@@ -9,6 +9,8 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export default function Button({
@@ -18,6 +20,8 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   className = '',
+  disabled = false,
+  type = 'button',
 }: ButtonProps) {
   const baseStyles = 'flex items-center gap-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95';
 
@@ -35,8 +39,10 @@ export default function Button({
 
   return (
     <button
+      type={type}
       onClick={onClick}
-      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      disabled={disabled}
+      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
     >
       {icon && <span className="flex shrink-0">{icon}</span>}
       {children}

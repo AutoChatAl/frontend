@@ -63,7 +63,8 @@ export default function ChannelInstanceCard({
             className={
               status === 'connected'
                 ? 'text-emerald-500 dark:text-emerald-400'
-                : 'text-rose-400 dark:text-rose-400'
+                :
+                'text-rose-400 dark:text-rose-400'
             }
           />
           {statusLabel || (status === 'connected' ? 'Sincronizado' : 'Dessincronizado')}

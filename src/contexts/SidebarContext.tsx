@@ -42,7 +42,6 @@ export function SidebarProvider({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Sync activeTab with current URL path
   useEffect(() => {
     const currentTab = pathname.split('/')[1] || 'dashboard';
     setActiveTab(currentTab);

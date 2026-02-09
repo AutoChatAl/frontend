@@ -1,0 +1,286 @@
+'use client';
+
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import Button from '@/components/Button';
+import Modal from '@/components/Modal';
+import type { WhatsappConnectResponse } from '@/types/Channel';
+
+interface WhatsAppCreateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (data: { name?: string; autoConnect?: boolean }) => Promise<{ channel: { id: string } }>;
+  onConnect: (channelId: string, phone?: string) => Promise<WhatsappConnectResponse>;
+}
+
+type ModalState = 'form' | 'creating' | 'connecting' | 'connected';
+
+export default function WhatsAppCreateModal({
+  isOpen,
+  onClose,
+  onCreate,
+  onConnect,
+}: WhatsAppCreateModalProps) {
+  const [state, setState] = useState<ModalState>('form');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => {
+        setState('form');
+        setName('');
+        setPhone('');
+        setQrCode(null);
+        setPairingCode(null);
+        setError(null);
+      }, 300);
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      setError('Por favor, insira um nome para a instância');
+      return;
+    }
+
+    try {
+      setState('creating');
+      setError(null);
+
+      const response = await onCreate({
+        name: name.trim(),
+        autoConnect: false,
+      });
+
+      setState('connecting');
+      const phoneNumber = phone.trim() || undefined;
+      const connectResponse = await onConnect(response.channel.id, phoneNumber);
+
+      if (connectResponse.ok && connectResponse.result?.raw?.instance) {
+        const { instance } = connectResponse.result.raw;
+        const qr = instance.qrcode && instance.qrcode.trim() !== '' ? instance.qrcode : null;
+        const pair = instance.paircode && typeof instance.paircode === 'string' && instance.paircode.trim() !== '' ? instance.paircode : null;
+
+        setQrCode(qr);
+        setPairingCode(pair);
+
+        const isConnected = instance.status === 'open' || connectResponse.result.raw.connected === true;
+        if (isConnected) {
+          setState('connected');
+        }
+      } else {
+        setError('Erro ao obter código de conexão');
+        setState('form');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro inesperado, tente novamente mais tarde.');
+      setState('form');
+    }
+  };
+
+  const renderContent = () => {
+    switch (state) {
+    case 'form':
+      return (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Nome da Instância *
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Atendimento Principal"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Número do WhatsApp (opcional)
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Ex: 5511999999999"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
+            />
+            <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                {phone ? '📱 Será gerado um código de pareamento numérico' : '📸 Será gerado um QR Code para escanear'}
+              </p>
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-6">
+            <Button type="button" onClick={onClose} variant="secondary" className="flex-1 justify-center">
+                Cancelar
+            </Button>
+            <Button type="submit" variant="primary" className="flex-1 justify-center">
+                Criar Instância
+            </Button>
+          </div>
+        </form>
+      );
+
+    case 'creating':
+      return (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="relative">
+            <div className="absolute inset-0 bg-emerald-500 opacity-20 rounded-full blur-xl animate-pulse"></div>
+            <Loader2 className="relative w-16 h-16 text-emerald-500 animate-spin" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 mt-6 text-lg font-medium">Criando instância...</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">Aguarde alguns instantes</p>
+        </div>
+      );
+
+    case 'connecting':
+      return (
+        <div className="flex flex-col items-center py-6">
+          {qrCode && (
+            <div className="w-full max-w-sm">
+              <div className="bg-linear-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-2xl shadow-lg border border-emerald-200 dark:border-emerald-800 mb-6">
+                <div className="bg-white p-4 rounded-xl mb-4 shadow-inner">
+                  <img src={qrCode} alt="QR Code" className="w-full h-auto" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pairingCode && (
+            <div className="w-full max-w-sm">
+              <div className={`bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl shadow-lg border border-blue-200 dark:border-blue-800 ${qrCode ? 'mt-4' : ''}`}>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
+                  {qrCode ? 'Ou conecte com código de pareamento' : 'Conecte com código de pareamento'}
+                </h4>
+                <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-xl mb-4 shadow-inner border-2 border-blue-200 dark:border-blue-700">
+                  <p className="text-3xl font-mono font-bold text-center text-blue-600 dark:text-blue-400 tracking-wider">
+                    {pairingCode}
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span> → <span className="font-semibold">Conectar um aparelho</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">"Conectar com número de telefone"</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Digite o código: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{pairingCode}</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!qrCode && !pairingCode && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald-500 opacity-20 rounded-full blur-xl animate-pulse"></div>
+                <Loader2 className="relative w-16 h-16 text-emerald-500 animate-spin" />
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 mt-6 text-lg font-medium">Gerando código de conexão...</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">Aguarde alguns instantes</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 rounded-lg w-full mt-4">
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+            </div>
+          )}
+        </div>
+      );
+
+    case 'connected':
+      return (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-emerald-500 opacity-20 rounded-full blur-2xl animate-pulse"></div>
+            <CheckCircle className="relative w-20 h-20 text-emerald-500" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              Conectado com sucesso!
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm">
+              Sua instância do WhatsApp está conectada e pronta para uso.
+          </p>
+          <div className="mt-6 w-full max-w-sm">
+            <Button onClick={onClose} variant="primary" className="w-full">
+              Concluir
+            </Button>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const getTitle = () => {
+    switch (state) {
+    case 'form':
+      return 'Nova Instância WhatsApp';
+    case 'creating':
+      return 'Criando Instância';
+    case 'connecting':
+      return 'Conectar WhatsApp';
+    case 'connected':
+      return 'Sucesso!';
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={getTitle()}>
+      <div className="p-6">
+        {renderContent()}
+      </div>
+    </Modal>
+  );
+}

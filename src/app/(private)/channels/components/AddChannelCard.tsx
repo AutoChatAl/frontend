@@ -9,9 +9,10 @@ interface AddChannelCardProps {
   title: string;
   subtitle: string;
   colorClass: 'emerald' | 'fuchsia';
+  disabled?: boolean;
 }
 
-export default function AddChannelCard({ onClick, icon, title, subtitle, colorClass }: AddChannelCardProps) {
+export default function AddChannelCard({ onClick, icon, title, subtitle, colorClass, disabled }: AddChannelCardProps) {
   const colorStyles = {
     emerald: {
       border: 'hover:border-emerald-500 dark:hover:border-emerald-500',
@@ -34,7 +35,8 @@ export default function AddChannelCard({ onClick, icon, title, subtitle, colorCl
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-54`}
+      disabled={disabled}
+      className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-54 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <div
         className={`w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 ${styles.iconBg} transition-colors`}

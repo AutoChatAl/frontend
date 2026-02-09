@@ -1,6 +1,7 @@
 'use client';
 
 import { User } from 'lucide-react';
+import { useState } from 'react';
 
 import AddChannelCard from './AddChannelCard';
 import ChannelInstanceCard from './ChannelInstanceCard';
@@ -8,14 +9,35 @@ import ChannelInstanceCard from './ChannelInstanceCard';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
 
 export default function InstagramInstances() {
-  const { accounts, loading, deleteAccount, getOAuthUrl } = useInstagramAccounts();
+  const { accounts, loading, deleteAccount, getOAuthUrl, refetch } = useInstagramAccounts();
+  const [connecting, setConnecting] = useState(false);
 
   const handleConnectInstagram = async () => {
     try {
+      setConnecting(true);
       const url = await getOAuthUrl();
-      window.location.href = url;
-    } catch (_error) {
-      alert('Erro ao conectar com Instagram. Tente novamente.');
+
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        url,
+        'Instagram OAuth',
+        `width=${width},height=${height},left=${left},top=${top}`,
+      );
+
+      const checkPopup = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkPopup);
+          setConnecting(false);
+          refetch();
+        }
+      }, 500);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao conectar com Instagram. Tente novamente.');
+      setConnecting(false);
     }
   };
 
@@ -23,13 +45,17 @@ export default function InstagramInstances() {
     if (confirm('Deseja realmente desconectar esta conta do Instagram?')) {
       try {
         await deleteAccount(String(id));
-      } catch (_error) {
-        alert('Erro ao desconectar conta. Tente novamente.');
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Erro ao desconectar conta. Tente novamente.');
       }
     }
   };
 
-  if (loading) {
+  const handleRefresh = () => {
+    refetch();
+  };
+
+  if (loading && accounts.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fuchsia-600"></div>
@@ -44,6 +70,7 @@ export default function InstagramInstances() {
         subtitle="Login Instagram"
         colorClass="fuchsia"
         onClick={handleConnectInstagram}
+        disabled={connecting}
       />
 
       {accounts.map((account) => {
@@ -75,7 +102,7 @@ export default function InstagramInstances() {
             subtitle={account.name}
             status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'}
             colorClass="fuchsia"
-            onRefresh={(_id) => {}}
+            onRefresh={handleRefresh}
             onDelete={handleDelete}
           />
         );

@@ -4,6 +4,7 @@ import { Bot, Menu, Sparkles, LogOut, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
+import { authService } from '@/services/auth.service';
 
 interface SidebarItemProps {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -79,6 +80,11 @@ export default function Sidebar({
     }
   };
 
+  const handleLogout = () => {
+    authService.logout();
+    router.push('/login');
+  };
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -128,23 +134,35 @@ export default function Sidebar({
             </div>
           )}
 
-          <button
-            onClick={toggleSidebar}
-            className="flex items-center justify-center w-full p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            {sidebarCollapsed ? <Menu size={20} /> : (
-              <div className="flex items-center w-full gap-3">
+          {sidebarCollapsed ? (
+            <button
+              onClick={toggleSidebar}
+              className="flex items-center justify-center w-full p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+          ) : (
+            <div className="flex items-center w-full gap-3 p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
+              <div
+                onClick={toggleSidebar}
+                className="flex items-center gap-3 flex-1 cursor-pointer"
+              >
                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-600">
                   {userInitials}
                 </div>
-                <div className="text-left overflow-hidden">
+                <div className="text-left overflow-hidden flex-1">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userName}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{userRole}</p>
                 </div>
-                <LogOut size={16} className="ml-auto hover:text-rose-500 transition-colors" />
               </div>
-            )}
-          </button>
+              <button
+                onClick={handleLogout}
+                className="hover:text-rose-500 transition-colors shrink-0"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 

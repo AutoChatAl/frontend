@@ -1,5 +1,5 @@
 
-import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
+import type { InstagramAccount, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
 import { apiClient } from '@/utils/ApiClient';
 
 class ChannelsService {
@@ -9,10 +9,29 @@ class ChannelsService {
   }
 
   public async createWhatsAppInstance(data: {
-    name: string;
-    evolutionInstance: string;
-  }): Promise<WhatsAppInstance> {
-    return apiClient.post<WhatsAppInstance>('/channels/whatsapp', data);
+    name?: string;
+    systemName?: string;
+    baseUrl?: string;
+    autoConnect?: boolean;
+  }): Promise<WhatsAppCreateResponse> {
+    return apiClient.post<WhatsAppCreateResponse>('/channels/whatsapp', data);
+  }
+
+  public async connectWhatsAppInstance(
+    channelId: string,
+    phone?: string,
+  ): Promise<WhatsappConnectResponse> {
+    return apiClient.post<WhatsappConnectResponse>(`/channels/whatsapp/${channelId}/connect`, {
+      phone,
+    });
+  }
+
+  public async getWhatsAppQRCode(channelId: string): Promise<WhatsAppQRCodeRawResponse> {
+    return apiClient.get<WhatsAppQRCodeRawResponse>(`/channels/whatsapp/${channelId}/qrcode`);
+  }
+
+  public async getWhatsAppStatus(channelId: string): Promise<WhatsAppStatusResponse> {
+    return apiClient.get<WhatsAppStatusResponse>(`/channels/whatsapp/${channelId}/status`);
   }
 
   public async deleteWhatsAppInstance(id: string): Promise<void> {

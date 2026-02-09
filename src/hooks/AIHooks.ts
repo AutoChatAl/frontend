@@ -44,10 +44,6 @@ export function useAIConfig() {
     setRules(rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)));
   };
 
-  const saveConfig = () => {
-    // TODO: Implement API call to save configuration
-  };
-
   return {
     segment,
     setSegment,
@@ -59,6 +55,5 @@ export function useAIConfig() {
     toggleChannel,
     rules,
     toggleRule,
-    saveConfig,
   };
 }

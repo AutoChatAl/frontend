@@ -1,20 +1,74 @@
+/* eslint-disable no-console */
 'use client';
 
-import { Filter, MoreVertical, Plus } from 'lucide-react';
+import { Filter, MoreVertical, Play, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { columns } from './components/CampaignsColumns';
+import CreateCampaignModal from './components/CreateCampaignModal';
 
 import Table from '@/components/Table';
-import { CampaignStatus, type Campaign } from '@/types/Campaign';
+import { campaignService } from '@/services/campaign.service';
+import { type Campaign } from '@/types/Campaign';
 
 export default function CampaignsPage() {
-  const campaignsData: Campaign[] = [
-    { id: 1, name: 'Promoção Relâmpago VIP', channel: 'whatsapp', sent: 1540, opened: '92%', status: CampaignStatus.SUCCESS, date: 'Hoje, 10:00' },
-    { id: 2, name: 'Recuperação de Carrinho', channel: 'instagram', sent: 45, opened: '68%', status: CampaignStatus.PROCESSING, date: 'Automático' },
-    { id: 3, name: 'Lançamento Coleção Inverno', channel: 'whatsapp', sent: 5200, opened: '85%', status: CampaignStatus.SUCCESS, date: 'Ontem' },
-    { id: 4, name: 'Boas-vindas Novos Leads', channel: 'instagram', sent: 12, opened: '45%', status: CampaignStatus.WARNING, date: 'Automático' },
-    { id: 5, name: 'Aviso de Manutenção', channel: 'whatsapp', sent: 890, opened: '98%', status: CampaignStatus.SUCCESS, date: '02/05/2024' },
-  ];
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [runningCampaign, setRunningCampaign] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadCampaigns();
+  }, []);
+
+  const loadCampaigns = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await campaignService.listCampaigns();
+      setCampaigns(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar campanhas');
+      console.error('Erro ao carregar campanhas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRunCampaign = async (campaignId: string) => {
+    try {
+      setRunningCampaign(campaignId);
+      await campaignService.runCampaign(campaignId);
+
+      await campaignService.processJobs();
+
+      await loadCampaigns();
+
+      alert('Campanha disparada com sucesso!');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao disparar campanha');
+      console.error('Erro ao disparar campanha:', err);
+    } finally {
+      setRunningCampaign(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-500">Carregando campanhas...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Erro: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -27,7 +81,7 @@ export default function CampaignsPage() {
 
       <Table
         columns={columns}
-        data={campaignsData}
+        data={campaigns}
         actions={{
           buttons: [
             {
@@ -39,16 +93,36 @@ export default function CampaignsPage() {
             {
               label: 'Nova Campanha',
               icon: <Plus size={16} />,
-              onClick: () => {},
+              onClick: () => setIsCreateModalOpen(true),
               variant: 'primary',
             },
           ],
         }}
-        renderActions={() => (
-          <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-            <MoreVertical size={16} />
-          </button>
+        renderActions={(row: Campaign) => (
+          <div className="flex justify-end gap-2">
+            <button
+              className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded text-indigo-600 dark:text-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleRunCampaign(row.id)}
+              disabled={runningCampaign === row.id || row.status !== 'ACTIVE'}
+              title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'}
+            >
+              {runningCampaign === row.id ? (
+                <div className="animate-spin h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full" />
+              ) : (
+                <Play size={16} />
+              )}
+            </button>
+            <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <MoreVertical size={16} />
+            </button>
+          </div>
         )}
+      />
+
+      <CreateCampaignModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => loadCampaigns()}
       />
     </div>
   );
