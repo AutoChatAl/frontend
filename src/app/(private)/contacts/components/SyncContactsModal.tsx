@@ -13,7 +13,6 @@ import { useState } from 'react';
 
 import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
-import { channelsService } from '@/services/channels.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 
 interface SyncResult {
@@ -83,7 +82,6 @@ export default function SyncContactsModal({
     onClose();
   };
 
-  // ── Success screen ──────────────────────────────────────────────────────────
   if (results) {
     const totalCreated = results.reduce((s, r) => s + r.created, 0);
     const totalUpdated = results.reduce((s, r) => s + r.updated, 0);
@@ -132,11 +130,9 @@ export default function SyncContactsModal({
     );
   }
 
-  // ── Confirmation screen ─────────────────────────────────────────────────────
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Sincronizar Contatos" size="sm">
       <div className="space-y-5">
-        {/* WhatsApp-only warning */}
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
           <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <div>
@@ -150,7 +146,6 @@ export default function SyncContactsModal({
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
             <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
@@ -164,7 +159,6 @@ export default function SyncContactsModal({
           </div>
         )}
 
-        {/* Channel selection */}
         <div>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
             Selecione o canal para importar contatos
@@ -219,12 +213,10 @@ export default function SyncContactsModal({
                       )}
                     </div>
 
-                    {/* Connected badge */}
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 font-medium shrink-0">
                       Conectado
                     </span>
 
-                    {/* Radio indicator */}
                     <div
                       className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                         isSelected
