@@ -6,35 +6,74 @@ import React, { type ReactNode } from 'react';
 import Badge from '@/components/Badge';
 import type { Contact } from '@/types/Contact';
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function formatDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0)
+    return 'Hoje, ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 1) return 'Ontem';
+  if (diffDays < 7) return `${diffDays} dias atrás`;
+  return d.toLocaleDateString('pt-BR');
+}
+
 export const columns = [
   {
-    header: 'Nome / Identificação',
-    accessor: 'name' as keyof Contact,
-    render: (value: unknown) => {
-      const v = value as string;
+    header: 'Nome',
+    accessor: 'displayName' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const name = row.displayName || 'Sem nome';
       return (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-xs border border-slate-200 dark:border-slate-600">
-            {v.charAt(0)}
+          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-xs shrink-0">
+            {getInitials(name) || '?'}
           </div>
-          <span className="font-medium text-slate-900 dark:text-white">{v}</span>
+          <span className="font-medium text-slate-900 dark:text-white">{name}</span>
         </div>
       );
     },
   },
   {
-    header: 'Contato',
-    accessor: 'contact' as keyof Contact,
-    className: 'text-slate-600 dark:text-slate-300 font-mono text-xs',
+    header: 'Identificador',
+    accessor: 'identities' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const identities = row.identities ?? [];
+      if (identities.length === 0)
+        return <span className="text-xs text-slate-400 italic">Sem identificador</span>;
+      return (
+        <div className="flex flex-col gap-0.5">
+          {identities.map((identity, i) => (
+            <span key={i} className="text-xs font-mono text-slate-600 dark:text-slate-300">
+              {identity.phoneE164 ?? identity.igUsername ?? '—'}
+            </span>
+          ))}
+        </div>
+      );
+    },
   },
   {
     header: 'Canais',
-    accessor: 'channels' as keyof Contact,
-    render: (value: unknown) => {
-      const channels = value as string[];
+    accessor: 'identities' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const identities = row.identities ?? [];
+      const hasWA = identities.some((i) => i.type === 'WHATSAPP');
+      const hasIG = identities.some((i) => i.type === 'INSTAGRAM');
+      if (!hasWA && !hasIG)
+        return <span className="text-xs text-slate-400 italic">Nenhum</span>;
       return (
-        <div className="flex gap-1">
-          {channels.includes('whatsapp') && (
+        <div className="flex gap-1.5">
+          {hasWA && (
             <div
               className="p-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
               title="WhatsApp"
@@ -42,7 +81,7 @@ export const columns = [
               <MessageCircle size={14} />
             </div>
           )}
-          {channels.includes('instagram') && (
+          {hasIG && (
             <div
               className="p-1.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400"
               title="Instagram"
@@ -57,12 +96,12 @@ export const columns = [
   {
     header: 'Tags',
     accessor: 'tags' as keyof Contact,
-    render: (value: unknown) => {
-      const tags = value as string[];
+    render: (_value: unknown, row: Contact) => {
+      const tags = row.tags ?? [];
       return (
         <div className="flex flex-wrap gap-1">
           {tags.length > 0 ? (
-            tags.map((tag, i) => <Badge key={i} type="tag" text={tag} />)
+            tags.map((t) => <Badge key={t.tagId} type="tag" text={t.tag.name} />)
           ) : (
             <span className="text-slate-400 text-xs italic">Sem tags</span>
           )}
@@ -72,8 +111,9 @@ export const columns = [
   },
   {
     header: 'Última Interação',
-    accessor: 'lastInteraction' as keyof Contact,
+    accessor: 'lastInteractionAt' as keyof Contact,
     className: 'text-slate-500 dark:text-slate-400 text-xs',
+    render: (_value: unknown, row: Contact) => <span>{formatDate(row.lastInteractionAt)}</span>,
   },
 ] as const satisfies Array<{
   header: string;

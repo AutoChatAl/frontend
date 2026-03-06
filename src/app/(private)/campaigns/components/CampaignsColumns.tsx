@@ -25,14 +25,17 @@ export const columns = [
     render: (_value: unknown, row: Campaign) => (
       <div className="flex gap-2">
         {row.channels && row.channels.length > 0 ? (
-          row.channels.map((ch) => (
-            <Badge
-              key={ch.id}
-              type={ch.channel?.type.toLowerCase() || 'whatsapp'}
-              text={ch.channel?.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}
-              icon={ch.channel?.type === 'WHATSAPP' ? MessageCircle : Smartphone}
-            />
-          ))
+          row.channels.map((ch) => {
+            if (!ch.channel) return null;
+            return (
+              <Badge
+                key={ch.channelId}
+                type={ch.channel.type.toLowerCase() || 'whatsapp'}
+                text={ch.channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}
+                icon={ch.channel.type === 'WHATSAPP' ? MessageCircle : Smartphone}
+              />
+            );
+          })
         ) : (
           <span className="text-xs text-slate-400">Nenhum canal</span>
         )}

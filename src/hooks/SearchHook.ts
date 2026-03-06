@@ -20,12 +20,14 @@ export function useFilter(initialData: Contact[]) {
     if (!q) return initialData;
 
     return initialData.filter((c) => {
-      const haystack = normalize(
-        [
-          c.name,
-        ].join(' '),
-      );
+      const parts: string[] = [c.displayName ?? ''];
 
+      for (const identity of c.identities ?? []) {
+        if (identity.phoneE164) parts.push(identity.phoneE164);
+        if (identity.igUsername) parts.push(identity.igUsername);
+      }
+
+      const haystack = normalize(parts.join(' '));
       return haystack.includes(q);
     });
   }, [query, initialData]);

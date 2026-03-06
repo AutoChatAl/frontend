@@ -1,6 +1,12 @@
 import type { Contact, ListContactsParams } from '@/types/Contact';
 import { apiClient } from '@/utils/ApiClient';
 
+export interface SyncContactsResult {
+  ok: boolean;
+  created: number;
+  updated: number;
+}
+
 class ContactService {
   public async listContacts(params?: ListContactsParams): Promise<Contact[]> {
     const queryString = new URLSearchParams();
@@ -13,6 +19,14 @@ class ContactService {
 
   public async getContact(contactId: string): Promise<Contact> {
     return apiClient.get<Contact>(`/contacts/${contactId}`);
+  }
+
+  /**
+   * Sincroniza contatos do WhatsApp remoto para o banco local.
+   * Endpoint: POST /channels/whatsapp/:channelId/contacts/sync
+   */
+  public async syncContacts(channelId: string): Promise<SyncContactsResult> {
+    return apiClient.post<SyncContactsResult>(`/channels/whatsapp/${channelId}/contacts/sync`);
   }
 }
 

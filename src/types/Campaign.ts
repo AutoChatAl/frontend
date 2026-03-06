@@ -17,26 +17,23 @@ export interface Campaign {
 }
 
 export interface CampaignChannel {
-  id: string;
   campaignId: string;
   channelId: string;
   messageOverride?: string | null;
-  pacingJson?: Record<string, unknown>;
-  payloadJson?: Record<string, unknown>;
-  createdAt: string;
-  channel?: {
+  pacingJson?: Record<string, unknown> | null;
+  payloadJson?: Record<string, unknown> | null;
+  channel: {
     id: string;
     name: string;
     type: 'WHATSAPP' | 'INSTAGRAM';
+    status: string;
   };
 }
 
 export interface CampaignGroup {
-  id: string;
   campaignId: string;
   groupId: string;
-  createdAt: string;
-  group?: {
+  group: {
     id: string;
     name: string;
     type: string;
