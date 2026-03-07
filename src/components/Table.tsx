@@ -1,6 +1,6 @@
 'use client';
 
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useRef, useCallback, useEffect } from 'react';
 
 import Button from './Button';
 import Card from './Card';
@@ -30,6 +30,9 @@ interface TableProps<T> {
     }>;
   };
   renderActions?: (row: T) => ReactNode;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
 }
 
 export default function Table<T extends { id: number | string }>({
@@ -37,7 +40,29 @@ export default function Table<T extends { id: number | string }>({
   data,
   actions,
   renderActions,
+  onLoadMore,
+  hasMore,
+  loadingMore,
 }: TableProps<T>) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const handleIntersect = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0]?.isIntersecting && hasMore && !loadingMore && onLoadMore) {
+        onLoadMore();
+      }
+    },
+    [hasMore, loadingMore, onLoadMore],
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !onLoadMore) return;
+    const observer = new IntersectionObserver(handleIntersect, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleIntersect, onLoadMore]);
+
   return (
     <div className="space-y-4">
       {actions && (
@@ -101,6 +126,12 @@ export default function Table<T extends { id: number | string }>({
             </tbody>
           </table>
         </div>
+
+        {onLoadMore && (
+          <div ref={sentinelRef} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+            {loadingMore ? 'Carregando...' : ''}
+          </div>
+        )}
       </Card>
     </div>
   );

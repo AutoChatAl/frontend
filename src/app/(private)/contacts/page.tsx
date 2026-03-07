@@ -3,12 +3,14 @@
 
 import {
   AlertCircle,
+  CheckCircle2,
   Loader2,
   MoreVertical,
   RefreshCw,
   Users,
+  X,
 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { columns } from './components/ContactColumns';
 import SyncContactsModal from './components/SyncContactsModal';
@@ -19,56 +21,71 @@ import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 
+const PAGE_SIZE = 50;
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [total, setTotal] = useState(0);
   const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppInstance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string } | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const loadData = async () => {
+  const fetchContacts = useCallback(async (search: string, skip: number, append: boolean) => {
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
-      const [contactsList, waChannels] = await Promise.all([
-        contactService.listContacts(),
-        channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
-      ]);
-      setContacts(contactsList);
-      setWhatsappChannels(waChannels);
+
+      const result = await contactService.listContacts({
+        search: search.trim() || undefined,
+        skip,
+        limit: PAGE_SIZE,
+      });
+
+      setContacts((prev) => (append ? [...prev, ...result.data] : result.data));
+      setTotal(result.total);
     } catch (err) {
       console.error('Erro ao carregar contatos:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar contatos');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, []);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return contacts;
+  useEffect(() => {
+    Promise.all([
+      fetchContacts('', 0, false),
+      channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
+    ]).then(([, waChannels]) => setWhatsappChannels(waChannels));
+  }, []);
 
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .trim();
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      searchTimeout.current = setTimeout(() => {
+        fetchContacts(value, 0, false);
+      }, 350);
+    },
+    [fetchContacts],
+  );
 
-    const q = normalize(query);
-    return contacts.filter((c) => {
-      const parts: string[] = [c.displayName ?? ''];
-      for (const identity of c.identities ?? []) {
-        if (identity.phoneE164) parts.push(identity.phoneE164);
-        if (identity.igUsername) parts.push(identity.igUsername);
-      }
-      return normalize(parts.join(' ')).includes(q);
-    });
-  }, [contacts, query]);
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || contacts.length >= total) return;
+    fetchContacts(query, contacts.length, true);
+  }, [loadingMore, contacts.length, total, query, fetchContacts]);
+
+  const hasMore = contacts.length < total;
 
   if (loading) {
     return (
@@ -81,7 +98,7 @@ export default function ContactsPage() {
     );
   }
 
-  if (error) {
+  if (error && contacts.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-4">
@@ -90,7 +107,7 @@ export default function ContactsPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => fetchContacts('', 0, false)}
             className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors"
           >
             Tentar novamente
@@ -107,9 +124,9 @@ export default function ContactsPage() {
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Contatos</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             Gerencie sua base de contatos e leads
-            {contacts.length > 0 && (
+            {total > 0 && (
               <span className="ml-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
-                {contacts.length} no total
+                {total} no total
               </span>
             )}
           </p>
@@ -125,7 +142,7 @@ export default function ContactsPage() {
         </button>
       </header>
 
-      {contacts.length === 0 ? (
+      {contacts.length === 0 && !query ? (
         <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 gap-4">
           <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
             <Users size={22} />
@@ -149,12 +166,12 @@ export default function ContactsPage() {
       ) : (
         <Table
           columns={columns}
-          data={filtered}
+          data={contacts}
           actions={{
             searchBar: {
               placeholder: 'Buscar por nome, telefone ou @usuário...',
               value: query,
-              onChange: setQuery,
+              onChange: handleSearchChange,
             },
           }}
           renderActions={() => (
@@ -162,15 +179,39 @@ export default function ContactsPage() {
               <MoreVertical size={16} />
             </button>
           )}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
         />
       )}
 
       <SyncContactsModal
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
-        onSuccess={loadData}
+        onSuccess={(result) => {
+          fetchContacts(query, 0, false);
+          setToast({
+            message: `Você tem ${result.created} sincronizados via WhatsApp.`,
+          });
+          setTimeout(() => setToast(null), 4000);
+        }}
         whatsappChannels={whatsappChannels}
       />
+
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right-4 duration-300">
+          <div className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border bg-white dark:bg-slate-800 border-green-200 dark:border-green-800 max-w-sm">
+            <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-700 dark:text-slate-300 flex-1">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="text-slate-400 hover:text-slate-600 shrink-0"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

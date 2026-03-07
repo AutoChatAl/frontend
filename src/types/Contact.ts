@@ -30,4 +30,11 @@ export interface Contact {
 export interface ListContactsParams {
   search?: string;
   channelId?: string;
+  skip?: number;
+  limit?: number;
+}
+
+export interface PaginatedContacts {
+  data: Contact[];
+  total: number;
 }

@@ -3,7 +3,6 @@
 
 import {
   AlertTriangle,
-  CheckCircle2,
   Loader2,
   MessageCircle,
   RefreshCw,
@@ -15,16 +14,10 @@ import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 
-interface SyncResult {
-  channelName: string;
-  created: number;
-  updated: number;
-}
-
 interface SyncContactsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (result: { created: number; updated: number }) => void;
   whatsappChannels: WhatsAppInstance[];
 }
 
@@ -37,7 +30,6 @@ export default function SyncContactsModal({
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<SyncResult[] | null>(null);
 
   const connectedChannels = whatsappChannels.filter((ch) => ch.status === 'CONNECTED');
 
@@ -53,15 +45,10 @@ export default function SyncContactsModal({
 
       const result = await contactService.syncContacts(selectedChannelId);
 
-      setResults([
-        {
-          channelName: channel.name,
-          created: result.created,
-          updated: result.updated,
-        },
-      ]);
-
-      onSuccess();
+      setSelectedChannelId('');
+      setError(null);
+      onClose();
+      onSuccess({ created: result.created, updated: result.updated });
     } catch (err) {
       console.error('Erro ao sincronizar contatos:', err);
       setError(
@@ -78,57 +65,8 @@ export default function SyncContactsModal({
     if (syncing) return;
     setSelectedChannelId('');
     setError(null);
-    setResults(null);
     onClose();
   };
-
-  if (results) {
-    const totalCreated = results.reduce((s, r) => s + r.created, 0);
-    const totalUpdated = results.reduce((s, r) => s + r.updated, 0);
-
-    return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Sincronização Concluída" size="sm">
-        <div className="flex flex-col items-center gap-6 py-2">
-          <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-            <CheckCircle2 className="text-green-500" size={32} />
-          </div>
-
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
-              Contatos sincronizados!
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Os contatos do WhatsApp foram importados para sua base.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 w-full">
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {totalCreated}
-              </div>
-              <div className="text-xs text-green-700 dark:text-green-400 mt-1">
-                Novos contatos
-              </div>
-            </div>
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                {totalUpdated}
-              </div>
-              <div className="text-xs text-indigo-700 dark:text-indigo-400 mt-1">Atualizados</div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleClose}
-            className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-medium text-sm"
-          >
-            Fechar
-          </button>
-        </div>
-      </Modal>
-    );
-  }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Sincronizar Contatos" size="sm">

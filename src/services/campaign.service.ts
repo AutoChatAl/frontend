@@ -5,6 +5,14 @@ interface ApiResponse<T> {
   data: T;
 }
 
+/** Normalize MongoDB _id → id for lean() query results */
+function normalizeId<T extends { id?: string; _id?: string }>(obj: T): T {
+  if (!obj.id && obj._id) {
+    return { ...obj, id: obj._id };
+  }
+  return obj;
+}
+
 export class CampaignService {
   /**
    * Lista todas as campanhas
@@ -26,8 +34,8 @@ export class CampaignService {
    * Cria uma nova campanha
    */
   public async createCampaign(input: CreateCampaignInput): Promise<Campaign> {
-    const response = await apiClient.post<ApiResponse<Campaign>>('/campaigns', input);
-    return response.data;
+    const response = await apiClient.post<ApiResponse<Campaign & { _id?: string }>>('/campaigns', input);
+    return normalizeId(response.data);
   }
 
   /**

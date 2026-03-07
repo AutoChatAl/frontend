@@ -137,11 +137,26 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     try {
       setLoadingData(true);
       setError(null);
-      const [whatsappChannels, instagramChannels, contactsList] = await Promise.all([
+      const [whatsappChannels, instagramChannels] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
-        contactService.listContacts().catch(() => []),
       ]);
+
+      // Fetch all contacts with pagination (API max 100 per page)
+      const allContacts: Contact[] = [];
+      let skip = 0;
+      const PAGE_SIZE = 100;
+      for (;;) {
+        const page = await contactService.listContacts({ skip, limit: PAGE_SIZE });
+        // Normalize: lean() queries return _id instead of id
+        const normalized = page.data.map((c: Contact & { _id?: string }) => ({
+          ...c,
+          id: c.id || c._id || '',
+        }));
+        allContacts.push(...normalized);
+        if (allContacts.length >= page.total || page.data.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+      }
 
       const allChannels: Channel[] = [
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,7 +176,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       ];
 
       setChannels(allChannels);
-      setContacts(contactsList);
+      setContacts(allContacts);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
       setError('Não foi possível carregar canais e contatos. Tente novamente.');
@@ -219,18 +234,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       setError(null);
 
       const campaign = await campaignService.createCampaign(formData);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const runResult = (await campaignService.runCampaign(campaign.id)) as any;
-      const dispatchStats = await campaignService.processJobs();
-
-      setDispatchResult({
-        jobsCreated: runResult?.jobsCreated ?? 0,
-        sent: dispatchStats.sent,
-        failed: dispatchStats.failed,
-        skipped: dispatchStats.skipped,
-      });
+      await campaignService.runCampaign(campaign.id);
+      await campaignService.processJobs();
 
       onSuccess();
+      handleClose();
     } catch (err) {
       console.error('Erro ao disparar campanha:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar e disparar a campanha.');
@@ -251,12 +259,27 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   };
 
   const toggleChannel = (channelId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      channelIds: prev.channelIds.includes(channelId)
+    const isRemoving = formData.channelIds.includes(channelId);
+    setFormData((prev) => {
+      const newChannelIds = isRemoving
         ? prev.channelIds.filter((id) => id !== channelId)
-        : [...prev.channelIds, channelId],
-    }));
+        : [...prev.channelIds, channelId];
+
+      // Auto-select/deselect contacts of this channel
+      const channelContactIds = new Set(
+        contacts
+          .filter((c) => c.identities?.some((i) => i.channelId === channelId))
+          .map((c) => c.id),
+      );
+      let newContactIds: string[];
+      if (isRemoving) {
+        newContactIds = prev.contactIds.filter((id) => !channelContactIds.has(id));
+      } else {
+        newContactIds = Array.from(new Set([...prev.contactIds, ...channelContactIds]));
+      }
+
+      return { ...prev, channelIds: newChannelIds, contactIds: newContactIds };
+    });
     clearFieldError('channels');
   };
 
@@ -274,16 +297,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
   const deselectAllContacts = () =>
     setFormData((prev) => ({ ...prev, contactIds: [] }));
-
-  const selectContactsByChannel = (channelId: string) => {
-    const ids = contacts
-      .filter((c) => c.identities?.some((i) => i.channelId === channelId))
-      .map((c) => c.id);
-    setFormData((prev) => ({
-      ...prev,
-      contactIds: Array.from(new Set([...prev.contactIds, ...ids])),
-    }));
-  };
 
   const filteredContacts = useMemo(() => {
     if (!contactFilter.trim()) return contacts;
@@ -523,19 +536,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                         {isSelected && <CheckCircle2 size={12} className="text-white" />}
                       </div>
 
-                      {/* Quick-select contacts button */}
-                      {isSelected && channelContacts.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            selectContactsByChannel(channel.id);
-                          }}
-                          className="absolute bottom-2 right-2 text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
-                        >
-                          + Selecionar contatos
-                        </button>
-                      )}
                     </div>
                   );
                 })}
