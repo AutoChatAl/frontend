@@ -28,7 +28,6 @@ export function useWhatsAppInstances() {
 
   const createInstance = async (data: { name?: string; systemName?: string; autoConnect?: boolean }) => {
     try {
-      setLoading(true);
       const response = await channelsService.createWhatsAppInstance(data);
       setInstances((prev) => [...prev, response.channel]);
       return response;
@@ -36,8 +35,6 @@ export function useWhatsAppInstances() {
       const errorMsg = getErrorMessage(err, 'Erro ao criar instância');
       setError(errorMsg);
       throw new Error(errorMsg);
-    } finally {
-      setLoading(false);
     }
   };
 
