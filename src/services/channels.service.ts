@@ -5,7 +5,11 @@ import { apiClient } from '@/utils/ApiClient';
 class ChannelsService {
   // WhatsApp
   public async getWhatsAppInstances(): Promise<WhatsAppInstance[]> {
-    return apiClient.get<WhatsAppInstance[]>('/channels/whatsapp');
+    const data = await apiClient.get<WhatsAppInstance[]>('/channels/whatsapp');
+    return data.map((inst) => ({
+      ...inst,
+      number: inst.number ?? inst.whatsapp?.phoneNumber ?? undefined,
+    }));
   }
 
   public async createWhatsAppInstance(data: {

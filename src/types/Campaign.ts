@@ -79,6 +79,9 @@ export interface CreateCampaignInput {
     ctaDefaultActionUrl?: string;
   };
   messageTag?: 'HUMAN_AGENT';
+  frequency?: 'DAILY' | 'ONCE';
+  scheduledDate?: string | undefined;
+  executionHour?: number;
 }
 
 export type UpdateCampaignInput = CreateCampaignInput;

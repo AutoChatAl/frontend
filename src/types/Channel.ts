@@ -10,6 +10,7 @@ export type WhatsAppInstance = {
     id: string;
     channelId: string;
     provider: string;
+    phoneNumber?: string;
     uazapiInstanceId?: string;
     uazapiBaseUrl?: string;
     createdAt: string;

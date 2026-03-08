@@ -3,9 +3,12 @@
 
 import {
   AlertCircle,
+  Calendar,
   CheckCircle2,
+  Clock,
   Loader2,
   MessageCircle,
+  Repeat,
   Save,
   Search,
   Send,
@@ -57,6 +60,8 @@ function getContactIdentifier(contact: Contact): string {
   if (!identity) return 'Sem identificador';
   return identity.phoneE164 || identity.igUsername || 'N/A';
 }
+
+const EXECUTION_HOURS = [8, 10, 12, 14, 16, 18];
 
 const INITIAL_FORM: CreateCampaignInput = {
   name: '',
@@ -234,8 +239,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       setError(null);
 
       const campaign = await campaignService.createCampaign(formData);
-      await campaignService.runCampaign(campaign.id);
-      await campaignService.processJobs();
+
+      if (formData.contactIds.length > 0) {
+        await campaignService.runCampaign(campaign.id);
+        await campaignService.processJobs();
+      }
 
       onSuccess();
       handleClose();
@@ -701,6 +709,111 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 )}
               </>
             )}
+          </section>
+
+          {/* ── Section 5: Agendamento ── */}
+          <section>
+            <SectionHeader step={5} label="Agendamento" />
+            <div className="space-y-4">
+              {/* Frequencia */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <Repeat size={14} className="inline mr-1.5 -mt-0.5" />
+                  Frequencia
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { value: 'DAILY', label: 'Todo dia', desc: 'Executa diariamente' },
+                    { value: 'ONCE', label: 'Dia especifico', desc: 'Executa uma unica vez' },
+                  ] as const).map((opt) => {
+                    const isSelected = formData.frequency === opt.value;
+                    return (
+                      <div
+                        key={opt.value}
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            frequency: opt.value,
+                            scheduledDate: opt.value === 'DAILY' ? undefined : prev.scheduledDate,
+                          }));
+                        }}
+                        className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                        }`}
+                      >
+                        <span className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">{opt.desc}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Data (somente para dia especifico) */}
+              {formData.frequency === 'ONCE' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    <Calendar size={14} className="inline mr-1.5 -mt-0.5" />
+                    Data de Execucao <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd/mm/aaaa"
+                    value={
+                      formData.scheduledDate
+                        ? formData.scheduledDate.split('-').reverse().join('/')
+                        : ''
+                    }
+                    onChange={(e) => {
+                      let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      if (v.length >= 5) v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+                      else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+
+                      // Converte dd/mm/yyyy para yyyy-mm-dd para o backend
+                      const parts = v.split('/');
+                      if (parts.length === 3 && parts[2]?.length === 4) {
+                        setFormData({ ...formData, scheduledDate: `${parts[2]}-${parts[1]}-${parts[0]}` });
+                      } else {
+                        setFormData({ ...formData, scheduledDate: '' });
+                      }
+                    }}
+                    className={inputCls(false)}
+                  />
+                </div>
+              )}
+
+              {/* Hora de execucao */}
+              {formData.frequency && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    <Clock size={14} className="inline mr-1.5 -mt-0.5" />
+                    Hora de Execucao
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {EXECUTION_HOURS.map((hour) => {
+                      const isSelected = formData.executionHour === hour;
+                      return (
+                        <button
+                          key={hour}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, executionHour: hour })}
+                          className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
+                          }`}
+                        >
+                          {String(hour).padStart(2, '0')}:00
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* ── Footer ── */}

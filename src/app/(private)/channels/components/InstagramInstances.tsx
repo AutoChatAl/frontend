@@ -6,11 +6,16 @@ import { useState } from 'react';
 import AddChannelCard from './AddChannelCard';
 import ChannelInstanceCard from './ChannelInstanceCard';
 
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { ToastContainer, useToast } from '@/components/Toast';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
 
 export default function InstagramInstances() {
   const { accounts, loading, deleteAccount, getOAuthUrl, refetch } = useInstagramAccounts();
   const [connecting, setConnecting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleConnectInstagram = async () => {
     try {
@@ -36,18 +41,26 @@ export default function InstagramInstances() {
         }
       }, 500);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao conectar com Instagram. Tente novamente.');
+      addToast('error', error instanceof Error ? error.message : 'Erro ao conectar com Instagram. Tente novamente.');
       setConnecting(false);
     }
   };
 
-  const handleDelete = async (id: string | number) => {
-    if (confirm('Deseja realmente desconectar esta conta do Instagram?')) {
-      try {
-        await deleteAccount(String(id));
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Erro ao desconectar conta. Tente novamente.');
-      }
+  const handleDeleteClick = (id: string | number) => {
+    setDeleteTarget(String(id));
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(deleteTarget);
+      addToast('success', 'Conta desconectada com sucesso.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Erro ao desconectar conta.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -64,49 +77,62 @@ export default function InstagramInstances() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <AddChannelCard
-        title="Conectar Conta"
-        subtitle="Login Instagram"
-        colorClass="fuchsia"
-        onClick={handleConnectInstagram}
-        disabled={connecting}
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AddChannelCard
+          title="Conectar Conta"
+          subtitle="Login Instagram"
+          colorClass="fuchsia"
+          onClick={handleConnectInstagram}
+          disabled={connecting}
+        />
+
+        {accounts.map((account) => {
+          const username = account.instagram.username || account.name || 'Sem nome';
+          const displayUsername = username.startsWith('@') ? username : `@${username}`;
+
+          return (
+            <ChannelInstanceCard
+              key={account.id}
+              id={account.id}
+              icon={
+                <div className="w-12 h-12 bg-linear-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-0.5">
+                  <div className="w-full h-full bg-white dark:bg-slate-800 rounded-full p-0.5">
+                    {account.instagram.profilePictureUrl ? (
+                      <img
+                        src={account.instagram.profilePictureUrl}
+                        alt={displayUsername}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500">
+                        <User size={20} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              }
+              title={displayUsername}
+              subtitle={account.name}
+              status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'}
+              colorClass="fuchsia"
+              onRefresh={handleRefresh}
+              onDelete={handleDeleteClick}
+            />
+          );
+        })}
+      </div>
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+        message="Deseja realmente desconectar esta conta do Instagram? Esta ação não pode ser desfeita."
+        confirmLabel="Desconectar"
+        loading={deleting}
       />
 
-      {accounts.map((account) => {
-        const username = account.instagram.username || account.name || 'Sem nome';
-        const displayUsername = username.startsWith('@') ? username : `@${username}`;
-
-        return (
-          <ChannelInstanceCard
-            key={account.id}
-            id={account.id}
-            icon={
-              <div className="w-12 h-12 bg-linear-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-0.5">
-                <div className="w-full h-full bg-white dark:bg-slate-800 rounded-full p-0.5">
-                  {account.instagram.profilePictureUrl ? (
-                    <img
-                      src={account.instagram.profilePictureUrl}
-                      alt={displayUsername}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500">
-                      <User size={20} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            }
-            title={displayUsername}
-            subtitle={account.name}
-            status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'}
-            colorClass="fuchsia"
-            onRefresh={handleRefresh}
-            onDelete={handleDelete}
-          />
-        );
-      })}
-    </div>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   );
 }

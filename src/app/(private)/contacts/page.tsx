@@ -3,12 +3,10 @@
 
 import {
   AlertCircle,
-  CheckCircle2,
   Loader2,
   MoreVertical,
   RefreshCw,
   Users,
-  X,
 } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
@@ -16,6 +14,7 @@ import { columns } from './components/ContactColumns';
 import SyncContactsModal from './components/SyncContactsModal';
 
 import Table from '@/components/Table';
+import { ToastContainer, useToast } from '@/components/Toast';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
@@ -32,7 +31,7 @@ export default function ContactsPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [toast, setToast] = useState<{ message: string } | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -190,28 +189,12 @@ export default function ContactsPage() {
         onClose={() => setIsSyncModalOpen(false)}
         onSuccess={(result) => {
           fetchContacts(query, 0, false);
-          setToast({
-            message: `Você tem ${result.created} sincronizados via WhatsApp.`,
-          });
-          setTimeout(() => setToast(null), 4000);
+          addToast('success', `Você tem ${result.created} sincronizados via WhatsApp.`);
         }}
         whatsappChannels={whatsappChannels}
       />
 
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right-4 duration-300">
-          <div className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border bg-white dark:bg-slate-800 border-green-200 dark:border-green-800 max-w-sm">
-            <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-slate-700 dark:text-slate-300 flex-1">{toast.message}</p>
-            <button
-              onClick={() => setToast(null)}
-              className="text-slate-400 hover:text-slate-600 shrink-0"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

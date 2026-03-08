@@ -8,6 +8,8 @@ import ChannelInstanceCard from './ChannelInstanceCard';
 import WhatsAppCreateModal from './WhatsAppCreateModal';
 import WhatsAppQRModal from './WhatsAppQRModal';
 
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import { ToastContainer, useToast } from '@/components/Toast';
 import { useWhatsAppInstances } from '@/hooks/ChannelHook';
 
 export default function WhatsAppInstances() {
@@ -15,6 +17,9 @@ export default function WhatsAppInstances() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
@@ -29,13 +34,21 @@ export default function WhatsAppInstances() {
     }
   };
 
-  const handleDelete = async (id: string | number) => {
-    if (confirm('Tem certeza que deseja deletar esta instância?')) {
-      try {
-        await deleteInstance(String(id));
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'Erro ao deletar instância');
-      }
+  const handleDeleteClick = (id: string | number) => {
+    setDeleteTarget(String(id));
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteInstance(deleteTarget);
+      addToast('success', 'Instância deletada com sucesso.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Erro ao deletar instância.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -71,7 +84,7 @@ export default function WhatsAppInstances() {
             status={inst.status === 'CONNECTED' ? 'connected' : 'disconnected'}
             colorClass="emerald"
             onRefresh={handleRefresh}
-            onDelete={handleDelete}
+            onDelete={handleDeleteClick}
           />
         ))}
       </div>
@@ -101,6 +114,16 @@ export default function WhatsAppInstances() {
           onCheckStatus={getStatus}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+        message="Tem certeza que deseja deletar esta instância do WhatsApp? Esta ação não pode ser desfeita."
+        loading={deleting}
+      />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
 }
