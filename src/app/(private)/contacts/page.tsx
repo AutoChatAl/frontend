@@ -44,8 +44,9 @@ export default function ContactsPage() {
       }
       setError(null);
 
+      const trimmed = search.trim();
       const result = await contactService.listContacts({
-        search: search.trim() || undefined,
+        ...(trimmed ? { search: trimmed } : {}),
         skip,
         limit: PAGE_SIZE,
       });
