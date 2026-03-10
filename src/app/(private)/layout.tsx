@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { authService } from '@/services/auth.service';
+import { authService, type AuthUser } from '@/services/auth.service';
 
 export default function PrivateLayout({
   children,
@@ -16,6 +17,7 @@ export default function PrivateLayout({
 }>) {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -24,6 +26,12 @@ export default function PrivateLayout({
         return;
       }
       setIsAuthenticated(true);
+
+      const cached = authService.getUser();
+      if (cached) {
+        setUser(cached);
+      }
+      authService.fetchMe().then(setUser).catch(() => {});
     };
 
     checkAuth();
@@ -40,18 +48,28 @@ export default function PrivateLayout({
     );
   }
 
+  const userName = user?.name || user?.email || '';
+  const userInitials = userName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('');
+
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-          <div className="flex flex-col flex-1">
-            <Header />
-            <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-slate-900">
-              {children}
-            </main>
+        <ChannelStatusProvider>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar userName={userName} userInitials={userInitials} />
+            <div className="flex flex-col flex-1">
+              <Header />
+              <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-slate-900">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </ChannelStatusProvider>
       </SidebarProvider>
     </ThemeProvider>
   );

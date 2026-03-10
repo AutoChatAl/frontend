@@ -22,8 +22,10 @@ import Modal from '@/components/Modal';
 import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
+import { groupService } from '@/services/group.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
 import type { Contact } from '@/types/Contact';
+import type { Group } from '@/types/Group';
 
 interface Channel {
   id: string;
@@ -67,13 +69,12 @@ const INITIAL_FORM: CreateCampaignInput = {
   name: '',
   description: '',
   message: '',
+  sourceType: 'CHANNEL',
   channelIds: [],
   contactIds: [],
   status: 'ACTIVE',
   messageType: 'TEXT',
 };
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function inputCls(hasError: boolean) {
   return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${
@@ -131,6 +132,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const [loadingType, setLoadingType] = useState<'create' | 'dispatch' | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [contactFilter, setContactFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -142,18 +144,17 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     try {
       setLoadingData(true);
       setError(null);
-      const [whatsappChannels, instagramChannels] = await Promise.all([
+      const [whatsappChannels, instagramChannels, groupsList] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
+        groupService.listGroups().catch(() => []),
       ]);
 
-      // Fetch all contacts with pagination (API max 100 per page)
       const allContacts: Contact[] = [];
       let skip = 0;
       const PAGE_SIZE = 100;
       for (;;) {
         const page = await contactService.listContacts({ skip, limit: PAGE_SIZE });
-        // Normalize: lean() queries return _id instead of id
         const normalized = page.data.map((c: Contact & { _id?: string }) => ({
           ...c,
           id: c.id || c._id || '',
@@ -182,6 +183,12 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
       setChannels(allChannels);
       setContacts(allContacts);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const normalizedGroups = (groupsList as any[]).map((g: any) => ({
+        ...g,
+        id: g.id || g._id || '',
+      }));
+      setGroups(normalizedGroups);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
       setError('Não foi possível carregar canais e contatos. Tente novamente.');
@@ -204,8 +211,15 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       newErrors.message = 'Mensagem é obrigatória';
     if (formData.message.length > 2000)
       newErrors.message = 'Mensagem não pode ter mais de 2000 caracteres';
-    if (formData.channelIds.length === 0)
-      newErrors.channels = 'Selecione pelo menos um canal';
+
+    if (formData.sourceType === 'CHANNEL') {
+      if (formData.channelIds.length === 0)
+        newErrors.channels = 'Selecione pelo menos um canal';
+    } else {
+      if (!formData.groupId)
+        newErrors.group = 'Selecione um grupo';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -240,7 +254,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
       const campaign = await campaignService.createCampaign(formData);
 
-      if (formData.contactIds.length > 0) {
+      const hasRecipients = formData.sourceType === 'GROUP'
+        ? !!formData.groupId
+        : formData.contactIds.length > 0;
+
+      if (hasRecipients) {
         await campaignService.runCampaign(campaign.id);
         await campaignService.processJobs();
       }
@@ -266,6 +284,20 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     onClose();
   };
 
+  const handleSourceTypeChange = (newSourceType: 'CHANNEL' | 'GROUP') => {
+    setFormData((prev) => {
+      const next: CreateCampaignInput = {
+        ...prev,
+        sourceType: newSourceType,
+        channelIds: [],
+        contactIds: [],
+      };
+      delete next.groupId;
+      return next;
+    });
+    setErrors({});
+  };
+
   const toggleChannel = (channelId: string) => {
     const isRemoving = formData.channelIds.includes(channelId);
     setFormData((prev) => {
@@ -273,7 +305,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         ? prev.channelIds.filter((id) => id !== channelId)
         : [...prev.channelIds, channelId];
 
-      // Auto-select/deselect contacts of this channel
       const channelContactIds = new Set(
         contacts
           .filter((c) => c.identities?.some((i) => i.channelId === channelId))
@@ -289,6 +320,19 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       return { ...prev, channelIds: newChannelIds, contactIds: newContactIds };
     });
     clearFieldError('channels');
+  };
+
+  const selectGroup = (gId: string) => {
+    setFormData((prev) => {
+      const next: CreateCampaignInput = { ...prev };
+      if (prev.groupId === gId) {
+        delete next.groupId;
+      } else {
+        next.groupId = gId;
+      }
+      return next;
+    });
+    clearFieldError('group');
   };
 
   const toggleContact = (contactId: string) => {
@@ -318,7 +362,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     });
   }, [contacts, contactFilter]);
 
-  // ── Success screen ──────────────────────────────────────────────────────────
+  const selectedGroup = useMemo(
+    () => groups.find((g) => g.id === formData.groupId),
+    [groups, formData.groupId],
+  );
+
   if (dispatchResult) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title="Campanha Disparada" size="sm">
@@ -375,7 +423,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     );
   }
 
-  // ── Main form ───────────────────────────────────────────────────────────────
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Nova Campanha" size="lg">
       {loadingData ? (
@@ -396,7 +443,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             </div>
           )}
 
-          {/* ── Section 1: Informações ── */}
           <section>
             <SectionHeader step={1} label="Informações" />
             <div className="space-y-4">
@@ -433,7 +479,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             </div>
           </section>
 
-          {/* ── Section 2: Mensagem ── */}
           <section>
             <SectionHeader step={2} label="Mensagem" />
             <div>
@@ -465,255 +510,394 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             </div>
           </section>
 
-          {/* ── Section 3: Canais ── */}
+          {/* Step 3: Source type toggle */}
           <section>
-            <SectionHeader step={3} label="Canais de Envio" />
-            {channels.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-                <MessageCircle size={24} className="text-slate-300 dark:text-slate-600" />
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                  Nenhum canal disponível
-                </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Configure seus canais primeiro nas configurações
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {channels.map((channel) => {
-                  const isSelected = formData.channelIds.includes(channel.id);
-                  const isWhatsApp = channel.type === 'WHATSAPP';
-                  const channelContacts = contacts.filter((c) =>
-                    c.identities?.some((i) => i.channelId === channel.id),
-                  );
-
-                  return (
-                    <div
-                      key={channel.id}
-                      onClick={() => toggleChannel(channel.id)}
-                      className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                        isSelected
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
-                      }`}
-                    >
-                      {/* Channel icon */}
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          isWhatsApp
-                            ? 'bg-green-100 dark:bg-green-900/30'
-                            : 'bg-pink-100 dark:bg-pink-900/30'
-                        }`}
-                      >
-                        {isWhatsApp ? (
-                          <MessageCircle size={18} className="text-green-600 dark:text-green-400" />
-                        ) : (
-                          <Smartphone size={18} className="text-pink-600 dark:text-pink-400" />
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                          {channel.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span
-                            className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                              isWhatsApp
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                                : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
-                            }`}
-                          >
-                            {isWhatsApp ? 'WhatsApp' : 'Instagram'}
-                          </span>
-                          <span className="text-xs text-slate-400 dark:text-slate-500">
-                            {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Selection indicator */}
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-500'
-                            : 'border-slate-300 dark:border-slate-600'
-                        }`}
-                      >
-                        {isSelected && <CheckCircle2 size={12} className="text-white" />}
-                      </div>
-
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <FieldError msg={errors.channels} />
-          </section>
-
-          {/* ── Section 4: Destinatários ── */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <SectionHeader step={4} label="Destinatários" inline />
-                {formData.contactIds.length > 0 && (
-                  <span className="text-xs font-normal bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
-                    {formData.contactIds.length} selecionado
-                    {formData.contactIds.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-              {contacts.length > 0 && (
-                <div className="flex gap-3">
+            <SectionHeader step={3} label="Origem dos Destinatários" />
+            <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5 w-full">
+              {([
+                { value: 'CHANNEL' as const, label: 'Canal', icon: MessageCircle },
+                { value: 'GROUP' as const, label: 'Grupo', icon: Users },
+              ]).map((opt) => {
+                const isActive = formData.sourceType === opt.value;
+                const Icon = opt.icon;
+                return (
                   <button
+                    key={opt.value}
                     type="button"
-                    onClick={selectAllContacts}
-                    disabled={contacts.length === 0}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 disabled:opacity-40 font-medium transition-colors"
+                    onClick={() => handleSourceTypeChange(opt.value)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all select-none ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
                   >
-                    Selecionar todos
+                    <Icon size={16} />
+                    {opt.label}
                   </button>
-                  <button
-                    type="button"
-                    onClick={deselectAllContacts}
-                    disabled={formData.contactIds.length === 0}
-                    className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 transition-colors"
-                  >
-                    Limpar
-                  </button>
-                </div>
-              )}
+                );
+              })}
             </div>
 
-            {contacts.length === 0 ? (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                    Nenhum contato disponível
-                  </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                    Adicione contatos antes de criar uma campanha.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Search */}
-                <div className="relative mb-3">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    value={contactFilter}
-                    onChange={(e) => setContactFilter(e.target.value)}
-                    placeholder="Buscar por nome ou número..."
-                    className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white text-sm transition-colors placeholder:text-slate-400"
-                  />
-                  {contactFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setContactFilter('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 -mt-3 mb-4">
+              {formData.sourceType === 'CHANNEL'
+                ? 'Selecione um canal e escolha os contatos para envio.'
+                : 'Selecione um grupo existente — os contatos dele serão usados automaticamente.'}
+            </p>
 
-                {/* Contact list */}
-                <div className="max-h-56 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {filteredContacts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 gap-2 text-slate-400">
-                      <Users size={20} className="opacity-50" />
-                      <p className="text-sm">Nenhum contato encontrado</p>
-                    </div>
-                  ) : (
-                    filteredContacts.map((contact) => {
-                      const isChecked = formData.contactIds.includes(contact.id);
-                      const initials = getInitials(contact.displayName || 'U');
+            {/* CHANNEL mode: channel selection */}
+            {formData.sourceType === 'CHANNEL' && (
+              <>
+                {channels.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                    <MessageCircle size={24} className="text-slate-300 dark:text-slate-600" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                      Nenhum canal disponível
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Configure seus canais primeiro nas configurações
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {channels.map((channel) => {
+                      const isSelected = formData.channelIds.includes(channel.id);
+                      const isWhatsApp = channel.type === 'WHATSAPP';
+                      const channelContacts = contacts.filter((c) =>
+                        c.identities?.some((i) => i.channelId === channel.id),
+                      );
+
                       return (
-                        <label
-                          key={contact.id}
-                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                            isChecked
-                              ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        <div
+                          key={channel.id}
+                          onClick={() => toggleChannel(channel.id)}
+                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleContact(contact.id)}
-                            className="sr-only"
-                          />
-                          {/* Avatar */}
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors ${
-                              isChecked
-                                ? 'bg-indigo-500 text-white'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              isWhatsApp
+                                ? 'bg-green-100 dark:bg-green-900/30'
+                                : 'bg-pink-100 dark:bg-pink-900/30'
                             }`}
                           >
-                            {initials || 'U'}
+                            {isWhatsApp ? (
+                              <MessageCircle size={18} className="text-green-600 dark:text-green-400" />
+                            ) : (
+                              <Smartphone size={18} className="text-pink-600 dark:text-pink-400" />
+                            )}
                           </div>
-                          {/* Info */}
+
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                              {contact.displayName || 'Sem nome'}
+                              {channel.name}
                             </p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                              {getContactIdentifier(contact)}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span
+                                className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                  isWhatsApp
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                    : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
+                                }`}
+                              >
+                                {isWhatsApp ? 'WhatsApp' : 'Instagram'}
+                              </span>
+                              <span className="text-xs text-slate-400 dark:text-slate-500">
+                                {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
                           </div>
-                          {/* Checkbox indicator */}
+
                           <div
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-                              isChecked
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                              isSelected
                                 ? 'border-indigo-500 bg-indigo-500'
                                 : 'border-slate-300 dark:border-slate-600'
                             }`}
                           >
-                            {isChecked && (
-                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                <path
-                                  d="M1 4L3.5 6.5L9 1"
-                                  stroke="white"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            )}
+                            {isSelected && <CheckCircle2 size={12} className="text-white" />}
                           </div>
-                        </label>
+                        </div>
                       );
-                    })
-                  )}
-                </div>
-
-                {contactFilter && (
-                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                    {filteredContacts.length} de {contacts.length} contatos
-                  </p>
+                    })}
+                  </div>
                 )}
+                <FieldError msg={errors.channels} />
+              </>
+            )}
 
-                {formData.contactIds.length === 0 && (
-                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    Sem destinatários — a campanha será criada mas não enviará mensagens.
-                  </p>
+            {/* GROUP mode: group selection */}
+            {formData.sourceType === 'GROUP' && (
+              <>
+                {groups.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+                    <Users size={24} className="text-slate-300 dark:text-slate-600" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                      Nenhum grupo disponível
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Crie um grupo de contatos primeiro
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {groups.map((group) => {
+                      const isSelected = formData.groupId === group.id;
+                      const isManual = group.type === 'MANUAL';
+                      const count = group.memberCount ?? group.memberContactIds?.length ?? 0;
+                      return (
+                        <div
+                          key={group.id}
+                          onClick={() => selectGroup(group.id)}
+                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/50 shadow-sm shadow-indigo-500/10'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                          }`}
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            isSelected
+                              ? 'bg-indigo-500 dark:bg-indigo-600'
+                              : isManual
+                                ? 'bg-violet-100 dark:bg-violet-900/30'
+                                : 'bg-cyan-100 dark:bg-cyan-900/30'
+                          }`}>
+                            <Users size={18} className={
+                              isSelected
+                                ? 'text-white'
+                                : isManual
+                                  ? 'text-violet-600 dark:text-violet-400'
+                                  : 'text-cyan-600 dark:text-cyan-400'
+                            } />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                              {group.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                isManual
+                                  ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400'
+                                  : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400'
+                              }`}>
+                                {isManual ? 'Manual' : 'Dinâmico'}
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <Users size={11} className="opacity-60" />
+                                {count} contato{count !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                              isSelected
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-slate-300 dark:border-slate-600'
+                            }`}
+                          >
+                            {isSelected && <CheckCircle2 size={12} className="text-white" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
+                <FieldError msg={errors.group} />
+
+                {selectedGroup && (() => {
+                  const count = selectedGroup.memberCount ?? selectedGroup.memberContactIds?.length ?? 0;
+                  return (
+                    <div className="mt-4 p-4 bg-linear-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/30 border border-indigo-200/80 dark:border-indigo-800/60 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500 dark:bg-indigo-600 flex items-center justify-center shrink-0">
+                          <CheckCircle2 size={20} className="text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                            {selectedGroup.name}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Os contatos deste grupo serão usados automaticamente
+                          </p>
+                        </div>
+                        <div className="text-center shrink-0 px-3">
+                          <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">
+                            {count}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wider text-indigo-500/70 dark:text-indigo-400/60 font-semibold">
+                            {count === 1 ? 'contato' : 'contatos'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
           </section>
 
-          {/* ── Section 5: Agendamento ── */}
+          {/* Step 4: Contact selection (only for CHANNEL mode) */}
+          {formData.sourceType === 'CHANNEL' && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <SectionHeader step={4} label="Destinatários" inline />
+                  {formData.contactIds.length > 0 && (
+                    <span className="text-xs font-normal bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                      {formData.contactIds.length} selecionado
+                      {formData.contactIds.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                {contacts.length > 0 && (
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={selectAllContacts}
+                      disabled={contacts.length === 0}
+                      className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 disabled:opacity-40 font-medium transition-colors"
+                    >
+                      Selecionar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deselectAllContacts}
+                      disabled={formData.contactIds.length === 0}
+                      className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 transition-colors"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {contacts.length === 0 ? (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                  <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                      Nenhum contato disponível
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      Adicione contatos antes de criar uma campanha.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-3">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={16}
+                    />
+                    <input
+                      type="text"
+                      value={contactFilter}
+                      onChange={(e) => setContactFilter(e.target.value)}
+                      placeholder="Buscar por nome ou número..."
+                      className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white text-sm transition-colors placeholder:text-slate-400"
+                    />
+                    {contactFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setContactFilter('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/80">
+                    {filteredContacts.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-8 gap-2 text-slate-400">
+                        <Users size={20} className="opacity-50" />
+                        <p className="text-sm">Nenhum contato encontrado</p>
+                      </div>
+                    ) : (
+                      filteredContacts.map((contact) => {
+                        const isChecked = formData.contactIds.includes(contact.id);
+                        const initials = getInitials(contact.displayName || 'U');
+                        return (
+                          <label
+                            key={contact.id}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                              isChecked
+                                ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleContact(contact.id)}
+                              className="sr-only"
+                            />
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors ${
+                                isChecked
+                                  ? 'bg-indigo-500 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                              }`}
+                            >
+                              {initials || 'U'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                                {contact.displayName || 'Sem nome'}
+                              </p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                                {getContactIdentifier(contact)}
+                              </p>
+                            </div>
+                            <div
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+                                isChecked
+                                  ? 'border-indigo-500 bg-indigo-500'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
+                            >
+                              {isChecked && (
+                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                  <path
+                                    d="M1 4L3.5 6.5L9 1"
+                                    stroke="white"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {contactFilter && (
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                      {filteredContacts.length} de {contacts.length} contatos
+                    </p>
+                  )}
+
+                  {formData.contactIds.length === 0 && (
+                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      Sem destinatários — a campanha será criada mas não enviará mensagens.
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
           <section>
-            <SectionHeader step={5} label="Agendamento" />
+            <SectionHeader step={formData.sourceType === 'CHANNEL' ? 5 : 4} label="Agendamento" />
             <div className="space-y-4">
               {/* Frequencia */}
               <div>
@@ -751,7 +935,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 </div>
               </div>
 
-              {/* Data (somente para dia especifico) */}
               {formData.frequency === 'ONCE' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -772,7 +955,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                       if (v.length >= 5) v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
                       else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
 
-                      // Converte dd/mm/yyyy para yyyy-mm-dd para o backend
                       const parts = v.split('/');
                       if (parts.length === 3 && parts[2]?.length === 4) {
                         setFormData({ ...formData, scheduledDate: `${parts[2]}-${parts[1]}-${parts[0]}` });
@@ -785,7 +967,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 </div>
               )}
 
-              {/* Hora de execucao */}
               {formData.frequency && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -816,7 +997,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             </div>
           </section>
 
-          {/* ── Footer ── */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"

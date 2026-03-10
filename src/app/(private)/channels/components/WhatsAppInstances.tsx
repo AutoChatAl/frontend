@@ -10,10 +10,12 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useWhatsAppInstances } from '@/hooks/ChannelHook';
 
 export default function WhatsAppInstances() {
   const { instances, loading, createInstance, connectInstance, getQRCode, getStatus, deleteInstance, refetch } = useWhatsAppInstances();
+  const { refetchWhatsApp } = useChannelStatus();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function WhatsAppInstances() {
     try {
       await getStatus(String(id));
       await refetch();
+      await refetchWhatsApp();
     } catch (_error) {
       // Handle error silently
     }
@@ -43,6 +46,7 @@ export default function WhatsAppInstances() {
     setDeleting(true);
     try {
       await deleteInstance(deleteTarget);
+      await refetchWhatsApp();
       addToast('success', 'Instância deletada com sucesso.');
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erro ao deletar instância.');
@@ -95,6 +99,7 @@ export default function WhatsAppInstances() {
           onClose={() => {
             setShowCreateModal(false);
             refetch();
+            refetchWhatsApp();
           }}
           onCreate={createInstance}
           onConnect={connectInstance}
@@ -108,6 +113,7 @@ export default function WhatsAppInstances() {
             setShowQRModal(false);
             setSelectedChannelId(null);
             refetch();
+            refetchWhatsApp();
           }}
           channelId={selectedChannelId}
           onGetQRCode={getQRCode}

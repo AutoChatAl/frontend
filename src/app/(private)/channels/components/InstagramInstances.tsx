@@ -8,10 +8,12 @@ import ChannelInstanceCard from './ChannelInstanceCard';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
 
 export default function InstagramInstances() {
   const { accounts, loading, deleteAccount, getOAuthUrl, refetch } = useInstagramAccounts();
+  const { refetchInstagram } = useChannelStatus();
   const [connecting, setConnecting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -38,6 +40,7 @@ export default function InstagramInstances() {
           clearInterval(checkPopup);
           setConnecting(false);
           refetch();
+          refetchInstagram();
         }
       }, 500);
     } catch (error) {
@@ -55,6 +58,7 @@ export default function InstagramInstances() {
     setDeleting(true);
     try {
       await deleteAccount(deleteTarget);
+      await refetchInstagram();
       addToast('success', 'Conta desconectada com sucesso.');
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erro ao desconectar conta.');
@@ -66,6 +70,7 @@ export default function InstagramInstances() {
 
   const handleRefresh = () => {
     refetch();
+    refetchInstagram();
   };
 
   if (loading && accounts.length === 0) {

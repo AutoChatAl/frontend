@@ -64,8 +64,10 @@ export interface CreateCampaignInput {
   name: string;
   description?: string;
   status?: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+  sourceType: 'CHANNEL' | 'GROUP';
   message: string;
   channelIds: string[];
+  groupId?: string;
   contactIds: string[];
   messageType?: 'TEXT' | 'GENERIC_TEMPLATE';
   messageMeta?: {

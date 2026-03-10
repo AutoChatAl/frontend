@@ -2,12 +2,17 @@
 
 import { Menu, Sun, Moon, Bell } from 'lucide-react';
 
+import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Header() {
   const { activeTab, menuItems, setMobileMenuOpen } = useSidebar();
   const { darkMode, toggleTheme } = useTheme();
+  const { whatsappInstances, instagramAccounts } = useChannelStatus();
+
+  const hasWhatsAppConnected = whatsappInstances.some((i) => i.status === 'CONNECTED');
+  const hasInstagramConnected = instagramAccounts.some((a) => a.status === 'CONNECTED');
 
   return (
     <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-8 z-10 sticky top-0 transition-colors duration-300">
@@ -25,16 +30,22 @@ export default function Header() {
 
       <div className="flex items-center gap-3 md:gap-6">
         <div className="hidden sm:flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-100 dark:border-emerald-800/50">
-            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-            Whatsapp Conectado
-          </div>
-          <div className="flex items-center gap-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 px-3 py-1.5 rounded-full text-xs font-medium border border-fuchsia-100 dark:border-fuchsia-800/50">
-            <div className="w-1.5 h-1.5 bg-fuchsia-500 rounded-full animate-pulse"></div>
-            Instagram Conectado
-          </div>
+          {hasWhatsAppConnected && (
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-100 dark:border-emerald-800/50">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+              WhatsApp Conectado
+            </div>
+          )}
+          {hasInstagramConnected && (
+            <div className="flex items-center gap-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 px-3 py-1.5 rounded-full text-xs font-medium border border-fuchsia-100 dark:border-fuchsia-800/50">
+              <div className="w-1.5 h-1.5 bg-fuchsia-500 rounded-full animate-pulse"></div>
+              Instagram Conectado
+            </div>
+          )}
         </div>
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+        {(hasWhatsAppConnected || hasInstagramConnected) && (
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+        )}
 
         <button
           onClick={toggleTheme}
