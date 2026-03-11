@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot } from 'lucide-react';
+import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
@@ -53,6 +53,7 @@ export function SidebarProvider({
     { id: 'channels', icon: Share2, text: 'Canais', href: '/channels' },
     { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns' },
     { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts' },
+    { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies' },
     { id: 'ia', icon: Bot, text: 'IA', href: '/ia' },
     { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
   ];

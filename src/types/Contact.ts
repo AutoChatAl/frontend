@@ -30,6 +30,8 @@ export interface Contact {
 export interface ListContactsParams {
   search?: string;
   channelId?: string;
+  tagName?: string;
+  tagIds?: string;
   skip?: number;
   limit?: number;
 }

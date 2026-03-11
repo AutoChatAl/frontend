@@ -17,7 +17,7 @@ import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
-import type { WhatsAppInstance } from '@/types/Channel';
+import type { WhatsAppInstance, InstagramAccount } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 
 const PAGE_SIZE = 50;
@@ -26,6 +26,7 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
   const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppInstance[]>([]);
+  const [instagramChannels, setInstagramChannels] = useState<InstagramAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,11 @@ export default function ContactsPage() {
     Promise.all([
       fetchContacts('', 0, false),
       channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
-    ]).then(([, waChannels]) => setWhatsappChannels(waChannels));
+      channelsService.getInstagramAccounts().catch(() => [] as InstagramAccount[]),
+    ]).then(([, waChannels, igChannels]) => {
+      setWhatsappChannels(waChannels);
+      setInstagramChannels(igChannels);
+    });
   }, []);
 
   const handleSearchChange = useCallback(
@@ -138,7 +143,7 @@ export default function ContactsPage() {
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors shadow-sm"
         >
           <RefreshCw size={15} />
-          Sincronizar WhatsApp
+          Sincronizar Contatos
         </button>
       </header>
 
@@ -152,7 +157,7 @@ export default function ContactsPage() {
               Nenhum contato ainda
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Sincronize contatos via WhatsApp ou aguarde interações chegarem.
+              Sincronize contatos via WhatsApp ou Instagram, ou aguarde interações chegarem.
             </p>
           </div>
           <button
@@ -160,7 +165,7 @@ export default function ContactsPage() {
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
           >
             <RefreshCw size={15} />
-            Sincronizar WhatsApp
+            Sincronizar Contatos
           </button>
         </div>
       ) : (
@@ -193,6 +198,7 @@ export default function ContactsPage() {
           addToast('success', `Você tem ${result.created} sincronizados via WhatsApp.`);
         }}
         whatsappChannels={whatsappChannels}
+        instagramChannels={instagramChannels}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

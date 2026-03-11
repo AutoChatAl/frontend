@@ -1,14 +1,18 @@
 interface ToggleSwitchProps {
+  checked?: boolean;
   defaultChecked?: boolean;
   onChange?: (checked: boolean) => void;
 }
 
-export default function ToggleSwitch({ defaultChecked = false, onChange }: ToggleSwitchProps) {
+export default function ToggleSwitch({ checked, defaultChecked = false, onChange }: ToggleSwitchProps) {
+  // Use controlled mode if `checked` is provided, otherwise fallback to uncontrolled
+  const isControlled = checked !== undefined;
+
   return (
     <label className="relative inline-flex items-center cursor-pointer">
       <input
         type="checkbox"
-        defaultChecked={defaultChecked}
+        {...(isControlled ? { checked } : { defaultChecked })}
         onChange={onChange ? (e) => onChange(e.target.checked) : undefined}
         className="sr-only peer"
       />
