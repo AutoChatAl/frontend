@@ -3,7 +3,6 @@
 
 import {
   AlertCircle,
-  Loader2,
   MoreVertical,
   RefreshCw,
   Users,
@@ -13,6 +12,10 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { columns } from './components/ContactColumns';
 import SyncContactsModal from './components/SyncContactsModal';
 
+import Button from '@/components/Button';
+import EmptyState from '@/components/EmptyState';
+import IconButton from '@/components/IconButton';
+import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { channelsService } from '@/services/channels.service';
@@ -93,14 +96,7 @@ export default function ContactsPage() {
   const hasMore = contacts.length < total;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-indigo-500" size={28} />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Carregando contatos...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Carregando contatos..." />;
   }
 
   if (error && contacts.length === 0) {
@@ -111,12 +107,7 @@ export default function ContactsPage() {
             <AlertCircle size={20} />
             <span className="text-sm font-medium">{error}</span>
           </div>
-          <button
-            onClick={() => fetchContacts('', 0, false)}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors"
-          >
-            Tentar novamente
-          </button>
+          <Button onClick={() => fetchContacts('', 0, false)} size="sm">Tentar novamente</Button>
         </div>
       </div>
     );
@@ -137,36 +128,22 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsSyncModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors shadow-sm"
-        >
-          <RefreshCw size={15} />
+        <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => setIsSyncModalOpen(true)}>
           Sincronizar Contatos
-        </button>
+        </Button>
       </header>
 
       {contacts.length === 0 && !query ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 gap-4">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
-            <Users size={22} />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Nenhum contato ainda
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Sincronize contatos via WhatsApp ou Instagram, ou aguarde interações chegarem.
-            </p>
-          </div>
-          <button
-            onClick={() => setIsSyncModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
-          >
-            <RefreshCw size={15} />
-            Sincronizar Contatos
-          </button>
-        </div>
+        <EmptyState
+          icon={<Users size={22} />}
+          title="Nenhum contato ainda"
+          description="Sincronize contatos via WhatsApp ou Instagram, ou aguarde interações chegarem."
+          action={{
+            label: 'Sincronizar Contatos',
+            icon: <RefreshCw size={15} />,
+            onClick: () => setIsSyncModalOpen(true),
+          }}
+        />
       ) : (
         <Table
           columns={columns}
@@ -179,9 +156,7 @@ export default function ContactsPage() {
             },
           }}
           renderActions={() => (
-            <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-              <MoreVertical size={16} />
-            </button>
+            <IconButton icon={<MoreVertical size={16} />} />
           )}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}

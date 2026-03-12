@@ -3,7 +3,6 @@
 
 import {
   AlertCircle,
-  Loader2,
   MessageCircle,
   Plus,
   Reply,
@@ -13,7 +12,12 @@ import { useEffect, useState, useCallback } from 'react';
 
 import CreateAutoReplyModal from './components/CreateAutoReplyModal';
 
+import Badge from '@/components/Badge';
+import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import EmptyState from '@/components/EmptyState';
+import IconButton from '@/components/IconButton';
+import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import { autoReplyService } from '@/services/auto-reply.service';
@@ -86,14 +90,7 @@ export default function AutoRepliesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-indigo-500" size={28} />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Carregando auto-respostas...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Carregando auto-respostas..." />;
   }
 
   if (error && rules.length === 0) {
@@ -104,12 +101,7 @@ export default function AutoRepliesPage() {
             <AlertCircle size={20} />
             <span className="text-sm font-medium">{error}</span>
           </div>
-          <button
-            onClick={fetchRules}
-            className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors"
-          >
-            Tentar novamente
-          </button>
+          <Button onClick={fetchRules} size="sm">Tentar novamente</Button>
         </div>
       </div>
     );
@@ -130,36 +122,22 @@ export default function AutoRepliesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-colors shadow-sm shadow-indigo-500/20"
-        >
-          <Plus size={16} />
+        <Button icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
           Nova Auto-Resposta
-        </button>
+        </Button>
       </header>
 
       {rules.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 gap-4">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
-            <Reply size={22} />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Nenhuma auto-resposta configurada
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Crie regras para responder automaticamente quando um contato enviar uma palavra-chave.
-            </p>
-          </div>
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
-          >
-            <Plus size={15} />
-            Criar primeira regra
-          </button>
-        </div>
+        <EmptyState
+          icon={<Reply size={22} />}
+          title="Nenhuma auto-resposta configurada"
+          description="Crie regras para responder automaticamente quando um contato enviar uma palavra-chave."
+          action={{
+            label: 'Criar primeira regra',
+            icon: <Plus size={15} />,
+            onClick: () => setIsCreateOpen(true),
+          }}
+        />
       ) : (
         <div className="grid gap-4">
           {rules.map((rule) => {
@@ -181,20 +159,10 @@ export default function AutoRepliesPage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          isWA
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                            : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
-                        }`}>
-                          {isWA ? 'WhatsApp' : 'Instagram'}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-                          {MATCH_MODE_LABELS[rule.matchMode] || rule.matchMode}
-                        </span>
+                        <Badge type={isWA ? 'whatsapp' : 'instagram'} text={isWA ? 'WhatsApp' : 'Instagram'} pill />
+                        <Badge type="neutral" text={MATCH_MODE_LABELS[rule.matchMode] || rule.matchMode} pill />
                         {rule.caseSensitive && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                            Aa
-                          </span>
+                          <Badge type="warning" text="Aa" pill />
                         )}
                       </div>
 
@@ -220,12 +188,12 @@ export default function AutoRepliesPage() {
                       checked={rule.enabled}
                       onChange={() => handleToggle(rule)}
                     />
-                    <button
+                    <IconButton
+                      icon={<Trash2 size={16} />}
                       onClick={() => setDeleteTarget(rule)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                      variant="danger"
+                      size="md"
+                    />
                   </div>
                 </div>
               </div>

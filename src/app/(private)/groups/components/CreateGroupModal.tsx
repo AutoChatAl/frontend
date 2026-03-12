@@ -4,6 +4,7 @@ import { Search, MessageCircle, Smartphone, Check } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 
 import Button from '@/components/Button';
+import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
 import type { Contact } from '@/types/Contact';
@@ -92,34 +93,24 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Criar Novo Grupo" size="md">
       <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Nome do grupo
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: VIP Black Friday"
-            className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            autoFocus
-          />
-        </div>
+        <Input
+          label="Nome do grupo"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ex: VIP Black Friday"
+          autoFocus
+        />
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-            Selecionar contatos
-          </label>
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Buscar contatos por nome ou telefone..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+          <Input
+            label="Selecionar contatos"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Buscar contatos por nome ou telefone..."
+            leftIcon={<Search size={16} />}
+          />
 
           {searching && (
             <p className="text-xs text-slate-400 mt-2">Buscando...</p>

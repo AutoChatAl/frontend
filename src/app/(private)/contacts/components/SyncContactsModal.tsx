@@ -3,7 +3,6 @@
 
 import {
   AlertTriangle,
-  Loader2,
   MessageCircle,
   RefreshCw,
   X,
@@ -11,6 +10,7 @@ import {
 import { useState } from 'react';
 
 import Modal from '@/components/Modal';
+import ModalActions from '@/components/ModalActions';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance, InstagramAccount } from '@/types/Channel';
 
@@ -240,30 +240,15 @@ export default function SyncContactsModal({
           }
         </p>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={syncing}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSync}
-            disabled={!selectedChannelId || syncing}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-500/25"
-          >
-            {syncing ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
-            {syncing ? 'Sincronizando...' : 'Sincronizar'}
-          </button>
-        </div>
+        <ModalActions
+          onCancel={handleClose}
+          onConfirm={handleSync}
+          confirmLabel="Sincronizar"
+          confirmIcon={<RefreshCw size={16} />}
+          loading={syncing}
+          loadingText="Sincronizando..."
+          disabled={!selectedChannelId}
+        />
       </div>
     </Modal>
   );

@@ -3,6 +3,7 @@
 import { ArrowUpRight, MessageCircle, MoreVertical, Smartphone, Trash2, Users } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
+import Badge from '@/components/Badge';
 import Card from '@/components/Card';
 
 interface GroupCardProps {
@@ -48,16 +49,10 @@ export default function GroupCard({
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-1.5">
           {channelTypes?.includes('WHATSAPP') && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
-              <MessageCircle size={12} />
-              WhatsApp
-            </span>
+            <Badge type="whatsapp" text="WhatsApp" icon={MessageCircle} pill />
           )}
           {channelTypes?.includes('INSTAGRAM') && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300">
-              <Smartphone size={12} />
-              Instagram
-            </span>
+            <Badge type="instagram" text="Instagram" icon={Smartphone} pill />
           )}
         </div>
         <div className="relative" ref={menuRef}>

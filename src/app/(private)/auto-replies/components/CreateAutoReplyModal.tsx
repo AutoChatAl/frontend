@@ -9,7 +9,11 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
+import Checkbox from '@/components/Checkbox';
+import Input from '@/components/Input';
 import Modal from '@/components/Modal';
+import ModalActions from '@/components/ModalActions';
+import Textarea from '@/components/Textarea';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { channelsService } from '@/services/channels.service';
 import type { CreateAutoReplyInput } from '@/types/AutoReply';
@@ -33,14 +37,6 @@ const MATCH_MODES = [
   { value: 'EXACT', label: 'Exata', description: 'A mensagem é exatamente a palavra-chave' },
   { value: 'STARTS_WITH', label: 'Começa com', description: 'A mensagem começa com a palavra-chave' },
 ] as const;
-
-function inputCls(hasError: boolean) {
-  return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${
-    hasError
-      ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
-      : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'
-  }`;
-}
 
 export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: CreateAutoReplyModalProps) {
   const [loading, setLoading] = useState(false);
@@ -214,26 +210,17 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Palavra-chave / Frase
-          </label>
-          <input
-            type="text"
-            value={formData.keyword}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, keyword: e.target.value }));
-              setErrors((prev) => ({ ...prev, keyword: '' }));
-            }}
-            placeholder="Ex: eu quero, quero comprar, me ajuda..."
-            className={inputCls(!!errors.keyword)}
-          />
-          {errors.keyword && (
-            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} /> {errors.keyword}
-            </p>
-          )}
-        </div>
+        <Input
+          label="Palavra-chave / Frase"
+          type="text"
+          value={formData.keyword}
+          onChange={(e) => {
+            setFormData((prev) => ({ ...prev, keyword: e.target.value }));
+            setErrors((prev) => ({ ...prev, keyword: '' }));
+          }}
+          placeholder="Ex: eu quero, quero comprar, me ajuda..."
+          error={errors.keyword}
+        />
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -258,38 +245,24 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         </div>
 
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.caseSensitive}
-            onChange={(e) => setFormData((prev) => ({ ...prev, caseSensitive: e.target.checked }))}
-            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            Diferenciar maiúsculas/minúsculas
-          </span>
-        </label>
+        <Checkbox
+          checked={formData.caseSensitive ?? false}
+          onChange={(checked) => setFormData((prev) => ({ ...prev, caseSensitive: checked }))}
+          label="Diferenciar maiúsculas/minúsculas"
+          description="A palavra-chave será sensível a maiúsculas e minúsculas"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Mensagem de resposta
-          </label>
-          <textarea
-            value={formData.replyMessage}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, replyMessage: e.target.value }));
-              setErrors((prev) => ({ ...prev, replyMessage: '' }));
-            }}
-            placeholder="Ex: Aqui está seu link do Pix: https://pix.exemplo.com/12345"
-            rows={4}
-            className={inputCls(!!errors.replyMessage)}
-          />
-          {errors.replyMessage && (
-            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} /> {errors.replyMessage}
-            </p>
-          )}
-        </div>
+        <Textarea
+          label="Mensagem de resposta"
+          value={formData.replyMessage}
+          onChange={(e) => {
+            setFormData((prev) => ({ ...prev, replyMessage: e.target.value }));
+            setErrors((prev) => ({ ...prev, replyMessage: '' }));
+          }}
+          placeholder="Ex: Aqui está seu link do Pix: https://pix.exemplo.com/12345"
+          rows={4}
+          error={errors.replyMessage}
+        />
 
         {formData.keyword && formData.replyMessage && (
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -315,25 +288,14 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 shadow-sm shadow-indigo-500/25"
-          >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Reply size={16} />}
-            {loading ? 'Criando...' : 'Criar Auto-Resposta'}
-          </button>
-        </div>
+        <ModalActions
+          onCancel={onClose}
+          onConfirm={handleSubmit}
+          confirmLabel="Criar Auto-Resposta"
+          confirmIcon={<Reply size={16} />}
+          loading={loading}
+          loadingText="Criando..."
+        />
       </div>
     </Modal>
   );

@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 
 import AuthShell from '../components/AuthShell';
 
+import Checkbox from '@/components/Checkbox';
+import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
 
 export default function RegisterPage() {
@@ -59,86 +61,77 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Nome Completo</label>
-          <input
-            type="text"
-            name="name"
-            placeholder="João Silva"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all bg-white text-slate-900"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Nome da Empresa</label>
-          <input
-            type="text"
-            name="workspaceName"
-            placeholder="Minha Loja Ltda"
-            value={formData.workspaceName}
+        <Input
+          label="Nome Completo"
+          type="text"
+          name="name"
+          placeholder="João Silva"
+          value={formData.name}
+          onChange={handleChange}
+          autoComplete="name"
+        />
+        <Input
+          label="Nome da Empresa"
+          type="text"
+          name="workspaceName"
+          placeholder="Minha Loja Ltda"
+          value={formData.workspaceName}
+          onChange={handleChange}
+          required
+          minLength={2}
+        />
+        <Input
+          label="Email"
+          type="email"
+          name="email"
+          placeholder="seu@email.com"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          autoComplete="email"
+        />
+        <div>
+          <Input
+            label="Senha"
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            placeholder="••••••••"
+            value={formData.password}
             onChange={handleChange}
             required
-            minLength={2}
-            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all bg-white text-slate-900"
+            minLength={8}
+            autoComplete="new-password"
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            }
           />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Email</label>
-          <input
-            type="email"
-            name="email"
-            placeholder="seu@email.com"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all bg-white text-slate-900"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Senha</label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={8}
-              className="w-full px-4 py-2.5 pr-11 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all bg-white text-slate-900"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
           <p className="text-xs text-slate-500 mt-1">Mínimo de 8 caracteres</p>
         </div>
 
-        <div className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            checked={acceptTerms}
-            onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className="text-xs text-slate-500">
-            Eu concordo com os{' '}
-            <a href="#" className="text-indigo-600 hover:underline">
-              Termos de Serviço
-            </a>{' '}
-            e{' '}
-            <a href="#" className="text-indigo-600 hover:underline">
-              Política de Privacidade
-            </a>
-            .
-          </span>
-        </div>
+        <Checkbox
+          checked={acceptTerms}
+          onChange={setAcceptTerms}
+          label={
+            <span className="text-xs text-slate-500">
+              Eu concordo com os{' '}
+              <a href="#" className="text-indigo-600 hover:underline">
+                Termos de Serviço
+              </a>{' '}
+              e{' '}
+              <a href="#" className="text-indigo-600 hover:underline">
+                Política de Privacidade
+              </a>
+              .
+            </span>
+          }
+        />
 
         <button
           type="submit"

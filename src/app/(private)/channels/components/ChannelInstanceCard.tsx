@@ -4,6 +4,7 @@ import { RefreshCw, Trash2, Wifi } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 import Card from '@/components/Card';
+import IconButton from '@/components/IconButton';
 
 interface ChannelInstanceCardProps {
   id: string | number;
@@ -28,16 +29,7 @@ export default function ChannelInstanceCard({
   onRefresh,
   onDelete,
 }: ChannelInstanceCardProps) {
-  const colorStyles = {
-    emerald: {
-      refresh: 'hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50',
-    },
-    fuchsia: {
-      refresh: 'hover:text-fuchsia-600 dark:hover:text-fuchsia-400 hover:bg-fuchsia-50',
-    },
-  };
-
-  const styles = colorStyles[colorClass];
+  const refreshVariant = colorClass === 'emerald' ? 'success' : 'fuchsia';
 
   return (
     <Card className="p-6 relative overflow-hidden group">
@@ -72,18 +64,16 @@ export default function ChannelInstanceCard({
       </div>
 
       <div className="absolute top-0.5 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-        <button
+        <IconButton
+          icon={<RefreshCw size={16} />}
           onClick={() => onRefresh?.(id)}
-          className={`p-1.5 text-slate-400 dark:text-slate-500 ${styles.refresh} dark:hover:bg-slate-700 rounded-lg`}
-        >
-          <RefreshCw size={16} />
-        </button>
-        <button
+          variant={refreshVariant}
+        />
+        <IconButton
+          icon={<Trash2 size={16} />}
           onClick={() => onDelete?.(id)}
-          className="p-1.5 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-700 rounded-lg"
-        >
-          <Trash2 size={16} />
-        </button>
+          variant="danger"
+        />
       </div>
     </Card>
   );

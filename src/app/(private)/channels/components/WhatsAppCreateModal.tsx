@@ -4,6 +4,7 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
+import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import type { WhatsappConnectResponse } from '@/types/Channel';
 
@@ -90,32 +91,24 @@ export default function WhatsAppCreateModal({
     case 'form':
       return (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Nome da Instância *
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Atendimento Principal"
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
-              required
-            />
-          </div>
+          <Input
+            id="name"
+            label="Nome da Instância *"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Atendimento Principal"
+            required
+          />
 
           <div>
-            <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Número do WhatsApp (opcional)
-            </label>
-            <input
+            <Input
               id="phone"
+              label="Número do WhatsApp (opcional)"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Ex: 5511999999999"
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
             />
             <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-600 dark:text-gray-400">

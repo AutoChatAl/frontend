@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
 import AddGroupCard from './components/AddGroupCard';
@@ -10,6 +10,7 @@ import ManageGroupModal from './components/ManageGroupModal';
 
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { groupService } from '@/services/group.service';
 import type { Group } from '@/types/Group';
@@ -84,9 +85,7 @@ export default function GroupsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={32} className="animate-spin text-indigo-500" />
-        </div>
+        <PageLoader message="Carregando grupos..." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map((group) => (
