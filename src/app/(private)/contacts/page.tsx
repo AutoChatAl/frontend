@@ -137,7 +137,6 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        {/* Sync button — always visible */}
         <button
           onClick={() => setIsSyncModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors shadow-sm"

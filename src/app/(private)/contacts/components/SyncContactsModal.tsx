@@ -121,7 +121,6 @@ export default function SyncContactsModal({
             </div>
           ) : (
             <div className="space-y-2">
-              {/* WhatsApp channels */}
               {connectedWA.length > 0 && (
                 <>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2 mb-1">WhatsApp</p>
@@ -179,7 +178,6 @@ export default function SyncContactsModal({
                 </>
               )}
 
-              {/* Instagram channels */}
               {connectedIG.length > 0 && (
                 <>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-3 mb-1">Instagram</p>
@@ -235,7 +233,6 @@ export default function SyncContactsModal({
           )}
         </div>
 
-        {/* Info note */}
         <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
           {selectedType === 'INSTAGRAM'
             ? 'A sincronização importará contatos das conversas do Instagram DM. Apenas quem já interagiu será importado.'
@@ -243,7 +240,6 @@ export default function SyncContactsModal({
           }
         </p>
 
-        {/* Footer */}
         <div className="flex gap-3 pt-1">
           <button
             type="button"

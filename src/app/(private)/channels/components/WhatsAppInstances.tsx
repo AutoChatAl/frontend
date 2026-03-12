@@ -33,7 +33,6 @@ export default function WhatsAppInstances() {
       await refetch();
       await refetchWhatsApp();
     } catch (_error) {
-      // Handle error silently
     }
   };
 

@@ -1,5 +1,6 @@
+import type { ErrorReason } from './ErrorCode';
+
 export type ApiError = {
-  message: string;
+  reason?: ErrorReason;
   statusCode: number;
-  errors?: Record<string, string[]>;
 };

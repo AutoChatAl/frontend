@@ -86,7 +86,6 @@ export default function WhatsAppQRModal({
         }
       }
     } catch (_err) {
-      // Silently fail status checks
     } finally {
       setCheckingStatus(false);
     }

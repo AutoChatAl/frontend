@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { channelsService } from '@/services/channels.service';
 import type { InstagramAccount, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
-import { getErrorMessage } from '@/utils/ErrorHandling';
+import { getErrorMessageFromCatch } from '@/utils/ErrorHandling';
 
 export function useWhatsAppInstances() {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
@@ -16,7 +16,7 @@ export function useWhatsAppInstances() {
       const data = await channelsService.getWhatsAppInstances();
       setInstances(data);
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao carregar instâncias'));
+      setError(getErrorMessageFromCatch(err, 'Erro ao carregar instâncias'));
     } finally {
       setLoading(false);
     }
@@ -32,7 +32,7 @@ export function useWhatsAppInstances() {
       setInstances((prev) => [...prev, response.channel]);
       return response;
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao criar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao criar instância');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -44,7 +44,7 @@ export function useWhatsAppInstances() {
       await fetchInstances();
       return response;
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao conectar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao conectar instância');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -54,7 +54,7 @@ export function useWhatsAppInstances() {
     try {
       return await channelsService.getWhatsAppQRCode(channelId);
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao obter QR Code');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao obter QR Code');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -66,7 +66,7 @@ export function useWhatsAppInstances() {
       await fetchInstances();
       return status;
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao verificar status');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao verificar status');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -77,7 +77,7 @@ export function useWhatsAppInstances() {
       await channelsService.deleteWhatsAppInstance(id);
       setInstances((prev) => prev.filter((inst) => inst.id !== id));
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao deletar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao deletar instância');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -108,7 +108,7 @@ export function useInstagramAccounts() {
       const data = await channelsService.getInstagramAccounts();
       setAccounts(data);
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao carregar contas'));
+      setError(getErrorMessageFromCatch(err, 'Erro ao carregar contas'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export function useInstagramAccounts() {
       await channelsService.deleteInstagramAccount(id);
       setAccounts((prev) => prev.filter((acc) => acc.id !== id));
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao deletar conta');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao deletar conta');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -134,7 +134,7 @@ export function useInstagramAccounts() {
       const { url } = await channelsService.getInstagramOAuthUrl();
       return url;
     } catch (err) {
-      const errorMsg = getErrorMessage(err, 'Erro ao obter URL de autenticação');
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao obter URL de autenticação');
       setError(errorMsg);
       throw new Error(errorMsg);
     }

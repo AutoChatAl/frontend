@@ -18,27 +18,27 @@ class ContactService {
     if (params?.limit != null) queryString.append('limit', String(params.limit));
 
     const url = `/contacts${queryString.toString() ? `?${queryString.toString()}` : ''}`;
-    return apiClient.get<PaginatedContacts>(url);
+    const response = await apiClient.get<PaginatedContacts>(url);
+    if (!response.success || !response.data) throw new Error('Falha ao buscar contatos. Tente novamente.');
+    return response.data as PaginatedContacts;
   }
 
   public async getContact(contactId: string): Promise<Contact> {
-    return apiClient.get<Contact>(`/contacts/${contactId}`);
+    const response = await apiClient.get<Contact>(`/contacts/${contactId}`);
+    if (!response.success || !response.data) throw new Error('Falha ao buscar contato. Tente novamente.');
+    return response.data as Contact;
   }
 
-  /**
-   * Sincroniza contatos do WhatsApp remoto para o banco local.
-   * Endpoint: POST /channels/whatsapp/:channelId/contacts/sync
-   */
   public async syncContacts(channelId: string): Promise<SyncContactsResult> {
-    return apiClient.post<SyncContactsResult>(`/channels/whatsapp/${channelId}/contacts/sync`);
+    const response = await apiClient.post<SyncContactsResult>(`/channels/whatsapp/${channelId}/contacts/sync`);
+    if (!response.success || !response.data) throw new Error('Não foi possível sincronizar os contatos. Tente novamente.');
+    return response.data as SyncContactsResult;
   }
 
-  /**
-   * Sincroniza contatos do Instagram (a partir das conversas DM).
-   * Endpoint: POST /channels/instagram/:channelId/contacts/sync
-   */
   public async syncInstagramContacts(channelId: string): Promise<{ ok: boolean; upserted: number }> {
-    return apiClient.post<{ ok: boolean; upserted: number }>(`/channels/instagram/${channelId}/contacts/sync`);
+    const response = await apiClient.post<{ ok: boolean; upserted: number }>(`/channels/instagram/${channelId}/contacts/sync`);
+    if (!response.success || !response.data) throw new Error('Não foi possível sincronizar os contatos do Instagram. Tente novamente.');
+    return response.data as { ok: boolean; upserted: number };
   }
 }
 

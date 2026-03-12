@@ -6,7 +6,6 @@ import {
   Loader2,
   MessageCircle,
   Reply,
-  X,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -14,6 +13,7 @@ import Modal from '@/components/Modal';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { channelsService } from '@/services/channels.service';
 import type { CreateAutoReplyInput } from '@/types/AutoReply';
+import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 
 interface Channel {
   id: string;
@@ -67,15 +67,13 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       ]);
 
       const allChannels: Channel[] = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...waChannels.map((ch: any) => ({
+        ...waChannels.map((ch: WhatsAppInstance) => ({
           id: ch.id,
           name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
           type: 'WHATSAPP' as const,
           status: ch.status,
         })),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...igChannels.map((ch: any) => ({
+        ...igChannels.map((ch: InstagramAccount) => ({
           id: ch.id,
           name: ch.instagram?.username || ch.name || 'Instagram',
           type: 'INSTAGRAM' as const,
@@ -152,7 +150,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         )}
 
-        {/* Canal */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Canal
@@ -217,7 +214,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           )}
         </div>
 
-        {/* Palavra-chave */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Palavra-chave / Frase
@@ -239,7 +235,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           )}
         </div>
 
-        {/* Modo de correspondência */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Modo de correspondência
@@ -263,7 +258,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         </div>
 
-        {/* Case sensitive */}
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -276,7 +270,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </span>
         </label>
 
-        {/* Mensagem de resposta */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Mensagem de resposta
@@ -298,7 +291,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           )}
         </div>
 
-        {/* Preview */}
         {formData.keyword && formData.replyMessage && (
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
@@ -323,7 +315,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         )}
 
-        {/* Footer */}
         <div className="flex gap-3 pt-2">
           <button
             type="button"

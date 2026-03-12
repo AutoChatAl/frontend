@@ -14,8 +14,8 @@ import { useEffect, useState, useCallback } from 'react';
 import CreateAutoReplyModal from './components/CreateAutoReplyModal';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import ToggleSwitch from '@/components/ToggleSwitch';
 import { ToastContainer, useToast } from '@/components/Toast';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { autoReplyService } from '@/services/auto-reply.service';
 import type { AutoReply } from '@/types/AutoReply';
 
@@ -39,7 +39,6 @@ export default function AutoRepliesPage() {
       setLoading(true);
       setError(null);
       const data = await autoReplyService.list();
-      // Normalize _id → id (lean() queries may not apply toJSON transform)
       const normalized = data.map((r: AutoReply & { _id?: string }) => ({
         ...r,
         id: r.id || r._id || '',
@@ -61,7 +60,7 @@ export default function AutoRepliesPage() {
     try {
       await autoReplyService.toggle(rule.id);
       setRules((prev) =>
-        prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
+        prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r)),
       );
       addToast('success', `Auto-resposta ${rule.enabled ? 'desativada' : 'ativada'}`);
     } catch (err) {

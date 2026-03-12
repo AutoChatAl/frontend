@@ -25,7 +25,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Add contacts sub-view
   const [showAddContacts, setShowAddContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
@@ -135,7 +134,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={group.name} size="lg">
       <div className="space-y-4">
-        {/* Header info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <Users size={14} />
@@ -152,7 +150,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
           )}
         </div>
 
-        {/* Add contacts section */}
         {showAddContacts && (
           <div className="border border-indigo-200 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10 space-y-3">
             <div className="flex items-center justify-between">
@@ -229,7 +226,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
           </div>
         )}
 
-        {/* Members list */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-200 border-t-indigo-600" />

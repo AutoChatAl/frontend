@@ -5,7 +5,6 @@ interface ToggleSwitchProps {
 }
 
 export default function ToggleSwitch({ checked, defaultChecked = false, onChange }: ToggleSwitchProps) {
-  // Use controlled mode if `checked` is provided, otherwise fallback to uncontrolled
   const isControlled = checked !== undefined;
 
   return (

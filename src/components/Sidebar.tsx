@@ -87,7 +87,6 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <aside
         className={`
           hidden md:flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 z-20
@@ -166,7 +165,6 @@ export default function Sidebar({
         </div>
       </aside>
 
-      {/* Mobile Sidebar */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></div>
       )}

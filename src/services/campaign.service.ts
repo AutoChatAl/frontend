@@ -1,11 +1,10 @@
 import type { Campaign, CampaignRun, CreateCampaignInput, UpdateCampaignInput } from '@/types/Campaign';
 import { apiClient } from '@/utils/ApiClient';
 
-interface ApiResponse<T> {
+interface BackendResponse<T> {
   data: T;
 }
 
-/** Normalize MongoDB _id → id for lean() query results */
 function normalizeId<T extends { id?: string; _id?: string }>(obj: T): T {
   if (!obj.id && obj._id) {
     return { ...obj, id: obj._id };
@@ -14,58 +13,46 @@ function normalizeId<T extends { id?: string; _id?: string }>(obj: T): T {
 }
 
 export class CampaignService {
-  /**
-   * Lista todas as campanhas
-   */
   public async listCampaigns(): Promise<Campaign[]> {
-    const response = await apiClient.get<ApiResponse<Campaign[]>>('/campaigns');
-    return response.data;
+    const response = await apiClient.get<BackendResponse<Campaign[]>>('/campaigns');
+    if (!response.success || !response.data) throw new Error('Falha ao buscar campanhas. Tente novamente.');
+    return response.data.data;
   }
 
-  /**
-   * Busca uma campanha específica
-   */
   public async getCampaign(campaignId: string): Promise<Campaign> {
-    const response = await apiClient.get<ApiResponse<Campaign>>(`/campaigns/${campaignId}`);
-    return response.data;
+    const response = await apiClient.get<BackendResponse<Campaign>>(`/campaigns/${campaignId}`);
+    if (!response.success || !response.data) throw new Error('Falha ao buscar campanha. Tente novamente.');
+    return response.data.data;
   }
 
-  /**
-   * Cria uma nova campanha
-   */
   public async createCampaign(input: CreateCampaignInput): Promise<Campaign> {
-    const response = await apiClient.post<ApiResponse<Campaign & { _id?: string }>>('/campaigns', input);
-    return normalizeId(response.data);
+    const response = await apiClient.post<BackendResponse<Campaign & { _id?: string }>>('/campaigns', input);
+    if (!response.success || !response.data) throw new Error('Falha ao criar campanha. Tente novamente.');
+    return normalizeId(response.data.data);
   }
 
-  /**
-   * Atualiza uma campanha existente
-   */
   public async updateCampaign(campaignId: string, input: UpdateCampaignInput): Promise<Campaign> {
-    const response = await apiClient.put<ApiResponse<Campaign>>(`/campaigns/${campaignId}`, input);
-    return response.data;
+    const response = await apiClient.put<BackendResponse<Campaign>>(`/campaigns/${campaignId}`, input);
+    if (!response.success || !response.data) throw new Error('Falha ao atualizar campanha. Tente novamente.');
+    return response.data.data;
   }
 
-  /**
-   * Inicia o disparo de uma campanha (cria run e jobs)
-   */
   public async runCampaign(campaignId: string, paceMs?: number): Promise<CampaignRun> {
     const queryString = paceMs !== undefined ? `?paceMs=${paceMs}` : '';
-    const response = await apiClient.post<ApiResponse<CampaignRun>>(
+    const response = await apiClient.post<BackendResponse<CampaignRun>>(
       `/campaigns/${campaignId}/run${queryString}`,
     );
-    return response.data;
+    if (!response.success || !response.data) throw new Error('Falha ao executar campanha. Tente novamente.');
+    return response.data.data;
   }
 
-  /**
-   * Processa jobs pendentes (dispara mensagens)
-   */
   public async processJobs(limit?: number): Promise<{ sent: number; failed: number; skipped: number }> {
     const queryString = limit !== undefined ? `?limit=${limit}` : '';
-    const response = await apiClient.post<ApiResponse<{ sent: number; failed: number; skipped: number }>>(
+    const response = await apiClient.post<BackendResponse<{ sent: number; failed: number; skipped: number }>>(
       `/campaigns/jobs/process${queryString}`,
     );
-    return response.data;
+    if (!response.success || !response.data) throw new Error('Falha ao processar jobs. Tente novamente.');
+    return response.data.data;
   }
 }
 

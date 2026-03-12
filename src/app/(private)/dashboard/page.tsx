@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   Send,
   MessageSquare,
@@ -11,6 +10,8 @@ import {
   TrendingDown,
   AlertCircle,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
 import { dashboardService, type DashboardMetrics } from '@/services/dashboard.service';
 
 interface MetricCardProps {
@@ -40,9 +41,8 @@ function MetricCard({ title, value, icon: Icon, color, bgColor }: MetricCardProp
 function MiniChart({ data, dataKey, color }: { data: { date: string; sent: number; received: number }[]; dataKey: 'sent' | 'received'; color: string }) {
   if (!data.length) return null;
 
-  const values = data.map(d => d[dataKey]);
+  const values = data.map((d) => d[dataKey]);
   const max = Math.max(...values, 1);
-  const barWidth = 100 / data.length;
 
   return (
     <div className="flex items-end gap-px h-28 w-full">
@@ -83,8 +83,12 @@ export default function DashboardPage() {
       setError(null);
       const data = await dashboardService.getMetrics();
       setMetrics(data);
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao carregar métricas');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Erro ao carregar métricas');
+      } else {
+        setError('Erro ao carregar métricas');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,11 +122,26 @@ export default function DashboardPage() {
     );
   }
 
-  // Calculate totals from daily data for "last 30 days" context
+  if (!metrics.daily || !Array.isArray(metrics.daily)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle size={40} className="text-red-400 mx-auto" />
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Dados de métricas inválidos</p>
+          <button
+            onClick={loadMetrics}
+            className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const totalSent30d = metrics.daily.reduce((sum, d) => sum + d.sent, 0);
   const totalReceived30d = metrics.daily.reduce((sum, d) => sum + d.received, 0);
 
-  // Last 7 days vs previous 7 days trend
   const last7 = metrics.daily.slice(-7);
   const prev7 = metrics.daily.slice(-14, -7);
   const sentLast7 = last7.reduce((s, d) => s + d.sent, 0);
@@ -138,7 +157,6 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <MetricCard
           title="Mensagens Enviadas"
@@ -177,9 +195,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sent Messages Chart */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -205,7 +221,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Received Messages Chart */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -226,7 +241,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Failed messages alert */}
       {metrics.messagesFailed > 0 && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle size={18} className="text-red-500 mt-0.5 shrink-0" />

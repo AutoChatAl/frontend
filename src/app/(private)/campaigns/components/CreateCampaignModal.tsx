@@ -24,6 +24,7 @@ import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
+import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 
@@ -165,15 +166,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       }
 
       const allChannels: Channel[] = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...whatsappChannels.map((ch: any) => ({
+        ...whatsappChannels.map((ch: WhatsAppInstance) => ({
           id: ch.id,
           name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
           type: 'WHATSAPP' as const,
           status: ch.status,
         })),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...instagramChannels.map((ch: any) => ({
+        ...instagramChannels.map((ch: InstagramAccount) => ({
           id: ch.id,
           name: ch.instagram?.username || ch.name || 'Instagram',
           type: 'INSTAGRAM' as const,
@@ -183,8 +182,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
       setChannels(allChannels);
       setContacts(allContacts);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const normalizedGroups = (groupsList as any[]).map((g: any) => ({
+      const normalizedGroups = (groupsList as (Group & { _id?: string })[]).map((g: Group & { _id?: string }) => ({
         ...g,
         id: g.id || g._id || '',
       }));
@@ -432,7 +430,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Error banner */}
           {error && (
             <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
@@ -510,7 +507,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             </div>
           </section>
 
-          {/* Step 3: Source type toggle */}
           <section>
             <SectionHeader step={3} label="Origem dos Destinatários" />
             <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5 w-full">
@@ -544,7 +540,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 : 'Selecione um grupo existente — os contatos dele serão usados automaticamente.'}
             </p>
 
-            {/* CHANNEL mode: channel selection */}
             {formData.sourceType === 'CHANNEL' && (
               <>
                 {channels.length === 0 ? (
@@ -628,7 +623,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
               </>
             )}
 
-            {/* GROUP mode: group selection */}
             {formData.sourceType === 'GROUP' && (
               <>
                 {groups.length === 0 ? (
@@ -740,7 +734,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
             )}
           </section>
 
-          {/* Step 4: Contact selection (only for CHANNEL mode) */}
           {formData.sourceType === 'CHANNEL' && (
             <section>
               <div className="flex items-center justify-between mb-4">
@@ -899,7 +892,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
           <section>
             <SectionHeader step={formData.sourceType === 'CHANNEL' ? 5 : 4} label="Agendamento" />
             <div className="space-y-4">
-              {/* Frequencia */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   <Repeat size={14} className="inline mr-1.5 -mt-0.5" />

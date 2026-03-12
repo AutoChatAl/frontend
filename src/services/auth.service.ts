@@ -30,28 +30,40 @@ interface AuthResponse {
 class AuthService {
   public async register(data: RegisterData): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/register', data);
-    if (response.token) {
-      this.saveToken(response.token);
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível registrar. Verifique os dados e tente novamente.');
     }
-    if (response.user) {
-      this.saveUser(response.user);
+    const authData = response.data as AuthResponse;
+    if (authData.token) {
+      this.saveToken(authData.token);
     }
-    return response;
+    if (authData.user) {
+      this.saveUser(authData.user);
+    }
+    return authData;
   }
 
   public async login(data: LoginData): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/login', data);
-    if (response.token) {
-      this.saveToken(response.token);
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível fazer login. Verifique os dados e tente novamente.');
     }
-    if (response.user) {
-      this.saveUser(response.user);
+    const authData = response.data as AuthResponse;
+    if (authData.token) {
+      this.saveToken(authData.token);
     }
-    return response;
+    if (authData.user) {
+      this.saveUser(authData.user);
+    }
+    return authData;
   }
 
   public async fetchMe(): Promise<AuthUser> {
-    const user = await apiClient.get<AuthUser>('/auth/me');
+    const response = await apiClient.get<AuthUser>('/auth/me');
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível encontrar o usuário. Tente novamente.');
+    }
+    const user = response.data as AuthUser;
     this.saveUser(user);
     return user;
   }

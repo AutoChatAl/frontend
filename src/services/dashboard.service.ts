@@ -17,7 +17,10 @@ interface MetricsResponse {
 class DashboardService {
   public async getMetrics(): Promise<DashboardMetrics> {
     const response = await apiClient.get<MetricsResponse>('/dashboard/metrics');
-    return response.data;
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao buscar métricas do dashboard. Tente novamente.');
+    }
+    return (response.data as MetricsResponse).data;
   }
 }
 

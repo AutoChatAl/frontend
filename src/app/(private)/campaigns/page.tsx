@@ -104,7 +104,6 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Toast container */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div

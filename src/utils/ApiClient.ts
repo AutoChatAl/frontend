@@ -1,4 +1,8 @@
-import type { ApiError } from '@/types/Api';
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  statusCode: number;
+  data?: T;
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -10,7 +14,7 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-  ): Promise<T> {
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
 
     const config: RequestInit = {
@@ -31,47 +35,54 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+      const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const error: ApiError = await response.json().catch(() => ({
-          message: 'Erro desconhecido',
+        return {
+          success: false,
           statusCode: response.status,
-        }));
-        throw new Error(error.message || `Erro ${response.status}`);
+          data: body,
+        };
       }
 
-      return await response.json();
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Erro ao fazer requisição');
+      return {
+        success: true,
+        statusCode: response.status,
+        data: body,
+      };
+    } catch (_error) {
+
+      return {
+        success: false,
+        statusCode: 0,
+        data: { reason: 'NETWORK_ERROR' } as T,
+      };
     }
   }
 
-  public async get<T>(endpoint: string): Promise<T> {
+  public async get<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  public async post<T>(endpoint: string, data?: unknown): Promise<T> {
+  public async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       ...(data ? { body: JSON.stringify(data) } : {}),
     });
   }
 
-  public async put<T>(endpoint: string, data?: unknown): Promise<T> {
+  public async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       ...(data ? { body: JSON.stringify(data) } : {}),
     });
   }
 
-  public async delete<T>(endpoint: string): Promise<T> {
+  public async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 
-  public async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+  public async patch<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       ...(data ? { body: JSON.stringify(data) } : {}),
