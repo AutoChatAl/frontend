@@ -46,8 +46,11 @@ export class CampaignService {
     return response.data.data;
   }
 
-  public async processJobs(limit?: number): Promise<{ sent: number; failed: number; skipped: number }> {
-    const queryString = limit !== undefined ? `?limit=${limit}` : '';
+  public async processJobs(opts?: { limit?: number; runId?: string }): Promise<{ sent: number; failed: number; skipped: number }> {
+    const params = new URLSearchParams();
+    if (opts?.limit !== undefined) params.set('limit', String(opts.limit));
+    if (opts?.runId) params.set('runId', opts.runId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await apiClient.post<BackendResponse<{ sent: number; failed: number; skipped: number }>>(
       `/campaigns/jobs/process${queryString}`,
     );

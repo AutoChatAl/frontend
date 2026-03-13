@@ -45,8 +45,8 @@ export default function CampaignsPage() {
   const handleRunCampaign = async (campaignId: string) => {
     try {
       setRunningCampaign(campaignId);
-      await campaignService.runCampaign(campaignId);
-      const stats = await campaignService.processJobs();
+      const run = await campaignService.runCampaign(campaignId);
+      const stats = await campaignService.processJobs({ runId: run.id });
       await loadCampaigns();
       addToast(
         'success',

@@ -257,8 +257,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         : formData.contactIds.length > 0;
 
       if (hasRecipients) {
-        await campaignService.runCampaign(campaign.id);
-        await campaignService.processJobs();
+        const run = await campaignService.runCampaign(campaign.id);
+        await campaignService.processJobs({ runId: run.id });
       }
 
       onSuccess();
