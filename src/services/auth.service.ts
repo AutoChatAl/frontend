@@ -136,6 +136,20 @@ class AuthService {
     }
   }
 
+  public async clearData(): Promise<void> {
+    const response = await apiClient.delete<{ ok: boolean }>('/auth/data');
+    if (!response.success) {
+      throw new Error('Não foi possível remover os dados. Tente novamente.');
+    }
+  }
+
+  public async deleteAccount(): Promise<void> {
+    const response = await apiClient.delete<{ ok: boolean }>('/auth/account');
+    if (!response.success) {
+      throw new Error('Não foi possível excluir a conta. Tente novamente.');
+    }
+  }
+
   public saveToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);
