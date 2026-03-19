@@ -3,16 +3,15 @@
 import {
   Shield,
   Loader2,
-  Check,
   ShieldCheck,
   ShieldOff,
-  Copy,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import TwoFactorModal from './TwoFactorModal';
+
 import Button from '@/components/Button';
 import Card from '@/components/Card';
-import Input from '@/components/Input';
 import PasswordInput from '@/components/PasswordInput';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
@@ -24,11 +23,7 @@ export default function SecurityTab() {
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [loading2FA, setLoading2FA] = useState(true);
-  const [setupData, setSetupData] = useState<{ secret: string; qrCode: string } | null>(null);
-  const [setupLoading, setSetupLoading] = useState(false);
-  const [totpCode, setTotpCode] = useState('');
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [secretCopied, setSecretCopied] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
   const fetch2FAStatus = useCallback(async () => {
@@ -62,68 +57,6 @@ export default function SecurityTab() {
       addToast('error', err instanceof Error ? err.message : 'Erro ao alterar a senha.');
     } finally {
       setPasswordLoading(false);
-    }
-  };
-
-  const handleSetup2FA = async () => {
-    setSetupLoading(true);
-    try {
-      const data = await authService.setup2FA();
-      setSetupData(data);
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : 'Erro ao configurar 2FA.');
-    } finally {
-      setSetupLoading(false);
-    }
-  };
-
-  const handleVerify2FA = async () => {
-    if (!totpCode || totpCode.length !== 6) {
-      addToast('error', 'Insira o código de 6 dígitos.');
-      return;
-    }
-
-    setVerifyLoading(true);
-    try {
-      await authService.verify2FA(totpCode);
-      setTwoFactorEnabled(true);
-      setSetupData(null);
-      setTotpCode('');
-      addToast('success', '2FA ativado com sucesso.');
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : 'Código inválido.');
-    } finally {
-      setVerifyLoading(false);
-    }
-  };
-
-  const handleDisable2FA = async () => {
-    if (!totpCode || totpCode.length !== 6) {
-      addToast('error', 'Insira o código de 6 dígitos para desativar.');
-      return;
-    }
-
-    setVerifyLoading(true);
-    try {
-      await authService.disable2FA(totpCode);
-      setTwoFactorEnabled(false);
-      setTotpCode('');
-      addToast('success', '2FA desativado com sucesso.');
-    } catch (err) {
-      addToast('error', err instanceof Error ? err.message : 'Código inválido.');
-    } finally {
-      setVerifyLoading(false);
-    }
-  };
-
-  const handleCopySecret = async () => {
-    if (!setupData) return;
-    try {
-      await navigator.clipboard.writeText(setupData.secret);
-      setSecretCopied(true);
-      setTimeout(() => setSecretCopied(false), 2000);
-    } catch {
-      // fallback: ignore
     }
   };
 
@@ -172,110 +105,47 @@ export default function SecurityTab() {
             <Loader2 size={16} className="animate-spin" />
             Carregando status do 2FA...
           </div>
-        ) : twoFactorEnabled ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                <ShieldCheck size={14} /> 2FA Ativo
-              </span>
-            </div>
-
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Para desativar a autenticação de dois fatores, insira o código gerado pelo seu aplicativo autenticador.
-            </p>
-
-            <div className="flex items-end gap-3 max-w-md">
-              <Input
-                label="Código TOTP"
-                placeholder="000000"
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
-                wrapperClassName="flex-1"
-              />
-              <Button
-                variant="danger"
-                onClick={handleDisable2FA}
-                loading={verifyLoading}
-                loadingText="Desativando..."
-                icon={<ShieldOff size={16} />}
-              >
-                Desativar 2FA
-              </Button>
-            </div>
-          </div>
-        ) : setupData ? (
-          <div className="space-y-5">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Escaneie o QR Code abaixo com seu aplicativo autenticador (Google Authenticator, Authy, etc.) ou insira a chave manualmente.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-6 items-start">
-              <div className="shrink-0 p-3 bg-white rounded-xl border border-slate-200 dark:border-slate-600">
-                <img
-                  src={setupData.qrCode}
-                  alt="QR Code para 2FA"
-                  className="w-48 h-48"
-                />
-              </div>
-
-              <div className="flex-1 space-y-4 min-w-0">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">
-                    Chave secreta (entrada manual)
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono text-slate-700 dark:text-slate-300 break-all select-all">
-                      {setupData.secret}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={handleCopySecret}
-                      className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                      title="Copiar chave"
-                    >
-                      {secretCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                <Input
-                  label="Código de verificação"
-                  placeholder="000000"
-                  value={totpCode}
-                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength={6}
-                />
-
-                <Button
-                  onClick={handleVerify2FA}
-                  loading={verifyLoading}
-                  loadingText="Verificando..."
-                  icon={<ShieldCheck size={16} />}
-                >
-                  Verificar e Ativar
-                </Button>
-              </div>
-            </div>
-          </div>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Adicione uma camada extra de segurança à sua conta com autenticação de dois fatores.
-            </p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                twoFactorEnabled
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                  : 'bg-slate-100 dark:bg-slate-800'
+              }`}>
+                <ShieldCheck size={20} className={twoFactorEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                  {twoFactorEnabled ? '2FA Ativado' : '2FA Desativado'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {twoFactorEnabled
+                    ? 'Sua conta está protegida com autenticação de dois fatores.'
+                    : 'Adicione uma camada extra de segurança à sua conta.'}
+                </p>
+              </div>
+            </div>
             <Button
-              variant="secondary"
-              onClick={handleSetup2FA}
-              loading={setupLoading}
-              loadingText="Configurando..."
-              icon={<Shield size={16} />}
+              variant={twoFactorEnabled ? 'danger' : 'secondary'}
+              onClick={() => setShow2FAModal(true)}
+              icon={twoFactorEnabled ? <ShieldOff size={16} /> : <Shield size={16} />}
             >
-              Ativar 2FA
+              {twoFactorEnabled ? 'Desativar' : 'Configurar'}
             </Button>
           </div>
         )}
-
       </Card>
+
+      <TwoFactorModal
+        isOpen={show2FAModal}
+        enabled={twoFactorEnabled}
+        onClose={() => setShow2FAModal(false)}
+        onSuccess={(enabled) => {
+          setTwoFactorEnabled(enabled);
+          addToast('success', enabled ? '2FA ativado com sucesso.' : '2FA desativado com sucesso.');
+        }}
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
