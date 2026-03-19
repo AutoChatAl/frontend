@@ -90,7 +90,6 @@ const APPS = [
   },
 ];
 
-// ── Disable flow ────────────────────────────────────────────────────────────
 function DisableView({
   onDisable,
   onClose,
@@ -163,7 +162,6 @@ function DisableView({
   );
 }
 
-// ── Setup flow ───────────────────────────────────────────────────────────────
 function SetupView({
   setupData,
   onVerify,
@@ -187,7 +185,7 @@ function SetupView({
       await navigator.clipboard.writeText(setupData.secret);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
+    } catch { /* fallback: ignore */ }
   };
 
   const handleVerify = async () => {
@@ -205,7 +203,6 @@ function SetupView({
 
   return (
     <div className="space-y-6">
-      {/* App selector tabs */}
       <div>
         <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
           Escolha seu app autenticador
@@ -229,7 +226,6 @@ function SetupView({
         </div>
       </div>
 
-      {/* Step tabs: Scan / Verify */}
       <div className="flex gap-0 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden text-sm font-medium">
         <button
           type="button"
@@ -257,10 +253,8 @@ function SetupView({
         </button>
       </div>
 
-      {/* ── Scan step ── */}
       {step === 'scan' && (
         <div className="space-y-5">
-          {/* Numbered instructions */}
           <ol className="space-y-2.5">
             {app.steps.map((s, i) => (
               <li key={i} className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-400">
@@ -292,7 +286,6 @@ function SetupView({
             </a>
           </div>
 
-          {/* QR + secret */}
           <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="shrink-0 p-2.5 bg-white rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
               <img src={setupData.qrCode} alt="QR Code 2FA" className="w-40 h-40" />
@@ -331,7 +324,6 @@ function SetupView({
         </div>
       )}
 
-      {/* ── Verify step ── */}
       {step === 'verify' && (
         <div className="space-y-5">
           <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
@@ -375,7 +367,6 @@ function SetupView({
   );
 }
 
-// ── Pre-setup idle view ──────────────────────────────────────────────────────
 function IdleView({
   onSetup,
   loading,
@@ -387,7 +378,6 @@ function IdleView({
 }) {
   return (
     <div className="space-y-6">
-      {/* Hero */}
       <div className="flex flex-col items-center gap-4 py-4">
         <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
           <Shield size={32} className="text-indigo-600 dark:text-indigo-400" />
@@ -402,7 +392,6 @@ function IdleView({
         </div>
       </div>
 
-      {/* Benefits */}
       <ul className="space-y-2.5">
         {[
           'Protege contra senhas vazadas ou roubadas',
@@ -433,7 +422,6 @@ function IdleView({
   );
 }
 
-// ── Main modal ───────────────────────────────────────────────────────────────
 export default function TwoFactorModal({ isOpen, enabled, onClose, onSuccess }: TwoFactorModalProps) {
   const [setupData, setSetupData] = useState<{ secret: string; qrCode: string } | null>(null);
   const [setupLoading, setSetupLoading] = useState(false);
@@ -444,7 +432,7 @@ export default function TwoFactorModal({ isOpen, enabled, onClose, onSuccess }: 
       const data = await authService.setup2FA();
       setSetupData(data);
     } catch (err) {
-      // propagate or just ignore — caller handles toast
+      // fallback: ignore
       throw err;
     } finally {
       setSetupLoading(false);
