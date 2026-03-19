@@ -20,7 +20,7 @@ import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
-import type { WhatsAppInstance, InstagramAccount } from '@/types/Channel';
+import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 
 const PAGE_SIZE = 50;
@@ -29,7 +29,6 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
   const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppInstance[]>([]);
-  const [instagramChannels, setInstagramChannels] = useState<InstagramAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,10 +69,8 @@ export default function ContactsPage() {
     Promise.all([
       fetchContacts('', 0, false),
       channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
-      channelsService.getInstagramAccounts().catch(() => [] as InstagramAccount[]),
-    ]).then(([, waChannels, igChannels]) => {
+    ]).then(([, waChannels]) => {
       setWhatsappChannels(waChannels);
-      setInstagramChannels(igChannels);
     });
   }, []);
 
@@ -172,7 +169,6 @@ export default function ContactsPage() {
           addToast('success', `Você tem ${result.created} sincronizados via WhatsApp.`);
         }}
         whatsappChannels={whatsappChannels}
-        instagramChannels={instagramChannels}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

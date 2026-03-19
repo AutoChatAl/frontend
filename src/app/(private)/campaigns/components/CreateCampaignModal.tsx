@@ -18,13 +18,16 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
+import DatePicker from '@/components/DatePicker';
 import Modal from '@/components/Modal';
+import WhatsAppEditor from '@/components/WhatsAppEditor';
+import WhatsAppPreview from '@/components/WhatsAppPreview';
 import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
-import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
+import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 
@@ -78,10 +81,9 @@ const INITIAL_FORM: CreateCampaignInput = {
 };
 
 function inputCls(hasError: boolean) {
-  return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${
-    hasError
-      ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
-      : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'
+  return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${hasError
+    ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
+    : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'
   }`;
 }
 
@@ -145,16 +147,15 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     try {
       setLoadingData(true);
       setError(null);
-      const [whatsappChannels, instagramChannels, groupsList] = await Promise.all([
+      const [whatsappChannels, groupsList] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
-        channelsService.getInstagramAccounts().catch(() => []),
         groupService.listGroups().catch(() => []),
       ]);
 
       const allContacts: Contact[] = [];
       let skip = 0;
       const PAGE_SIZE = 100;
-      for (;;) {
+      for (; ;) {
         const page = await contactService.listContacts({ skip, limit: PAGE_SIZE });
         const normalized = page.data.map((c: Contact & { _id?: string }) => ({
           ...c,
@@ -165,27 +166,29 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         skip += PAGE_SIZE;
       }
 
-      const allChannels: Channel[] = [
-        ...whatsappChannels.map((ch: WhatsAppInstance) => ({
-          id: ch.id,
-          name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
-          type: 'WHATSAPP' as const,
-          status: ch.status,
-        })),
-        ...instagramChannels.map((ch: InstagramAccount) => ({
-          id: ch.id,
-          name: ch.instagram?.username || ch.name || 'Instagram',
-          type: 'INSTAGRAM' as const,
-          status: ch.status,
-        })),
-      ];
+      const allChannels: Channel[] = whatsappChannels.map((ch: WhatsAppInstance) => ({
+        id: ch.id,
+        name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
+        type: 'WHATSAPP' as const,
+        status: ch.status,
+      }));
 
       setChannels(allChannels);
       setContacts(allContacts);
-      const normalizedGroups = (groupsList as (Group & { _id?: string })[]).map((g: Group & { _id?: string }) => ({
-        ...g,
-        id: g.id || g._id || '',
-      }));
+
+      // Filter out groups that have Instagram contacts (only WhatsApp groups allowed)
+      const waChannelIds = new Set(allChannels.map((ch) => ch.id));
+      const normalizedGroups = (groupsList as (Group & { _id?: string })[])
+        .map((g: Group & { _id?: string }) => ({
+          ...g,
+          id: g.id || g._id || '',
+        }))
+        .filter((g) => {
+          if (g.type === 'DYNAMIC' && g.ruleJson?.channelIds?.length) {
+            return g.ruleJson.channelIds.every((cId: string) => waChannelIds.has(cId));
+          }
+          return true;
+        });
       setGroups(normalizedGroups);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
@@ -303,16 +306,15 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         ? prev.channelIds.filter((id) => id !== channelId)
         : [...prev.channelIds, channelId];
 
-      const channelContactIds = new Set(
-        contacts
-          .filter((c) => c.identities?.some((i) => i.channelId === channelId))
-          .map((c) => c.id),
-      );
-      let newContactIds: string[];
+      // When removing a channel, also remove its contacts from selection
+      let newContactIds = prev.contactIds;
       if (isRemoving) {
+        const channelContactIds = new Set(
+          contacts
+            .filter((c) => c.identities?.some((i) => i.channelId === channelId))
+            .map((c) => c.id),
+        );
         newContactIds = prev.contactIds.filter((id) => !channelContactIds.has(id));
-      } else {
-        newContactIds = Array.from(new Set([...prev.contactIds, ...channelContactIds]));
       }
 
       return { ...prev, channelIds: newChannelIds, contactIds: newContactIds };
@@ -342,23 +344,43 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     }));
   };
 
+  // Only show contacts belonging to selected channels
+  const channelContacts = useMemo(() => {
+    if (formData.channelIds.length === 0) return [];
+    const selectedChannelSet = new Set(formData.channelIds);
+    return contacts.filter((c) =>
+      c.identities?.some((i) => selectedChannelSet.has(i.channelId)),
+    );
+  }, [contacts, formData.channelIds]);
+
   const selectAllContacts = () =>
-    setFormData((prev) => ({ ...prev, contactIds: contacts.map((c) => c.id) }));
+    setFormData((prev) => ({ ...prev, contactIds: channelContacts.map((c) => c.id) }));
 
   const deselectAllContacts = () =>
     setFormData((prev) => ({ ...prev, contactIds: [] }));
 
   const filteredContacts = useMemo(() => {
-    if (!contactFilter.trim()) return contacts;
-    const term = contactFilter.toLowerCase().trim();
-    return contacts.filter((c) => {
-      const name = c.displayName?.toLowerCase().includes(term);
-      const id = c.identities?.some(
-        (i) => i.phoneE164?.includes(term) || i.igUsername?.toLowerCase().includes(term),
-      );
-      return name || id;
+    let result = channelContacts;
+
+    if (contactFilter.trim()) {
+      const term = contactFilter.toLowerCase().trim();
+      result = result.filter((c) => {
+        const name = c.displayName?.toLowerCase().includes(term);
+        const id = c.identities?.some(
+          (i) => i.phoneE164?.includes(term) || i.igUsername?.toLowerCase().includes(term),
+        );
+        return name || id;
+      });
+    }
+
+    // Sort selected contacts to top
+    const selectedSet = new Set(formData.contactIds);
+    return [...result].sort((a, b) => {
+      const aSelected = selectedSet.has(a.id) ? 0 : 1;
+      const bSelected = selectedSet.has(b.id) ? 0 : 1;
+      return aSelected - bSelected;
     });
-  }, [contacts, contactFilter]);
+  }, [channelContacts, contactFilter, formData.contactIds]);
 
   const selectedGroup = useMemo(
     () => groups.find((g) => g.id === formData.groupId),
@@ -478,32 +500,42 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
           <section>
             <SectionHeader step={2} label="Mensagem" />
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Conteúdo <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.message}
-                onChange={(e) => {
-                  setFormData({ ...formData, message: e.target.value });
-                  clearFieldError('message');
-                }}
-                rows={5}
-                className={`${inputCls(!!errors.message)} resize-none`}
-                placeholder="Digite a mensagem que será enviada para os contatos..."
-              />
-              <div className="flex justify-between mt-1.5">
-                <FieldError msg={errors.message} />
-                <span
-                  className={`text-xs ml-auto ${
-                    formData.message.length > 1800
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Conteúdo <span className="text-red-500">*</span>
+                </label>
+                <WhatsAppEditor
+                  value={formData.message}
+                  onChange={(val) => {
+                    setFormData({ ...formData, message: val });
+                    clearFieldError('message');
+                  }}
+                  placeholder="Digite a mensagem que será enviada para os contatos..."
+                  rows={5}
+                  maxLength={2000}
+                  error={errors.message}
+                />
+                <div className="flex justify-end mt-1.5">
+                  <span
+                    className={`text-xs ${formData.message.length > 1800
                       ? 'text-amber-500'
                       : 'text-slate-400 dark:text-slate-500'
-                  }`}
-                >
-                  {formData.message.length}/2000
-                </span>
+                    }`}
+                  >
+                    {formData.message.length}/2000
+                  </span>
+                </div>
               </div>
+
+              {formData.message.trim() && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Preview no WhatsApp
+                  </label>
+                  <WhatsAppPreview message={formData.message} />
+                </div>
+              )}
             </div>
           </section>
 
@@ -521,10 +553,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                     key={opt.value}
                     type="button"
                     onClick={() => handleSourceTypeChange(opt.value)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all select-none ${
-                      isActive
-                        ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all select-none ${isActive
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
                     <Icon size={16} />
@@ -565,17 +596,15 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                         <div
                           key={channel.id}
                           onClick={() => toggleChannel(channel.id)}
-                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                            isSelected
-                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
                           }`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                              isWhatsApp
-                                ? 'bg-green-100 dark:bg-green-900/30'
-                                : 'bg-pink-100 dark:bg-pink-900/30'
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp
+                              ? 'bg-green-100 dark:bg-green-900/30'
+                              : 'bg-pink-100 dark:bg-pink-900/30'
                             }`}
                           >
                             {isWhatsApp ? (
@@ -591,10 +620,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                             </p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span
-                                className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                  isWhatsApp
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                                    : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
+                                className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                  : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'
                                 }`}
                               >
                                 {isWhatsApp ? 'WhatsApp' : 'Instagram'}
@@ -606,10 +634,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                           </div>
 
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                              isSelected
-                                ? 'border-indigo-500 bg-indigo-500'
-                                : 'border-slate-300 dark:border-slate-600'
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
+                              ? 'border-indigo-500 bg-indigo-500'
+                              : 'border-slate-300 dark:border-slate-600'
                             }`}
                           >
                             {isSelected && <CheckCircle2 size={12} className="text-white" />}
@@ -645,18 +672,16 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                         <div
                           key={group.id}
                           onClick={() => selectGroup(group.id)}
-                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                            isSelected
-                              ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/50 shadow-sm shadow-indigo-500/10'
-                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                          className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+                            ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/50 shadow-sm shadow-indigo-500/10'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'bg-indigo-500 dark:bg-indigo-600'
-                              : isManual
-                                ? 'bg-violet-100 dark:bg-violet-900/30'
-                                : 'bg-cyan-100 dark:bg-cyan-900/30'
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected
+                            ? 'bg-indigo-500 dark:bg-indigo-600'
+                            : isManual
+                              ? 'bg-violet-100 dark:bg-violet-900/30'
+                              : 'bg-cyan-100 dark:bg-cyan-900/30'
                           }`}>
                             <Users size={18} className={
                               isSelected
@@ -672,10 +697,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                               {group.name}
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                isManual
-                                  ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400'
-                                  : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400'
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isManual
+                                ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400'
+                                : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400'
                               }`}>
                                 {isManual ? 'Manual' : 'Dinâmico'}
                               </span>
@@ -687,10 +711,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                           </div>
 
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                              isSelected
-                                ? 'border-indigo-500 bg-indigo-500'
-                                : 'border-slate-300 dark:border-slate-600'
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
+                              ? 'border-indigo-500 bg-indigo-500'
+                              : 'border-slate-300 dark:border-slate-600'
                             }`}
                           >
                             {isSelected && <CheckCircle2 size={12} className="text-white" />}
@@ -746,12 +769,12 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                     </span>
                   )}
                 </div>
-                {contacts.length > 0 && (
+                {channelContacts.length > 0 && (
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={selectAllContacts}
-                      disabled={contacts.length === 0}
+                      disabled={channelContacts.length === 0}
                       className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 disabled:opacity-40 font-medium transition-colors"
                     >
                       Selecionar todos
@@ -768,7 +791,19 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 )}
               </div>
 
-              {contacts.length === 0 ? (
+              {formData.channelIds.length === 0 ? (
+                <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+                  <MessageCircle size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Selecione um canal primeiro
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      Os contatos serão exibidos de acordo com o canal selecionado.
+                    </p>
+                  </div>
+                </div>
+              ) : channelContacts.length === 0 ? (
                 <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
                   <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
                   <div>
@@ -776,7 +811,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                       Nenhum contato disponível
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                      Adicione contatos antes de criar uma campanha.
+                      Não há contatos vinculados aos canais selecionados.
                     </p>
                   </div>
                 </div>
@@ -818,10 +853,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                         return (
                           <label
                             key={contact.id}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                              isChecked
-                                ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked
+                              ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                             }`}
                           >
                             <input
@@ -831,10 +865,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                               className="sr-only"
                             />
                             <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors ${
-                                isChecked
-                                  ? 'bg-indigo-500 text-white'
-                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors ${isChecked
+                                ? 'bg-indigo-500 text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                               }`}
                             >
                               {initials || 'U'}
@@ -848,10 +881,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                               </p>
                             </div>
                             <div
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-                                isChecked
-                                  ? 'border-indigo-500 bg-indigo-500'
-                                  : 'border-slate-300 dark:border-slate-600'
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${isChecked
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-slate-300 dark:border-slate-600'
                               }`}
                             >
                               {isChecked && (
@@ -874,7 +906,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
 
                   {contactFilter && (
                     <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                      {filteredContacts.length} de {contacts.length} contatos
+                      {filteredContacts.length} de {channelContacts.length} contatos
                     </p>
                   )}
 
@@ -913,10 +945,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                             scheduledDate: opt.value === 'DAILY' ? undefined : prev.scheduledDate,
                           }));
                         }}
-                        className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                        className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
                         }`}
                       >
                         <span className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</span>
@@ -931,30 +962,12 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     <Calendar size={14} className="inline mr-1.5 -mt-0.5" />
-                    Data de Execucao <span className="text-red-500">*</span>
+                    Data de Execução <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="dd/mm/aaaa"
-                    value={
-                      formData.scheduledDate
-                        ? formData.scheduledDate.split('-').reverse().join('/')
-                        : ''
-                    }
-                    onChange={(e) => {
-                      let v = e.target.value.replace(/\D/g, '').slice(0, 8);
-                      if (v.length >= 5) v = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
-                      else if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
-
-                      const parts = v.split('/');
-                      if (parts.length === 3 && parts[2]?.length === 4) {
-                        setFormData({ ...formData, scheduledDate: `${parts[2]}-${parts[1]}-${parts[0]}` });
-                      } else {
-                        setFormData({ ...formData, scheduledDate: '' });
-                      }
-                    }}
-                    className={inputCls(false)}
+                  <DatePicker
+                    value={formData.scheduledDate ?? ''}
+                    onChange={(v) => setFormData({ ...formData, scheduledDate: v })}
+                    placeholder="Selecione uma data"
                   />
                 </div>
               )}
@@ -973,10 +986,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                           key={hour}
                           type="button"
                           onClick={() => setFormData({ ...formData, executionHour: hour })}
-                          className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                            isSelected
-                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
+                          className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${isSelected
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
                           }`}
                         >
                           {String(hour).padStart(2, '0')}:00

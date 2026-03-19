@@ -4,6 +4,7 @@
 import {
   AlertCircle,
   MessageCircle,
+  Pencil,
   Plus,
   Reply,
   Trash2,
@@ -11,6 +12,7 @@ import {
 import { useEffect, useState, useCallback } from 'react';
 
 import CreateAutoReplyModal from './components/CreateAutoReplyModal';
+import EditAutoReplyModal from './components/EditAutoReplyModal';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
@@ -35,6 +37,7 @@ export default function AutoRepliesPage() {
   const [error, setError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AutoReply | null>(null);
+  const [editTarget, setEditTarget] = useState<AutoReply | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
@@ -189,6 +192,12 @@ export default function AutoRepliesPage() {
                       onChange={() => handleToggle(rule)}
                     />
                     <IconButton
+                      icon={<Pencil size={16} />}
+                      onClick={() => setEditTarget(rule)}
+                      variant="default"
+                      size="md"
+                    />
+                    <IconButton
                       icon={<Trash2 size={16} />}
                       onClick={() => setDeleteTarget(rule)}
                       variant="danger"
@@ -210,6 +219,18 @@ export default function AutoRepliesPage() {
           addToast('success', 'Auto-resposta criada com sucesso!');
         }}
       />
+
+      {editTarget && (
+        <EditAutoReplyModal
+          isOpen={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          onSuccess={() => {
+            fetchRules();
+            addToast('success', 'Auto-resposta atualizada com sucesso!');
+          }}
+          autoReply={editTarget}
+        />
+      )}
 
       {deleteTarget && (
         <ConfirmDeleteModal

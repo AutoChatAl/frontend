@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDownRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowDownRight, Eye, EyeOff, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -14,7 +14,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +26,18 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await authService.login({ email, password });
+      const result = await authService.login({
+        email,
+        password,
+        ...(requires2FA ? { totpCode } : {}),
+      });
+
+      if (result.requires2FA) {
+        setRequires2FA(true);
+        setIsLoading(false);
+        return;
+      }
+
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
@@ -42,50 +55,90 @@ export default function LoginPage() {
           </div>
         )}
 
-        <Input
-          label="Email"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-        />
-        <div>
-          <div className="flex justify-between mb-1.5">
-            <label className="text-sm font-medium text-slate-700">Senha</label>
-            <a href="#" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-              Esqueceu a senha?
-            </a>
+        {!requires2FA ? (
+          <>
+            <Input
+              label="Email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+            <div>
+              <div className="flex justify-between mb-1.5">
+                <label className="text-sm font-medium text-slate-700">Senha</label>
+                <a href="#" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                  Esqueceu a senha?
+                </a>
+              </div>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="current-password"
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                }
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+              <Shield size={20} className="text-indigo-600 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-indigo-800">Verificação em duas etapas</p>
+                <p className="text-xs text-indigo-600">Insira o código do seu app autenticador.</p>
+              </div>
+            </div>
+            <Input
+              label="Código 2FA"
+              type="text"
+              placeholder="000000"
+              value={totpCode}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setTotpCode(v);
+              }}
+              required
+              autoComplete="one-time-code"
+            />
           </div>
-          <Input
-            type={showPassword ? 'text' : 'password'}
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="current-password"
-            rightElement={
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            }
-          />
-        </div>
+        )}
 
         <button
           type="submit"
           disabled={isLoading}
           className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
         >
-          {isLoading ? 'Entrando...' : 'Entrar na Plataforma'}
+          {isLoading ? 'Entrando...' : requires2FA ? 'Verificar e Entrar' : 'Entrar na Plataforma'}
         </button>
+
+        {requires2FA && (
+          <button
+            type="button"
+            onClick={() => {
+              setRequires2FA(false);
+              setTotpCode('');
+              setError('');
+            }}
+            className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            Voltar para login
+          </button>
+        )}
       </form>
 
       <div className="mt-6 pt-6 border-t border-slate-100 text-center">

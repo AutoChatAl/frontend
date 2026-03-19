@@ -10,21 +10,41 @@ interface RegisterData {
 interface LoginData {
   email: string;
   password: string;
+  totpCode?: string;
 }
 
 export interface AuthUser {
   id: string;
   email: string;
   name?: string;
+  twoFactorEnabled?: boolean;
+  workspace?: { id: string; name: string } | null;
 }
 
 interface AuthResponse {
-  token: string;
+  token?: string;
+  requires2FA?: boolean;
   workspace?: {
     id: string;
     name: string;
   };
   user?: AuthUser;
+}
+
+interface UpdateAccountData {
+  workspaceName?: string;
+  email?: string;
+  name?: string;
+}
+
+interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+interface Setup2FAResponse {
+  secret: string;
+  qrCode: string;
 }
 
 class AuthService {
@@ -49,6 +69,9 @@ class AuthService {
       throw new Error('Não foi possível fazer login. Verifique os dados e tente novamente.');
     }
     const authData = response.data as AuthResponse;
+    if (authData.requires2FA) {
+      return authData;
+    }
     if (authData.token) {
       this.saveToken(authData.token);
     }
@@ -66,6 +89,51 @@ class AuthService {
     const user = response.data as AuthUser;
     this.saveUser(user);
     return user;
+  }
+
+  public async updateAccount(data: UpdateAccountData): Promise<{ user: AuthUser | null; workspace: { id: string; name: string } | null }> {
+    const response = await apiClient.put<{ ok: boolean; user: AuthUser | null; workspace: { id: string; name: string } | null }>('/auth/account', data);
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível atualizar a conta. Tente novamente.');
+    }
+    const result = response.data as { ok: boolean; user: AuthUser | null; workspace: { id: string; name: string } | null };
+    if (result.user) {
+      this.saveUser(result.user);
+    }
+    return result;
+  }
+
+  public async changePassword(data: ChangePasswordData): Promise<void> {
+    const response = await apiClient.put<{ ok: boolean }>('/auth/password', data);
+    if (!response.success) {
+      const errData = response.data as { code?: string } | undefined;
+      if (errData?.code === 'INVALID_CURRENT_PASSWORD') {
+        throw new Error('Senha atual incorreta.');
+      }
+      throw new Error('Não foi possível alterar a senha. Tente novamente.');
+    }
+  }
+
+  public async setup2FA(): Promise<Setup2FAResponse> {
+    const response = await apiClient.post<Setup2FAResponse>('/auth/2fa/setup');
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível configurar 2FA. Tente novamente.');
+    }
+    return response.data as Setup2FAResponse;
+  }
+
+  public async verify2FA(token: string): Promise<void> {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/2fa/verify', { token });
+    if (!response.success) {
+      throw new Error('Código inválido. Verifique e tente novamente.');
+    }
+  }
+
+  public async disable2FA(token: string): Promise<void> {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/2fa/disable', { token });
+    if (!response.success) {
+      throw new Error('Código inválido. Não foi possível desativar 2FA.');
+    }
   }
 
   public saveToken(token: string): void {
