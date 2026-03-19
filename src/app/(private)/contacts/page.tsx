@@ -37,12 +37,13 @@ export default function ContactsPage() {
   const { toasts, addToast, removeToast } = useToast();
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
+  const hasLoaded = useRef(false);
 
   const fetchContacts = useCallback(async (search: string, skip: number, append: boolean) => {
     try {
       if (append) {
         setLoadingMore(true);
-      } else {
+      } else if (!hasLoaded.current) {
         setLoading(true);
       }
       setError(null);
@@ -60,6 +61,7 @@ export default function ContactsPage() {
       console.error('Erro ao carregar contatos:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar contatos');
     } finally {
+      hasLoaded.current = true;
       setLoading(false);
       setLoadingMore(false);
     }
