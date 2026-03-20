@@ -57,6 +57,11 @@ export class CampaignService {
     return extractData<CampaignRun>(response, 'Falha ao executar campanha. Tente novamente.');
   }
 
+  public async deleteCampaign(campaignId: string): Promise<void> {
+    const response = await apiClient.delete(`/campaigns/${campaignId}`);
+    if (!response.success) throw new Error('Falha ao excluir campanha. Tente novamente.');
+  }
+
   public async processJobs(opts?: { limit?: number; runId?: string }): Promise<{ sent: number; failed: number; skipped: number }> {
     const params = new URLSearchParams();
     if (opts?.limit !== undefined) params.set('limit', String(opts.limit));

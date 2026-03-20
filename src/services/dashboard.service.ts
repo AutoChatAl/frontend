@@ -4,10 +4,11 @@ export interface DashboardMetrics {
   messagesSent: number;
   messagesFailed: number;
   messagesReceived: number;
+  messagesRead: number;
   totalContacts: number;
   activeChannels: number;
   totalCampaigns: number;
-  daily: { date: string; sent: number; received: number }[];
+  daily: { date: string; sent: number; received: number; read: number }[];
 }
 
 interface MetricsResponse {

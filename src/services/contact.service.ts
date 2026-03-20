@@ -35,6 +35,17 @@ class ContactService {
     return response.data as SyncContactsResult;
   }
 
+  public async updateContact(contactId: string, data: { displayName?: string; tagIds?: string[] }): Promise<Contact> {
+    const response = await apiClient.put<{ data: Contact }>(`/contacts/${contactId}`, data);
+    if (!response.success || !response.data) throw new Error('Falha ao atualizar contato.');
+    return response.data.data;
+  }
+
+  public async deleteContact(contactId: string): Promise<void> {
+    const response = await apiClient.delete(`/contacts/${contactId}`);
+    if (!response.success) throw new Error('Falha ao excluir contato.');
+  }
+
   public async syncInstagramContacts(channelId: string): Promise<{ ok: boolean; upserted: number }> {
     const response = await apiClient.post<{ ok: boolean; upserted: number }>(`/channels/instagram/${channelId}/contacts/sync`);
     if (!response.success || !response.data) throw new Error('Não foi possível sincronizar os contatos do Instagram. Tente novamente.');

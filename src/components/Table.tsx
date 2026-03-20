@@ -30,6 +30,7 @@ interface TableProps<T> {
     }>;
   };
   renderActions?: (row: T) => ReactNode;
+  renderMobileCard?: (row: T) => ReactNode;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
@@ -40,6 +41,7 @@ export default function Table<T extends { id: number | string }>({
   data,
   actions,
   renderActions,
+  renderMobileCard,
   onLoadMore,
   hasMore,
   loadingMore,
@@ -66,7 +68,7 @@ export default function Table<T extends { id: number | string }>({
   return (
     <div className="space-y-4">
       {actions && (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           {actions.searchBar && (
             <SearchBar
               placeholder={actions.searchBar.placeholder ?? ''}
@@ -87,7 +89,17 @@ export default function Table<T extends { id: number | string }>({
         </div>
       )}
 
-      <Card className="overflow-hidden">
+      {renderMobileCard && (
+        <div className="flex flex-col gap-3 md:hidden">
+          {data.map((row) => (
+            <React.Fragment key={row.id}>
+              {renderMobileCard(row)}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      <Card className={`overflow-hidden ${renderMobileCard ? 'hidden md:block' : ''}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -128,11 +140,17 @@ export default function Table<T extends { id: number | string }>({
         </div>
 
         {onLoadMore && (
-          <div ref={sentinelRef} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div ref={!renderMobileCard ? sentinelRef : undefined} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
             {loadingMore ? 'Carregando...' : ''}
           </div>
         )}
       </Card>
+
+      {renderMobileCard && onLoadMore && (
+        <div ref={sentinelRef} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500 md:hidden">
+          {loadingMore ? 'Carregando...' : ''}
+        </div>
+      )}
     </div>
   );
 }
