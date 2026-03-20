@@ -58,11 +58,14 @@ function MiniChart({
     return d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
   };
 
+  const BAR_HEIGHT = 112;
+
   return (
     <div>
-      <div className="flex items-end gap-1.5 h-28 w-full">
+      <div className="flex items-end gap-1.5 w-full" style={{ height: BAR_HEIGHT }}>
         {data.map((d, i) => {
-          const h = (d[dataKey] / max) * 100;
+          const val = d[dataKey];
+          const px = Math.max(Math.round((val / max) * BAR_HEIGHT), 3);
           return (
             <div
               key={i}
@@ -70,11 +73,11 @@ function MiniChart({
               style={{ minWidth: 0 }}
             >
               <div
-                className={`w-full rounded-t-sm ${color} opacity-80 hover:opacity-100 transition-opacity`}
-                style={{ height: `${Math.max(h, 2)}%` }}
+                className={`w-full rounded-t-sm ${color} opacity-80 hover:opacity-100 transition-all cursor-pointer`}
+                style={{ height: `${px}px` }}
               />
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
-                {weekday(d.date)}: {d[dataKey]}
+                {weekday(d.date)}: {val}
               </div>
             </div>
           );
