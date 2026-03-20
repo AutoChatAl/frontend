@@ -1,12 +1,13 @@
 'use client';
 
 import { Search, MessageCircle, Smartphone, Check } from 'lucide-react';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
+import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
 
 type RawContact = Contact & { _id?: string };
@@ -25,7 +26,15 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [maxContacts, setMaxContacts] = useState(250);
+  const [limitError, setLimitError] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    if (isOpen) {
+      planLimitsService.getLimits().then((l) => setMaxContacts(l.maxContactsPerGroup));
+    }
+  }, [isOpen]);
 
   const searchContacts = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -50,9 +59,18 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
   };
 
   const toggleContact = (contactId: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(contactId) ? prev.filter((id) => id !== contactId) : [...prev, contactId],
-    );
+    setSelectedIds((prev) => {
+      if (prev.includes(contactId)) {
+        setLimitError('');
+        return prev.filter((id) => id !== contactId);
+      }
+      if (prev.length >= maxContacts) {
+        setLimitError(`Limite de ${maxContacts} contatos por grupo atingido.`);
+        return prev;
+      }
+      setLimitError('');
+      return [...prev, contactId];
+    });
   };
 
   const getContactDisplay = (contact: Contact) => {
@@ -152,8 +170,11 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
 
           {selectedIds.length > 0 && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              {selectedIds.length} contato{selectedIds.length > 1 ? 's' : ''} selecionado{selectedIds.length > 1 ? 's' : ''}
+              {selectedIds.length}/{maxContacts} contato{selectedIds.length > 1 ? 's' : ''} selecionado{selectedIds.length > 1 ? 's' : ''}
             </p>
+          )}
+          {limitError && (
+            <p className="text-xs text-red-500 mt-1">{limitError}</p>
           )}
         </div>
 

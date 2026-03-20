@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import {
@@ -6,6 +5,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Loader2,
   MessageCircle,
   Repeat,
@@ -26,6 +26,7 @@ import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
+import { planLimitsService, type PlanLimits } from '@/services/plan-limits.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
@@ -142,11 +143,14 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const [dispatchResult, setDispatchResult] = useState<DispatchResult | null>(null);
   const [formData, setFormData] = useState<CreateCampaignInput>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [limits, setLimits] = useState<PlanLimits | null>(null);
 
   const loadInitialData = useCallback(async () => {
     try {
       setLoadingData(true);
       setError(null);
+      const fetchedLimits = await planLimitsService.getLimits();
+      setLimits(fetchedLimits);
       const [whatsappChannels, groupsList] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
         groupService.listGroups().catch(() => []),
@@ -176,7 +180,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       setChannels(allChannels);
       setContacts(allContacts);
 
-      // Filter out groups that have Instagram contacts (only WhatsApp groups allowed)
       const waChannelIds = new Set(allChannels.map((ch) => ch.id));
       const normalizedGroups = (groupsList as (Group & { _id?: string })[])
         .map((g: Group & { _id?: string }) => ({
@@ -190,8 +193,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
           return true;
         });
       setGroups(normalizedGroups);
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err);
+    } catch {
       setError('Não foi possível carregar canais e contatos. Tente novamente.');
     } finally {
       setLoadingData(false);
@@ -238,7 +240,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       onSuccess();
       handleClose();
     } catch (err) {
-      console.error('Erro ao criar campanha:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar campanha. Tente novamente.');
     } finally {
       setLoading(false);
@@ -267,7 +268,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       onSuccess();
       handleClose();
     } catch (err) {
-      console.error('Erro ao disparar campanha:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar e disparar a campanha.');
     } finally {
       setLoading(false);
@@ -306,7 +306,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         ? prev.channelIds.filter((id) => id !== channelId)
         : [...prev.channelIds, channelId];
 
-      // When removing a channel, also remove its contacts from selection
       let newContactIds = prev.contactIds;
       if (isRemoving) {
         const channelContactIds = new Set(
@@ -335,16 +334,24 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     clearFieldError('group');
   };
 
+  const maxContacts = limits?.maxContactsPerCampaign ?? 250;
+
   const toggleContact = (contactId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      contactIds: prev.contactIds.includes(contactId)
-        ? prev.contactIds.filter((id) => id !== contactId)
-        : [...prev.contactIds, contactId],
-    }));
+    setFormData((prev) => {
+      const isRemoving = prev.contactIds.includes(contactId);
+      if (!isRemoving && prev.contactIds.length >= maxContacts) {
+        setError(`Limite de ${maxContacts} contatos por campanha atingido.`);
+        return prev;
+      }
+      return {
+        ...prev,
+        contactIds: isRemoving
+          ? prev.contactIds.filter((id) => id !== contactId)
+          : [...prev.contactIds, contactId],
+      };
+    });
   };
 
-  // Only show contacts belonging to selected channels
   const channelContacts = useMemo(() => {
     if (formData.channelIds.length === 0) return [];
     const selectedChannelSet = new Set(formData.channelIds);
@@ -353,8 +360,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     );
   }, [contacts, formData.channelIds]);
 
-  const selectAllContacts = () =>
-    setFormData((prev) => ({ ...prev, contactIds: channelContacts.map((c) => c.id) }));
+  const selectAllContacts = () => {
+    const ids = channelContacts.map((c) => c.id).slice(0, maxContacts);
+    if (channelContacts.length > maxContacts) {
+      setError(`Limite de ${maxContacts} contatos. Apenas os ${maxContacts} primeiros foram selecionados.`);
+    }
+    setFormData((prev) => ({ ...prev, contactIds: ids }));
+  };
 
   const deselectAllContacts = () =>
     setFormData((prev) => ({ ...prev, contactIds: [] }));
@@ -373,7 +385,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       });
     }
 
-    // Sort selected contacts to top
     const selectedSet = new Set(formData.contactIds);
     return [...result].sort((a, b) => {
       const aSelected = selectedSet.has(a.id) ? 0 : 1;
@@ -528,12 +539,39 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <ExternalLink size={14} className="text-indigo-500" />
+                  Botão de link <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="url"
+                    value={formData.linkUrl ?? ''}
+                    onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
+                    className={inputCls(false)}
+                    placeholder="https://exemplo.com/link"
+                  />
+                  <input
+                    type="text"
+                    value={formData.linkLabel ?? ''}
+                    onChange={(e) => setFormData({ ...formData, linkLabel: e.target.value })}
+                    className={inputCls(false)}
+                    placeholder="Texto do botão (ex: Saiba mais)"
+                  />
+                </div>
+              </div>
+
               {formData.message.trim() && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Preview no WhatsApp
                   </label>
-                  <WhatsAppPreview message={formData.message} />
+                  <WhatsAppPreview
+                    message={formData.message}
+                    linkUrl={formData.linkUrl}
+                    linkLabel={formData.linkLabel}
+                  />
                 </div>
               )}
             </div>

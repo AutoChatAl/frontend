@@ -141,15 +141,15 @@ export default function Sidebar({
               <Menu size={20} />
             </button>
           ) : (
-            <div className="flex items-center w-full gap-3 p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
+            <div className="flex items-center w-full gap-3 p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors overflow-hidden">
               <div
                 onClick={toggleSidebar}
-                className="flex items-center gap-3 flex-1 cursor-pointer"
+                className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-600">
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-600 shrink-0">
                   {userInitials}
                 </div>
-                <div className="text-left overflow-hidden flex-1">
+                <div className="text-left overflow-hidden min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userName}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{userRole}</p>
                 </div>

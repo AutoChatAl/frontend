@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
 'use client';
 
 import {
   AlertCircle,
   MessageCircle,
+  Mic,
   Pencil,
   Plus,
   Reply,
@@ -52,7 +52,6 @@ export default function AutoRepliesPage() {
       }));
       setRules(normalized);
     } catch (err) {
-      console.error('Erro ao carregar auto-respostas:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar auto-respostas');
     } finally {
       setLoading(false);
@@ -71,7 +70,6 @@ export default function AutoRepliesPage() {
       );
       addToast('success', `Auto-resposta ${rule.enabled ? 'desativada' : 'ativada'}`);
     } catch (err) {
-      console.error('Erro ao alternar:', err);
       addToast('error', 'Erro ao alterar status da auto-resposta');
     }
   };
@@ -84,7 +82,6 @@ export default function AutoRepliesPage() {
       setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       addToast('success', 'Auto-resposta excluída');
     } catch (err) {
-      console.error('Erro ao excluir:', err);
       addToast('error', 'Erro ao excluir auto-resposta');
     } finally {
       setDeleting(false);
@@ -178,9 +175,30 @@ export default function AutoRepliesPage() {
                         </div>
                         <div>
                           <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Responder com:</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 line-clamp-3">
-                            {rule.replyMessage}
-                          </p>
+                          <div className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 space-y-1">
+                            {(rule.replyType === 'TEXT' || rule.replyType === 'TEXT_AND_AUDIO') && rule.replyMessage && (
+                              <p className="line-clamp-3 whitespace-pre-wrap">{rule.replyMessage}</p>
+                            )}
+                            {rule.channelType === 'INSTAGRAM' && rule.replyLinkDescription && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 whitespace-pre-wrap">
+                                {rule.replyLinkDescription}
+                              </p>
+                            )}
+                            {rule.replyLinkUrl && (
+                              <div className="pt-0.5">
+                                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                                  <Reply size={12} />
+                                  <span className="text-xs font-medium truncate">{rule.replyLinkLabel || rule.replyLinkUrl}</span>
+                                </div>
+                              </div>
+                            )}
+                            {(rule.replyType === 'AUDIO' || rule.replyType === 'TEXT_AND_AUDIO') && (
+                              <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                                <Mic size={14} />
+                                <span className="text-xs font-medium">Mensagem de áudio</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

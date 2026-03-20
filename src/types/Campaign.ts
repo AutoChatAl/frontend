@@ -6,6 +6,8 @@ export interface Campaign {
   status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
   sourceType?: 'CHANNEL' | 'GROUP';
   message: string;
+  linkUrl?: string;
+  linkLabel?: string;
   messageType: 'TEXT' | 'GENERIC_TEMPLATE';
   messageMeta?: Record<string, unknown>;
   messageTag?: 'HUMAN_AGENT' | null;
@@ -70,6 +72,8 @@ export interface CreateCampaignInput {
   status?: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
   sourceType: 'CHANNEL' | 'GROUP';
   message: string;
+  linkUrl?: string;
+  linkLabel?: string;
   channelIds: string[];
   groupId?: string;
   contactIds: string[];

@@ -116,7 +116,6 @@ function DisableView({
 
   return (
     <div className="space-y-6">
-      {/* Status badge */}
       <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
         <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
           <ShieldCheck size={20} className="text-emerald-600 dark:text-emerald-400" />
@@ -266,7 +265,6 @@ function SetupView({
             ))}
           </ol>
 
-          {/* Download links */}
           <div className="flex gap-2">
             <a
               href={app.ios}
@@ -432,7 +430,6 @@ export default function TwoFactorModal({ isOpen, enabled, onClose, onSuccess }: 
       const data = await authService.setup2FA();
       setSetupData(data);
     } catch (err) {
-      // fallback: ignore
       throw err;
     } finally {
       setSetupLoading(false);
