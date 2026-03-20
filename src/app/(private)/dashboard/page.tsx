@@ -3,6 +3,7 @@
 import {
   Send,
   MessageSquare,
+  CheckCheck,
   Users,
   Wifi,
   Megaphone,
@@ -38,32 +39,54 @@ function MetricCard({ title, value, icon: Icon, color, bgColor }: MetricCardProp
   );
 }
 
-function MiniChart({ data, dataKey, color }: { data: { date: string; sent: number; received: number }[]; dataKey: 'sent' | 'received'; color: string }) {
+function MiniChart({
+  data,
+  dataKey,
+  color,
+}: {
+  data: { date: string; sent: number; received: number; read: number }[];
+  dataKey: 'sent' | 'received' | 'read';
+  color: string;
+}) {
   if (!data.length) return null;
 
   const values = data.map((d) => d[dataKey]);
   const max = Math.max(...values, 1);
 
+  const weekday = (iso: string) => {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+  };
+
   return (
-    <div className="flex items-end gap-px h-28 w-full">
-      {data.map((d, i) => {
-        const h = (d[dataKey] / max) * 100;
-        return (
-          <div
-            key={i}
-            className="flex-1 group relative"
-            style={{ minWidth: 0 }}
-          >
+    <div>
+      <div className="flex items-end gap-1.5 h-28 w-full">
+        {data.map((d, i) => {
+          const h = (d[dataKey] / max) * 100;
+          return (
             <div
-              className={`w-full rounded-t-sm ${color} opacity-80 hover:opacity-100 transition-opacity`}
-              style={{ height: `${Math.max(h, 2)}%` }}
-            />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
-              {d.date.slice(5)}: {d[dataKey]}
+              key={i}
+              className="flex-1 group relative"
+              style={{ minWidth: 0 }}
+            >
+              <div
+                className={`w-full rounded-t-sm ${color} opacity-80 hover:opacity-100 transition-opacity`}
+                style={{ height: `${Math.max(h, 2)}%` }}
+              />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+                {weekday(d.date)}: {d[dataKey]}
+              </div>
             </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-1.5 mt-1.5">
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 text-center text-[10px] text-slate-400 dark:text-slate-500 truncate">
+            {weekday(d.date)}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -139,25 +162,34 @@ export default function DashboardPage() {
     );
   }
 
-  const totalSent30d = metrics.daily.reduce((sum, d) => sum + d.sent, 0);
-  const totalReceived30d = metrics.daily.reduce((sum, d) => sum + d.received, 0);
+  const daily7 = metrics.daily.slice(-7);
 
-  const last7 = metrics.daily.slice(-7);
-  const prev7 = metrics.daily.slice(-14, -7);
-  const sentLast7 = last7.reduce((s, d) => s + d.sent, 0);
-  const sentPrev7 = prev7.reduce((s, d) => s + d.sent, 0);
-  const sentTrend = sentPrev7 > 0 ? ((sentLast7 - sentPrev7) / sentPrev7 * 100) : 0;
+  const totalSent7d = daily7.reduce((sum, d) => sum + d.sent, 0);
+  const totalReceived7d = daily7.reduce((sum, d) => sum + d.received, 0);
+  const totalRead7d = daily7.reduce((sum, d) => sum + (d.read ?? 0), 0);
+
+  const first3 = daily7.slice(0, 3);
+  const last3 = daily7.slice(-3);
+  const sentFirst3 = first3.reduce((s, d) => s + d.sent, 0);
+  const sentLast3 = last3.reduce((s, d) => s + d.sent, 0);
+  const sentTrend = sentFirst3 > 0 ? ((sentLast3 - sentFirst3) / sentFirst3 * 100) : 0;
+  const recFirst3 = first3.reduce((s, d) => s + d.received, 0);
+  const recLast3 = last3.reduce((s, d) => s + d.received, 0);
+  const recTrend = recFirst3 > 0 ? ((recLast3 - recFirst3) / recFirst3 * 100) : 0;
+  const readFirst3 = first3.reduce((s, d) => s + (d.read ?? 0), 0);
+  const readLast3 = last3.reduce((s, d) => s + (d.read ?? 0), 0);
+  const readTrend = readFirst3 > 0 ? ((readLast3 - readFirst3) / readFirst3 * 100) : 0;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Visão Geral</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Métricas do seu workspace
+          Métricas dos últimos 7 dias do seu workspace
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard
           title="Mensagens Enviadas"
           value={metrics.messagesSent}
@@ -171,6 +203,13 @@ export default function DashboardPage() {
           icon={MessageSquare}
           color="text-emerald-600 dark:text-emerald-400"
           bgColor="bg-emerald-50 dark:bg-emerald-900/30"
+        />
+        <MetricCard
+          title="Mensagens Lidas"
+          value={metrics.messagesRead ?? 0}
+          icon={CheckCheck}
+          color="text-sky-600 dark:text-sky-400"
+          bgColor="bg-sky-50 dark:bg-sky-900/30"
         />
         <MetricCard
           title="Contatos"
@@ -195,49 +234,68 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-white">Mensagens Enviadas</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimos 30 dias</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimos 7 dias</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {totalSent30d.toLocaleString('pt-BR')}
+                {totalSent7d.toLocaleString('pt-BR')}
               </p>
               {sentTrend !== 0 && (
                 <div className={`flex items-center gap-1 text-xs justify-end ${sentTrend > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                   {sentTrend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                  <span>{Math.abs(sentTrend).toFixed(0)}% vs semana anterior</span>
+                  <span>{Math.abs(sentTrend).toFixed(0)}% tendência</span>
                 </div>
               )}
             </div>
           </div>
-          <MiniChart data={metrics.daily} dataKey="sent" color="bg-indigo-500" />
-          <div className="flex justify-between mt-2 text-[10px] text-slate-400">
-            <span>{metrics.daily[0]?.date.slice(5)}</span>
-            <span>{metrics.daily[metrics.daily.length - 1]?.date.slice(5)}</span>
-          </div>
+          <MiniChart data={daily7} dataKey="sent" color="bg-indigo-500" />
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-slate-800 dark:text-white">Mensagens Recebidas</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimos 30 dias</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimos 7 dias</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-slate-800 dark:text-white">
-                {totalReceived30d.toLocaleString('pt-BR')}
+                {totalReceived7d.toLocaleString('pt-BR')}
               </p>
+              {recTrend !== 0 && (
+                <div className={`flex items-center gap-1 text-xs justify-end ${recTrend > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {recTrend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{Math.abs(recTrend).toFixed(0)}% tendência</span>
+                </div>
+              )}
             </div>
           </div>
-          <MiniChart data={metrics.daily} dataKey="received" color="bg-emerald-500" />
-          <div className="flex justify-between mt-2 text-[10px] text-slate-400">
-            <span>{metrics.daily[0]?.date.slice(5)}</span>
-            <span>{metrics.daily[metrics.daily.length - 1]?.date.slice(5)}</span>
+          <MiniChart data={daily7} dataKey="received" color="bg-emerald-500" />
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-slate-800 dark:text-white">Mensagens Lidas</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Últimos 7 dias</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-slate-800 dark:text-white">
+                {totalRead7d.toLocaleString('pt-BR')}
+              </p>
+              {readTrend !== 0 && (
+                <div className={`flex items-center gap-1 text-xs justify-end ${readTrend > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {readTrend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{Math.abs(readTrend).toFixed(0)}% tendência</span>
+                </div>
+              )}
+            </div>
           </div>
+          <MiniChart data={daily7} dataKey="read" color="bg-sky-500" />
         </div>
       </div>
 

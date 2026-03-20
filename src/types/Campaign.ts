@@ -4,10 +4,14 @@ export interface Campaign {
   name: string;
   description?: string | null;
   status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+  sourceType?: 'CHANNEL' | 'GROUP';
   message: string;
   messageType: 'TEXT' | 'GENERIC_TEMPLATE';
   messageMeta?: Record<string, unknown>;
   messageTag?: 'HUMAN_AGENT' | null;
+  channelConfigs?: Array<{ channelId: string; messageOverride?: string }>;
+  contactIds?: string[];
+  groupIds?: string[];
   createdAt: string;
   updatedAt: string;
   channels?: CampaignChannel[];
