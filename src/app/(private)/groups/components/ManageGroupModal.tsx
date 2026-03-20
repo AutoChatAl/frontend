@@ -7,6 +7,7 @@ import Button from '@/components/Button';
 import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
+import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 
@@ -30,6 +31,8 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
   const [searchResults, setSearchResults] = useState<Contact[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [maxContacts, setMaxContacts] = useState(250);
+  const [limitError, setLimitError] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const loadGroupData = useCallback(async () => {
@@ -52,6 +55,8 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       setSearchQuery('');
       setSearchResults([]);
       setSelectedContactIds([]);
+      setLimitError('');
+      planLimitsService.getLimits().then((l) => setMaxContacts(l.maxContactsPerGroup));
     }
   }, [isOpen, group, loadGroupData]);
 
@@ -78,9 +83,19 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
   };
 
   const toggleContactSelection = (contactId: string) => {
-    setSelectedContactIds((prev) =>
-      prev.includes(contactId) ? prev.filter((id) => id !== contactId) : [...prev, contactId],
-    );
+    setSelectedContactIds((prev) => {
+      if (prev.includes(contactId)) {
+        setLimitError('');
+        return prev.filter((id) => id !== contactId);
+      }
+      const totalAfterAdd = members.length + prev.length + 1;
+      if (totalAfterAdd > maxContacts) {
+        setLimitError(`Limite de ${maxContacts} contatos por grupo atingido.`);
+        return prev;
+      }
+      setLimitError('');
+      return [...prev, contactId];
+    });
   };
 
   const handleAddSelected = async () => {
@@ -215,9 +230,12 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
               </div>
             )}
 
+            {limitError && (
+              <p className="text-xs text-red-500 mt-1">{limitError}</p>
+            )}
             {selectedContactIds.length > 0 && (
               <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-600">
-                <span className="text-xs text-slate-500">{selectedContactIds.length} selecionados</span>
+                <span className="text-xs text-slate-500">{selectedContactIds.length} selecionados ({members.length + selectedContactIds.length}/{maxContacts})</span>
                 <Button size="sm" onClick={handleAddSelected} disabled={saving}>
                   {saving ? 'Adicionando...' : 'Adicionar Selecionados'}
                 </Button>

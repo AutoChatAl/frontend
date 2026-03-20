@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import { AlertCircle, Filter, Loader2, MoreVertical, Play, Plus } from 'lucide-react';
@@ -36,7 +35,6 @@ export default function CampaignsPage() {
       setCampaigns(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar campanhas');
-      console.error('Erro ao carregar campanhas:', err);
     } finally {
       setLoading(false);
     }
@@ -55,7 +53,6 @@ export default function CampaignsPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao executar campanha';
       addToast('error', msg);
-      console.error('Erro ao executar campanha:', err);
     } finally {
       setRunningCampaign(null);
     }

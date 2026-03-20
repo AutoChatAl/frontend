@@ -1,10 +1,12 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, ExternalLink } from 'lucide-react';
 
 interface WhatsAppPreviewProps {
   message: string;
   senderName?: string;
+  linkUrl?: string | undefined;
+  linkLabel?: string | undefined;
 }
 
 function formatWhatsAppText(text: string): string {
@@ -23,7 +25,7 @@ function formatWhatsAppText(text: string): string {
   return html;
 }
 
-export default function WhatsAppPreview({ message, senderName = 'Synq' }: WhatsAppPreviewProps) {
+export default function WhatsAppPreview({ message, senderName = 'Synq', linkUrl, linkLabel }: WhatsAppPreviewProps) {
   const now = new Date();
   const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -48,15 +50,26 @@ export default function WhatsAppPreview({ message, senderName = 'Synq' }: WhatsA
       >
         {message ? (
           <div className="flex justify-end">
-            <div className="bg-[#DCF8C6] dark:bg-[#005C4B] rounded-lg rounded-tr-sm px-3 py-2 max-w-[85%] shadow-sm">
-              <div
-                className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed wrap-break-word whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message) }}
-              />
-              <div className="flex items-center justify-end gap-1 mt-1">
-                <span className="text-[10px] text-gray-500 dark:text-gray-400">{time}</span>
-                <Check size={12} className="text-blue-500" />
+            <div className="bg-[#DCF8C6] dark:bg-[#005C4B] rounded-lg rounded-tr-sm max-w-[85%] shadow-sm overflow-hidden">
+              <div className="px-3 py-2">
+                <div
+                  className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed wrap-break-word whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message) }}
+                />
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">{time}</span>
+                  <Check size={12} className="text-blue-500" />
+                </div>
               </div>
+
+              {linkUrl && (
+                <div className="border-t border-[#c8e6b0] dark:border-[#00483d] px-3 py-2.5 flex items-center justify-center gap-2 cursor-pointer hover:bg-[#d4f0c5] dark:hover:bg-[#004a3e] transition-colors">
+                  <ExternalLink size={14} className="text-[#075E54] dark:text-[#25D366] shrink-0" />
+                  <span className="text-sm font-medium text-[#075E54] dark:text-[#25D366]">
+                    {linkLabel || 'Abrir link'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ) : (

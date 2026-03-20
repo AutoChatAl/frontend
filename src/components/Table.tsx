@@ -74,9 +74,9 @@ export default function Table<T extends { id: number | string }>({
               onChange={actions.searchBar.onChange ?? ((_v: string) => {})}
             />
           )}
-          {actions.buttons?.map((button, index) => (
+          {actions.buttons?.map((button) => (
             <Button
-              key={index}
+              key={button.label}
               onClick={button.onClick}
               icon={button.icon}
               variant={button.variant || 'primary'}
@@ -92,8 +92,8 @@ export default function Table<T extends { id: number | string }>({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
-                {columns.map((column, index) => (
-                  <th key={index} className={`p-4 font-semibold ${column.className || ''}`}>
+                {columns.map((column) => (
+                  <th key={column.header} className={`p-4 font-semibold ${column.className || ''}`}>
                     {column.header}
                   </th>
                 ))}
@@ -105,13 +105,13 @@ export default function Table<T extends { id: number | string }>({
             <tbody className="text-sm divide-y divide-slate-50 dark:divide-slate-700/50">
               {data.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                  {columns.map((column, colIndex) => {
+                  {columns.map((column) => {
                     const value: ReactNode = typeof column.accessor === 'function'
                       ? column.accessor(row)
                       : (row[column.accessor] as unknown as ReactNode);
 
                     return (
-                      <td key={colIndex} className={`p-4 ${column.className || ''}`}>
+                      <td key={column.header} className={`p-4 ${column.className || ''}`}>
                         {column.render ? column.render(value, row) : value}
                       </td>
                     );

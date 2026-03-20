@@ -1,7 +1,8 @@
 'use client';
 
-import { Menu, Sun, Moon, Bell } from 'lucide-react';
+import { Menu, Sun, Moon } from 'lucide-react';
 
+import NotificationDropdown from '@/components/NotificationDropdown';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -54,10 +55,7 @@ export default function Header() {
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
-        <button className="relative text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors">
-          <Bell size={20} />
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-slate-800"></span>
-        </button>
+        <NotificationDropdown />
       </div>
     </header>
   );

@@ -31,7 +31,6 @@ export default function SecurityTab() {
       const user = await authService.fetchMe();
       setTwoFactorEnabled(!!user.twoFactorEnabled);
     } catch {
-      // fallback: ignore
     } finally {
       setLoading2FA(false);
     }

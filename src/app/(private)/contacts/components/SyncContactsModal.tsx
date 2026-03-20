@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import {
@@ -46,7 +45,6 @@ export default function SyncContactsModal({
       onClose();
       onSuccess({ created: result.created, updated: result.updated });
     } catch (err) {
-      console.error('Erro ao sincronizar contatos:', err);
       setError(
         err instanceof Error
           ? err.message

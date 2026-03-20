@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import {
@@ -58,7 +57,6 @@ export default function ContactsPage() {
       setContacts((prev) => (append ? [...prev, ...result.data] : result.data));
       setTotal(result.total);
     } catch (err) {
-      console.error('Erro ao carregar contatos:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar contatos');
     } finally {
       hasLoaded.current = true;
