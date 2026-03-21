@@ -1,11 +1,12 @@
 'use client';
 
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
+import { authService } from '@/services/auth.service';
 import type { WhatsappConnectResponse } from '@/types/Channel';
 
 interface WhatsAppCreateModalProps {
@@ -29,9 +30,13 @@ export default function WhatsAppCreateModal({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const createdChannelId = useRef<string | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
+      esRef.current?.close();
+      esRef.current = null;
       setTimeout(() => {
         setState('form');
         setName('');
@@ -39,9 +44,30 @@ export default function WhatsAppCreateModal({
         setQrCode(null);
         setPairingCode(null);
         setError(null);
+        createdChannelId.current = null;
       }, 300);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (state !== 'connecting' || !createdChannelId.current) return;
+    const token = authService.getToken();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const url = `${apiUrl}/channels/whatsapp/${createdChannelId.current}/events?token=${encodeURIComponent(token || '')}`;
+    const es = new EventSource(url);
+    esRef.current = es;
+
+    es.addEventListener('connected', () => {
+      setState('connected');
+      es.close();
+      setTimeout(() => onClose(), 2000);
+    });
+
+    return () => {
+      es.close();
+      esRef.current = null;
+    };
+  }, [state, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +86,7 @@ export default function WhatsAppCreateModal({
         autoConnect: false,
       });
 
+      createdChannelId.current = response.channel.id;
       setState('connecting');
       const phoneNumber = phone.trim() || undefined;
       const connectResponse = await onConnect(response.channel.id, phoneNumber);

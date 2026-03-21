@@ -69,9 +69,9 @@ export default function LoginPage() {
             <div>
               <div className="flex justify-between mb-1.5">
                 <label className="text-sm font-medium text-slate-700">Senha</label>
-                <a href="#" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                <Link href="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
                   Esqueceu a senha?
-                </a>
+                </Link>
               </div>
               <Input
                 type={showPassword ? 'text' : 'password'}

@@ -7,6 +7,13 @@ export interface PlanLimits {
   maxContactsPerCampaign: number;
   maxContactsPerGroup: number;
   manualDispatchCooldownHours: number;
+  maxMessagesPerMonth: number;
+}
+
+export interface MessageUsage {
+  count: number;
+  periodStart: string;
+  limit: number;
 }
 
 const DEFAULT_LIMITS: PlanLimits = {
@@ -16,6 +23,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   maxContactsPerCampaign: 250,
   maxContactsPerGroup: 250,
   manualDispatchCooldownHours: 2,
+  maxMessagesPerMonth: 1000,
 };
 
 let cachedLimits: PlanLimits | null = null;
@@ -36,6 +44,17 @@ class PlanLimitsService {
 
   clearCache() {
     cachedLimits = null;
+  }
+
+  async getMessageUsage(): Promise<MessageUsage> {
+    try {
+      const response = await apiClient.get<MessageUsage>('/auth/workspace/message-usage');
+      if (response.success && response.data) {
+        return response.data as MessageUsage;
+      }
+    } catch {
+    }
+    return { count: 0, periodStart: new Date().toISOString(), limit: DEFAULT_LIMITS.maxMessagesPerMonth };
   }
 }
 

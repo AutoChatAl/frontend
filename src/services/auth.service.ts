@@ -150,6 +150,20 @@ class AuthService {
     }
   }
 
+  public async forgotPassword(email: string): Promise<void> {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/forgot-password', { email });
+    if (!response.success) {
+      throw new Error('Não foi possível enviar o email. Tente novamente.');
+    }
+  }
+
+  public async resetPassword(token: string, newPassword: string): Promise<void> {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/reset-password', { token, newPassword });
+    if (!response.success) {
+      throw new Error('Token inválido ou expirado. Solicite um novo link de recuperação.');
+    }
+  }
+
   public saveToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);

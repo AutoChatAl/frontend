@@ -1,36 +1,61 @@
 'use client';
 
 import { CheckCircle, Download } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import { type MessageUsage, planLimitsService } from '@/services/plan-limits.service';
 
 const INVOICES = [
-  { date: '01/05/2024', amount: 'R$ 199,90', id: 202400 },
-  { date: '01/04/2024', amount: 'R$ 199,90', id: 202401 },
-  { date: '01/03/2024', amount: 'R$ 199,90', id: 202402 },
+  { date: '01/05/2024', amount: 'R$ 69,90', id: 202400 },
+  { date: '01/04/2024', amount: 'R$ 69,90', id: 202401 },
+  { date: '01/03/2024', amount: 'R$ 69,90', id: 202402 },
 ];
 
 export default function BillingTab() {
+  const [usage, setUsage] = useState<MessageUsage | null>(null);
+
+  const fetchUsage = useCallback(async () => {
+    try {
+      const data = await planLimitsService.getMessageUsage();
+      setUsage(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchUsage();
+    const interval = setInterval(fetchUsage, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchUsage]);
+
+  const formatNumber = (n: number) => n.toLocaleString('pt-BR');
+  const count = usage?.count ?? 0;
+  const limit = usage?.limit ?? 0;
+  const progress = limit > 0 ? Math.min(Math.round((count / limit) * 100), 100) : 0;
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
         <div className="flex justify-between items-start mb-6">
           <div>
             <p className="text-indigo-600 dark:text-indigo-400 text-xs uppercase tracking-wider font-semibold">Plano Atual</p>
-            <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">Plano Pro</h3>
+            <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">Plano Basic</h3>
           </div>
           <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium">
-            R$ 199,90/mês
+            R$ 69,90/mês
           </span>
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>Consumo de Mensagens</span>
-            <span>7.500 / 10.000</span>
+            <span>{formatNumber(count)} / {formatNumber(limit)}</span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
-            <div className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full w-[75%] shadow-sm" />
+            <div
+              className={`h-2 rounded-full shadow-sm transition-all duration-500 ${progress >= 90 ? 'bg-red-500' : progress >= 70 ? 'bg-amber-500' : 'bg-indigo-600 dark:bg-indigo-500'}`}
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
         <div className="mt-6 flex gap-3">
