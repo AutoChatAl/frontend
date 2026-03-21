@@ -1,10 +1,11 @@
 'use client';
 
 import { RefreshCw, CheckCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
+import { authService } from '@/services/auth.service';
 import type { WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
 
 interface WhatsAppQRModalProps {
@@ -28,12 +29,37 @@ export default function WhatsAppQRModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (isOpen && channelId) {
       loadQRCode();
     }
+    if (!isOpen) {
+      esRef.current?.close();
+      esRef.current = null;
+    }
   }, [isOpen, channelId]);
+
+  useEffect(() => {
+    if (!isOpen || !channelId || isConnected) return;
+    const token = authService.getToken();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const url = `${apiUrl}/channels/whatsapp/${channelId}/events?token=${encodeURIComponent(token || '')}`;
+    const es = new EventSource(url);
+    esRef.current = es;
+
+    es.addEventListener('connected', () => {
+      setIsConnected(true);
+      es.close();
+      setTimeout(() => onClose(), 2000);
+    });
+
+    return () => {
+      es.close();
+      esRef.current = null;
+    };
+  }, [isOpen, channelId, isConnected, onClose]);
 
   const loadQRCode = async () => {
     try {
