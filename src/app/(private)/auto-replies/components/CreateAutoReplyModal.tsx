@@ -308,7 +308,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Modo de correspondência
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {MATCH_MODES.map((mode) => (
               <button
                 key={mode.value}
@@ -338,7 +338,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Tipo de resposta
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {REPLY_TYPES.map((opt) => {
               const disabled = false;
               return (

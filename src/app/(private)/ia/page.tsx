@@ -44,9 +44,9 @@ export default function IAPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Inteligência Artificial</h2>
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-1 sm:gap-2">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">Inteligência Artificial</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm">Configure o cérebro do seu assistente virtual</p>
       </div>
 
@@ -82,7 +82,7 @@ export default function IAPage() {
         <button
           onClick={saveConfig}
           disabled={saving}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center gap-2 transition-colors"
+          className="w-full sm:w-auto px-6 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors"
         >
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
           {saving ? 'Salvando...' : 'Salvar Alterações na IA'}
