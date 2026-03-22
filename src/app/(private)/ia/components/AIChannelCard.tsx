@@ -6,16 +6,17 @@ import type { AIChannel } from '@/types/AI';
 
 interface AIChannelCardProps {
   channel: AIChannel;
+  active: boolean;
   onToggle: (id: string) => void;
 }
 
-export default function AIChannelCard({ channel, onToggle }: AIChannelCardProps) {
+export default function AIChannelCard({ channel, active, onToggle }: AIChannelCardProps) {
   const isWhatsApp = channel.type === 'whatsapp';
 
   return (
     <div
       className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
-        channel.active
+        active
           ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm'
           : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 opacity-75'
       }`}
@@ -48,13 +49,20 @@ export default function AIChannelCard({ channel, onToggle }: AIChannelCardProps)
       </div>
 
       <div className="flex items-center gap-3">
-        <span className={`text-xs font-medium ${channel.active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-          {channel.active ? 'IA Ativa' : 'Desativada'}
+        <span className={`text-xs font-medium ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+          {active ? 'IA Ativa' : 'Desativada'}
         </span>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" checked={channel.active} onChange={() => onToggle(channel.id)} className="sr-only peer" />
-          <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-500"></div>
-        </label>
+        <button
+          type="button"
+          onClick={() => onToggle(channel.id)}
+          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+            active
+              ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-600 dark:bg-indigo-500'
+              : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600'
+          }`}
+        >
+          {active && <div className="w-2 h-2 rounded-full bg-white" />}
+        </button>
       </div>
     </div>
   );

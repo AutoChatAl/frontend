@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot } from 'lucide-react';
+import { Bot, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 import AIChannelsList from './components/AIChannelsList';
@@ -9,6 +9,7 @@ import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AITabs from './components/AITabs';
 
+import { ToastContainer } from '@/components/Toast';
 import { useAIConfig } from '@/hooks/AIHooks';
 
 export default function IAPage() {
@@ -18,14 +19,29 @@ export default function IAPage() {
     setSegment,
     tone,
     setTone,
+    customRules,
+    setCustomRules,
     products,
-    setProducts,
     channels,
-    toggleChannel,
-    rules,
-    toggleRule,
+    activeChannelId,
+    loading,
+    saving,
     saveConfig,
+    toggleChannel,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    toasts,
+    removeToast,
   } = useAIConfig();
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center py-32">
+        <Loader2 size={32} className="animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -44,7 +60,9 @@ export default function IAPage() {
             products={products}
             onSegmentChange={setSegment}
             onToneChange={setTone}
-            onProductsChange={setProducts}
+            onAddProduct={addProduct}
+            onUpdateProduct={updateProduct}
+            onDeleteProduct={deleteProduct}
           />
           <AIPromptPreview segment={segment} tone={tone} products={products} />
         </div>
@@ -52,21 +70,26 @@ export default function IAPage() {
 
       {activeTab === 'channels' && (
         <div className="space-y-6">
-          <AIChannelsList channels={channels} onToggleChannel={toggleChannel} />
+          <AIChannelsList channels={channels} activeChannelId={activeChannelId} onToggle={toggleChannel} />
         </div>
       )}
 
-      {activeTab === 'triggers' && <AIRulesSection rules={rules} onToggleRule={toggleRule} />}
+      {activeTab === 'triggers' && (
+        <AIRulesSection customRules={customRules} onCustomRulesChange={setCustomRules} />
+      )}
 
       <div className="flex justify-end pt-4">
         <button
           onClick={saveConfig}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center gap-2"
+          disabled={saving}
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center gap-2 transition-colors"
         >
-          <Bot size={18} />
-          Salvar Alterações na IA
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
+          {saving ? 'Salvando...' : 'Salvar Alterações na IA'}
         </button>
       </div>
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

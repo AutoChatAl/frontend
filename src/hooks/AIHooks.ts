@@ -1,59 +1,188 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { AIChannel, AIRule } from '@/types/AI';
+import { aiService } from '@/services/ai.service';
+import { channelsService } from '@/services/channels.service';
+import type { AIChannel } from '@/types/AI';
+import type { Product } from '@/types/AI';
+import type { Toast } from '@/components/Toast';
 
 export function useAIConfig() {
-  const [segment, setSegment] = useState('Varejo / E-commerce');
+  const [segment, setSegment] = useState('');
   const [tone, setTone] = useState('Amigável e Casual');
-  const [products, setProducts] = useState('Roupas femininas, vestidos de festa, moda casual, acessórios e calçados.');
+  const [customRules, setCustomRules] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [channels, setChannels] = useState<AIChannel[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const counterRef = useRef(0);
 
-  const [channels, setChannels] = useState<AIChannel[]>([
-    { id: 'wa1', name: 'Atendimento Principal', type: 'whatsapp', active: true, identifier: '+55 11 99999-9999' },
-    { id: 'wa2', name: 'Vendas Diretas', type: 'whatsapp', active: false, identifier: '+55 11 98888-8888' },
-    { id: 'ig1', name: '@loja.oficial', type: 'instagram', active: true, identifier: '@loja.oficial' },
-  ]);
+  const addToast = useCallback((type: 'success' | 'error', message: string) => {
+    const id = ++counterRef.current;
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  }, []);
 
-  const [rules, setRules] = useState<AIRule[]>([
-    {
-      id: 'rule1',
-      title: 'Responder a todos as novas mensagens',
-      description: 'A IA tentará responder a qualquer mensagem recebida.',
-      enabled: true,
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const loadChannels = useCallback(async (currentActiveChannelId: string | null) => {
+    try {
+      const [whatsappInstances, instagramAccounts] = await Promise.all([
+        channelsService.getWhatsAppInstances().catch(() => []),
+        channelsService.getInstagramAccounts().catch(() => []),
+      ]);
+
+      const waChannels: AIChannel[] = whatsappInstances.map((inst) => ({
+        id: inst.id,
+        name: inst.name,
+        type: 'whatsapp' as const,
+        active: inst.id === currentActiveChannelId,
+        identifier: inst.whatsapp?.phoneNumber || inst.number || '',
+      }));
+
+      const igChannels: AIChannel[] = instagramAccounts.map((acc) => ({
+        id: acc.id,
+        name: acc.name,
+        type: 'instagram' as const,
+        active: acc.id === currentActiveChannelId,
+        identifier: acc.instagram?.username || '',
+      }));
+
+      setChannels([...waChannels, ...igChannels]);
+    } catch {
+      setChannels([]);
+    }
+  }, []);
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const { aiConfig, products: fetchedProducts } = await aiService.getConfig();
+      setSegment(aiConfig.segment);
+      setTone(aiConfig.tone);
+      setCustomRules(aiConfig.customRules);
+      setEnabled(aiConfig.enabled);
+      setActiveChannelId(aiConfig.activeChannelId);
+      setProducts(fetchedProducts);
+      await loadChannels(aiConfig.activeChannelId);
+    } catch {
+      // keep defaults on error
+    }
+  }, [loadChannels]);
+
+  useEffect(() => {
+    setLoading(true);
+    loadConfig().finally(() => setLoading(false));
+  }, [loadConfig]);
+
+  const saveConfig = useCallback(async () => {
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ segment, tone, customRules });
+      addToast('success', 'Configurações da IA salvas com sucesso!');
+    } catch {
+      addToast('error', 'Erro ao salvar configurações da IA.');
+    } finally {
+      setSaving(false);
+    }
+  }, [segment, tone, customRules, addToast]);
+
+  const toggleChannel = useCallback(
+    async (channelId: string) => {
+      setSaving(true);
+      try {
+        if (channelId === activeChannelId) {
+          await aiService.deactivateAi();
+          addToast('success', 'IA desativada com sucesso.');
+        } else {
+          await aiService.activateChannel(channelId);
+          addToast('success', 'Canal ativado para IA com sucesso!');
+        }
+        await loadConfig();
+      } catch {
+        addToast('error', 'Erro ao alterar canal da IA.');
+      } finally {
+        setSaving(false);
+      }
     },
-    {
-      id: 'rule2',
-      title: 'Silenciar fora do horário comercial',
-      description: 'Não enviar respostas automáticas entre 22h e 08h.',
-      enabled: false,
-    },
-    {
-      id: 'rule3',
-      title: 'Transbordo para humano',
-      description: 'Transferir automaticamente se o cliente pedir "falar com atendente".',
-      enabled: false,
-    },
-  ]);
+    [activeChannelId, loadConfig, addToast],
+  );
 
-  const toggleChannel = (id: string) => {
-    setChannels(channels.map((ch) => (ch.id === id ? { ...ch, active: !ch.active } : ch)));
-  };
+  const addProduct = useCallback(
+    async (name: string) => {
+      setSaving(true);
+      try {
+        await aiService.createProduct({ name });
+        const refreshed = await aiService.listProducts();
+        setProducts(refreshed);
+        addToast('success', `Produto "${name}" adicionado.`);
+      } catch {
+        addToast('error', 'Erro ao adicionar produto.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [addToast],
+  );
 
-  const toggleRule = (id: string) => {
-    setRules(rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)));
-  };
+  const updateProduct = useCallback(
+    async (id: string, data: { name?: string; priceCents?: number; link?: string }) => {
+      setSaving(true);
+      try {
+        await aiService.updateProduct(id, data);
+        const refreshed = await aiService.listProducts();
+        setProducts(refreshed);
+        addToast('success', 'Produto atualizado.');
+      } catch {
+        addToast('error', 'Erro ao atualizar produto.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [addToast],
+  );
+
+  const deleteProduct = useCallback(
+    async (id: string) => {
+      setSaving(true);
+      try {
+        await aiService.deleteProduct(id);
+        const refreshed = await aiService.listProducts();
+        setProducts(refreshed);
+        addToast('success', 'Produto removido.');
+      } catch {
+        addToast('error', 'Erro ao remover produto.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [addToast],
+  );
 
   return {
     segment,
     setSegment,
     tone,
     setTone,
+    customRules,
+    setCustomRules,
     products,
-    setProducts,
     channels,
+    activeChannelId,
+    enabled,
+    loading,
+    saving,
+    toasts,
+    removeToast,
+    saveConfig,
     toggleChannel,
-    rules,
-    toggleRule,
+    addProduct,
+    updateProduct,
+    deleteProduct,
   };
 }

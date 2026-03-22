@@ -74,11 +74,11 @@ export default function PrivateLayout({
 
   const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
   const planUsageText = messageUsage
-    ? `${formatCount(messageUsage.count)} / ${formatCount(messageUsage.limit)} mensagens`
-    : undefined;
+    ? `${formatCount(messageUsage.count)} / ${messageUsage.limit} mensagens`
+    : '';
   const planProgress = messageUsage
     ? Math.min(Math.round((messageUsage.count / messageUsage.limit) * 100), 100)
-    : undefined;
+    : 0;
 
   return (
     <ThemeProvider>

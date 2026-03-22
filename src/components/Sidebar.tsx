@@ -57,7 +57,7 @@ export default function Sidebar({
   userName = 'John Doe',
   userRole = 'Admin',
   userInitials = 'JD',
-  planName = 'Plano Pro',
+  planName = 'Plano Basic',
   planUsage = '7.5k / 10k mensagens',
   planProgress = 70,
 }: SidebarProps) {

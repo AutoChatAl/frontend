@@ -10,6 +10,7 @@ interface AISegmentSelectorProps {
 }
 
 const segments = [
+  { value: '', label: 'Selecione um segmento...' },
   'Varejo / E-commerce',
   'Serviços Profissionais',
   'Restaurante / Delivery',

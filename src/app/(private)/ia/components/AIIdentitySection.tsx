@@ -7,14 +7,17 @@ import AISegmentSelector from './AISegmentSelector';
 import AIToneSelector from './AIToneSelector';
 
 import Card from '@/components/Card';
+import type { Product } from '@/types/AI';
 
 interface AIIdentitySectionProps {
   segment: string;
   tone: string;
-  products: string;
+  products: Product[];
   onSegmentChange: (value: string) => void;
   onToneChange: (value: string) => void;
-  onProductsChange: (value: string) => void;
+  onAddProduct: (name: string) => void;
+  onUpdateProduct: (id: string, data: { name?: string; priceCents?: number; link?: string }) => void;
+  onDeleteProduct: (id: string) => void;
 }
 
 export default function AIIdentitySection({
@@ -23,7 +26,9 @@ export default function AIIdentitySection({
   products,
   onSegmentChange,
   onToneChange,
-  onProductsChange,
+  onAddProduct,
+  onUpdateProduct,
+  onDeleteProduct,
 }: AIIdentitySectionProps) {
   return (
     <Card className="p-6 md:col-span-2">
@@ -36,7 +41,12 @@ export default function AIIdentitySection({
           <AISegmentSelector value={segment} onChange={onSegmentChange} />
           <AIToneSelector value={tone} onChange={onToneChange} />
         </div>
-        <AIProductsInput value={products} onChange={onProductsChange} />
+        <AIProductsInput
+          products={products}
+          onAddProduct={onAddProduct}
+          onUpdateProduct={onUpdateProduct}
+          onDeleteProduct={onDeleteProduct}
+        />
       </div>
     </Card>
   );
