@@ -32,7 +32,7 @@ export default function TestimonialCard({ name, role, company, avatar, rating, c
         ))}
       </div>
 
-      <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">"{content}"</p>
+      <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">&ldquo;{content}&rdquo;</p>
     </div>
   );
 }

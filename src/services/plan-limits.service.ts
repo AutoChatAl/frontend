@@ -29,7 +29,7 @@ const DEFAULT_LIMITS: PlanLimits = {
 let cachedLimits: PlanLimits | null = null;
 
 class PlanLimitsService {
-  async getLimits(): Promise<PlanLimits> {
+  public async getLimits(): Promise<PlanLimits> {
     if (cachedLimits) return cachedLimits;
     try {
       const response = await apiClient.get<PlanLimits>('/plan-limits');
@@ -42,11 +42,11 @@ class PlanLimitsService {
     return DEFAULT_LIMITS;
   }
 
-  clearCache() {
+  public clearCache() {
     cachedLimits = null;
   }
 
-  async getMessageUsage(): Promise<MessageUsage> {
+  public async getMessageUsage(): Promise<MessageUsage> {
     try {
       const response = await apiClient.get<MessageUsage>('/auth/workspace/message-usage');
       if (response.success && response.data) {

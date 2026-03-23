@@ -230,7 +230,7 @@ export default function WhatsAppCreateModal({
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">"Conectar com número de telefone"</span></p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">&ldquo;Conectar com número de telefone&rdquo;</span></p>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</div>

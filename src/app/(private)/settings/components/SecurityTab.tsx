@@ -8,13 +8,13 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-import TwoFactorModal from './TwoFactorModal';
-
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import PasswordInput from '@/components/PasswordInput';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
+
+import TwoFactorModal from './TwoFactorModal';
 
 export default function SecurityTab() {
   const [currentPassword, setCurrentPassword] = useState('');

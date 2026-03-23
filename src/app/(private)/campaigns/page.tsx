@@ -1,12 +1,8 @@
 'use client';
 
 import { AlertCircle, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Smartphone, Trash2 } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-import { columns } from './components/CampaignsColumns';
-import CreateCampaignModal from './components/CreateCampaignModal';
-import EditCampaignModal from './components/EditCampaignModal';
+import { createPortal } from 'react-dom';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
@@ -18,6 +14,10 @@ import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { campaignService } from '@/services/campaign.service';
 import { type Campaign } from '@/types/Campaign';
+
+import { columns } from './components/CampaignsColumns';
+import CreateCampaignModal from './components/CreateCampaignModal';
+import EditCampaignModal from './components/EditCampaignModal';
 
 function ActionsDropdown({
   campaign,
@@ -98,7 +98,7 @@ function ActionsDropdown({
             Excluir
           </button>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );

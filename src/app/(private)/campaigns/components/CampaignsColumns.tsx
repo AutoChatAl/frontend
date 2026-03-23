@@ -84,7 +84,7 @@ export const columns = [
         const dateB = b.startedAt ?? b.scheduledFor;
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       });
-      const last = sorted[0];
+      const [last] = sorted;
       if (!last) return <span className="text-xs text-slate-400">Nunca</span>;
       const displayDate = last.startedAt ?? last.scheduledFor;
       return (

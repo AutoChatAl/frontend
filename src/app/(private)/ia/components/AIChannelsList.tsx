@@ -2,10 +2,10 @@
 
 import { Bot } from 'lucide-react';
 
-import AIChannelCard from './AIChannelCard';
-
 import Card from '@/components/Card';
 import type { AIChannel } from '@/types/AI';
+
+import AIChannelCard from './AIChannelCard';
 
 interface AIChannelsListProps {
   channels: AIChannel[];

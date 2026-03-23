@@ -4,8 +4,8 @@ import { Mail, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
 import Card from '@/components/Card';
-import ToggleSwitch from '@/components/ToggleSwitch';
 import { ToastContainer, useToast } from '@/components/Toast';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { apiClient } from '@/utils/ApiClient';
 
 interface WorkspaceNotifications {
@@ -47,7 +47,7 @@ export default function NotificationsTab() {
     try {
       const response = await apiClient.put<{ ok: boolean; notifications: WorkspaceNotifications }>(
         '/auth/workspace/notifications',
-        { emailCampaignDispatch: checked }
+        { emailCampaignDispatch: checked },
       );
       if (response.success && response.data) {
         const data = response.data as { ok: boolean; notifications: WorkspaceNotifications };

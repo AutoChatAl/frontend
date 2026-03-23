@@ -3,13 +3,13 @@
 import { User } from 'lucide-react';
 import { useState } from 'react';
 
-import AddChannelCard from './AddChannelCard';
-import ChannelInstanceCard from './ChannelInstanceCard';
-
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
+
+import AddChannelCard from './AddChannelCard';
+import ChannelInstanceCard from './ChannelInstanceCard';
 
 export default function InstagramInstances() {
   const { accounts, loading, deleteAccount, getOAuthUrl, refetch } = useInstagramAccounts();

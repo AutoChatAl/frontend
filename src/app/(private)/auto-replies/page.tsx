@@ -11,9 +11,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
-import CreateAutoReplyModal from './components/CreateAutoReplyModal';
-import EditAutoReplyModal from './components/EditAutoReplyModal';
-
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
@@ -24,6 +21,9 @@ import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import { autoReplyService } from '@/services/auto-reply.service';
 import type { AutoReply } from '@/types/AutoReply';
+
+import CreateAutoReplyModal from './components/CreateAutoReplyModal';
+import EditAutoReplyModal from './components/EditAutoReplyModal';
 
 const MATCH_MODE_LABELS: Record<string, string> = {
   CONTAINS: 'Contém',
@@ -69,7 +69,7 @@ export default function AutoRepliesPage() {
         prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r)),
       );
       addToast('success', `Auto-resposta ${rule.enabled ? 'desativada' : 'ativada'}`);
-    } catch (err) {
+    } catch (_err) {
       addToast('error', 'Erro ao alterar status da auto-resposta');
     }
   };
@@ -81,7 +81,7 @@ export default function AutoRepliesPage() {
       await autoReplyService.delete(deleteTarget.id);
       setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       addToast('success', 'Auto-resposta excluída');
-    } catch (err) {
+    } catch (_err) {
       addToast('error', 'Erro ao excluir auto-resposta');
     } finally {
       setDeleting(false);

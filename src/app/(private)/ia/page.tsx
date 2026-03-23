@@ -3,14 +3,14 @@
 import { Bot, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { ToastContainer } from '@/components/Toast';
+import { useAIConfig } from '@/hooks/AIHooks';
+
 import AIChannelsList from './components/AIChannelsList';
 import AIIdentitySection from './components/AIIdentitySection';
 import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AITabs from './components/AITabs';
-
-import { ToastContainer } from '@/components/Toast';
-import { useAIConfig } from '@/hooks/AIHooks';
 
 export default function IAPage() {
   const [activeTab, setActiveTab] = useState('general');

@@ -11,12 +11,8 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { useEffect, useState, useRef, useCallback } from 'react';
-
-import { columns } from './components/ContactColumns';
-import EditContactModal from './components/EditContactModal';
-import SyncContactsModal from './components/SyncContactsModal';
+import { createPortal } from 'react-dom';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
@@ -30,6 +26,10 @@ import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+
+import { columns } from './components/ContactColumns';
+import EditContactModal from './components/EditContactModal';
+import SyncContactsModal from './components/SyncContactsModal';
 
 const PAGE_SIZE = 50;
 
@@ -133,7 +133,7 @@ function ActionsDropdown({
             Excluir
           </button>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );
@@ -244,6 +244,7 @@ export default function ContactsPage() {
     ]).then(([, waChannels]) => {
       setWhatsappChannels(waChannels);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearchChange = useCallback(

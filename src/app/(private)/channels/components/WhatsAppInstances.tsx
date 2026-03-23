@@ -3,15 +3,15 @@
 import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
-import AddChannelCard from './AddChannelCard';
-import ChannelInstanceCard from './ChannelInstanceCard';
-import WhatsAppCreateModal from './WhatsAppCreateModal';
-import WhatsAppQRModal from './WhatsAppQRModal';
-
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useWhatsAppInstances } from '@/hooks/ChannelHook';
+
+import AddChannelCard from './AddChannelCard';
+import ChannelInstanceCard from './ChannelInstanceCard';
+import WhatsAppCreateModal from './WhatsAppCreateModal';
+import WhatsAppQRModal from './WhatsAppQRModal';
 
 export default function WhatsAppInstances() {
   const { instances, loading, createInstance, connectInstance, getQRCode, getStatus, deleteInstance, refetch } = useWhatsAppInstances();

@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, Suspense } from 'react';
 
-import AuthShell from '../components/AuthShell';
-
 import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
+
+import AuthShell from '../components/AuthShell';
 
 function ResetPasswordForm() {
   const router = useRouter();

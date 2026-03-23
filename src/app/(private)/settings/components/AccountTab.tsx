@@ -35,6 +35,7 @@ export default function AccountTab() {
         addToast('error', 'Não foi possível carregar os dados da conta.');
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSave() {

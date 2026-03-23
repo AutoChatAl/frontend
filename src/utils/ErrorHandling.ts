@@ -1,6 +1,6 @@
-import type { ApiResponse } from './ApiClient';
-
 import { getErrorMessage, type ErrorReason } from '@/types/ErrorCode';
+
+import type { ApiResponse } from './ApiClient';
 
 export function getErrorFromResponse(response: ApiResponse<unknown>): string {
   if (response.success) {

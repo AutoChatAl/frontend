@@ -3,17 +3,17 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
-import AddGroupCard from './components/AddGroupCard';
-import CreateGroupModal from './components/CreateGroupModal';
-import GroupCard from './components/GroupCard';
-import ManageGroupModal from './components/ManageGroupModal';
-
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { groupService } from '@/services/group.service';
 import type { Group } from '@/types/Group';
+
+import AddGroupCard from './components/AddGroupCard';
+import CreateGroupModal from './components/CreateGroupModal';
+import GroupCard from './components/GroupCard';
+import ManageGroupModal from './components/ManageGroupModal';
 
 type RawGroup = Group & { _id?: string };
 const normalizeGroup = (g: RawGroup): Group => ({ ...g, id: g.id ?? g._id ?? '' });

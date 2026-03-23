@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
 import { channelsService } from '@/services/channels.service';
 import type { AIChannel } from '@/types/AI';
 import type { Product } from '@/types/AI';
-import type { Toast } from '@/components/Toast';
 
 export function useAIConfig() {
   const [segment, setSegment] = useState('');

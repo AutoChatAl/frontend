@@ -192,13 +192,14 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
   useEffect(() => {
     if (isOpen && campaign) {
       loadInitialData();
-      const schedule = campaign.schedule;
+      const { schedule } = campaign;
       const scheduleKind = (schedule?.kind || schedule?.frequency) as 'DAILY' | 'ONCE' | undefined;
 
       // Extract executionHour from schedule.timeOfDay (format "HH:00")
       let savedExecutionHour: number | undefined;
       if (schedule?.timeOfDay) {
-        const parsed = parseInt(schedule.timeOfDay.split(':')[0], 10);
+        const [hourStr = ''] = schedule.timeOfDay.split(':');
+        const parsed = parseInt(hourStr, 10);
         if (!isNaN(parsed)) savedExecutionHour = parsed;
       }
 
@@ -207,7 +208,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       if (scheduleKind === 'ONCE' && schedule?.onceAt) {
         const d = new Date(schedule.onceAt);
         if (!isNaN(d.getTime())) {
-          savedScheduledDate = d.toISOString().split('T')[0];
+          [savedScheduledDate] = d.toISOString().split('T');
         }
       }
 
@@ -220,15 +221,15 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         sourceType: campaign.sourceType || 'CHANNEL',
         channelIds: campaign.channelConfigs?.map((c) => c.channelId) || campaign.channels?.map((c) => c.channelId) || [],
         contactIds: campaign.contactIds || [],
-        groupId: campaign.groupIds?.[0],
+        groupId: campaign.groupIds?.[0] ?? '',
         status: campaign.status,
         messageType: campaign.messageType || 'TEXT',
-        messageMeta: campaign.messageMeta as UpdateCampaignInput['messageMeta'],
-        messageTag: campaign.messageTag || undefined,
+        messageMeta: (campaign.messageMeta ?? {}) as CreateCampaignInput['messageMeta'],
+        messageTag: campaign.messageTag as CreateCampaignInput['messageTag'],
         frequency: scheduleKind,
         executionHour: savedExecutionHour,
         scheduledDate: savedScheduledDate,
-      });
+      } as CreateCampaignInput);
     }
   }, [isOpen, campaign, loadInitialData]);
 

@@ -124,6 +124,7 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
       setErrors({});
       setAudioFileName(autoReply.replyAudioBase64 ? 'Áudio existente' : '');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, autoReply, loadChannels]);
 
   const needsText = formData.replyType === 'TEXT' || formData.replyType === 'TEXT_AND_AUDIO';

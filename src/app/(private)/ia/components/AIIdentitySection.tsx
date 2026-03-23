@@ -2,12 +2,12 @@
 
 import { Bot } from 'lucide-react';
 
+import Card from '@/components/Card';
+import type { Product } from '@/types/AI';
+
 import AIProductsInput from './AIProductsInput';
 import AISegmentSelector from './AISegmentSelector';
 import AIToneSelector from './AIToneSelector';
-
-import Card from '@/components/Card';
-import type { Product } from '@/types/AI';
 
 interface AIIdentitySectionProps {
   segment: string;

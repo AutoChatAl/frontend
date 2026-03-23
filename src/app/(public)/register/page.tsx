@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 
-import AuthShell from '../components/AuthShell';
-
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
+
+import AuthShell from '../components/AuthShell';
 
 export default function RegisterPage() {
   const router = useRouter();
