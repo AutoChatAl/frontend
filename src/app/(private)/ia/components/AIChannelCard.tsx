@@ -15,7 +15,7 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
 
   return (
     <div
-      className={`flex items-center justify-between p-4 border rounded-xl transition-all ${
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 sm:p-4 border rounded-xl transition-all ${
         active
           ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm'
           : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 opacity-75'
@@ -48,7 +48,7 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 self-end sm:self-auto">
         <span className={`text-xs font-medium ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
           {active ? 'IA Ativa' : 'Desativada'}
         </span>

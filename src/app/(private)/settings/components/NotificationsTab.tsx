@@ -75,13 +75,13 @@ export default function NotificationsTab() {
 
   return (
     <>
-      <Card className="p-6">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+      <Card className="p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
           <Mail size={20} className="text-indigo-600 dark:text-indigo-400" /> Preferências de Email
         </h3>
         <div className="space-y-6">
           {EMAIL_NOTIFICATION_ITEMS.map((item, i) => (
-            <div key={i} className="flex items-center justify-between">
+            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-white">{item.title}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
@@ -91,7 +91,7 @@ export default function NotificationsTab() {
           ))}
 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-white">Disparo de Campanha</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">

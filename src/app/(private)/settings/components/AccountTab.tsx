@@ -84,10 +84,10 @@ export default function AccountTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Informações da Conta</h3>
+      <Card className="p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4">Informações da Conta</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Input
             label="Nome da Empresa"
             value={workspaceName}
@@ -103,12 +103,13 @@ export default function AccountTab() {
           />
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-end mt-4 sm:mt-6">
           <Button
             onClick={handleSave}
             loading={saving}
             loadingText="Salvando..."
             disabled={saving}
+            className="w-full sm:w-auto justify-center"
           >
             Salvar Alterações
           </Button>

@@ -17,24 +17,21 @@ interface SettingsNavProps {
 
 export default function SettingsNav({ activeTab, onTabChange }: SettingsNavProps) {
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-1 sm:p-1 rounded-lg">
       {NAV_ITEMS.map((item) => {
         const isActive = activeTab === item.id;
         return (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center gap-3 ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-2 text-[10px] sm:text-xs font-medium rounded-md transition-all ${
               isActive
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'
+                ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
             }`}
           >
-            <item.icon
-              size={18}
-              className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}
-            />
-            {item.label}
+            <item.icon size={14} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
+            <span className="leading-tight text-center">{item.label}</span>
           </button>
         );
       })}

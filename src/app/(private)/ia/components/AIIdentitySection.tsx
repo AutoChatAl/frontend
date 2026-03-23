@@ -31,7 +31,7 @@ export default function AIIdentitySection({
   onDeleteProduct,
 }: AIIdentitySectionProps) {
   return (
-    <Card className="p-6 md:col-span-2">
+    <Card className="p-4 sm:p-6 md:col-span-2">
       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
         <Bot size={18} className="text-indigo-600 dark:text-indigo-400" />
         Identidade do Assistente

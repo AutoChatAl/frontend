@@ -89,29 +89,43 @@ export default function AIProductsInput({ products, onAddProduct, onUpdateProduc
       </p>
 
       {products.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/80 text-left">
-                <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Nome</th>
-                <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-36">Preço (R$)</th>
-                <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Link</th>
-                <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-16 text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {products.map((product) => (
-                <ProductRow
-                  key={product.id}
-                  product={product}
-                  onUpdate={onUpdateProduct}
-                  onDelete={onDeleteProduct}
-                  formatCents={formatCents}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/80 text-left">
+                  <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Nome</th>
+                  <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-36">Preço (R$)</th>
+                  <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Link</th>
+                  <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-16 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {products.map((product) => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    onUpdate={onUpdateProduct}
+                    onDelete={onDeleteProduct}
+                    formatCents={formatCents}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="sm:hidden space-y-3">
+            {products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onUpdate={onUpdateProduct}
+                onDelete={onDeleteProduct}
+                formatCents={formatCents}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -185,5 +199,50 @@ function ProductRow({
         </button>
       </td>
     </tr>
+  );
+}
+
+function ProductCard({
+  product,
+  onUpdate,
+  onDelete,
+  formatCents,
+}: {
+  product: Product;
+  onUpdate: (id: string, data: { name?: string; priceCents?: number; link?: string }) => void;
+  onDelete: (id: string) => void;
+  formatCents: (cents: number) => string;
+}) {
+  const [price, setPrice] = useState(formatCents(product.priceCents));
+  const [link, setLink] = useState(product.link);
+
+  const handlePriceBlur = () => {
+    const parsed = parseFloat(price.replace(/\./g, '').replace(',', '.'));
+    const cents = isNaN(parsed) ? 0 : Math.round(parsed * 100);
+    if (cents !== product.priceCents) onUpdate(product.id, { priceCents: cents });
+    setPrice(formatCents(cents));
+  };
+
+  const handleLinkBlur = () => {
+    if (link !== product.link) onUpdate(product.id, { link });
+  };
+
+  const inputClass =
+    'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400';
+
+  return (
+    <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-800 dark:text-white">{product.name}</p>
+        <button type="button" onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-500 p-1">
+          <Trash2 size={15} />
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-400 shrink-0">R$</span>
+        <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} onBlur={handlePriceBlur} className={inputClass} placeholder="0,00" />
+      </div>
+      <input type="text" value={link} onChange={(e) => setLink(e.target.value)} onBlur={handleLinkBlur} className={inputClass} placeholder="https://..." />
+    </div>
   );
 }

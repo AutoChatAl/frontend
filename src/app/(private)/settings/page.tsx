@@ -21,17 +21,13 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('account');
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Configurações Gerais</h2>
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500 overflow-x-hidden">
+      <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">Configurações Gerais</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          <SettingsNav activeTab={activeTab} onTabChange={setActiveTab} />
-        </div>
+      <SettingsNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="md:col-span-2 space-y-6">
-          {TABS[activeTab]}
-        </div>
+      <div className="space-y-6">
+        {TABS[activeTab]}
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ export default function AIPromptPreview({ segment, tone, products }: AIPromptPre
   const productNames = products.map((p) => p.name).join(', ') || '...';
 
   return (
-    <Card className="p-6 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700">
+    <Card className="p-4 sm:p-6 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700">
       <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
         <Sparkles size={16} className="text-indigo-500" />
         Preview do Prompt Gerado

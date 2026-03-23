@@ -108,7 +108,7 @@ export default function AutoRepliesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Auto-Respostas</h2>
@@ -145,20 +145,20 @@ export default function AutoRepliesPage() {
             return (
               <div
                 key={rule.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-all ${
+                className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-5 transition-all ${
                   !rule.enabled ? 'opacity-60' : ''
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                  <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       isWA ? 'bg-green-100 dark:bg-green-900/30' : 'bg-pink-100 dark:bg-pink-900/30'
                     }`}>
                       <MessageCircle size={18} className={isWA ? 'text-green-600 dark:text-green-400' : 'text-pink-600 dark:text-pink-400'} />
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
                         <Badge type={isWA ? 'whatsapp' : 'instagram'} text={isWA ? 'WhatsApp' : 'Instagram'} pill />
                         <Badge type="neutral" text={MATCH_MODE_LABELS[rule.matchMode] || rule.matchMode} pill />
                         {rule.caseSensitive && (
@@ -204,7 +204,7 @@ export default function AutoRepliesPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
                     <ToggleSwitch
                       checked={rule.enabled}
                       onChange={() => handleToggle(rule)}

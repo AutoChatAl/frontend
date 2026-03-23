@@ -61,13 +61,13 @@ export default function SecurityTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+      <Card className="p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
           <Shield size={20} className="text-indigo-600 dark:text-indigo-400" />
           Alterar Senha
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <PasswordInput
             label="Senha Atual"
             placeholder="Digite sua senha atual"
@@ -82,19 +82,20 @@ export default function SecurityTab() {
           />
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-end mt-4 sm:mt-6">
           <Button
             onClick={handleChangePassword}
             loading={passwordLoading}
             loadingText="Alterando..."
+            className="w-full sm:w-auto justify-center"
           >
             Atualizar Senha
           </Button>
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+      <Card className="p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
           <ShieldCheck size={20} className="text-indigo-600 dark:text-indigo-400" />
           Autenticação de Dois Fatores (2FA)
         </h3>
@@ -105,7 +106,7 @@ export default function SecurityTab() {
             Carregando status do 2FA...
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 twoFactorEnabled
