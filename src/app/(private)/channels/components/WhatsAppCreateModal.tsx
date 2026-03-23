@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -180,7 +181,7 @@ export default function WhatsAppCreateModal({
             <div className="w-full max-w-sm">
               <div className="bg-linear-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-2xl shadow-lg border border-emerald-200 dark:border-emerald-800 mb-6">
                 <div className="bg-white p-4 rounded-xl mb-4 shadow-inner">
-                  <img src={qrCode} alt="QR Code" className="w-full h-auto" />
+                  <Image src={qrCode} alt="QR Code" width={300} height={300} className="w-full h-auto" />
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">

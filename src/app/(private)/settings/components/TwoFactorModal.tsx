@@ -11,6 +11,7 @@ import {
   QrCode,
   KeyRound,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import Button from '@/components/Button';
@@ -286,7 +287,7 @@ function SetupView({
 
           <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="shrink-0 p-2.5 bg-white rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
-              <img src={setupData.qrCode} alt="QR Code 2FA" className="w-40 h-40" />
+              <Image src={setupData.qrCode} alt="QR Code 2FA" width={160} height={160} className="w-40 h-40" />
             </div>
 
             <div className="flex-1 min-w-0 space-y-3 w-full">

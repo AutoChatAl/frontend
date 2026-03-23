@@ -215,7 +215,6 @@ export default function CampaignsPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao excluir campanha';
       addToast('error', msg);
-      console.error('Erro ao excluir campanha:', err);
     } finally {
       setDeletingLoading(false);
     }

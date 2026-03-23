@@ -224,12 +224,12 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         groupId: campaign.groupIds?.[0] ?? '',
         status: campaign.status,
         messageType: campaign.messageType || 'TEXT',
-        messageMeta: (campaign.messageMeta ?? {}) as CreateCampaignInput['messageMeta'],
-        messageTag: campaign.messageTag as CreateCampaignInput['messageTag'],
+        messageMeta: (campaign.messageMeta ?? {}) as UpdateCampaignInput['messageMeta'],
+        messageTag: campaign.messageTag as UpdateCampaignInput['messageTag'],
         frequency: scheduleKind,
         executionHour: savedExecutionHour,
         scheduledDate: savedScheduledDate,
-      } as CreateCampaignInput);
+      } as UpdateCampaignInput);
     }
   }, [isOpen, campaign, loadInitialData]);
 
@@ -478,7 +478,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 items-center gap-1.5">
                   <ExternalLink size={14} className="text-indigo-500" />
                   Botão de link <span className="text-slate-400 font-normal">(opcional)</span>
                 </label>

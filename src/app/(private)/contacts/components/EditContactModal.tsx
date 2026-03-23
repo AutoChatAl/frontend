@@ -56,7 +56,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
       setLoading(true);
       setError(null);
       await contactService.updateContact(contact.id, {
-        displayName: displayName.trim() || undefined,
+        ...(displayName.trim() ? { displayName: displayName.trim() } : {}),
         tagIds: selectedTagId ? [selectedTagId] : [],
       });
       onSuccess();

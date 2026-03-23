@@ -274,7 +274,6 @@ export default function ContactsPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao excluir contato';
       addToast('error', msg);
-      console.error('Erro ao excluir contato:', err);
     } finally {
       setDeletingLoading(false);
     }

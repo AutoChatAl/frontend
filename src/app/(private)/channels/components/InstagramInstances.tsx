@@ -1,6 +1,7 @@
 'use client';
 
 import { User } from 'lucide-react';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
@@ -104,9 +105,11 @@ export default function InstagramInstances() {
                 <div className="w-12 h-12 bg-linear-to-tr from-yellow-400 via-red-500 to-purple-500 rounded-full p-0.5">
                   <div className="w-full h-full bg-white dark:bg-slate-800 rounded-full p-0.5">
                     {account.instagram.profilePictureUrl ? (
-                      <img
+                      <Image
                         src={account.instagram.profilePictureUrl}
                         alt={displayUsername}
+                        width={48}
+                        height={48}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
