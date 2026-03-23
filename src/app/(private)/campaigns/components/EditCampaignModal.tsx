@@ -6,6 +6,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Loader2,
   MessageCircle,
   Repeat,
@@ -124,6 +125,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     name: '',
     description: '',
     message: '',
+    linkUrl: '',
+    linkLabel: '',
     sourceType: 'CHANNEL',
     channelIds: [],
     contactIds: [],
@@ -194,6 +197,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         name: campaign.name,
         description: campaign.description || '',
         message: campaign.message,
+        linkUrl: campaign.linkUrl || '',
+        linkLabel: campaign.linkLabel || '',
         sourceType: campaign.sourceType || 'CHANNEL',
         channelIds: campaign.channelConfigs?.map((c) => c.channelId) || campaign.channels?.map((c) => c.channelId) || [],
         contactIds: campaign.contactIds || [],
@@ -254,6 +259,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       name: '',
       description: '',
       message: '',
+      linkUrl: '',
+      linkLabel: '',
       sourceType: 'CHANNEL',
       channelIds: [],
       contactIds: [],
@@ -450,12 +457,39 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <ExternalLink size={14} className="text-indigo-500" />
+                  Botão de link <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="url"
+                    value={formData.linkUrl ?? ''}
+                    onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
+                    className={inputCls(false)}
+                    placeholder="https://exemplo.com/link"
+                  />
+                  <input
+                    type="text"
+                    value={formData.linkLabel ?? ''}
+                    onChange={(e) => setFormData({ ...formData, linkLabel: e.target.value })}
+                    className={inputCls(false)}
+                    placeholder="Texto do botão (ex: Saiba mais)"
+                  />
+                </div>
+              </div>
+
               {formData.message.trim() && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Preview no WhatsApp
                   </label>
-                  <WhatsAppPreview message={formData.message} />
+                  <WhatsAppPreview
+                    message={formData.message}
+                    linkUrl={formData.linkUrl}
+                    linkLabel={formData.linkLabel}
+                  />
                 </div>
               )}
             </div>
