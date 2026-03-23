@@ -1,10 +1,21 @@
 'use client';
 
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { Clock, MessageCircle, Smartphone, Users } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
 import { type Campaign } from '@/types/Campaign';
+
+function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export const columns = [
   {
@@ -23,7 +34,7 @@ export const columns = [
     header: 'Canais',
     accessor: 'channels' as keyof Campaign,
     render: (_value: unknown, row: Campaign) => (
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {row.channels && row.channels.length > 0 ? (
           row.channels.map((ch) => {
             if (!ch.channel) return null;
@@ -37,18 +48,52 @@ export const columns = [
             );
           })
         ) : (
-          <span className="text-xs text-slate-400">Nenhum canal</span>
+          <span className="text-xs text-slate-400">—</span>
         )}
       </div>
     ),
   },
   {
-    header: 'Execuções',
+    header: 'Grupo',
+    accessor: 'groups' as keyof Campaign,
+    render: (_value: unknown, row: Campaign) => {
+      const groups = row.groups ?? [];
+      if (groups.length === 0) return <span className="text-xs text-slate-400">—</span>;
+      return (
+        <div className="flex gap-2 flex-wrap">
+          {groups.map((g) => (
+            <Badge
+              key={g.groupId}
+              type="group"
+              text={g.group?.name ?? 'Grupo'}
+              icon={Users}
+            />
+          ))}
+        </div>
+      );
+    },
+  },
+  {
+    header: 'Último Disparo',
     accessor: 'runs' as keyof Campaign,
-    className: 'text-slate-700 dark:text-slate-300 font-medium',
-    render: (_value: unknown, row: Campaign) => (
-      <span>{row.runs ? row.runs.length : 0}</span>
-    ),
+    render: (_value: unknown, row: Campaign) => {
+      const runs = row.runs ?? [];
+      if (runs.length === 0) return <span className="text-xs text-slate-400">Nunca</span>;
+      const sorted = [...runs].sort((a, b) => {
+        const dateA = a.startedAt ?? a.scheduledFor;
+        const dateB = b.startedAt ?? b.scheduledFor;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+      const last = sorted[0];
+      if (!last) return <span className="text-xs text-slate-400">Nunca</span>;
+      const displayDate = last.startedAt ?? last.scheduledFor;
+      return (
+        <div className="flex items-center gap-1.5">
+          <Clock size={12} className="text-slate-400" />
+          <span className="text-xs text-slate-600 dark:text-slate-400">{formatDate(displayDate)}</span>
+        </div>
+      );
+    },
   },
   {
     header: 'Status',

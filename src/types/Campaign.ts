@@ -62,8 +62,7 @@ export interface CampaignRun {
   scheduledFor: string;
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   startedAt?: string | null;
-  completedAt?: string | null;
-  createdAt: string;
+  finishedAt?: string | null;
 }
 
 export interface CreateCampaignInput {
