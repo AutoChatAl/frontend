@@ -50,6 +50,9 @@ export interface CampaignSchedule {
   id: string;
   campaignId: string;
   frequency: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  kind?: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  timeOfDay?: string;
+  onceAt?: string | null;
   startAt: string;
   endAt?: string | null;
   cron?: string | null;

@@ -192,7 +192,25 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
   useEffect(() => {
     if (isOpen && campaign) {
       loadInitialData();
-      const scheduleKind = campaign.schedule?.frequency as 'DAILY' | 'ONCE' | undefined;
+      const schedule = campaign.schedule;
+      const scheduleKind = (schedule?.kind || schedule?.frequency) as 'DAILY' | 'ONCE' | undefined;
+
+      // Extract executionHour from schedule.timeOfDay (format "HH:00")
+      let savedExecutionHour: number | undefined;
+      if (schedule?.timeOfDay) {
+        const parsed = parseInt(schedule.timeOfDay.split(':')[0], 10);
+        if (!isNaN(parsed)) savedExecutionHour = parsed;
+      }
+
+      // Extract scheduledDate from schedule.onceAt (ISO date string)
+      let savedScheduledDate: string | undefined;
+      if (scheduleKind === 'ONCE' && schedule?.onceAt) {
+        const d = new Date(schedule.onceAt);
+        if (!isNaN(d.getTime())) {
+          savedScheduledDate = d.toISOString().split('T')[0];
+        }
+      }
+
       setFormData({
         name: campaign.name,
         description: campaign.description || '',
@@ -208,7 +226,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         messageMeta: campaign.messageMeta as UpdateCampaignInput['messageMeta'],
         messageTag: campaign.messageTag || undefined,
         frequency: scheduleKind,
-        executionHour: undefined,
+        executionHour: savedExecutionHour,
+        scheduledDate: savedScheduledDate,
       });
     }
   }, [isOpen, campaign, loadInitialData]);
