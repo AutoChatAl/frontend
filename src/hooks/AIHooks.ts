@@ -12,6 +12,8 @@ export function useAIConfig() {
   const [segment, setSegment] = useState('');
   const [tone, setTone] = useState('Amigável e Casual');
   const [customRules, setCustomRules] = useState('');
+  const [schedulingQueryEnabled, setSchedulingQueryEnabled] = useState(false);
+  const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [channels, setChannels] = useState<AIChannel[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
@@ -66,6 +68,8 @@ export function useAIConfig() {
       setSegment(aiConfig.segment);
       setTone(aiConfig.tone);
       setCustomRules(aiConfig.customRules);
+      setSchedulingQueryEnabled(aiConfig.schedulingQueryEnabled);
+      setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
@@ -83,14 +87,14 @@ export function useAIConfig() {
   const saveConfig = useCallback(async () => {
     setSaving(true);
     try {
-      await aiService.updateConfig({ segment, tone, customRules });
+      await aiService.updateConfig({ segment, tone, customRules, schedulingQueryEnabled, schedulingBookingEnabled });
       addToast('success', 'Configurações da IA salvas com sucesso!');
     } catch {
       addToast('error', 'Erro ao salvar configurações da IA.');
     } finally {
       setSaving(false);
     }
-  }, [segment, tone, customRules, addToast]);
+  }, [segment, tone, customRules, schedulingQueryEnabled, schedulingBookingEnabled, addToast]);
 
   const toggleChannel = useCallback(
     async (channelId: string) => {
@@ -171,6 +175,10 @@ export function useAIConfig() {
     setTone,
     customRules,
     setCustomRules,
+    schedulingQueryEnabled,
+    setSchedulingQueryEnabled,
+    schedulingBookingEnabled,
+    setSchedulingBookingEnabled,
     products,
     channels,
     activeChannelId,

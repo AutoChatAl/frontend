@@ -10,6 +10,7 @@ import AIChannelsList from './components/AIChannelsList';
 import AIIdentitySection from './components/AIIdentitySection';
 import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
+import AISchedulingSection from './components/AISchedulingSection';
 import AITabs from './components/AITabs';
 
 export default function IAPage() {
@@ -21,6 +22,10 @@ export default function IAPage() {
     setTone,
     customRules,
     setCustomRules,
+    schedulingQueryEnabled,
+    setSchedulingQueryEnabled,
+    schedulingBookingEnabled,
+    setSchedulingBookingEnabled,
     products,
     channels,
     activeChannelId,
@@ -76,6 +81,15 @@ export default function IAPage() {
 
       {activeTab === 'triggers' && (
         <AIRulesSection customRules={customRules} onCustomRulesChange={setCustomRules} />
+      )}
+
+      {activeTab === 'scheduling' && (
+        <AISchedulingSection
+          schedulingQueryEnabled={schedulingQueryEnabled}
+          schedulingBookingEnabled={schedulingBookingEnabled}
+          onToggleQuery={setSchedulingQueryEnabled}
+          onToggleBooking={setSchedulingBookingEnabled}
+        />
       )}
 
       <div className="flex justify-end pt-4">

@@ -7,6 +7,8 @@ export interface AiConfig {
   segment: string;
   tone: string;
   customRules: string;
+  schedulingQueryEnabled: boolean;
+  schedulingBookingEnabled: boolean;
 }
 
 export interface Product {
@@ -36,12 +38,14 @@ class AiService {
         segment: '',
         tone: 'Amigável e Casual',
         customRules: '',
+        schedulingQueryEnabled: false,
+        schedulingBookingEnabled: false,
       },
       products: [],
     };
   }
 
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'tone' | 'customRules'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'tone' | 'customRules' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled'>>): Promise<void> {
     await apiClient.put('/ai/config', data);
   }
 
