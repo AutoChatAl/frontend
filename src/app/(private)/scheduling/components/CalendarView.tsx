@@ -42,7 +42,6 @@ export default function CalendarView({
     return map;
   }, [contacts]);
 
-
   // ── Week View Logic ───────────────────────────
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
