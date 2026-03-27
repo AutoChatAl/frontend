@@ -110,8 +110,8 @@ export default function CalendarView({
       if (exception.type === 'BLOCKED') return false;
       if (exception.slots) {
         return exception.slots.some((s) => {
-          const [sh] = s.start.split(':').map(Number);
-          const [eh] = s.end.split(':').map(Number);
+          const [sh = 0] = s.start.split(':').map(Number);
+          const [eh = 0] = s.end.split(':').map(Number);
           return hour >= sh && hour < eh;
         });
       }
@@ -159,7 +159,7 @@ export default function CalendarView({
   };
 
   const headerLabel = viewMode === 'week'
-    ? `${weekDays[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${weekDays[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    ? `${weekDays[0]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${weekDays[6]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
