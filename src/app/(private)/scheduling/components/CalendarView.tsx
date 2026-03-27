@@ -74,7 +74,7 @@ export default function CalendarView({
       days.push(new Date(year, month, i));
     }
     while (days.length % 7 !== 0) {
-      const last = days[days.length - 1];
+      const last = days[days.length - 1]!;
       const d = new Date(last);
       d.setDate(d.getDate() + 1);
       days.push(d);
