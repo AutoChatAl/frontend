@@ -41,9 +41,7 @@ export default function AISchedulingSection({
                     schedulingQueryEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                    schedulingQueryEnabled ? 'translate-x-5.5 left-0' : 'left-0.5'
-                  }`} style={{ transform: schedulingQueryEnabled ? 'translateX(22px)' : 'translateX(0)' }} />
+                  <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform" style={{ transform: schedulingQueryEnabled ? 'translateX(22px)' : 'translateX(0)' }} />
                 </button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">

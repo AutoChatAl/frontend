@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 import type { Product } from '@/services/ai.service';
 import type { Contact } from '@/types/Contact';
@@ -24,7 +24,7 @@ const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6:00 to 20:00
 export default function CalendarView({
   appointments,
   businessHours,
-  contacts,
+  contacts: _contacts,
   products: _products,
   currentWeekStart,
   onWeekChange,
@@ -36,12 +36,6 @@ export default function CalendarView({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const contactMap = useMemo(() => {
-    const map = new Map<string, Contact>();
-    contacts.forEach((c) => map.set(c.id, c));
-    return map;
-  }, [contacts]);
-
   // ── Week View Logic ───────────────────────────
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
@@ -49,6 +43,23 @@ export default function CalendarView({
       d.setDate(d.getDate() + i);
       return d;
     });
+  }, [currentWeekStart]);
+
+  // Mobile: which day is selected in the day-picker
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<Date>(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  });
+
+  // When week changes, auto-select today (if in week) or first day
+  useEffect(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    const todayStr = t.toISOString().slice(0, 10);
+    const todayInWeek = weekDays.find((d) => d.toISOString().slice(0, 10) === todayStr);
+    setMobileSelectedDay(todayInWeek ?? weekDays[0]!);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeekStart]);
 
   // ── Month View Logic ──────────────────────────
@@ -162,6 +173,13 @@ export default function CalendarView({
     ? `${weekDays[0]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${weekDays[6]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
+  const aptCardClass = (status: string) =>
+    status === 'CONFIRMED'
+      ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-800 dark:text-green-300'
+      : status === 'COMPLETED'
+        ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-400 text-slate-600 dark:text-slate-300'
+        : 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-500 text-indigo-800 dark:text-indigo-300';
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -203,72 +221,128 @@ export default function CalendarView({
 
       {/* Week View */}
       {viewMode === 'week' && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          {/* Day headers */}
-          <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-700">
-            <div className="p-2 border-r border-slate-100 dark:border-slate-700" />
-            {weekDays.map((day, i) => (
-              <div
-                key={i}
-                className={`p-2 sm:p-3 text-center border-r last:border-r-0 border-slate-100 dark:border-slate-700 ${isToday(day) ? 'bg-indigo-50 dark:bg-indigo-900/10' : ''}`}
-              >
-                <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">
-                  {DAY_SHORT[day.getDay()]}
-                </div>
-                <div className={`text-sm sm:text-lg font-bold mt-0.5 ${isToday(day) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                  {day.getDate()}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Time grid - scrollable on mobile */}
-          <div className="overflow-x-auto overflow-y-auto max-h-[60vh] sm:max-h-[65vh]">
-            <div className="min-w-[640px]">
-              {HOURS.map((hour) => (
-                <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-                  <div className="p-1 sm:p-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-right pr-2 sm:pr-3 border-r border-slate-100 dark:border-slate-700 font-medium">
-                    {String(hour).padStart(2, '0')}:00
+        <>
+          {/* ── Mobile: day-picker + single day schedule ── */}
+          <div className="sm:hidden bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Day chips */}
+            <div className="flex border-b border-slate-200 dark:border-slate-700">
+              {weekDays.map((day, i) => {
+                const isSelected = formatDateStr(day) === formatDateStr(mobileSelectedDay);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setMobileSelectedDay(day)}
+                    className={`flex-1 py-2 flex flex-col items-center gap-0.5 transition-colors ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/10' : ''}`}
+                  >
+                    <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase">
+                      {DAY_SHORT[day.getDay()]}
+                    </span>
+                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                      isToday(day)
+                        ? 'bg-indigo-600 text-white'
+                        : isSelected
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-slate-700 dark:text-slate-200'
+                    }`}>
+                      {day.getDate()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Single-day schedule */}
+            <div className="overflow-y-auto max-h-[62vh]">
+              {HOURS.map((hour) => {
+                const dayAppts = getAppointmentsForHour(mobileSelectedDay, hour);
+                const isWorking = isWorkingHour(mobileSelectedDay, hour);
+                return (
+                  <div
+                    key={hour}
+                    onClick={() => isWorking ? onCreateAppointment(formatDateStr(mobileSelectedDay), `${String(hour).padStart(2, '0')}:00`) : undefined}
+                    className={`flex border-b border-slate-100 dark:border-slate-700 last:border-b-0 min-h-13 transition-colors ${
+                      isWorking
+                        ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
+                        : 'bg-slate-50 dark:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className="w-14 shrink-0 text-[10px] text-slate-400 dark:text-slate-500 text-right pr-3 pt-2 font-medium border-r border-slate-100 dark:border-slate-700">
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                    <div className="flex-1 p-1 space-y-0.5">
+                      {dayAppts.map((apt) => (
+                        <div
+                          key={apt.id}
+                          onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
+                          className={`text-xs p-1.5 rounded-md cursor-pointer border-l-2 ${aptCardClass(apt.status)}`}
+                        >
+                          <div className="font-semibold">{apt.title}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  {weekDays.map((day, dayIdx) => {
-                    const dayAppts = getAppointmentsForHour(day, hour);
-                    const isWorking = isWorkingHour(day, hour);
-                    return (
-                      <div
-                        key={dayIdx}
-                        onClick={() => isWorking ? onCreateAppointment(formatDateStr(day), `${String(hour).padStart(2, '0')}:00`) : undefined}
-                        className={`min-h-[48px] sm:min-h-[56px] p-0.5 sm:p-1 border-r last:border-r-0 border-slate-100 dark:border-slate-700 transition-colors ${
-                          isWorking
-                            ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
-                            : 'bg-slate-50 dark:bg-slate-800/50'
-                        } ${isToday(day) ? 'bg-indigo-50/30 dark:bg-indigo-900/5' : ''}`}
-                      >
-                        {dayAppts.map((apt) => {
-                          const contact = contactMap.get(apt.contactId);
-                          return (
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Desktop: 7-column week grid ── */}
+          <div className="hidden sm:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
+              <div className="min-w-140">
+                {/* Day headers */}
+                <div className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <div className="p-2 border-r border-slate-100 dark:border-slate-700" />
+                  {weekDays.map((day, i) => (
+                    <div
+                      key={i}
+                      className={`p-2 sm:p-3 text-center border-r last:border-r-0 border-slate-100 dark:border-slate-700 ${isToday(day) ? 'bg-indigo-50 dark:bg-indigo-900/10' : ''}`}
+                    >
+                      <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">
+                        {DAY_SHORT[day.getDay()]}
+                      </div>
+                      <div className={`text-sm sm:text-lg font-bold mt-0.5 ${isToday(day) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {day.getDate()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Time grid */}
+                {HOURS.map((hour) => (
+                  <div key={hour} className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+                    <div className="p-1 sm:p-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-right pr-2 sm:pr-3 border-r border-slate-100 dark:border-slate-700 font-medium">
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                    {weekDays.map((day, dayIdx) => {
+                      const dayAppts = getAppointmentsForHour(day, hour);
+                      const isWorking = isWorkingHour(day, hour);
+                      return (
+                        <div
+                          key={dayIdx}
+                          onClick={() => isWorking ? onCreateAppointment(formatDateStr(day), `${String(hour).padStart(2, '0')}:00`) : undefined}
+                          className={`min-h-14 p-1 border-r last:border-r-0 border-slate-100 dark:border-slate-700 transition-colors ${
+                            isWorking
+                              ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
+                              : 'bg-slate-50 dark:bg-slate-800/50'
+                          } ${isToday(day) ? 'bg-indigo-50/30 dark:bg-indigo-900/5' : ''}`}
+                        >
+                          {dayAppts.map((apt) => (
                             <div
                               key={apt.id}
                               onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
-                              className={`text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${
-                                apt.status === 'CONFIRMED' ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-800 dark:text-green-300'
-                                  : apt.status === 'COMPLETED' ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-400 text-slate-600 dark:text-slate-300'
-                                    : 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-500 text-indigo-800 dark:text-indigo-300'
-                              }`}
+                              className={`text-xs p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${aptCardClass(apt.status)}`}
                             >
                               <div className="font-semibold truncate">{apt.title}</div>
-                              <div className="truncate opacity-75 hidden sm:block">
-                                {contact?.displayName || 'Sem contato'}
-                              </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Month View */}
