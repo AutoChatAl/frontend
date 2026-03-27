@@ -120,8 +120,8 @@ export default function CalendarView({
     const daySchedule = businessHours.weeklySchedule.find((d) => d.dayOfWeek === dayOfWeek);
     if (!daySchedule || !daySchedule.enabled) return false;
     return daySchedule.slots.some((s) => {
-      const [sh] = s.start.split(':').map(Number);
-      const [eh] = s.end.split(':').map(Number);
+      const [sh = 0] = s.start.split(':').map(Number);
+      const [eh = 0] = s.end.split(':').map(Number);
       return hour >= sh && hour < eh;
     });
   };
