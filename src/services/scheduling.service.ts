@@ -41,7 +41,7 @@ class SchedulingService {
   }): Promise<Appointment> {
     const response = await apiClient.post<Appointment>('/scheduling/appointments', data);
     if (!response.success || !response.data) {
-      const errorData = response.data as any;
+      const errorData = response.data as unknown as { code?: string };
       if (errorData?.code === 'TIME_CONFLICT') {
         throw new Error('Já existe um agendamento neste horário.');
       }
@@ -61,7 +61,7 @@ class SchedulingService {
       endAt?: string;
       status?: string;
       notes?: string;
-    }
+    },
   ): Promise<Appointment> {
     const response = await apiClient.put<Appointment>(`/scheduling/appointments/${id}`, data);
     if (!response.success || !response.data) throw new Error('Falha ao atualizar agendamento.');

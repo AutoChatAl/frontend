@@ -4,21 +4,21 @@ import { CalendarDays, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
 import { ToastContainer } from '@/components/Toast';
-import { schedulingService } from '@/services/scheduling.service';
-import { contactService } from '@/services/contact.service';
 import { aiService } from '@/services/ai.service';
-import type { Appointment, BusinessHours } from '@/types/Scheduling';
-import type { Contact } from '@/types/Contact';
+import { contactService } from '@/services/contact.service';
+import { schedulingService } from '@/services/scheduling.service';
 import type { Product } from '@/services/ai.service';
+import type { Contact } from '@/types/Contact';
+import type { Appointment, BusinessHours } from '@/types/Scheduling';
 
-import SchedulingTabs from './components/SchedulingTabs';
-import CalendarView from './components/CalendarView';
-import BusinessHoursConfig from './components/BusinessHoursConfig';
 import AppointmentModal from './components/AppointmentModal';
+import BusinessHoursConfig from './components/BusinessHoursConfig';
+import CalendarView from './components/CalendarView';
+import SchedulingTabs from './components/SchedulingTabs';
 
 interface ToastItem {
   id: number;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error';
   message: string;
 }
 
@@ -43,7 +43,7 @@ export default function SchedulingPage() {
     return weekStart;
   });
 
-  const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
+  const addToast = useCallback((type: 'success' | 'error', message: string) => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
@@ -76,8 +76,8 @@ export default function SchedulingPage() {
         const pages = Math.ceil(totalContacts / 100);
         const additionalPages = await Promise.all(
           Array.from({ length: pages - 1 }, (_, i) =>
-            contactService.listContacts({ limit: 100, skip: (i + 1) * 100 })
-          )
+            contactService.listContacts({ limit: 100, skip: (i + 1) * 100 }),
+          ),
         );
         for (const page of additionalPages) {
           allContacts = [...allContacts, ...(page.data || [])];
@@ -128,13 +128,13 @@ export default function SchedulingPage() {
         await schedulingService.updateAppointment(editingAppointment.id, data);
         addToast('success', 'Agendamento atualizado com sucesso!');
       } else {
-        await schedulingService.createAppointment(data as any);
+        await schedulingService.createAppointment(data);
         addToast('success', 'Agendamento criado com sucesso!');
       }
       setModalOpen(false);
       loadData();
-    } catch (err: any) {
-      addToast('error', err.message || 'Erro ao salvar agendamento.');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao salvar agendamento.');
     }
   };
 
@@ -225,7 +225,7 @@ export default function SchedulingPage() {
           initialTime={selectedTime}
           slotDuration={businessHours?.slotDurationMinutes || 30}
           onSave={handleSaveAppointment}
-          onDelete={editingAppointment ? () => handleDeleteAppointment(editingAppointment.id) : undefined}
+          {...(editingAppointment && { onDelete: () => { void handleDeleteAppointment(editingAppointment.id); } })}
           onClose={() => setModalOpen(false)}
           onProductCreated={(product) => setProducts((prev) => [...prev, product])}
         />
