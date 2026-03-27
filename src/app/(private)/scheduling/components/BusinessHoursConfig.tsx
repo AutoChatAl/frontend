@@ -64,8 +64,8 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
     setExceptions((prev) => [...prev, {
       date: newExceptionDate,
       type: newExceptionType,
-      reason: newExceptionReason || undefined,
-      slots: newExceptionType === 'CUSTOM' ? [{ start: '08:00', end: '12:00' }] : undefined,
+      ...(newExceptionReason ? { reason: newExceptionReason } : {}),
+      ...(newExceptionType === 'CUSTOM' ? { slots: [{ start: '08:00', end: '12:00' }] } : {}),
     }]);
     setNewExceptionDate('');
     setNewExceptionReason('');
