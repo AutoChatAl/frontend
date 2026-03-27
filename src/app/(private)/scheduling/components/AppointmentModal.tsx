@@ -65,7 +65,7 @@ export default function AppointmentModal({
       return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
     }
     if (initialTime) {
-      const [h, m] = initialTime.split(':').map(Number);
+      const [h = 0, m = 0] = initialTime.split(':').map(Number);
       const endMinutes = h * 60 + m + slotDuration;
       const endH = Math.floor(endMinutes / 60);
       const endM = endMinutes % 60;
@@ -133,12 +133,12 @@ export default function AppointmentModal({
       const endAt = `${date}T${endTime}:00.000Z`;
       await onSave({
         contactId,
-        productId: productId || undefined,
         title: title.trim(),
-        description: description.trim() || undefined,
         startAt,
         endAt,
-        notes: notes.trim() || undefined,
+        ...(productId ? { productId } : {}),
+        ...(description.trim() ? { description: description.trim() } : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(isEditing ? { status } : {}),
       });
     } finally {
