@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { ToastContainer } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
+import type { Product } from '@/services/ai.service';
 import { contactService } from '@/services/contact.service';
 import { schedulingService } from '@/services/scheduling.service';
-import type { Product } from '@/services/ai.service';
 import type { Contact } from '@/types/Contact';
 import type { Appointment, BusinessHours } from '@/types/Scheduling';
 

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Clock, Plus, Trash2, Calendar, Save, Loader2, Ban, AlertCircle } from 'lucide-react';
-import type { BusinessHours, DaySchedule, TimeSlot, DateException } from '@/types/Scheduling';
+import { useState } from 'react';
+
+import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
 import { DAY_NAMES } from '@/types/Scheduling';
 
 interface BusinessHoursConfigProps {
@@ -22,8 +23,8 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
   const toggleDay = (dayOfWeek: number) => {
     setWeeklySchedule((prev) =>
       prev.map((d) =>
-        d.dayOfWeek === dayOfWeek ? { ...d, enabled: !d.enabled } : d
-      )
+        d.dayOfWeek === dayOfWeek ? { ...d, enabled: !d.enabled } : d,
+      ),
     );
   };
 
@@ -32,8 +33,8 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
       prev.map((d) =>
         d.dayOfWeek === dayOfWeek
           ? { ...d, slots: d.slots.map((s, i) => (i === slotIdx ? { ...s, [field]: value } : s)) }
-          : d
-      )
+          : d,
+      ),
     );
   };
 
@@ -42,8 +43,8 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
       prev.map((d) =>
         d.dayOfWeek === dayOfWeek
           ? { ...d, slots: [...d.slots, { start: '08:00', end: '12:00' }] }
-          : d
-      )
+          : d,
+      ),
     );
   };
 
@@ -52,8 +53,8 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
       prev.map((d) =>
         d.dayOfWeek === dayOfWeek
           ? { ...d, slots: d.slots.filter((_, i) => i !== slotIdx) }
-          : d
-      )
+          : d,
+      ),
     );
   };
 

@@ -73,7 +73,7 @@ export default function AISchedulingSection({
                     schedulingBookingEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform`} style={{ transform: schedulingBookingEnabled ? 'translateX(22px)' : 'translateX(0)' }} />
+                  <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform" style={{ transform: schedulingBookingEnabled ? 'translateX(22px)' : 'translateX(0)' }} />
                 </button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -82,14 +82,14 @@ export default function AISchedulingSection({
               {schedulingBookingEnabled && (
                 <div className="mt-3 px-3 py-2 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/20">
                   <p className="text-xs text-green-700 dark:text-green-300">
-                    A IA criará o agendamento com o contato da conversa e o horário confirmado. O agendamento aparecerá na aba Agendamentos com a tag "Criado por IA".
+                    A IA criará o agendamento com o contato da conversa e o horário confirmado. O agendamento aparecerá na aba Agendamentos com a tag &ldquo;Criado por IA&rdquo;.
                   </p>
                 </div>
               )}
               {schedulingBookingEnabled && !schedulingQueryEnabled && (
                 <div className="mt-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-900/20">
                   <p className="text-xs text-amber-700 dark:text-amber-300">
-                    Recomendamos também ativar "Consultar Disponibilidade" para que a IA possa verificar os horários antes de criar agendamentos.
+                    Recomendamos também ativar &ldquo;Consultar Disponibilidade&rdquo; para que a IA possa verificar os horários antes de criar agendamentos.
                   </p>
                 </div>
               )}

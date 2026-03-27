@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
 import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2 } from 'lucide-react';
-import type { Appointment } from '@/types/Scheduling';
-import type { Contact } from '@/types/Contact';
-import type { Product } from '@/services/ai.service';
+import { useState, useMemo } from 'react';
+
 import { aiService } from '@/services/ai.service';
-import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus } from '@/types/Scheduling';
+import type { Product } from '@/services/ai.service';
+import type { Contact } from '@/types/Contact';
+import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment } from '@/types/Scheduling';
 
 interface AppointmentModalProps {
   appointment: Appointment | null;
@@ -15,7 +15,16 @@ interface AppointmentModalProps {
   initialDate: string | null;
   initialTime: string | null;
   slotDuration: number;
-  onSave: (data: any) => void;
+  onSave: (data: {
+    contactId: string;
+    productId?: string;
+    title: string;
+    description?: string;
+    startAt: string;
+    endAt: string;
+    notes?: string;
+    status?: string;
+  }) => void;
   onDelete?: () => void;
   onClose: () => void;
   onProductCreated?: (product: Product) => void;
@@ -88,7 +97,7 @@ export default function AppointmentModal({
     const lower = contactSearch.toLowerCase();
     return contacts.filter((c) =>
       c.displayName?.toLowerCase().includes(lower) ||
-      c.identities?.some((i) => i.phoneE164?.includes(contactSearch))
+      c.identities?.some((i) => i.phoneE164?.includes(contactSearch)),
     ).slice(0, 10);
   }, [contacts, contactSearch]);
 

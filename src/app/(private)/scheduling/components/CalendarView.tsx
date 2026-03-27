@@ -1,11 +1,11 @@
 'use client';
 
+import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, Plus, Clock, User } from 'lucide-react';
-import type { Appointment, BusinessHours } from '@/types/Scheduling';
-import type { Contact } from '@/types/Contact';
+
 import type { Product } from '@/services/ai.service';
-import { STATUS_COLORS, STATUS_LABELS, DAY_SHORT, type AppointmentStatus } from '@/types/Scheduling';
+import type { Contact } from '@/types/Contact';
+import { DAY_SHORT, type Appointment, type BusinessHours } from '@/types/Scheduling';
 
 interface CalendarViewProps {
   appointments: Appointment[];
@@ -25,12 +25,12 @@ export default function CalendarView({
   appointments,
   businessHours,
   contacts,
-  products,
+  products: _products,
   currentWeekStart,
   onWeekChange,
   onCreateAppointment,
   onEditAppointment,
-  onUpdateStatus,
+  onUpdateStatus: _onUpdateStatus,
 }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const today = new Date();
@@ -42,11 +42,6 @@ export default function CalendarView({
     return map;
   }, [contacts]);
 
-  const productMap = useMemo(() => {
-    const map = new Map<string, Product>();
-    products.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [products]);
 
   // ── Week View Logic ───────────────────────────
   const weekDays = useMemo(() => {
@@ -256,8 +251,8 @@ export default function CalendarView({
                               onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
                               className={`text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${
                                 apt.status === 'CONFIRMED' ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-800 dark:text-green-300'
-                                : apt.status === 'COMPLETED' ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-400 text-slate-600 dark:text-slate-300'
-                                : 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-500 text-indigo-800 dark:text-indigo-300'
+                                  : apt.status === 'COMPLETED' ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-400 text-slate-600 dark:text-slate-300'
+                                    : 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-500 text-indigo-800 dark:text-indigo-300'
                               }`}
                             >
                               <div className="font-semibold truncate">{apt.title}</div>
@@ -313,7 +308,7 @@ export default function CalendarView({
                         onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
                         className={`text-[9px] sm:text-[11px] px-1 py-0.5 rounded truncate cursor-pointer ${
                           apt.status === 'CONFIRMED' ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                          : 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
+                            : 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
                         }`}
                       >
                         {new Date(apt.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} {apt.title}
