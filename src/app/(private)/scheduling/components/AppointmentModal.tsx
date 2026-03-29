@@ -215,53 +215,53 @@ export default function AppointmentModal({
 
           {/* Contact Search (optional - hidden for blocks) */}
           {type === 'APPOINTMENT' && (
-          <div className="relative">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <User size={14} /> Contato
-            </label>
-            {selectedContact ? (
-              <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                  {selectedContact.displayName || 'Sem nome'}
-                </span>
-                <button onClick={() => { setContactId(''); setContactSearch(''); }} className="text-indigo-400 hover:text-indigo-600">
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={contactSearch}
-                  onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }}
-                  onFocus={() => setShowContactDropdown(true)}
-                  placeholder="Buscar contato..."
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
-                {showContactDropdown && (
-                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredContacts.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-slate-400">Nenhum contato encontrado</div>
-                    ) : (
-                      filteredContacts.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => { setContactId(c.id); setContactSearch(''); setShowContactDropdown(false); }}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm text-slate-700 dark:text-slate-200 transition-colors"
-                        >
-                          <div className="font-medium">{c.displayName || 'Sem nome'}</div>
-                          {c.identities?.[0]?.phoneE164 && (
-                            <div className="text-xs text-slate-400">{c.identities[0].phoneE164}</div>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+            <div className="relative">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <User size={14} /> Contato
+              </label>
+              {selectedContact ? (
+                <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                  <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                    {selectedContact.displayName || 'Sem nome'}
+                  </span>
+                  <button onClick={() => { setContactId(''); setContactSearch(''); }} className="text-indigo-400 hover:text-indigo-600">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={contactSearch}
+                    onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }}
+                    onFocus={() => setShowContactDropdown(true)}
+                    placeholder="Buscar contato..."
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {showContactDropdown && (
+                    <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredContacts.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-slate-400">Nenhum contato encontrado</div>
+                      ) : (
+                        filteredContacts.map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => { setContactId(c.id); setContactSearch(''); setShowContactDropdown(false); }}
+                            className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm text-slate-700 dark:text-slate-200 transition-colors"
+                          >
+                            <div className="font-medium">{c.displayName || 'Sem nome'}</div>
+                            {c.identities?.[0]?.phoneE164 && (
+                              <div className="text-xs text-slate-400">{c.identities[0].phoneE164}</div>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
           )}
 
