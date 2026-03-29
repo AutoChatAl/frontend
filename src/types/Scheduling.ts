@@ -24,10 +24,18 @@ export interface BusinessHours {
   slotDurationMinutes: number;
 }
 
+export type AppointmentType = 'APPOINTMENT' | 'BLOCK';
+
+export const TYPE_LABELS: Record<AppointmentType, string> = {
+  APPOINTMENT: 'Agendamento',
+  BLOCK: 'Bloqueio',
+};
+
 export interface Appointment {
   id: string;
   workspaceId: string;
-  contactId: string;
+  type: AppointmentType;
+  contactId?: string;
   productId?: string;
   title: string;
   description?: string;

@@ -173,12 +173,16 @@ export default function CalendarView({
     ? `${weekDays[0]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - ${weekDays[6]!.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  const aptCardClass = (status: string) =>
-    status === 'CONFIRMED'
+  const aptCardClass = (apt: Appointment) => {
+    if (apt.type === 'BLOCK') {
+      return 'bg-red-50 dark:bg-red-900/10 border-red-400 text-red-700 dark:text-red-300';
+    }
+    return apt.status === 'CONFIRMED'
       ? 'bg-green-50 dark:bg-green-900/10 border-green-500 text-green-800 dark:text-green-300'
-      : status === 'COMPLETED'
+      : apt.status === 'COMPLETED'
         ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-400 text-slate-600 dark:text-slate-300'
         : 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-500 text-indigo-800 dark:text-indigo-300';
+  };
 
   return (
     <div className="space-y-4">
@@ -273,7 +277,7 @@ export default function CalendarView({
                         <div
                           key={apt.id}
                           onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
-                          className={`text-xs p-1.5 rounded-md cursor-pointer border-l-2 ${aptCardClass(apt.status)}`}
+                          className={`text-xs p-1.5 rounded-md cursor-pointer border-l-2 ${aptCardClass(apt)}`}
                         >
                           <div className="font-semibold">{apt.title}</div>
                         </div>
@@ -329,7 +333,7 @@ export default function CalendarView({
                             <div
                               key={apt.id}
                               onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
-                              className={`text-xs p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${aptCardClass(apt.status)}`}
+                              className={`text-xs p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${aptCardClass(apt)}`}
                             >
                               <div className="font-semibold truncate">{apt.title}</div>
                             </div>
@@ -380,8 +384,9 @@ export default function CalendarView({
                         key={apt.id}
                         onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
                         className={`text-[9px] sm:text-[11px] px-1 py-0.5 rounded truncate cursor-pointer ${
-                          apt.status === 'CONFIRMED' ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                            : 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
+                          apt.type === 'BLOCK' ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                            : apt.status === 'CONFIRMED' ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                              : 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
                         }`}
                       >
                         {new Date(apt.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} {apt.title}

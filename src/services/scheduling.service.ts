@@ -31,7 +31,8 @@ class SchedulingService {
   }
 
   public async createAppointment(data: {
-    contactId: string;
+    type?: string;
+    contactId?: string;
     productId?: string;
     title: string;
     description?: string;
@@ -53,7 +54,8 @@ class SchedulingService {
   public async updateAppointment(
     id: string,
     data: {
-      contactId?: string;
+      type?: string;
+      contactId?: string | null;
       productId?: string | null;
       title?: string;
       description?: string;

@@ -114,7 +114,8 @@ export default function SchedulingPage() {
   };
 
   const handleSaveAppointment = async (data: {
-    contactId: string;
+    type?: string;
+    contactId?: string;
     productId?: string;
     title: string;
     description?: string;

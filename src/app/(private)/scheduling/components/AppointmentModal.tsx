@@ -1,12 +1,12 @@
 'use client';
 
-import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2 } from 'lucide-react';
+import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2, Ban, CalendarDays } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
 import type { Contact } from '@/types/Contact';
-import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment } from '@/types/Scheduling';
+import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment, type AppointmentType } from '@/types/Scheduling';
 
 interface AppointmentModalProps {
   appointment: Appointment | null;
@@ -16,7 +16,8 @@ interface AppointmentModalProps {
   initialTime: string | null;
   slotDuration: number;
   onSave: (data: {
-    contactId: string;
+    type?: string;
+    contactId?: string;
     productId?: string;
     title: string;
     description?: string;
@@ -74,6 +75,7 @@ export default function AppointmentModal({
     return '09:30';
   };
 
+  const [type, setType] = useState<AppointmentType>(appointment?.type || 'APPOINTMENT');
   const [title, setTitle] = useState(appointment?.title || '');
   const [description, setDescription] = useState(appointment?.description || '');
   const [contactId, setContactId] = useState(appointment?.contactId || '');
@@ -126,17 +128,18 @@ export default function AppointmentModal({
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !contactId || !date || !startTime || !endTime) return;
+    if (!title.trim() || !date || !startTime || !endTime) return;
     setSaving(true);
     try {
       const startAt = `${date}T${startTime}:00.000Z`;
       const endAt = `${date}T${endTime}:00.000Z`;
       await onSave({
-        contactId,
+        type,
         title: title.trim(),
         startAt,
         endAt,
-        ...(productId ? { productId } : {}),
+        ...(contactId ? { contactId } : {}),
+        ...(productId && type === 'APPOINTMENT' ? { productId } : {}),
         ...(description.trim() ? { description: description.trim() } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(isEditing ? { status } : {}),
@@ -154,7 +157,10 @@ export default function AppointmentModal({
       <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex items-center justify-between z-10">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            {isEditing ? 'Editar Agendamento' : 'Novo Agendamento'}
+            {isEditing
+              ? (type === 'BLOCK' ? 'Editar Bloqueio' : 'Editar Agendamento')
+              : (type === 'BLOCK' ? 'Novo Bloqueio' : 'Novo Agendamento')
+            }
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
             <X size={20} />
@@ -162,6 +168,39 @@ export default function AppointmentModal({
         </div>
 
         <div className="p-4 sm:p-5 space-y-4">
+          {/* Type Selector */}
+          {!isEditing && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Tipo</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setType('APPOINTMENT'); }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
+                    type === 'APPOINTMENT'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-400/30'
+                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <CalendarDays size={16} />
+                  Agendamento
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setType('BLOCK'); setTitle(title || 'Bloqueio'); setContactId(''); setProductId(''); }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
+                    type === 'BLOCK'
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 ring-2 ring-red-400/30'
+                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <Ban size={16} />
+                  Bloqueio
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Título *</label>
@@ -169,15 +208,16 @@ export default function AppointmentModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Consulta, Reunião, Corte..."
+              placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'}
               className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
           </div>
 
-          {/* Contact Search */}
+          {/* Contact Search (optional - hidden for blocks) */}
+          {type === 'APPOINTMENT' && (
           <div className="relative">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <User size={14} /> Contato *
+              <User size={14} /> Contato
             </label>
             {selectedContact ? (
               <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
@@ -223,7 +263,10 @@ export default function AppointmentModal({
             )}
           </div>
 
+          )}
+
           {/* Product */}
+          {type === 'APPOINTMENT' && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -291,6 +334,8 @@ export default function AppointmentModal({
               </select>
             )}
           </div>
+
+          )}
 
           {/* Date and Time */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -396,15 +441,22 @@ export default function AppointmentModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={saving || !title.trim() || !contactId}
-              className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+              disabled={saving || !title.trim()}
+              className={`px-6 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                type === 'BLOCK'
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-200 dark:shadow-none'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none'
+              }`}
             >
               {saving ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <CheckCircle size={16} />
               )}
-              {isEditing ? 'Salvar Alterações' : 'Criar Agendamento'}
+              {isEditing
+                ? 'Salvar Alterações'
+                : type === 'BLOCK' ? 'Criar Bloqueio' : 'Criar Agendamento'
+              }
             </button>
           </div>
         </div>
