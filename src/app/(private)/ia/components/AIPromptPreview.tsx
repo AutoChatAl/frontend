@@ -13,7 +13,7 @@ interface AIPromptPreviewProps {
   products: Product[];
 }
 
-export default function AIPromptPreview({ segment, businessName, assistantName, tone, products }: AIPromptPreviewProps) {
+export default function AIPromptPreview({ segment, businessName, assistantName, products }: AIPromptPreviewProps) {
   const productNames = products.map((p) => p.name).filter(Boolean);
   const assistantDisplayName = assistantName.trim() || 'assistente virtual';
   const businessPart = businessName.trim() ? ` da ${businessName.trim()}` : '';

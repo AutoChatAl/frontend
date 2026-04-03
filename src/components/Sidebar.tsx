@@ -14,7 +14,7 @@ interface SidebarItemProps {
     active: boolean;
     onClick: () => void;
     collapsed: boolean;
-    badgeCount?: number;
+    badgeCount?: number | undefined;
 }
 
 interface SidebarProps {
@@ -112,7 +112,7 @@ export default function Sidebar({
     return menuItems.map((item) =>
       item.id === 'contacts'
         ? { ...item, badgeCount: humanQueueCount }
-        : item
+        : item,
     );
   }, [menuItems, humanQueueCount]);
 
