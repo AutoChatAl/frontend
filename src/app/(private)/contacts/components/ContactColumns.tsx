@@ -39,7 +39,15 @@ export const columns = [
           <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-xs shrink-0">
             {getInitials(name) || '?'}
           </div>
-          <span className="font-medium text-slate-900 dark:text-white">{name}</span>
+          <div className="flex flex-col items-start gap-1">
+            <span className="font-medium text-slate-900 dark:text-white">{name}</span>
+            {row.awaitingHuman && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-[10px] font-semibold text-red-700 dark:text-red-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400" />
+                Aguardando atendimento
+              </span>
+            )}
+          </div>
         </div>
       );
     },
@@ -101,7 +109,13 @@ export const columns = [
       return (
         <div className="flex flex-wrap gap-1">
           {tags.length > 0 ? (
-            tags.map((t) => <Badge key={t.tagId} type="tag" text={t.tag.name} />)
+            tags.map((t) =>
+              t.tag.name === 'Aguardando atendimento' ? (
+                <Badge key={t.tagId} type="error" text={t.tag.name} />
+              ) : (
+                <Badge key={t.tagId} type="tag" text={t.tag.name} />
+              ),
+            )
           ) : (
             <span className="text-slate-400 text-xs italic">Sem tags</span>
           )}

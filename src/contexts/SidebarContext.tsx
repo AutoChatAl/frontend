@@ -9,6 +9,7 @@ export interface MenuItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   text: string;
   href?: string;
+  badgeCount?: number;
 }
 
 interface SidebarContextType {

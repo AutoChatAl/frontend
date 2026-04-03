@@ -51,6 +51,17 @@ class ContactService {
     if (!response.success || !response.data) throw new Error('Não foi possível sincronizar os contatos do Instagram. Tente novamente.');
     return response.data as { ok: boolean; upserted: number };
   }
+
+  public async getHumanQueueSummary(): Promise<{ waitingCount: number }> {
+    const response = await apiClient.get<{ waitingCount: number }>('/contacts/human-queue/summary');
+    if (!response.success || !response.data) return { waitingCount: 0 };
+    return response.data as { waitingCount: number };
+  }
+
+  public async markHumanRead(contactId: string): Promise<void> {
+    const response = await apiClient.post(`/contacts/${contactId}/mark-human-read`, {});
+    if (!response.success) throw new Error('Falha ao marcar contato como lido.');
+  }
 }
 
 export const contactService = new ContactService();

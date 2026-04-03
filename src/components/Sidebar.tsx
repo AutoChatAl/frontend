@@ -2,9 +2,11 @@
 
 import { Bot, Menu, Sparkles, LogOut, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
+import { contactService } from '@/services/contact.service';
 
 interface SidebarItemProps {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -12,6 +14,7 @@ interface SidebarItemProps {
     active: boolean;
     onClick: () => void;
     collapsed: boolean;
+    badgeCount?: number;
 }
 
 interface SidebarProps {
@@ -24,7 +27,7 @@ interface SidebarProps {
     planProgress?: number;
 }
 
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed }: SidebarItemProps) => {
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount }: SidebarItemProps) => {
   return (
     <button
       onClick={onClick}
@@ -42,8 +45,13 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed }: SidebarIt
         {!collapsed && (
           <>
             <span className={`text-sm truncate ${active ? 'font-semibold' : 'font-medium'}`}>{text}</span>
+            {!!badgeCount && badgeCount > 0 && (
+              <span className="ml-auto mr-2 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                {badgeCount > 99 ? '99+' : badgeCount}
+              </span>
+            )}
             {active && (
-              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0" />
+              <div className={`${badgeCount && badgeCount > 0 ? '' : 'ml-auto'} w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0`} />
             )}
           </>
         )}
@@ -72,6 +80,41 @@ export default function Sidebar({
     toggleSidebar,
     setMobileMenuOpen,
   } = useSidebar();
+
+  const [humanQueueCount, setHumanQueueCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadQueueSummary = async () => {
+      try {
+        const summary = await contactService.getHumanQueueSummary();
+        if (mounted) setHumanQueueCount(summary.waitingCount || 0);
+      } catch {
+        if (mounted) setHumanQueueCount(0);
+      }
+    };
+
+    loadQueueSummary();
+    const timer = setInterval(loadQueueSummary, 30000);
+
+    const onDecrement = () => setHumanQueueCount((c) => Math.max(0, c - 1));
+    window.addEventListener('human-queue-decrement', onDecrement);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+      window.removeEventListener('human-queue-decrement', onDecrement);
+    };
+  }, []);
+
+  const menuItemsWithBadges = useMemo(() => {
+    return menuItems.map((item) =>
+      item.id === 'contacts'
+        ? { ...item, badgeCount: humanQueueCount }
+        : item
+    );
+  }, [menuItems, humanQueueCount]);
 
   const handleMenuClick = (item: MenuItem) => {
     setActiveTab(item.id);
@@ -107,7 +150,7 @@ export default function Sidebar({
         </div>
 
         <nav className="flex-1 p-3 space-y-2 overflow-y-auto mt-2">
-          {menuItems.map((item: MenuItem) => (
+          {menuItemsWithBadges.map((item: MenuItem) => (
             <SidebarItem
               key={item.id}
               icon={item.icon}
@@ -115,6 +158,7 @@ export default function Sidebar({
               active={activeTab === item.id}
               onClick={() => handleMenuClick(item)}
               collapsed={sidebarCollapsed}
+              badgeCount={item.badgeCount}
             />
           ))}
         </nav>
@@ -179,7 +223,7 @@ export default function Sidebar({
           </button>
         </div>
         <nav className="p-4 space-y-4">
-          {menuItems.map((item: MenuItem) => (
+          {menuItemsWithBadges.map((item: MenuItem) => (
             <SidebarItem
               key={item.id}
               icon={item.icon}
@@ -190,6 +234,7 @@ export default function Sidebar({
                 setMobileMenuOpen(false);
               }}
               collapsed={false}
+              badgeCount={item.badgeCount}
             />
           ))}
         </nav>

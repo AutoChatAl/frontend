@@ -58,10 +58,12 @@ function ActionsDropdown({
   contact,
   onEdit,
   onDelete,
+  onMarkAsRead,
 }: {
   contact: Contact;
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
+  onMarkAsRead: (contact: Contact) => void;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -79,7 +81,6 @@ function ActionsDropdown({
 
   useEffect(() => {
     if (!open) return;
-    updatePosition();
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -102,7 +103,10 @@ function ActionsDropdown({
     <div ref={buttonRef}>
       <IconButton
         icon={<MoreVertical size={16} />}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (!open) updatePosition();
+          setOpen((prev) => !prev);
+        }}
       />
       {open && createPortal(
         <div
@@ -110,6 +114,19 @@ function ActionsDropdown({
           style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
           className="w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95 duration-150"
         >
+          {contact.awaitingHuman && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onMarkAsRead(contact);
+              }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+            >
+              <AlertCircle size={15} />
+              Marcar como lido
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -247,6 +264,20 @@ export default function ContactsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const refresh = () => {
+      fetchContacts(query, 0, false);
+    };
+
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [fetchContacts, query]);
+
   const handleSearchChange = useCallback(
     (value: string) => {
       setQuery(value);
@@ -276,6 +307,18 @@ export default function ContactsPage() {
       addToast('error', msg);
     } finally {
       setDeletingLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (contact: Contact) => {
+    try {
+      await contactService.markHumanRead(contact.id);
+      window.dispatchEvent(new Event('human-queue-decrement'));
+      addToast('success', `Contato "${contact.displayName || 'Sem nome'}" marcado como lido.`);
+      await fetchContacts(query, 0, false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao marcar contato como lido';
+      addToast('error', msg);
     }
   };
 
@@ -346,8 +389,14 @@ export default function ContactsPage() {
               contact={row}
               onEdit={(c) => setEditingContact(c)}
               onDelete={(c) => setDeletingContact(c)}
+              onMarkAsRead={handleMarkAsRead}
             />
           )}
+          getRowClassName={(row: Contact) =>
+            row.awaitingHuman
+              ? 'bg-red-50/60 dark:bg-red-900/10 border-l-2 border-red-400'
+              : ''
+          }
           onLoadMore={handleLoadMore}
           hasMore={hasMore}
           loadingMore={loadingMore}
@@ -362,19 +411,26 @@ export default function ContactsPage() {
             const tags = row.tags ?? [];
 
             return (
-              <Card className="p-4">
+              <Card className={`p-4 ${row.awaitingHuman ? 'ring-1 ring-red-300 dark:ring-red-800 bg-red-50/40 dark:bg-red-900/10' : ''}`}>
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-sm shrink-0">
                     {getInitials(name) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-white truncate">{name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-900 dark:text-white truncate">{name}</p>
+                      {row.awaitingHuman && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />}
+                    </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">{identifier}</p>
+                    {row.awaitingHuman && (
+                      <p className="text-[11px] font-medium text-red-600 dark:text-red-400 mt-1">Aguardando atendimento</p>
+                    )}
                   </div>
                   <ActionsDropdown
                     contact={row}
                     onEdit={(c) => setEditingContact(c)}
                     onDelete={(c) => setDeletingContact(c)}
+                    onMarkAsRead={handleMarkAsRead}
                   />
                 </div>
 

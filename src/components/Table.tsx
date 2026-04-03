@@ -31,6 +31,7 @@ interface TableProps<T> {
   };
   renderActions?: (row: T) => ReactNode;
   renderMobileCard?: (row: T) => ReactNode;
+  getRowClassName?: (row: T) => string;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
@@ -42,6 +43,7 @@ export default function Table<T extends { id: number | string }>({
   actions,
   renderActions,
   renderMobileCard,
+  getRowClassName,
   onLoadMore,
   hasMore,
   loadingMore,
@@ -114,27 +116,35 @@ export default function Table<T extends { id: number | string }>({
                 )}
               </tr>
             </thead>
-            <tbody className="text-sm divide-y divide-slate-50 dark:divide-slate-700/50">
-              {data.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors group">
-                  {columns.map((column) => {
-                    const value: ReactNode = typeof column.accessor === 'function'
-                      ? column.accessor(row)
-                      : (row[column.accessor] as unknown as ReactNode);
+            <tbody className="text-sm">
+              {data.map((row) => {
+                const rowClass = getRowClassName ? getRowClassName(row) : '';
+                return (
+                  <tr
+                    key={row.id}
+                    className={`transition-colors group ${rowClass
+                      ? rowClass
+                      : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/30 border-b border-slate-50 dark:border-slate-700/50'}`}
+                  >
+                    {columns.map((column) => {
+                      const value: ReactNode = typeof column.accessor === 'function'
+                        ? column.accessor(row)
+                        : (row[column.accessor] as unknown as ReactNode);
 
-                    return (
-                      <td key={column.header} className={`p-4 ${column.className || ''}`}>
-                        {column.render ? column.render(value, row) : value}
+                      return (
+                        <td key={column.header} className={`p-4 ${column.className || ''}`}>
+                          {column.render ? column.render(value, row) : value}
+                        </td>
+                      );
+                    })}
+                    {renderActions && (
+                      <td className="p-4 text-right">
+                        {renderActions(row)}
                       </td>
-                    );
-                  })}
-                  {renderActions && (
-                    <td className="p-4 text-right">
-                      {renderActions(row)}
-                    </td>
-                  )}
-                </tr>
-              ))}
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

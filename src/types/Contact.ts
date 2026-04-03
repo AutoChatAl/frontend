@@ -23,6 +23,8 @@ export interface Contact {
   displayName?: string | null;
   createdAt: string;
   lastInteractionAt?: string | null;
+  awaitingHuman?: boolean;
+  awaitingHumanSince?: string | null;
   identities?: ContactIdentity[];
   tags?: ContactTag[];
 }
