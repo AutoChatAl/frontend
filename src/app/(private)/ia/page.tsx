@@ -18,10 +18,16 @@ export default function IAPage() {
   const {
     segment,
     setSegment,
+    businessName,
+    setBusinessName,
+    assistantName,
+    setAssistantName,
     tone,
     setTone,
     customRules,
     setCustomRules,
+    triggerSettings,
+    setTriggerSettings,
     schedulingQueryEnabled,
     setSchedulingQueryEnabled,
     schedulingBookingEnabled,
@@ -61,15 +67,25 @@ export default function IAPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <AIIdentitySection
             segment={segment}
+            businessName={businessName}
+            assistantName={assistantName}
             tone={tone}
             products={products}
             onSegmentChange={setSegment}
+            onBusinessNameChange={setBusinessName}
+            onAssistantNameChange={setAssistantName}
             onToneChange={setTone}
             onAddProduct={addProduct}
             onUpdateProduct={updateProduct}
             onDeleteProduct={deleteProduct}
           />
-          <AIPromptPreview segment={segment} tone={tone} products={products} />
+          <AIPromptPreview
+            segment={segment}
+            businessName={businessName}
+            assistantName={assistantName}
+            tone={tone}
+            products={products}
+          />
         </div>
       )}
 
@@ -80,7 +96,12 @@ export default function IAPage() {
       )}
 
       {activeTab === 'triggers' && (
-        <AIRulesSection customRules={customRules} onCustomRulesChange={setCustomRules} />
+        <AIRulesSection
+          customRules={customRules}
+          triggerSettings={triggerSettings}
+          onCustomRulesChange={setCustomRules}
+          onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))}
+        />
       )}
 
       {activeTab === 'scheduling' && (

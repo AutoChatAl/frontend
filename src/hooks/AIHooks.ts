@@ -7,11 +7,16 @@ import { aiService } from '@/services/ai.service';
 import { channelsService } from '@/services/channels.service';
 import type { AIChannel } from '@/types/AI';
 import type { Product } from '@/types/AI';
+import type { AiTriggerSettings } from '@/types/AI';
+import { defaultAiTriggerSettings } from '@/types/AI';
 
 export function useAIConfig() {
   const [segment, setSegment] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [assistantName, setAssistantName] = useState('');
   const [tone, setTone] = useState('Amigável e Casual');
   const [customRules, setCustomRules] = useState('');
+  const [triggerSettings, setTriggerSettings] = useState<AiTriggerSettings>(defaultAiTriggerSettings);
   const [schedulingQueryEnabled, setSchedulingQueryEnabled] = useState(false);
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,8 +71,11 @@ export function useAIConfig() {
     try {
       const { aiConfig, products: fetchedProducts } = await aiService.getConfig();
       setSegment(aiConfig.segment);
+      setBusinessName(aiConfig.businessName || '');
+      setAssistantName(aiConfig.assistantName || '');
       setTone(aiConfig.tone);
       setCustomRules(aiConfig.customRules);
+      setTriggerSettings({ ...defaultAiTriggerSettings, ...(aiConfig.triggerSettings || {}) });
       setSchedulingQueryEnabled(aiConfig.schedulingQueryEnabled);
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setEnabled(aiConfig.enabled);
@@ -87,14 +95,23 @@ export function useAIConfig() {
   const saveConfig = useCallback(async () => {
     setSaving(true);
     try {
-      await aiService.updateConfig({ segment, tone, customRules, schedulingQueryEnabled, schedulingBookingEnabled });
+      await aiService.updateConfig({
+        segment,
+        businessName,
+        assistantName,
+        tone,
+        customRules,
+        triggerSettings,
+        schedulingQueryEnabled,
+        schedulingBookingEnabled,
+      });
       addToast('success', 'Configurações da IA salvas com sucesso!');
     } catch {
       addToast('error', 'Erro ao salvar configurações da IA.');
     } finally {
       setSaving(false);
     }
-  }, [segment, tone, customRules, schedulingQueryEnabled, schedulingBookingEnabled, addToast]);
+  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, addToast]);
 
   const toggleChannel = useCallback(
     async (channelId: string) => {
@@ -171,10 +188,16 @@ export function useAIConfig() {
   return {
     segment,
     setSegment,
+    businessName,
+    setBusinessName,
+    assistantName,
+    setAssistantName,
     tone,
     setTone,
     customRules,
     setCustomRules,
+    triggerSettings,
+    setTriggerSettings,
     schedulingQueryEnabled,
     setSchedulingQueryEnabled,
     schedulingBookingEnabled,

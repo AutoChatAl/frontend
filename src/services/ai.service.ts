@@ -1,3 +1,6 @@
+
+import type { AiTriggerSettings } from '@/types/AI';
+import { defaultAiTriggerSettings } from '@/types/AI';
 import { apiClient } from '@/utils/ApiClient';
 
 export interface AiConfig {
@@ -5,8 +8,11 @@ export interface AiConfig {
   enabled: boolean;
   activeChannelId: string | null;
   segment: string;
+  businessName: string;
+  assistantName: string;
   tone: string;
   customRules: string;
+  triggerSettings: AiTriggerSettings;
   schedulingQueryEnabled: boolean;
   schedulingBookingEnabled: boolean;
 }
@@ -36,8 +42,11 @@ class AiService {
         enabled: false,
         activeChannelId: null,
         segment: '',
+        businessName: '',
+        assistantName: '',
         tone: 'Amigável e Casual',
         customRules: '',
+        triggerSettings: defaultAiTriggerSettings,
         schedulingQueryEnabled: false,
         schedulingBookingEnabled: false,
       },
@@ -45,7 +54,7 @@ class AiService {
     };
   }
 
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'tone' | 'customRules' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled'>>): Promise<void> {
     await apiClient.put('/ai/config', data);
   }
 

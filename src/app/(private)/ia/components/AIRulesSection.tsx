@@ -3,22 +3,81 @@
 import { FileText } from 'lucide-react';
 
 import Card from '@/components/Card';
+import type { AiTriggerSettings } from '@/types/AI';
+
+import AIRuleToggle from './AIRuleToggle';
 
 interface AIRulesSectionProps {
   customRules: string;
+  triggerSettings: AiTriggerSettings;
   onCustomRulesChange: (value: string) => void;
+  onToggleTrigger: (triggerKey: keyof AiTriggerSettings) => void;
 }
 
-export default function AIRulesSection({ customRules, onCustomRulesChange }: AIRulesSectionProps) {
+const triggerOptions: Array<{
+  key: keyof AiTriggerSettings;
+  title: string;
+  description: string;
+}> = [
+  {
+    key: 'qualifyLead',
+    title: 'Qualificar lead automaticamente',
+    description: 'Faz perguntas curtas de necessidade e prazo antes da recomendação.',
+  },
+  {
+    key: 'prioritizeScheduling',
+    title: 'Priorizar convite para agendamento',
+    description: 'Quando houver intenção clara, a IA puxa para o próximo passo de agenda.',
+  },
+  {
+    key: 'recoveryAfterNoReply',
+    title: 'Retomar conversa sem resposta',
+    description: 'Envia retomada curta quando o cliente some no meio do atendimento.',
+  },
+  {
+    key: 'detectUrgency',
+    title: 'Responder com urgência',
+    description: 'Prioriza acolhimento e orientação direta em mensagens urgentes.',
+  },
+];
+
+export default function AIRulesSection({
+  customRules,
+  triggerSettings,
+  onCustomRulesChange,
+  onToggleTrigger,
+}: AIRulesSectionProps) {
   return (
     <Card className="p-6">
       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
         <FileText size={18} className="text-indigo-600 dark:text-indigo-400" />
-        Regras Personalizadas
+        Gatilhos e Regras
       </h3>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-        Adicione instruções extras para guiar o comportamento da IA. Exemplo: &quot;Nunca ofereça desconto&quot;, &quot;Sempre pergunte o nome do cliente&quot;.
+        Ative gatilhos prontos para comportamentos comuns da IA. Todos começam desativados por padrão.
       </p>
+
+      <div className="mb-3">
+        {triggerOptions.map((trigger) => (
+          <AIRuleToggle
+            key={trigger.key}
+            title={trigger.title}
+            description={trigger.description}
+            enabled={triggerSettings[trigger.key]}
+            onToggle={() => onToggleTrigger(trigger.key)}
+          />
+        ))}
+      </div>
+
+      <div className="mb-4 border-t border-slate-200 dark:border-slate-700 pt-4">
+        <p className="text-sm font-semibold text-slate-800 dark:text-white">
+        Regras personalizadas adicionais
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+          Escreva regras específicas para o comportamento da IA que não estejam cobertas pelos gatilhos acima. Use uma regra por linha.
+        </p>
+      </div>
+
       <textarea
         rows={6}
         value={customRules}

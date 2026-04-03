@@ -21,6 +21,20 @@ export interface AITab {
   icon: LucideIcon;
 }
 
+export interface AiTriggerSettings {
+  qualifyLead: boolean;
+  prioritizeScheduling: boolean;
+  recoveryAfterNoReply: boolean;
+  detectUrgency: boolean;
+}
+
+export const defaultAiTriggerSettings: AiTriggerSettings = {
+  qualifyLead: false,
+  prioritizeScheduling: false,
+  recoveryAfterNoReply: false,
+  detectUrgency: false,
+};
+
 export const tonesOptions = [
   { value: '', label: 'Selecione um tom...' },
   'Profissional e Formal',
@@ -35,8 +49,13 @@ export interface AiConfig {
   enabled: boolean;
   activeChannelId: string | null;
   segment: string;
+  businessName: string;
+  assistantName: string;
   tone: string;
   customRules: string;
+  triggerSettings: AiTriggerSettings;
+  schedulingQueryEnabled: boolean;
+  schedulingBookingEnabled: boolean;
 }
 
 export interface Product {
