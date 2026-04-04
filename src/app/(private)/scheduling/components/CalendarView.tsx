@@ -37,6 +37,14 @@ export default function CalendarView({
   onUpdateStatus: _onUpdateStatus,
 }: CalendarViewProps) {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+
+  const formatDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -60,8 +68,8 @@ export default function CalendarView({
   useEffect(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
-    const todayStr = t.toISOString().slice(0, 10);
-    const todayInWeek = weekDays.find((d) => d.toISOString().slice(0, 10) === todayStr);
+    const todayStr = formatDateStr(t);
+    const todayInWeek = weekDays.find((d) => formatDateStr(d) === todayStr);
     setMobileSelectedDay(todayInWeek ?? weekDays[0]!);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeekStart]);
@@ -100,7 +108,7 @@ export default function CalendarView({
   const getAppointmentsForDate = (date: Date) => {
     const dateStr = formatDateStr(date);
     return appointments.filter((a) => {
-      const aptDate = new Date(a.startAt).toISOString().slice(0, 10);
+      const aptDate = formatDateStr(new Date(a.startAt));
       return aptDate === dateStr && a.status !== 'CANCELLED';
     });
   };
@@ -109,8 +117,8 @@ export default function CalendarView({
     const dateStr = formatDateStr(date);
     return appointments.filter((a) => {
       const aptStart = new Date(a.startAt);
-      const aptDate = aptStart.toISOString().slice(0, 10);
-      const aptHour = aptStart.getUTCHours();
+      const aptDate = formatDateStr(aptStart);
+      const aptHour = aptStart.getHours();
       return aptDate === dateStr && aptHour === hour && a.status !== 'CANCELLED';
     });
   };
@@ -118,8 +126,8 @@ export default function CalendarView({
   const getCardLayoutStyle = (apt: Appointment, slotHeight: number) => {
     const start = new Date(apt.startAt);
     const end = new Date(apt.endAt);
-    const startMinutes = start.getUTCHours() * 60 + start.getUTCMinutes();
-    const endMinutes = end.getUTCHours() * 60 + end.getUTCMinutes();
+    const startMinutes = start.getHours() * 60 + start.getMinutes();
+    const endMinutes = end.getHours() * 60 + end.getMinutes();
 
     const clampedStart = Math.max(startMinutes, DAY_START_MINUTES);
     const clampedEnd = Math.min(endMinutes, DAY_END_MINUTES);
@@ -176,10 +184,6 @@ export default function CalendarView({
     weekStart.setDate(diff);
     weekStart.setHours(0, 0, 0, 0);
     onWeekChange(weekStart);
-  };
-
-  const formatDateStr = (d: Date) => {
-    return d.toISOString().slice(0, 10);
   };
 
   const isToday = (d: Date) => {
@@ -412,7 +416,7 @@ export default function CalendarView({
                               : 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400'
                         }`}
                       >
-                        {new Date(apt.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} {apt.title}
+                        {new Date(apt.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} {apt.title}
                       </div>
                     ))}
                     {dayAppts.length > 3 && (

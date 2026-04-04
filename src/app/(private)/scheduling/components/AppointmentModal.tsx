@@ -3,6 +3,8 @@
 import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2, Ban, CalendarDays } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
+import DatePicker from '@/components/DatePicker';
+import TimePicker from '@/components/TimePicker';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
 import type { Contact } from '@/types/Contact';
@@ -45,6 +47,24 @@ export default function AppointmentModal({
 }: AppointmentModalProps) {
   const isEditing = !!appointment;
 
+  const toLocalDateTimeParts = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return {
+      date: `${year}-${month}-${day}`,
+      time: `${hours}:${minutes}`,
+    };
+  };
+
+  const buildUtcIsoFromLocal = (dateValue: string, timeValue: string) => {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    const [hours, minutes] = timeValue.split(':').map(Number);
+    return new Date(year ?? 2026, (month ?? 1) - 1, day ?? 1, hours ?? 0, minutes ?? 0, 0, 0).toISOString();
+  };
+
   const toLocalDateInput = (value: Date) => {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
@@ -53,15 +73,14 @@ export default function AppointmentModal({
   };
 
   const getInitialDate = () => {
-    if (appointment) return new Date(appointment.startAt).toISOString().slice(0, 10);
+    if (appointment) return toLocalDateTimeParts(new Date(appointment.startAt)).date;
     if (initialDate) return initialDate;
-    return new Date().toISOString().slice(0, 10);
+    return toLocalDateInput(new Date());
   };
 
   const getInitialStartTime = () => {
     if (appointment) {
-      const d = new Date(appointment.startAt);
-      return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+      return toLocalDateTimeParts(new Date(appointment.startAt)).time;
     }
     if (initialTime) return initialTime;
     return '09:00';
@@ -69,8 +88,7 @@ export default function AppointmentModal({
 
   const getInitialEndTime = () => {
     if (appointment) {
-      const d = new Date(appointment.endAt);
-      return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+      return toLocalDateTimeParts(new Date(appointment.endAt)).time;
     }
     if (initialTime) {
       const [h = 0, m = 0] = initialTime.split(':').map(Number);
@@ -105,7 +123,7 @@ export default function AppointmentModal({
   const minAllowedDate = useMemo(() => {
     const todayStr = toLocalDateInput(new Date());
     if (!appointment) return todayStr;
-    const appointmentDate = appointment.startAt.slice(0, 10);
+    const appointmentDate = toLocalDateTimeParts(new Date(appointment.startAt)).date;
     return appointmentDate < todayStr ? appointmentDate : todayStr;
   }, [appointment]);
 
@@ -146,20 +164,13 @@ export default function AppointmentModal({
     if (!title.trim() || !date || !startTime || !endTime) return;
     setSubmitError('');
 
-    const startAt = `${date}T${startTime}:00.000Z`;
-    const endAt = `${date}T${endTime}:00.000Z`;
+    const startAt = buildUtcIsoFromLocal(date, startTime);
+    const endAt = buildUtcIsoFromLocal(date, endTime);
     const startDate = new Date(startAt);
     const endDate = new Date(endAt);
-    const now = new Date();
-    const hasStartChanged = !appointment || new Date(appointment.startAt).getTime() !== startDate.getTime();
 
     if (endDate <= startDate) {
       setSubmitError('O horário final deve ser após o horário inicial.');
-      return;
-    }
-
-    if (hasStartChanged && startDate <= now) {
-      setSubmitError('Não é permitido agendar em datas ou horários passados.');
       return;
     }
 
@@ -241,7 +252,7 @@ export default function AppointmentModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'}
-              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
             />
           </div>
 
@@ -269,7 +280,7 @@ export default function AppointmentModal({
                     onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }}
                     onFocus={() => setShowContactDropdown(true)}
                     placeholder="Buscar contato..."
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
                   />
                   {showContactDropdown && (
                     <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -323,14 +334,14 @@ export default function AppointmentModal({
                     onChange={(e) => setNewProductName(e.target.value)}
                     placeholder="Nome do produto ou serviço"
                     autoFocus
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
                   />
                   <input
                     type="text"
                     value={newProductPrice}
                     onChange={(e) => setNewProductPrice(e.target.value)}
                     placeholder="Preço (opcional) ex: 50,00"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
                   />
                   <div className="flex gap-2">
                     <button
@@ -355,7 +366,7 @@ export default function AppointmentModal({
                 <select
                   value={productId}
                   onChange={(e) => setProductId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
                 >
                   <option value="">Nenhum produto selecionado</option>
                   {localProducts.map((p) => (
@@ -370,35 +381,29 @@ export default function AppointmentModal({
           )}
 
           {/* Date and Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div className="min-w-0 sm:col-span-4">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Data *</label>
-              <input
-                type="date"
+              <DatePicker
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
                 min={minAllowedDate}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
-            <div>
+            <div className="min-w-0 sm:col-span-4">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <Clock size={14} /> Início *
               </label>
-              <input
-                type="time"
+              <TimePicker
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                onChange={setStartTime}
               />
             </div>
-            <div>
+            <div className="min-w-0 sm:col-span-4">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Fim *</label>
-              <input
-                type="time"
+              <TimePicker
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                onChange={setEndTime}
               />
             </div>
           </div>
@@ -419,7 +424,7 @@ export default function AppointmentModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Detalhes do agendamento..."
-              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
             />
           </div>
 
@@ -431,7 +436,7 @@ export default function AppointmentModal({
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               placeholder="Notas internas..."
-              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
             />
           </div>
 

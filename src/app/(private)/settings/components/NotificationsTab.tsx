@@ -10,6 +10,7 @@ import { apiClient } from '@/utils/ApiClient';
 
 interface WorkspaceNotifications {
   emailCampaignDispatch: boolean;
+  schedulingReminder: boolean;
 }
 
 const EMAIL_NOTIFICATION_ITEMS = [
@@ -21,6 +22,7 @@ const EMAIL_NOTIFICATION_ITEMS = [
 export default function NotificationsTab() {
   const [notifications, setNotifications] = useState<WorkspaceNotifications>({
     emailCampaignDispatch: false,
+    schedulingReminder: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,7 +32,11 @@ export default function NotificationsTab() {
     try {
       const response = await apiClient.get<WorkspaceNotifications>('/auth/workspace/notifications');
       if (response.success && response.data) {
-        setNotifications(response.data as WorkspaceNotifications);
+        setNotifications({
+          emailCampaignDispatch: false,
+          schedulingReminder: false,
+          ...(response.data as Partial<WorkspaceNotifications>),
+        });
       }
     } catch {
     } finally {
@@ -51,13 +57,40 @@ export default function NotificationsTab() {
       );
       if (response.success && response.data) {
         const data = response.data as { ok: boolean; notifications: WorkspaceNotifications };
-        setNotifications(data.notifications);
+        setNotifications((prev) => ({
+          ...prev,
+          ...(data.notifications as Partial<WorkspaceNotifications>),
+        }));
         addToast('success', checked ? 'Notificação por e-mail ativada.' : 'Notificação por e-mail desativada.');
       } else {
         addToast('error', 'Erro ao atualizar notificação.');
       }
     } catch {
       addToast('error', 'Erro ao atualizar notificação.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSchedulingReminderToggle = async (checked: boolean) => {
+    setSaving(true);
+    try {
+      const response = await apiClient.put<{ ok: boolean; notifications: WorkspaceNotifications }>(
+        '/auth/workspace/notifications',
+        { schedulingReminder: checked },
+      );
+      if (response.success && response.data) {
+        const data = response.data as { ok: boolean; notifications: WorkspaceNotifications };
+        setNotifications((prev) => ({
+          ...prev,
+          ...(data.notifications as Partial<WorkspaceNotifications>),
+        }));
+        addToast('success', checked ? 'Lembrete de agendamento ativado.' : 'Lembrete de agendamento desativado.');
+      } else {
+        addToast('error', 'Erro ao atualizar lembrete de agendamento.');
+      }
+    } catch {
+      addToast('error', 'Erro ao atualizar lembrete de agendamento.');
     } finally {
       setSaving(false);
     }
@@ -102,6 +135,22 @@ export default function NotificationsTab() {
               <ToggleSwitch
                 checked={notifications.emailCampaignDispatch}
                 onChange={handleEmailToggle}
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-white">Lembrete de Agendamento</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  A cada 10 minutos, o sistema verifica agendamentos da próxima 1 hora e envia uma mensagem de lembrete ao contato.
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={notifications.schedulingReminder}
+                onChange={handleSchedulingReminderToggle}
                 disabled={saving}
               />
             </div>

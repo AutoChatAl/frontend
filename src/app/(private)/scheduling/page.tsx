@@ -1,8 +1,9 @@
 'use client';
 
-import { CalendarDays, Loader2 } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
+import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
@@ -171,11 +172,7 @@ export default function SchedulingPage() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto flex items-center justify-center py-32">
-        <Loader2 size={32} className="animate-spin text-indigo-500" />
-      </div>
-    );
+    return <PageLoader message="Carregando agendamentos" />;
   }
 
   return (

@@ -199,7 +199,7 @@ export default function AutoRepliesPage() {
                                 <span className="text-xs font-medium">Mensagem de áudio</span>
                               </div>
                             )}
-                            {['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO', 'TEXT_IMAGE_AND_AUDIO'].includes(rule.replyType) && (
+                            {['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(rule.replyType) && (
                               <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
                                 <ImageIcon size={14} />
                                 <span className="text-xs font-medium">Imagem enviada</span>

@@ -6,7 +6,7 @@ export interface AutoReply {
   keyword: string;
   matchMode: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
   caseSensitive: boolean;
-  replyType: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'TEXT_IMAGE_AND_AUDIO';
+  replyType: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO';
   replyMessage: string;
   replyAudioBase64?: string;
   replyAudioMimeType?: string;
@@ -26,7 +26,7 @@ export interface CreateAutoReplyInput {
   keyword: string;
   matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
   caseSensitive?: boolean;
-  replyType?: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'TEXT_IMAGE_AND_AUDIO';
+  replyType?: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO';
   replyMessage?: string;
   replyAudioBase64?: string;
   replyAudioMimeType?: string;
@@ -44,7 +44,7 @@ export interface UpdateAutoReplyInput {
   keyword?: string;
   matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
   caseSensitive?: boolean;
-  replyType?: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'TEXT_IMAGE_AND_AUDIO';
+  replyType?: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO';
   replyMessage?: string;
   replyAudioBase64?: string;
   replyAudioMimeType?: string;

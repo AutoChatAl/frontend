@@ -3,6 +3,7 @@
 import { Bot, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
+import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { useAIConfig } from '@/hooks/AIHooks';
 
@@ -47,11 +48,7 @@ export default function IAPage() {
   } = useAIConfig();
 
   if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto flex items-center justify-center py-32">
-        <Loader2 size={32} className="animate-spin text-indigo-500" />
-      </div>
-    );
+    return <PageLoader message="Carregando configurações de IA" />;
   }
 
   return (

@@ -3,6 +3,7 @@
 import { Clock, Plus, Trash2, Calendar, Save, Loader2, Ban, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 
+import TimePicker from '@/components/TimePicker';
 import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
 import { DAY_NAMES } from '@/types/Scheduling';
 
@@ -143,18 +144,14 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
                 <div className="space-y-2 ml-6">
                   {day.slots.map((slot, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="time"
+                      <TimePicker
                         value={slot.start}
-                        onChange={(e) => updateSlot(day.dayOfWeek, idx, 'start', e.target.value)}
-                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-md text-xs sm:text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        onChange={(value) => updateSlot(day.dayOfWeek, idx, 'start', value)}
                       />
                       <span className="text-slate-400 text-xs">até</span>
-                      <input
-                        type="time"
+                      <TimePicker
                         value={slot.end}
-                        onChange={(e) => updateSlot(day.dayOfWeek, idx, 'end', e.target.value)}
-                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-md text-xs sm:text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        onChange={(value) => updateSlot(day.dayOfWeek, idx, 'end', value)}
                       />
                       {day.slots.length > 1 && (
                         <button onClick={() => removeSlot(day.dayOfWeek, idx)} className="text-slate-400 hover:text-red-500 transition-colors">

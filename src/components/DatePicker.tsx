@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface DatePickerProps {
@@ -103,11 +103,6 @@ export default function DatePicker({
     setOpen(false);
   };
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange('');
-  };
-
   const goToday = () => {
     setViewYear(todayDate.getFullYear());
     setViewMonth(todayDate.getMonth());
@@ -118,11 +113,11 @@ export default function DatePicker({
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative w-full min-w-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-4 py-2.5 border-2 rounded-xl text-sm transition-all bg-white dark:bg-slate-900 ${
+        className={`w-full min-w-0 overflow-hidden flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm transition-all bg-white dark:bg-slate-900 ${
           open
             ? 'border-indigo-500 ring-2 ring-indigo-500/20'
             : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
@@ -133,26 +128,16 @@ export default function DatePicker({
           className={`shrink-0 transition-colors ${open ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}
         />
         <span
-          className={`flex-1 text-left ${
-            value ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-400 dark:text-slate-500'
+          className={`flex-1 min-w-0 text-left text-[14px] whitespace-nowrap tabular-nums ${
+            value ? 'text-slate-900 dark:text-white font-normal' : 'text-slate-400 dark:text-slate-500'
           }`}
         >
           {value ? formatBR(value) : placeholder}
         </span>
-        {value ? (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="shrink-0 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 transition-colors"
-          >
-            <X size={14} />
-          </button>
-        ) : (
-          <ChevronRight
-            size={14}
-            className={`shrink-0 transition-transform text-slate-300 dark:text-slate-600 ${open ? 'rotate-90' : 'rotate-0'}`}
-          />
-        )}
+        <ChevronRight
+          size={14}
+          className={`shrink-0 transition-transform text-slate-300 dark:text-slate-600 ${open ? 'rotate-90' : 'rotate-0'}`}
+        />
       </button>
 
       {open && (
@@ -225,13 +210,24 @@ export default function DatePicker({
             <span className="text-xs text-slate-400 dark:text-slate-500">
               {value ? formatBR(value) : 'Nenhuma data selecionada'}
             </span>
-            <button
-              type="button"
-              onClick={goToday}
-              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-            >
-              Hoje
-            </button>
+            <div className="flex items-center gap-3">
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => onChange('')}
+                  className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                >
+                  Limpar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={goToday}
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              >
+                Hoje
+              </button>
+            </div>
           </div>
         </div>
       )}

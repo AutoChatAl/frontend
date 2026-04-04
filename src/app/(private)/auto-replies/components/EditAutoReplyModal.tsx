@@ -52,7 +52,6 @@ const REPLY_TYPES = [
   { value: 'IMAGE' as const, label: 'Imagem', icon: ImageIcon },
   { value: 'TEXT_AND_IMAGE' as const, label: 'Texto + Imagem', icon: MessageCircle },
   { value: 'IMAGE_AND_AUDIO' as const, label: 'Imagem + Áudio', icon: Mic },
-  { value: 'TEXT_IMAGE_AND_AUDIO' as const, label: 'Texto + Imagem + Áudio', icon: Reply },
 ] as const;
 
 function stripWhatsAppFormatting(text: string) {
@@ -137,9 +136,9 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, autoReply, loadChannels]);
 
-  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
-  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
-  const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE'].includes(formData.replyType ?? 'TEXT');
+  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const isInstagram = formData.channelType === 'INSTAGRAM';
   const hasLinkButton = !!formData.replyLinkUrl?.trim();
 
