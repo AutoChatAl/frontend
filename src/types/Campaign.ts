@@ -89,6 +89,8 @@ export interface CreateCampaignInput {
     ctaSubtitle?: string;
     ctaImageUrl?: string;
     ctaDefaultActionUrl?: string;
+    imageBase64?: string;
+    imageMimeType?: string;
   };
   messageTag?: 'HUMAN_AGENT';
   frequency?: 'DAILY' | 'ONCE';

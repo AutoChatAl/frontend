@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ExternalLink,
+  Image as ImageIcon,
   Loader2,
   MessageCircle,
   Mic,
@@ -47,6 +48,10 @@ const REPLY_TYPES = [
   { value: 'TEXT' as const, label: 'Texto', icon: Type },
   { value: 'AUDIO' as const, label: 'Áudio', icon: Mic },
   { value: 'TEXT_AND_AUDIO' as const, label: 'Texto + Áudio', icon: MessageCircle },
+  { value: 'IMAGE' as const, label: 'Imagem', icon: ImageIcon },
+  { value: 'TEXT_AND_IMAGE' as const, label: 'Texto + Imagem', icon: MessageCircle },
+  { value: 'IMAGE_AND_AUDIO' as const, label: 'Imagem + Áudio', icon: Mic },
+  { value: 'TEXT_IMAGE_AND_AUDIO' as const, label: 'Texto + Imagem + Áudio', icon: Reply },
 ] as const;
 
 function stripWhatsAppFormatting(text: string) {
@@ -74,7 +79,9 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     enabled: true,
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [audioFileName, setAudioFileName] = useState<string>('');
+  const [imageFileName, setImageFileName] = useState<string>('');
 
   const loadChannels = useCallback(async () => {
     try {
@@ -121,11 +128,13 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       });
       setErrors({});
       setAudioFileName('');
+      setImageFileName('');
     }
   }, [isOpen, loadChannels]);
 
-  const needsText = formData.replyType === 'TEXT' || formData.replyType === 'TEXT_AND_AUDIO';
-  const needsAudio = formData.replyType === 'AUDIO' || formData.replyType === 'TEXT_AND_AUDIO';
+  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO', 'TEXT_IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const isInstagram = formData.channelType === 'INSTAGRAM';
   const hasLinkButton = !!formData.replyLinkUrl?.trim();
 
@@ -138,6 +147,9 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     }
     if (needsAudio && !formData.replyAudioBase64) {
       newErrors.replyAudio = 'Envie um arquivo de áudio';
+    }
+    if (needsImage && !formData.replyImageBase64) {
+      newErrors.replyImage = 'Envie uma imagem';
     }
     if (formData.replyLinkUrl && !/^https?:\/\/.+/.test(formData.replyLinkUrl)) {
       newErrors.replyLinkUrl = 'Informe uma URL válida (ex: https://exemplo.com)';
@@ -188,6 +200,45 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     if (audioInputRef.current) audioInputRef.current.value = '';
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrors((prev) => ({ ...prev, replyImage: 'O arquivo deve ser uma imagem.' }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, replyImage: 'A imagem deve ter no máximo 2MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        replyImageBase64: base64,
+        replyImageMimeType: file.type,
+      }));
+      setImageFileName(file.name);
+      setErrors((prev) => ({ ...prev, replyImage: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      delete next.replyImageBase64;
+      delete next.replyImageMimeType;
+      return next;
+    });
+    setImageFileName('');
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
 
@@ -216,7 +267,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     setErrors((prev) => ({ ...prev, channelId: '' }));
   };
 
-  const hasContent = formData.keyword && (formData.replyMessage || formData.replyAudioBase64);
+  const hasContent = formData.keyword && (formData.replyMessage || formData.replyAudioBase64 || formData.replyImageBase64);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nova Auto-Resposta" size="md">
@@ -308,7 +359,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Modo de correspondência
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {MATCH_MODES.map((mode) => (
               <button
                 key={mode.value}
@@ -445,6 +496,48 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         )}
 
+        {needsImage && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Imagem
+            </label>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            {imageFileName ? (
+              <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+              >
+                <Upload size={18} />
+                <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
+              </button>
+            )}
+            {errors.replyImage && (
+              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle size={12} /> {errors.replyImage}
+              </p>
+            )}
+          </div>
+        )}
+
         {needsText && (
           <div>
             <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -560,6 +653,17 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
                     <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                       <Mic size={14} />
                       <span className="text-xs font-medium">Mensagem de áudio</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {needsImage && formData.replyImageBase64 && (
+                <div className="flex justify-start">
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1.5 mb-1 text-indigo-600 dark:text-indigo-400">
+                      <ImageIcon size={14} />
+                      <span className="text-xs font-medium">Imagem anexada</span>
                     </div>
                   </div>
                 </div>

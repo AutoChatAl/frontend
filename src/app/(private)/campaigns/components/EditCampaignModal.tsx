@@ -7,16 +7,19 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Image as ImageIcon,
   Loader2,
   MessageCircle,
   Repeat,
   Save,
   Search,
   Smartphone,
+  Trash2,
+  Upload,
   Users,
   X,
 } from 'lucide-react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 import DatePicker from '@/components/DatePicker';
 import Modal from '@/components/Modal';
@@ -121,6 +124,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
   const [loadingData, setLoadingData] = useState(true);
   const [contactFilter, setContactFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState('');
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<UpdateCampaignInput>({
     name: '',
     description: '',
@@ -230,6 +235,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         executionHour: savedExecutionHour,
         scheduledDate: savedScheduledDate,
       } as UpdateCampaignInput);
+      setImageFileName((campaign.messageMeta as { imageBase64?: string } | undefined)?.imageBase64 ? 'Imagem existente' : '');
     }
   }, [isOpen, campaign, loadInitialData]);
 
@@ -237,8 +243,8 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim() || formData.name.length < 2)
       newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
-    if (!formData.message.trim())
-      newErrors.message = 'Mensagem é obrigatória';
+    if (!formData.message.trim() && !(formData.messageMeta as { imageBase64?: string } | undefined)?.imageBase64)
+      newErrors.message = 'Mensagem ou imagem é obrigatória';
     if (formData.message.length > 2000)
       newErrors.message = 'Mensagem não pode ter mais de 2000 caracteres';
 
@@ -290,7 +296,58 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     setErrors({});
     setContactFilter('');
     setError(null);
+    setImageFileName('');
+    if (imageInputRef.current) imageInputRef.current.value = '';
     onClose();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrors((prev) => ({ ...prev, message: 'O arquivo precisa ser uma imagem válida.' }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, message: 'A imagem deve ter no máximo 2MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        messageMeta: {
+          ...(prev.messageMeta ?? {}),
+          imageBase64: base64,
+          imageMimeType: file.type,
+        },
+      }));
+      setImageFileName(file.name);
+      clearFieldError('message');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setFormData((prev) => {
+      const nextMeta = { ...(prev.messageMeta ?? {}) } as Record<string, unknown>;
+      delete nextMeta.imageBase64;
+      delete nextMeta.imageMimeType;
+
+      const next = { ...prev };
+      if (Object.keys(nextMeta).length > 0) {
+        next.messageMeta = nextMeta;
+      } else {
+        delete next.messageMeta;
+      }
+      return next;
+    });
+    setImageFileName('');
+    if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
   const handleSourceTypeChange = (newSourceType: 'CHANNEL' | 'GROUP') => {
@@ -500,7 +557,43 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                 </div>
               </div>
 
-              {formData.message.trim() && (
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-indigo-500" />
+                  Imagem <span className="text-slate-400 font-normal">(opcional, até 2MB)</span>
+                </label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {imageFileName ? (
+                  <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                    <ImageIcon size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                  >
+                    <Upload size={16} />
+                    <span className="text-sm font-medium">Selecionar imagem da campanha</span>
+                  </button>
+                )}
+              </div>
+
+              {(formData.message.trim() || (formData.messageMeta as { imageBase64?: string } | undefined)?.imageBase64) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Preview no WhatsApp
@@ -510,6 +603,12 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                     linkUrl={formData.linkUrl}
                     linkLabel={formData.linkLabel}
                   />
+                  {(formData.messageMeta as { imageBase64?: string } | undefined)?.imageBase64 && (
+                    <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                      <ImageIcon size={12} />
+                      Imagem será enviada junto com a campanha.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
