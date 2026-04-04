@@ -45,6 +45,13 @@ export default function AppointmentModal({
 }: AppointmentModalProps) {
   const isEditing = !!appointment;
 
+  const toLocalDateInput = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getInitialDate = () => {
     if (appointment) return new Date(appointment.startAt).toISOString().slice(0, 10);
     if (initialDate) return initialDate;
@@ -93,6 +100,14 @@ export default function AppointmentModal({
   const [newProductPrice, setNewProductPrice] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
   const [localProducts, setLocalProducts] = useState<Product[]>(products);
+  const [submitError, setSubmitError] = useState('');
+
+  const minAllowedDate = useMemo(() => {
+    const todayStr = toLocalDateInput(new Date());
+    if (!appointment) return todayStr;
+    const appointmentDate = appointment.startAt.slice(0, 10);
+    return appointmentDate < todayStr ? appointmentDate : todayStr;
+  }, [appointment]);
 
   const filteredContacts = useMemo(() => {
     if (!contactSearch) return contacts.slice(0, 10);
@@ -129,10 +144,27 @@ export default function AppointmentModal({
 
   const handleSubmit = async () => {
     if (!title.trim() || !date || !startTime || !endTime) return;
+    setSubmitError('');
+
+    const startAt = `${date}T${startTime}:00.000Z`;
+    const endAt = `${date}T${endTime}:00.000Z`;
+    const startDate = new Date(startAt);
+    const endDate = new Date(endAt);
+    const now = new Date();
+    const hasStartChanged = !appointment || new Date(appointment.startAt).getTime() !== startDate.getTime();
+
+    if (endDate <= startDate) {
+      setSubmitError('O horário final deve ser após o horário inicial.');
+      return;
+    }
+
+    if (hasStartChanged && startDate <= now) {
+      setSubmitError('Não é permitido agendar em datas ou horários passados.');
+      return;
+    }
+
     setSaving(true);
     try {
-      const startAt = `${date}T${startTime}:00.000Z`;
-      const endAt = `${date}T${endTime}:00.000Z`;
       await onSave({
         type,
         title: title.trim(),
@@ -345,6 +377,7 @@ export default function AppointmentModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                min={minAllowedDate}
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
@@ -369,6 +402,12 @@ export default function AppointmentModal({
               />
             </div>
           </div>
+
+          {submitError && (
+            <div className="text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2">
+              {submitError}
+            </div>
+          )}
 
           {/* Description */}
           <div>

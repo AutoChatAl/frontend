@@ -20,6 +20,10 @@ interface CalendarViewProps {
 }
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6:00 to 20:00
+const DESKTOP_SLOT_HEIGHT = 56;
+const MOBILE_SLOT_HEIGHT = 52;
+const DAY_START_MINUTES = HOURS[0]! * 60;
+const DAY_END_MINUTES = (HOURS[HOURS.length - 1]! + 1) * 60;
 
 export default function CalendarView({
   appointments,
@@ -109,6 +113,23 @@ export default function CalendarView({
       const aptHour = aptStart.getUTCHours();
       return aptDate === dateStr && aptHour === hour && a.status !== 'CANCELLED';
     });
+  };
+
+  const getCardLayoutStyle = (apt: Appointment, slotHeight: number) => {
+    const start = new Date(apt.startAt);
+    const end = new Date(apt.endAt);
+    const startMinutes = start.getUTCHours() * 60 + start.getUTCMinutes();
+    const endMinutes = end.getUTCHours() * 60 + end.getUTCMinutes();
+
+    const clampedStart = Math.max(startMinutes, DAY_START_MINUTES);
+    const clampedEnd = Math.min(endMinutes, DAY_END_MINUTES);
+    const totalMinutes = Math.max(clampedEnd - clampedStart, 1);
+    const topMinutes = Math.max(startMinutes % 60, 0);
+
+    return {
+      top: `${(topMinutes / 60) * slotHeight}px`,
+      height: `${Math.max((totalMinutes / 60) * slotHeight, 24)}px`,
+    };
   };
 
   const isWorkingHour = (date: Date, hour: number) => {
@@ -263,7 +284,7 @@ export default function CalendarView({
                   <div
                     key={hour}
                     onClick={() => isWorking ? onCreateAppointment(formatDateStr(mobileSelectedDay), `${String(hour).padStart(2, '0')}:00`) : undefined}
-                    className={`flex border-b border-slate-100 dark:border-slate-700 last:border-b-0 min-h-13 transition-colors ${
+                    className={`flex border-b border-slate-100 dark:border-slate-700 last:border-b-0 min-h-13 transition-colors overflow-visible ${
                       isWorking
                         ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
                         : 'bg-slate-50 dark:bg-slate-800/50'
@@ -272,12 +293,13 @@ export default function CalendarView({
                     <div className="w-14 shrink-0 text-[10px] text-slate-400 dark:text-slate-500 text-right pr-3 pt-2 font-medium border-r border-slate-100 dark:border-slate-700">
                       {String(hour).padStart(2, '0')}:00
                     </div>
-                    <div className="flex-1 p-1 space-y-0.5">
+                    <div className="flex-1 p-1 relative overflow-visible">
                       {dayAppts.map((apt) => (
                         <div
                           key={apt.id}
                           onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
-                          className={`text-xs p-1.5 rounded-md cursor-pointer border-l-2 ${aptCardClass(apt)}`}
+                          style={getCardLayoutStyle(apt, MOBILE_SLOT_HEIGHT)}
+                          className={`absolute left-1 right-1 text-xs p-1.5 rounded-md cursor-pointer border-l-2 shadow-sm z-20 ${aptCardClass(apt)}`}
                         >
                           <div className="font-semibold">{apt.title}</div>
                         </div>
@@ -323,7 +345,7 @@ export default function CalendarView({
                         <div
                           key={dayIdx}
                           onClick={() => isWorking ? onCreateAppointment(formatDateStr(day), `${String(hour).padStart(2, '0')}:00`) : undefined}
-                          className={`min-h-14 p-1 border-r last:border-r-0 border-slate-100 dark:border-slate-700 transition-colors ${
+                          className={`min-h-14 p-1 border-r last:border-r-0 border-slate-100 dark:border-slate-700 transition-colors relative overflow-visible ${
                             isWorking
                               ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
                               : 'bg-slate-50 dark:bg-slate-800/50'
@@ -333,7 +355,8 @@ export default function CalendarView({
                             <div
                               key={apt.id}
                               onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }}
-                              className={`text-xs p-1.5 rounded-md mb-0.5 cursor-pointer truncate border-l-2 ${aptCardClass(apt)}`}
+                              style={getCardLayoutStyle(apt, DESKTOP_SLOT_HEIGHT)}
+                              className={`absolute left-1 right-1 text-xs p-1.5 rounded-md cursor-pointer border-l-2 shadow-sm z-20 ${aptCardClass(apt)}`}
                             >
                               <div className="font-semibold truncate">{apt.title}</div>
                             </div>
@@ -367,7 +390,7 @@ export default function CalendarView({
                 <div
                   key={idx}
                   onClick={() => onCreateAppointment(formatDateStr(day))}
-                  className={`min-h-[70px] sm:min-h-[100px] p-1 sm:p-2 border-r border-b border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${
+                  className={`min-h-17.5 sm:min-h-25 p-1 sm:p-2 border-r border-b border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${
                     idx % 7 === 6 ? 'border-r-0' : ''
                   } ${!isCurrMonth ? 'opacity-40' : ''} ${isToday(day) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
                 >
