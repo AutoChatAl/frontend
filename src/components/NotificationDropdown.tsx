@@ -1,9 +1,28 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { Bell, Loader2, X } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { notificationService, type Notification } from '@/services/notification.service';
+import { notificationService, type Notification, type NotificationType } from '@/services/notification.service';
+
+const READ_IDS_KEY = 'notifications:readIds';
+
+function getTypeLabel(type?: NotificationType): string {
+  if (type === 'maintenance') return 'Manutenção';
+  if (type === 'bugfix') return 'Correção de bug';
+  return 'Feature';
+}
+
+function getTypeClassName(type?: NotificationType): string {
+  if (type === 'maintenance') {
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+  }
+  if (type === 'bugfix') {
+    return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
+  }
+  return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -21,10 +40,12 @@ function formatDate(dateStr: string): string {
 }
 
 export default function NotificationDropdown() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [readIds, setReadIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = useCallback(async () => {
@@ -38,6 +59,33 @@ export default function NotificationDropdown() {
       setHasLoaded(true);
     }
   }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setReadIds((prev) => {
+      const next = Array.from(new Set([...prev, ...notifications.map((n) => n.id)]));
+      localStorage.setItem(READ_IDS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [notifications]);
+
+  const unreadCount = notifications.reduce((total, notification) => {
+    return readIds.includes(notification.id) ? total : total + 1;
+  }, 0);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(READ_IDS_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as unknown;
+        if (Array.isArray(parsed)) {
+          setReadIds(parsed.filter((v): v is string => typeof v === 'string'));
+        }
+      } catch {
+        localStorage.removeItem(READ_IDS_KEY);
+      }
+    }
+    loadNotifications();
+  }, [loadNotifications]);
 
   useEffect(() => {
     if (isOpen && !hasLoaded) {
@@ -58,19 +106,43 @@ export default function NotificationDropdown() {
   const handleToggle = () => {
     if (!isOpen) {
       loadNotifications();
+      markAllAsRead();
     }
     setIsOpen((prev) => !prev);
   };
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      loadNotifications();
+    };
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadNotifications();
+      }
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [pathname, loadNotifications]);
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={handleToggle}
-        className="relative text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+        className="relative text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
       >
         <Bell size={20} />
-        {notifications.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-slate-800" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full border border-white dark:border-slate-800 flex items-center justify-center leading-none">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
       </button>
 
@@ -102,18 +174,25 @@ export default function NotificationDropdown() {
                   key={notification.id}
                   className="px-4 py-3 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
-                        {notification.title}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1 ${getTypeClassName(notification.type)}`}>
+                          {getTypeLabel(notification.type)}
+                        </span>
+                        <p className="text-sm font-medium text-slate-800 dark:text-white">
+                          {notification.title}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 mt-0.5">
+                        {formatDate(notification.date)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap wrap-break-word">
                         {notification.description}
                       </p>
                     </div>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 mt-0.5">
-                      {formatDate(notification.date)}
-                    </span>
                   </div>
                 </div>
               ))

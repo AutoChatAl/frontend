@@ -1,18 +1,21 @@
 'use client';
 
-import { Clock, Plus, Trash2, Calendar, Save, Loader2, Ban, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Calendar, Save, Loader2, Ban, AlertCircle, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
 import TimePicker from '@/components/TimePicker';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
 import { DAY_NAMES } from '@/types/Scheduling';
 
 interface BusinessHoursConfigProps {
   businessHours: BusinessHours;
   onSave: (data: Partial<BusinessHours>) => void;
+  schedulingReminderEnabled: boolean;
+  onSchedulingReminderChange: (value: boolean) => void;
 }
 
-export default function BusinessHoursConfig({ businessHours, onSave }: BusinessHoursConfigProps) {
+export default function BusinessHoursConfig({ businessHours, onSave, schedulingReminderEnabled, onSchedulingReminderChange }: BusinessHoursConfigProps) {
   const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>(businessHours.weeklySchedule);
   const [exceptions, setExceptions] = useState<DateException[]>(businessHours.exceptions);
   const [slotDuration, setSlotDuration] = useState(businessHours.slotDurationMinutes);
@@ -238,6 +241,26 @@ export default function BusinessHoursConfig({ businessHours, onSave }: BusinessH
             ))}
           </div>
         )}
+      </div>
+
+      {/* WhatsApp Reminder */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare size={18} className="text-indigo-600 dark:text-indigo-400" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">Lembrete via WhatsApp</h3>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Enviar lembrete 1 hora antes</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              O sistema envia automaticamente uma mensagem de lembrete ao contato via WhatsApp 1 hora antes do horário agendado.
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={schedulingReminderEnabled}
+            onChange={onSchedulingReminderChange}
+          />
+        </div>
       </div>
 
       {/* Save Button */}

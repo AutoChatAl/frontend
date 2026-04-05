@@ -156,7 +156,7 @@ export default function Sidebar({
     };
 
     refreshSupportSummary();
-    const timer = setInterval(refreshSupportSummary, 15000);
+    const timer = setInterval(refreshSupportSummary, 60000);
 
     window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);

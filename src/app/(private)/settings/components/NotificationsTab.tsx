@@ -145,7 +145,7 @@ export default function NotificationsTab() {
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-white">Lembrete de Agendamento</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  A cada 10 minutos, o sistema verifica agendamentos da próxima 1 hora e envia uma mensagem de lembrete ao contato.
+                  A cada 30 minutos, o sistema verifica agendamentos da próxima 1 hora e envia uma mensagem de lembrete ao contato via WhatsApp.
                 </p>
               </div>
               <ToggleSwitch

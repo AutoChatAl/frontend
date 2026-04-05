@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { CheckCircle, Download } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -9,6 +10,7 @@ import Modal from '@/components/Modal';
 import { type MessageUsage, planLimitsService } from '@/services/plan-limits.service';
 
 export default function BillingTab() {
+  const pathname = usePathname();
   const [usage, setUsage] = useState<MessageUsage | null>(null);
   const [showUnavailable, setShowUnavailable] = useState(false);
 
@@ -21,9 +23,31 @@ export default function BillingTab() {
 
   useEffect(() => {
     fetchUsage();
-    const interval = setInterval(fetchUsage, 30_000);
-    return () => clearInterval(interval);
   }, [fetchUsage]);
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      fetchUsage();
+    };
+
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUsage();
+      }
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+    };
+  }, [fetchUsage]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [pathname, fetchUsage]);
 
   const formatNumber = (n: number) => n.toLocaleString('pt-BR');
   const count = usage?.count ?? 0;

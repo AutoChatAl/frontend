@@ -11,6 +11,7 @@ import { contactService } from '@/services/contact.service';
 import { schedulingService } from '@/services/scheduling.service';
 import type { Contact } from '@/types/Contact';
 import type { Appointment, BusinessHours } from '@/types/Scheduling';
+import { apiClient } from '@/utils/ApiClient';
 
 import AppointmentModal from './components/AppointmentModal';
 import BusinessHoursConfig from './components/BusinessHoursConfig';
@@ -29,6 +30,7 @@ export default function SchedulingPage() {
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [schedulingReminderEnabled, setSchedulingReminderEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,7 +62,7 @@ export default function SchedulingPage() {
       const weekEnd = new Date(currentWeekStart);
       weekEnd.setDate(weekEnd.getDate() + 42); // load 6 weeks for monthly view
 
-      const [appointmentsData, businessHoursData, firstContactPage, aiData] = await Promise.all([
+      const [appointmentsData, businessHoursData, firstContactPage, aiData, notificationsData] = await Promise.all([
         schedulingService.listAppointments({
           startDate: new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
           endDate: weekEnd.toISOString(),
@@ -68,6 +70,7 @@ export default function SchedulingPage() {
         schedulingService.getBusinessHours(),
         contactService.listContacts({ limit: 100, skip: 0 }),
         aiService.getConfig(),
+        apiClient.get<{ schedulingReminder?: boolean }>('/auth/workspace/notifications'),
       ]);
 
       // Load all contacts with pagination (max 100 per page)
@@ -89,6 +92,10 @@ export default function SchedulingPage() {
       setBusinessHours(businessHoursData);
       setContacts(allContacts);
       setProducts(aiData.products || []);
+      if (notificationsData.success && notificationsData.data) {
+        const notif = notificationsData.data as { schedulingReminder?: boolean };
+        setSchedulingReminderEnabled(notif.schedulingReminder ?? false);
+      }
     } catch {
       addToast('error', 'Erro ao carregar dados de agendamento.');
     } finally {
@@ -171,6 +178,16 @@ export default function SchedulingPage() {
     }
   };
 
+  const handleSchedulingReminderChange = async (value: boolean) => {
+    setSchedulingReminderEnabled(value);
+    try {
+      await apiClient.put('/auth/workspace/notifications', { schedulingReminder: value });
+    } catch {
+      addToast('error', 'Erro ao salvar configuração de lembrete.');
+      setSchedulingReminderEnabled(!value);
+    }
+  };
+
   if (loading) {
     return <PageLoader message="Carregando agendamentos" />;
   }
@@ -211,6 +228,8 @@ export default function SchedulingPage() {
         <BusinessHoursConfig
           businessHours={businessHours}
           onSave={handleSaveBusinessHours}
+          schedulingReminderEnabled={schedulingReminderEnabled}
+          onSchedulingReminderChange={handleSchedulingReminderChange}
         />
       )}
 

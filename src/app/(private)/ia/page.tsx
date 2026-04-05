@@ -110,7 +110,7 @@ export default function IAPage() {
         />
       )}
 
-      {activeTab === 'triggers' && (
+      {(activeTab === 'general' || activeTab === 'triggers') && (
         <div className="flex justify-end pt-4">
           <button
             onClick={saveConfig}

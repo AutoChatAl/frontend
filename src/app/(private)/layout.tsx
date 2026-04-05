@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
@@ -19,6 +19,7 @@ export default function PrivateLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [messageUsage, setMessageUsage] = useState<MessageUsage | null>(null);
@@ -51,9 +52,30 @@ export default function PrivateLayout({
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const interval = setInterval(fetchUsage, 30_000);
-    return () => clearInterval(interval);
+
+    const refreshOnFocus = () => {
+      fetchUsage();
+    };
+
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUsage();
+      }
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+    };
   }, [isAuthenticated, fetchUsage]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchUsage();
+  }, [isAuthenticated, pathname, fetchUsage]);
 
   if (!isAuthenticated) {
     return (
