@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays } from 'lucide-react';
+import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
@@ -31,12 +31,14 @@ interface SidebarProviderProps {
   children: ReactNode;
   defaultActiveTab?: string;
   menuItems?: MenuItem[];
+  showSupportTab?: boolean;
 }
 
 export function SidebarProvider({
   children,
   defaultActiveTab = 'dashboard',
   menuItems: customMenuItems,
+  showSupportTab = true,
 }: SidebarProviderProps) {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState(defaultActiveTab);
@@ -58,9 +60,14 @@ export function SidebarProvider({
     { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies' },
     { id: 'ia', icon: Bot, text: 'IA', href: '/ia' },
     { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
+    { id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte' },
   ];
 
-  const menuItems = customMenuItems || defaultMenuItems;
+  const filteredDefaultMenuItems = showSupportTab
+    ? defaultMenuItems
+    : defaultMenuItems.filter((item) => item.id !== 'suporte');
+
+  const menuItems = customMenuItems || filteredDefaultMenuItems;
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);

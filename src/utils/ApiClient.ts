@@ -17,8 +17,19 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+      return {
+        success: false,
+        statusCode: 0,
+        data: { reason: 'MIXED_CONTENT_BLOCKED' } as T,
+      };
+    }
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), 12_000) : null;
+
     const config: RequestInit = {
       ...options,
+      ...(controller ? { signal: controller.signal } : {}),
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -51,12 +62,13 @@ class ApiClient {
         data: body,
       };
     } catch (_error) {
-
       return {
         success: false,
         statusCode: 0,
         data: { reason: 'NETWORK_ERROR' } as T,
       };
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
   }
 

@@ -17,6 +17,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
+  role?: string;
   twoFactorEnabled?: boolean;
   workspace?: { id: string; name: string } | null;
 }

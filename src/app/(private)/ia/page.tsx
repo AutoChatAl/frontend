@@ -110,16 +110,18 @@ export default function IAPage() {
         />
       )}
 
-      <div className="flex justify-end pt-4">
-        <button
-          onClick={saveConfig}
-          disabled={saving}
-          className="w-full sm:w-auto px-6 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-        >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
-          {saving ? 'Salvando...' : 'Salvar Alterações na IA'}
-        </button>
-      </div>
+      {activeTab === 'triggers' && (
+        <div className="flex justify-end pt-4">
+          <button
+            onClick={saveConfig}
+            disabled={saving}
+            className="w-full sm:w-auto px-6 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : <Bot size={18} />}
+            {saving ? 'Salvando...' : 'Salvar Alterações na IA'}
+          </button>
+        </div>
+      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

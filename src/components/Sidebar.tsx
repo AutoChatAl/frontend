@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
+import { supportChatService } from '@/services/support-chat.service';
 
 interface SidebarItemProps {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -60,6 +61,14 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount 
   );
 };
 
+function getReadableRole(role?: string): string {
+  const normalized = (role || '').toLowerCase();
+  if (normalized === 'admin') return 'Administrador';
+  if (normalized === 'owner') return 'Usuário';
+  if (normalized === 'member') return 'Usuário';
+  return role || 'Usuário';
+}
+
 export default function Sidebar({
   brandName = 'Synq',
   userName = 'John Doe',
@@ -82,6 +91,8 @@ export default function Sidebar({
   } = useSidebar();
 
   const [humanQueueCount, setHumanQueueCount] = useState(0);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const hasSupportTab = useMemo(() => menuItems.some((item) => item.id === 'suporte'), [menuItems]);
 
   useEffect(() => {
     let mounted = true;
@@ -108,13 +119,81 @@ export default function Sidebar({
     };
   }, []);
 
+  useEffect(() => {
+    if (!hasSupportTab) {
+      setSupportUnreadCount(0);
+      return;
+    }
+
+    let mounted = true;
+    let source: EventSource | null = null;
+
+    const loadSupportSummary = async () => {
+      try {
+        const summary = await supportChatService.getAdminSummary();
+        if (mounted) setSupportUnreadCount(summary.unreadCount || 0);
+      } catch {
+        // Keep last known value on transient failures to avoid flickering badge.
+      }
+    };
+
+    const refreshSupportSummary = () => {
+      loadSupportSummary().catch(() => {});
+    };
+
+    const handleWindowFocus = () => {
+      refreshSupportSummary();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSupportSummary();
+      }
+    };
+
+    const handleSupportEvent = () => {
+      refreshSupportSummary();
+    };
+
+    refreshSupportSummary();
+    const timer = setInterval(refreshSupportSummary, 15000);
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const token = authService.getToken();
+    if (token) {
+      source = new EventSource(supportChatService.getWorkspaceEventsUrl());
+      source.addEventListener('conversation.created', handleSupportEvent);
+      source.addEventListener('conversation.updated', handleSupportEvent);
+      source.onerror = () => {
+        source?.close();
+        source = null;
+      };
+    }
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (source) {
+        source.removeEventListener('conversation.created', handleSupportEvent);
+        source.removeEventListener('conversation.updated', handleSupportEvent);
+        source.close();
+      }
+    };
+  }, [activeTab, hasSupportTab]);
+
   const menuItemsWithBadges = useMemo(() => {
     return menuItems.map((item) =>
       item.id === 'contacts'
         ? { ...item, badgeCount: humanQueueCount }
+        : item.id === 'suporte'
+          ? { ...item, badgeCount: supportUnreadCount }
         : item,
     );
-  }, [menuItems, humanQueueCount]);
+  }, [menuItems, humanQueueCount, supportUnreadCount]);
 
   const handleMenuClick = (item: MenuItem) => {
     setActiveTab(item.id);
@@ -195,7 +274,7 @@ export default function Sidebar({
                 </div>
                 <div className="text-left overflow-hidden min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userName}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{userRole}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{getReadableRole(userRole)}</p>
                 </div>
               </div>
               <button

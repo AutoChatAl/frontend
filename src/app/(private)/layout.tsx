@@ -7,6 +7,8 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
+import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { authService, type AuthUser } from '@/services/auth.service';
 import { type MessageUsage, planLimitsService } from '@/services/plan-limits.service';
@@ -79,25 +81,30 @@ export default function PrivateLayout({
   const planProgress = messageUsage
     ? Math.min(Math.round((messageUsage.count / messageUsage.limit) * 100), 100)
     : 0;
+  const isAdmin = user?.role === 'admin';
 
   return (
     <ThemeProvider>
-      <SidebarProvider>
+      <SidebarProvider showSupportTab={isAdmin}>
         <ChannelStatusProvider>
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar
-              userName={userName}
-              userInitials={userInitials}
-              planUsage={planUsageText}
-              planProgress={planProgress}
-            />
-            <div className="flex flex-col flex-1">
-              <Header />
-              <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
-                {children}
-              </main>
+          <SupportChatProvider>
+            <div className="flex h-screen overflow-hidden">
+              <Sidebar
+                userName={userName}
+                userInitials={userInitials}
+                userRole={user?.role || 'member'}
+                planUsage={planUsageText}
+                planProgress={planProgress}
+              />
+              <div className="flex flex-col flex-1">
+                <Header />
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
+            {!isAdmin && <SupportChatWidget />}
+          </SupportChatProvider>
         </ChannelStatusProvider>
       </SidebarProvider>
     </ThemeProvider>
