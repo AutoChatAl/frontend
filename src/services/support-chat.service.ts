@@ -177,6 +177,13 @@ class SupportChatService {
     return getData<SupportChatConversation>(response.data);
   }
 
+  public async deleteConversation(conversationId: string): Promise<void> {
+    const response = await apiClient.delete(`/support-chat/${conversationId}`);
+    if (!response.success) {
+      throw makeApiError('Não foi possível deletar a conversa.', response.statusCode, response.data as ApiErrorPayload | undefined);
+    }
+  }
+
   public getWorkspaceEventsUrl(): string {
     const token = authService.getToken();
     return `${API_URL}/support-chat/workspace/events?token=${encodeURIComponent(token || '')}`;

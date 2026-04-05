@@ -2,10 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ImagePlus, Loader2, MessageCircle, Search, Send, ShieldCheck, XCircle } from 'lucide-react';
+import { ImagePlus, Loader2, MessageCircle, Search, Send, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
+import IconButton from '../../../components/IconButton';
 import { authService } from '../../../services/auth.service';
 import { supportChatService } from '../../../services/support-chat.service';
 import type { SupportChatConversation, SupportChatMessage, SupportChatStatus } from '../../../types/SupportChat';
@@ -53,6 +55,8 @@ export default function SupportPage() {
   const [threadLoading, setThreadLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SupportChatStatus | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
@@ -183,6 +187,7 @@ export default function SupportPage() {
 
     source.addEventListener('conversation.created', syncWorkspace);
     source.addEventListener('conversation.updated', syncWorkspace);
+    source.addEventListener('conversation.deleted', syncWorkspace);
     // SSE auth is succeeding in production logs; trigger one initial sync from
     // this effect to guarantee conversation list request dispatch.
     syncWorkspace();
@@ -190,6 +195,7 @@ export default function SupportPage() {
     return () => {
       source.removeEventListener('conversation.created', syncWorkspace);
       source.removeEventListener('conversation.updated', syncWorkspace);
+      source.removeEventListener('conversation.deleted', syncWorkspace);
       source.close();
     };
   }, [isAdmin, isRoleChecking, loadConversations]);
@@ -312,6 +318,21 @@ export default function SupportPage() {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!selectedConversationId) return;
+
+    setDeleting(true);
+    try {
+      await supportChatService.deleteConversation(selectedConversationId);
+      setIsDeleteModalOpen(false);
+      await loadConversations(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível deletar a conversa.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (isRoleChecking) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
@@ -327,6 +348,18 @@ export default function SupportPage() {
 
   return (
     <div className="space-y-6">
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!deleting) setIsDeleteModalOpen(false);
+        }}
+        onConfirm={handleDeleteConversation}
+        title="Deletar conversa"
+        message="Tem certeza que deseja deletar esta conversa de suporte? Todas as mensagens vinculadas também serão removidas permanentemente."
+        confirmLabel="Deletar conversa"
+        loading={deleting}
+      />
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Suporte</h1>
@@ -337,7 +370,7 @@ export default function SupportPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <section className="flex h-[70vh] min-h-0 max-h-[70vh] flex-col rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
             <Search size={16} className="text-slate-400" />
             <input
@@ -362,7 +395,7 @@ export default function SupportPage() {
             ))}
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             {loading ? (
               <div className="flex items-center justify-center py-10 text-sm text-slate-500"><Loader2 size={18} className="mr-2 animate-spin" />Carregando conversas...</div>
             ) : conversations.length === 0 ? (
@@ -431,6 +464,15 @@ export default function SupportPage() {
                     <XCircle size={16} />
                     {closing ? 'Encerrando...' : 'Encerrar atendimento'}
                   </button>
+                  <IconButton
+                    icon={<Trash2 size={16}/>}
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    title="Deletar conversa"
+                    variant="danger"
+                    size="md"
+                    disabled={deleting}
+                    className="border border-red-200 dark:border-red-900"
+                  />
                 </div>
               </div>
 
