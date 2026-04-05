@@ -1,7 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { Bell, Loader2, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { notificationService, type Notification, type NotificationType } from '@/services/notification.service';

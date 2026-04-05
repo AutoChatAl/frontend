@@ -7,8 +7,8 @@ import type {
   SupportChatSendMessageInput,
   SupportChatSummary,
 } from '@/types/SupportChat';
-import { getSupportChatErrorMessage } from '@/utils/supportChat';
 import { apiClient } from '@/utils/ApiClient';
+import { getSupportChatErrorMessage } from '@/utils/supportChat';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -34,7 +34,7 @@ function makeApiError(defaultMessage: string, statusCode: number, payload?: ApiE
   const err = new Error(
     getSupportChatErrorMessage(payload?.reason || payload?.code, payload?.message || defaultMessage) || defaultMessage,
   ) as Error & { code?: string; statusCode?: number };
-  err.code = payload?.code || payload?.reason;
+  err.code = payload?.code || payload?.reason || 'UNKNOWN_ERROR';
   err.statusCode = statusCode;
   return err;
 }

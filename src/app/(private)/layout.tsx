@@ -5,9 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
-import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { authService, type AuthUser } from '@/services/auth.service';

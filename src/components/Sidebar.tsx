@@ -191,7 +191,7 @@ export default function Sidebar({
         ? { ...item, badgeCount: humanQueueCount }
         : item.id === 'suporte'
           ? { ...item, badgeCount: supportUnreadCount }
-        : item,
+          : item,
     );
   }, [menuItems, humanQueueCount, supportUnreadCount]);
 

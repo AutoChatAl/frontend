@@ -96,8 +96,7 @@ export default function SupportPage() {
           router.replace('/dashboard');
         }
       })
-      .catch((err) => {
-        console.error('[suporte] auth fetchMe error', err);
+      .catch(() => {
         if (!mounted) return;
         setIsAdmin(false);
         router.replace('/dashboard');
