@@ -19,7 +19,6 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  role?: string;
   twoFactorEnabled?: boolean;
   role?: 'owner' | 'collaborator';
   permissions?: Permission[];
