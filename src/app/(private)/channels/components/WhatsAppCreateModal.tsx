@@ -178,28 +178,26 @@ export default function WhatsAppCreateModal({
       return (
         <div className="flex flex-col items-center py-6">
           {qrCode && (
-            <div className="w-full max-w-sm">
-              <div className="bg-linear-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-2xl shadow-lg border border-emerald-200 dark:border-emerald-800 mb-6">
-                <div className="bg-white p-4 rounded-xl mb-4 shadow-inner">
-                  <Image src={qrCode} alt="QR Code" width={300} height={300} className="w-full h-auto" />
+            <div className="w-full max-w-xs mb-6">
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                <Image src={qrCode} alt="QR Code" width={300} height={300} className="w-full h-auto" />
+              </div>
+              <div className="space-y-3 mt-4 px-1">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
-                  </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
                 </div>
               </div>
             </div>
@@ -298,10 +296,8 @@ export default function WhatsAppCreateModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={getTitle()}>
-      <div className="p-6">
-        {renderContent()}
-      </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={getTitle()} size="sm">
+      {renderContent()}
     </Modal>
   );
 }

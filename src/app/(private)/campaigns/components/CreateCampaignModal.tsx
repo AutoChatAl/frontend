@@ -71,6 +71,28 @@ function getContactIdentifier(contact: Contact): string {
   return identity.phoneE164 || identity.igUsername || 'N/A';
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function matchesContactSearch(contact: Contact, rawTerm: string): boolean {
+  const term = normalizeText(rawTerm);
+  if (!term) return true;
+
+  const normalizedName = normalizeText(contact.displayName || '');
+  if (normalizedName.includes(term)) return true;
+
+  return (contact.identities ?? []).some((identity) => {
+    const normalizedUsername = normalizeText(identity.igUsername || '');
+    const normalizedPhone = normalizeText(identity.phoneE164 || '');
+    return normalizedUsername.includes(term) || normalizedPhone.includes(term);
+  });
+}
+
 const EXECUTION_HOURS = [8, 10, 12, 14, 16, 18];
 
 const INITIAL_FORM: CreateCampaignInput = {
@@ -410,9 +432,16 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const channelContacts = useMemo(() => {
     if (formData.channelIds.length === 0) return [];
     const selectedChannelSet = new Set(formData.channelIds);
-    return contacts.filter((c) =>
+    const filtered = contacts.filter((c) =>
       c.identities?.some((i) => selectedChannelSet.has(i.channelId)),
     );
+    const uniqueById = new Map<string, Contact>();
+    for (const contact of filtered) {
+      if (!uniqueById.has(contact.id)) {
+        uniqueById.set(contact.id, contact);
+      }
+    }
+    return Array.from(uniqueById.values());
   }, [contacts, formData.channelIds]);
 
   const selectAllContacts = () => {
@@ -430,14 +459,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     let result = channelContacts;
 
     if (contactFilter.trim()) {
-      const term = contactFilter.toLowerCase().trim();
-      result = result.filter((c) => {
-        const name = c.displayName?.toLowerCase().includes(term);
-        const id = c.identities?.some(
-          (i) => i.phoneE164?.includes(term) || i.igUsername?.toLowerCase().includes(term),
-        );
-        return name || id;
-      });
+      result = result.filter((c) => matchesContactSearch(c, contactFilter));
     }
 
     const selectedSet = new Set(formData.contactIds);

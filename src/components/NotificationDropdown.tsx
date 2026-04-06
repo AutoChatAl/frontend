@@ -6,8 +6,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { notificationService, type Notification, type NotificationType } from '@/services/notification.service';
 
-const READ_IDS_KEY = 'notifications:readIds';
-
 function getTypeLabel(type?: NotificationType): string {
   if (type === 'maintenance') return 'Manutenção';
   if (type === 'bugfix') return 'Correção de bug';
@@ -48,44 +46,48 @@ export default function NotificationDropdown() {
   const [readIds, setReadIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (): Promise<Notification[]> => {
     setLoading(true);
     try {
       const data = await notificationService.list();
       setNotifications(data);
+      return data;
     } catch {
+      return [];
     } finally {
       setLoading(false);
       setHasLoaded(true);
     }
   }, []);
 
-  const markAllAsRead = useCallback(() => {
-    setReadIds((prev) => {
-      const next = Array.from(new Set([...prev, ...notifications.map((n) => n.id)]));
-      localStorage.setItem(READ_IDS_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, [notifications]);
+  const loadReadState = useCallback(async () => {
+    try {
+      const ids = await notificationService.getReadState();
+      setReadIds(ids);
+    } catch {
+      setReadIds([]);
+    }
+  }, []);
+
+  const markAllAsRead = useCallback(async (items: Notification[]) => {
+    if (items.length === 0) return;
+    const next = Array.from(new Set([...readIds, ...items.map((n) => n.id)]));
+    setReadIds(next);
+    try {
+      const persisted = await notificationService.saveReadState(next);
+      setReadIds(persisted);
+    } catch {
+    }
+  }, [readIds]);
 
   const unreadCount = notifications.reduce((total, notification) => {
     return readIds.includes(notification.id) ? total : total + 1;
   }, 0);
 
   useEffect(() => {
-    const saved = localStorage.getItem(READ_IDS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as unknown;
-        if (Array.isArray(parsed)) {
-          setReadIds(parsed.filter((v): v is string => typeof v === 'string'));
-        }
-      } catch {
-        localStorage.removeItem(READ_IDS_KEY);
-      }
-    }
+    loadReadState();
     loadNotifications();
-  }, [loadNotifications]);
+  }, [loadNotifications, loadReadState]);
 
   useEffect(() => {
     if (isOpen && !hasLoaded) {
@@ -103,10 +105,10 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     if (!isOpen) {
-      loadNotifications();
-      markAllAsRead();
+      const items = await loadNotifications();
+      await markAllAsRead(items);
     }
     setIsOpen((prev) => !prev);
   };

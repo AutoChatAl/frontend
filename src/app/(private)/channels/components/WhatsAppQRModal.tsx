@@ -125,29 +125,23 @@ export default function WhatsAppQRModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Conectar WhatsApp">
-      <div className="p-6">
+      <div className="px-2 pb-2">
         {isConnected ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="relative mb-6">
-              <div className="absolute inset-0 bg-emerald-500 opacity-20 rounded-full blur-2xl animate-pulse"></div>
-              <CheckCircle className="relative w-20 h-20 text-emerald-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+          <div className="flex flex-col items-center justify-center py-6">
+            <CheckCircle className="w-16 h-16 text-emerald-500 mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               Conectado com sucesso!
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm text-sm">
               Sua instância do WhatsApp está conectada e pronta para uso.
             </p>
           </div>
         ) : (
           <>
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-emerald-500 opacity-20 rounded-full blur-xl animate-pulse"></div>
-                  <div className="relative animate-spin rounded-full h-16 w-16 border-b-4 border-emerald-500" />
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 mt-6 text-lg font-medium">Carregando...</p>
+              <div className="flex flex-col items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500" />
+                <p className="text-gray-600 dark:text-gray-400 mt-4 text-sm font-medium">Carregando...</p>
               </div>
             ) : error ? (
               <div className="text-center py-8">
@@ -161,9 +155,9 @@ export default function WhatsAppQRModal({
             ) : (
               <div className="flex flex-col items-center">
                 {qrCode && (
-                  <div className="w-full max-w-sm mb-6">
-                    <div className="bg-linear-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-2xl shadow-lg border border-emerald-200 dark:border-emerald-800">
-                      <div className="bg-white p-4 rounded-xl mb-4 shadow-inner">
+                  <div className="w-full max-w-sm mb-5">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="bg-white dark:bg-slate-950 p-3 rounded-lg mb-4 border border-slate-200 dark:border-slate-800">
                         <Image
                           src={qrCode}
                           alt="QR Code"
@@ -172,7 +166,7 @@ export default function WhatsAppQRModal({
                           className="w-full h-auto"
                         />
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         <div className="flex items-start gap-3">
                           <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
                           <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
@@ -196,16 +190,16 @@ export default function WhatsAppQRModal({
 
                 {pairingCode && (
                   <div className="w-full max-w-sm mb-6">
-                    <div className={`bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl shadow-lg border border-blue-200 dark:border-blue-800 ${qrCode ? 'mt-4' : ''}`}>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
+                    <div className={`bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 ${qrCode ? 'mt-3' : ''}`}>
+                      <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 text-center">
                         {qrCode ? 'Ou use o código de pareamento' : 'Código de pareamento'}
                       </h4>
-                      <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-xl mb-4 shadow-inner border-2 border-blue-200 dark:border-blue-700">
+                      <div className="bg-white dark:bg-slate-950 px-4 py-3 rounded-lg mb-4 border border-blue-200 dark:border-blue-700">
                         <p className="text-3xl font-mono font-bold text-center text-blue-600 dark:text-blue-400 tracking-wider">
                           {pairingCode}
                         </p>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         <div className="flex items-start gap-3">
                           <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
                           <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
@@ -231,7 +225,7 @@ export default function WhatsAppQRModal({
                   </div>
                 )}
 
-                <div className="flex gap-3 mt-4">
+                <div className="flex gap-3 mt-3">
                   <Button
                     onClick={handleRefresh}
                     variant="secondary"

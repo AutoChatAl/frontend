@@ -38,6 +38,20 @@ class NotificationService {
     const response = await apiClient.delete(`/notifications/${id}`);
     return response.success;
   }
+
+  public async getReadState(): Promise<string[]> {
+    const response = await apiClient.get<{ readIds: string[] }>('/notifications/read-state');
+    if (!response.success || !response.data) return [];
+    const result = response.data as { readIds: string[] };
+    return Array.isArray(result.readIds) ? result.readIds : [];
+  }
+
+  public async saveReadState(readIds: string[]): Promise<string[]> {
+    const response = await apiClient.put<{ ok: boolean; readIds: string[] }>('/notifications/read-state', { readIds });
+    if (!response.success || !response.data) return readIds;
+    const result = response.data as { ok: boolean; readIds: string[] };
+    return Array.isArray(result.readIds) ? result.readIds : readIds;
+  }
 }
 
 export const notificationService = new NotificationService();
