@@ -28,6 +28,7 @@ export interface Product {
 export interface AiConfigResponse {
   aiConfig: AiConfig;
   products: Product[];
+  visibleTabs?: string[];
 }
 
 class AiService {
@@ -63,9 +64,44 @@ class AiService {
     if (!response.success) throw new Error('Falha ao ativar canal de IA.');
   }
 
-  public async deactivateAi(): Promise<void> {
-    const response = await apiClient.post('/ai/config/deactivate', {});
+  public async deactivateAi(channelId?: string): Promise<void> {
+    const response = await apiClient.post('/ai/config/deactivate', channelId ? { channelId } : {});
     if (!response.success) throw new Error('Falha ao desativar IA.');
+  }
+
+  public async listChannels(): Promise<Array<{
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    createdBy: string | null;
+    ownerName: string | null;
+    ownerEmail: string | null;
+    aiEnabled: boolean;
+  }>> {
+    const response = await apiClient.get<Array<{
+      id: string;
+      name: string;
+      type: string;
+      status: string;
+      createdBy: string | null;
+      ownerName: string | null;
+      ownerEmail: string | null;
+      aiEnabled: boolean;
+    }>>('/ai/channels');
+    if (response.success && response.data) {
+      return response.data as Array<{
+        id: string;
+        name: string;
+        type: string;
+        status: string;
+        createdBy: string | null;
+        ownerName: string | null;
+        ownerEmail: string | null;
+        aiEnabled: boolean;
+      }>;
+    }
+    return [];
   }
 
   public async listProducts(): Promise<Product[]> {

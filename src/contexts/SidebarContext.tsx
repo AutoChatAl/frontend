@@ -2,7 +2,9 @@
 
 import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+
+import { authService, type Permission } from '@/services/auth.service';
 
 export interface MenuItem {
   id: string;
@@ -10,6 +12,7 @@ export interface MenuItem {
   text: string;
   href?: string;
   badgeCount?: number;
+  permission?: Permission;
 }
 
 interface SidebarContextType {
@@ -33,6 +36,18 @@ interface SidebarProviderProps {
   menuItems?: MenuItem[];
 }
 
+const ALL_MENU_ITEMS: MenuItem[] = [
+  { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard' },
+  { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups' },
+  { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels' },
+  { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns' },
+  { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts' },
+  { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling' },
+  { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies' },
+  { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia' },
+  { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
+];
+
 export function SidebarProvider({
   children,
   defaultActiveTab = 'dashboard',
@@ -48,19 +63,22 @@ export function SidebarProvider({
     setActiveTab(currentTab);
   }, [pathname]);
 
-  const defaultMenuItems: MenuItem[] = [
-    { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard' },
-    { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups' },
-    { id: 'channels', icon: Share2, text: 'Canais', href: '/channels' },
-    { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns' },
-    { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts' },
-    { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling' },
-    { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies' },
-    { id: 'ia', icon: Bot, text: 'IA', href: '/ia' },
-    { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
-  ];
+  const menuItems = useMemo(() => {
+    if (customMenuItems) return customMenuItems;
 
-  const menuItems = customMenuItems || defaultMenuItems;
+    const user = authService.getUser();
+    const role = user?.role;
+    const permissions = user?.permissions ?? [];
+
+    if (!role || role === 'owner') {
+      return ALL_MENU_ITEMS;
+    }
+
+    return ALL_MENU_ITEMS.filter((item) => {
+      if (!item.permission) return true;
+      return permissions.includes(item.permission);
+    });
+  }, [customMenuItems]);
 
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);

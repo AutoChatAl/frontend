@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
+import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
 import type { AIChannel } from '@/types/AI';
 import type { Product } from '@/types/AI';
@@ -23,6 +24,7 @@ export function useAIConfig() {
   const [channels, setChannels] = useState<AIChannel[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
+  const [visibleTabs, setVisibleTabs] = useState<string[]>(['general', 'channels', 'triggers', 'scheduling']);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -40,6 +42,24 @@ export function useAIConfig() {
 
   const loadChannels = useCallback(async (currentActiveChannelId: string | null) => {
     try {
+      const user = authService.getUser();
+      const isOwner = !user?.role || user.role === 'owner';
+
+      if (isOwner) {
+        const allChannels = await aiService.listChannels();
+        const mapped: AIChannel[] = allChannels.map((ch) => ({
+          id: ch.id,
+          name: ch.name,
+          type: ch.type.toLowerCase() as 'whatsapp' | 'instagram',
+          active: ch.aiEnabled,
+          identifier: '',
+          createdBy: ch.createdBy,
+          ownerName: ch.ownerName,
+        }));
+        setChannels(mapped);
+        return;
+      }
+
       const [whatsappInstances, instagramAccounts] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
@@ -69,7 +89,8 @@ export function useAIConfig() {
 
   const loadConfig = useCallback(async () => {
     try {
-      const { aiConfig, products: fetchedProducts } = await aiService.getConfig();
+      const { aiConfig, products: fetchedProducts, visibleTabs: fetchedTabs } = await aiService.getConfig();
+      if (fetchedTabs) setVisibleTabs(fetchedTabs);
       setSegment(aiConfig.segment);
       setBusinessName(aiConfig.businessName || '');
       setAssistantName(aiConfig.assistantName || '');
@@ -117,8 +138,9 @@ export function useAIConfig() {
     async (channelId: string) => {
       setSaving(true);
       try {
-        if (channelId === activeChannelId) {
-          await aiService.deactivateAi();
+        const target = channels.find((ch) => ch.id === channelId);
+        if (target?.active) {
+          await aiService.deactivateAi(channelId);
           addToast('success', 'IA desativada com sucesso.');
         } else {
           await aiService.activateChannel(channelId);
@@ -131,7 +153,7 @@ export function useAIConfig() {
         setSaving(false);
       }
     },
-    [activeChannelId, loadConfig, addToast],
+    [channels, loadConfig, addToast],
   );
 
   const addProduct = useCallback(
@@ -206,6 +228,7 @@ export function useAIConfig() {
     channels,
     activeChannelId,
     enabled,
+    visibleTabs,
     loading,
     saving,
     toasts,

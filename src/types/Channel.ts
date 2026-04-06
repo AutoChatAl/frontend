@@ -5,6 +5,8 @@ export type WhatsAppInstance = {
   status: 'CONNECTED' | 'CONNECTING' | 'DISCONNECTED';
   type: 'WHATSAPP';
   workspaceId: string;
+  createdBy?: string;
+  ownerName?: string | null;
   createdAt: string;
   whatsapp?: {
     id: string;
@@ -86,6 +88,8 @@ export type InstagramAccount = {
   status: 'CONNECTED' | 'DISCONNECTED';
   type: 'INSTAGRAM';
   workspaceId: string;
+  createdBy?: string;
+  ownerName?: string | null;
   createdAt: string;
   instagram: {
     id: string;

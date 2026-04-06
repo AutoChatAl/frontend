@@ -34,7 +34,7 @@ export default function IAPage() {
     setSchedulingBookingEnabled,
     products,
     channels,
-    activeChannelId,
+    activeChannelId: _activeChannelId,
     loading,
     saving,
     saveConfig,
@@ -44,6 +44,7 @@ export default function IAPage() {
     deleteProduct,
     toasts,
     removeToast,
+    visibleTabs,
   } = useAIConfig();
 
   if (loading) {
@@ -61,7 +62,7 @@ export default function IAPage() {
         <p className="text-slate-500 dark:text-slate-400 text-sm">Configure o cérebro do seu assistente virtual</p>
       </div>
 
-      <AITabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <AITabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs} />
 
       {activeTab === 'general' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -91,7 +92,7 @@ export default function IAPage() {
 
       {activeTab === 'channels' && (
         <div className="space-y-6">
-          <AIChannelsList channels={channels} activeChannelId={activeChannelId} onToggle={toggleChannel} />
+          <AIChannelsList channels={channels} onToggle={toggleChannel} />
         </div>
       )}
 

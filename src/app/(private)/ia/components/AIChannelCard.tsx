@@ -44,7 +44,14 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
               {channel.type}
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{channel.identifier}</p>
+          {channel.ownerName && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              Colaborador: <span className="font-medium text-slate-500 dark:text-slate-400">{channel.ownerName}</span>
+            </p>
+          )}
+          {channel.identifier && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{channel.identifier}</p>
+          )}
         </div>
       </div>
 
