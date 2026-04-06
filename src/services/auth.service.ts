@@ -20,7 +20,7 @@ export interface AuthUser {
   email: string;
   name?: string;
   twoFactorEnabled?: boolean;
-  role?: 'owner' | 'collaborator';
+  role?: 'owner' | 'collaborator' | 'admin';
   permissions?: Permission[];
   workspace?: { id: string; name: string } | null;
 }
