@@ -1,13 +1,16 @@
 'use client';
 
 import { Bell, CreditCard, Shield, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-const NAV_ITEMS = [
-  { id: 'account', label: 'Conta', icon: User },
-  { id: 'notifications', label: 'Notificações', icon: Bell },
-  { id: 'security', label: 'Segurança', icon: Shield },
-  { id: 'billing', label: 'Faturamento', icon: CreditCard },
-  { id: 'members', label: 'Membros', icon: Users },
+import { authService } from '@/services/auth.service';
+
+const ALL_NAV_ITEMS = [
+  { id: 'account', label: 'Conta', icon: User, ownerOnly: false },
+  { id: 'notifications', label: 'Notificações', icon: Bell, ownerOnly: true },
+  { id: 'security', label: 'Segurança', icon: Shield, ownerOnly: false },
+  { id: 'billing', label: 'Faturamento', icon: CreditCard, ownerOnly: true },
+  { id: 'members', label: 'Membros', icon: Users, ownerOnly: true },
 ];
 
 interface SettingsNavProps {
@@ -16,9 +19,21 @@ interface SettingsNavProps {
 }
 
 export default function SettingsNav({ activeTab, onTabChange }: SettingsNavProps) {
+  const [role, setRole] = useState<string>('owner');
+
+  useEffect(() => {
+    const user = authService.getUser();
+    if (user?.role) setRole(user.role);
+  }, []);
+
+  const visibleItems = ALL_NAV_ITEMS.filter((item) => {
+    if (item.ownerOnly && role === 'collaborator') return false;
+    return true;
+  });
+
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-1 sm:p-1 rounded-lg">
-      {NAV_ITEMS.map((item) => {
+    <div className="grid gap-1.5 sm:gap-1 bg-slate-100 dark:bg-slate-800 p-1 sm:p-1 rounded-lg" style={{ gridTemplateColumns: `repeat(${Math.min(visibleItems.length, 5)}, minmax(0, 1fr))` }}>
+      {visibleItems.map((item) => {
         const isActive = activeTab === item.id;
         return (
           <button

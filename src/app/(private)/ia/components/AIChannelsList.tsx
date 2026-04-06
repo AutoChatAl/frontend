@@ -9,12 +9,11 @@ import AIChannelCard from './AIChannelCard';
 
 interface AIChannelsListProps {
   channels: AIChannel[];
-  activeChannelId: string | null;
   onToggle: (id: string) => Promise<void>;
 }
 
-export default function AIChannelsList({ channels, activeChannelId, onToggle }: AIChannelsListProps) {
-  const hasActive = activeChannelId !== null;
+export default function AIChannelsList({ channels, onToggle }: AIChannelsListProps) {
+  const activeCount = channels.filter((ch) => ch.active).length;
 
   return (
     <Card className="p-4 sm:p-6">
@@ -25,7 +24,7 @@ export default function AIChannelsList({ channels, activeChannelId, onToggle }: 
         </div>
         <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-800 flex items-center gap-1 self-start sm:self-auto shrink-0">
           <Bot size={12} />
-          {hasActive ? '1 Ativo' : '0 Ativos'}
+          {activeCount > 0 ? `${activeCount} Ativo${activeCount > 1 ? 's' : ''}` : '0 Ativos'}
         </div>
       </div>
 
@@ -39,7 +38,7 @@ export default function AIChannelsList({ channels, activeChannelId, onToggle }: 
             <AIChannelCard
               key={channel.id}
               channel={channel}
-              active={channel.id === activeChannelId}
+              active={channel.active}
               onToggle={onToggle}
             />
           ))}

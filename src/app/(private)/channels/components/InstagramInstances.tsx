@@ -2,12 +2,13 @@
 
 import { User } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
+import { authService } from '@/services/auth.service';
 
 import AddChannelCard from './AddChannelCard';
 import ChannelInstanceCard from './ChannelInstanceCard';
@@ -18,7 +19,13 @@ export default function InstagramInstances() {
   const [connecting, setConnecting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
+
+  useEffect(() => {
+    const user = authService.getUser();
+    setIsOwner(!user?.role || user.role === 'owner' || (user.permissions ?? []).includes('channels'));
+  }, []);
 
   const handleConnectInstagram = async () => {
     try {
@@ -85,13 +92,15 @@ export default function InstagramInstances() {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AddChannelCard
-          title="Conectar Conta"
-          subtitle="Login Instagram"
-          colorClass="fuchsia"
-          onClick={handleConnectInstagram}
-          disabled={connecting}
-        />
+        {isOwner && (
+          <AddChannelCard
+            title="Conectar Conta"
+            subtitle="Login Instagram"
+            colorClass="fuchsia"
+            onClick={handleConnectInstagram}
+            disabled={connecting}
+          />
+        )}
 
         {accounts.map((account) => {
           const username = account.instagram.username || account.name || 'Sem nome';
@@ -124,6 +133,8 @@ export default function InstagramInstances() {
               subtitle={account.name}
               status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'}
               colorClass="fuchsia"
+              createdBy={account.createdBy}
+              ownerName={account.ownerName}
               onRefresh={handleRefresh}
               onDelete={handleDeleteClick}
             />

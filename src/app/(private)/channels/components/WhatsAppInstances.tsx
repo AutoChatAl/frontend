@@ -1,12 +1,13 @@
 'use client';
 
 import { MessageCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
 import { useWhatsAppInstances } from '@/hooks/ChannelHook';
+import { authService } from '@/services/auth.service';
 
 import AddChannelCard from './AddChannelCard';
 import ChannelInstanceCard from './ChannelInstanceCard';
@@ -21,7 +22,13 @@ export default function WhatsAppInstances() {
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
+
+  useEffect(() => {
+    const user = authService.getUser();
+    setIsOwner(!user?.role || user.role === 'owner' || (user.permissions ?? []).includes('channels'));
+  }, []);
 
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
@@ -66,12 +73,14 @@ export default function WhatsAppInstances() {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AddChannelCard
-          title="Nova Instância"
-          subtitle="Escanear QR Code"
-          colorClass="emerald"
-          onClick={handleOpenCreateModal}
-        />
+        {isOwner && (
+          <AddChannelCard
+            title="Nova Instância"
+            subtitle="Escanear QR Code"
+            colorClass="emerald"
+            onClick={handleOpenCreateModal}
+          />
+        )}
 
         {instances.map((inst) => (
           <ChannelInstanceCard
@@ -86,6 +95,8 @@ export default function WhatsAppInstances() {
             subtitle={inst.number || 'Não conectado'}
             status={inst.status === 'CONNECTED' ? 'connected' : 'disconnected'}
             colorClass="emerald"
+            createdBy={inst.createdBy}
+            ownerName={inst.ownerName}
             onRefresh={handleRefresh}
             onDelete={handleDeleteClick}
           />

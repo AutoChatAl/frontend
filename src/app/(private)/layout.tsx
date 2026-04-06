@@ -89,6 +89,7 @@ export default function PrivateLayout({
   }
 
   const userName = user?.name || user?.email || '';
+  const userRole = user?.role === 'collaborator' ? 'Colaborador' : 'Admin';
   const userInitials = userName
     .split(' ')
     .filter(Boolean)
@@ -113,8 +114,8 @@ export default function PrivateLayout({
             <div className="flex h-screen overflow-hidden">
               <Sidebar
                 userName={userName}
+                userRole={userRole}
                 userInitials={userInitials}
-                userRole={user?.role || 'member'}
                 planUsage={planUsageText}
                 planProgress={planProgress}
               />

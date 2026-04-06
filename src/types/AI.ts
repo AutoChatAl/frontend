@@ -6,6 +6,8 @@ export interface AIChannel {
   type: 'whatsapp' | 'instagram';
   active: boolean;
   identifier: string;
+  createdBy?: string | null;
+  ownerName?: string | null;
 }
 
 export interface AIRule {

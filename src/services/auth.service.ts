@@ -13,12 +13,16 @@ interface LoginData {
   totpCode?: string;
 }
 
+export type Permission = 'contacts' | 'groups' | 'scheduling' | 'ia' | 'channels' | 'campaigns' | 'auto-replies';
+
 export interface AuthUser {
   id: string;
   email: string;
   name?: string;
   role?: string;
   twoFactorEnabled?: boolean;
+  role?: 'owner' | 'collaborator';
+  permissions?: Permission[];
   workspace?: { id: string; name: string } | null;
 }
 

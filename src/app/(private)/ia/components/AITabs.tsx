@@ -4,7 +4,7 @@ import { Settings, Share2, Zap, CalendarDays } from 'lucide-react';
 
 import type { AITab } from '@/types/AI';
 
-const tabs: AITab[] = [
+const allTabs: AITab[] = [
   { id: 'general', label: 'Geral', icon: Settings },
   { id: 'channels', label: 'Canais', icon: Share2 },
   { id: 'triggers', label: 'Gatilhos', icon: Zap },
@@ -14,9 +14,12 @@ const tabs: AITab[] = [
 interface AITabsProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  visibleTabs?: string[];
 }
 
-export default function AITabs({ activeTab, onTabChange }: AITabsProps) {
+export default function AITabs({ activeTab, onTabChange, visibleTabs }: AITabsProps) {
+  const tabs = visibleTabs ? allTabs.filter((t) => visibleTabs.includes(t.id)) : allTabs;
+
   return (
     <div>
       <div className="grid grid-cols-2 sm:flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full sm:w-fit">
