@@ -30,9 +30,7 @@ export default function IAPage() {
     triggerSettings,
     setTriggerSettings,
     schedulingQueryEnabled,
-    setSchedulingQueryEnabled,
     schedulingBookingEnabled,
-    setSchedulingBookingEnabled,
     products,
     channels,
     activeChannelId: _activeChannelId,
@@ -40,6 +38,8 @@ export default function IAPage() {
     saving,
     saveConfig,
     toggleChannel,
+    toggleSchedulingQuery,
+    toggleSchedulingBooking,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -106,8 +106,8 @@ export default function IAPage() {
         <AISchedulingSection
           schedulingQueryEnabled={schedulingQueryEnabled}
           schedulingBookingEnabled={schedulingBookingEnabled}
-          onToggleQuery={setSchedulingQueryEnabled}
-          onToggleBooking={setSchedulingBookingEnabled}
+          onToggleQuery={toggleSchedulingQuery}
+          onToggleBooking={toggleSchedulingBooking}
         />
       )}
 

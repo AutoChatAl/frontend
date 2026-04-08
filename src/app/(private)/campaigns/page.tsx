@@ -359,6 +359,7 @@ export default function CampaignsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={() => loadCampaigns()}
+        addToast={addToast}
       />
 
       <EditCampaignModal

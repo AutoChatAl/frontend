@@ -56,9 +56,10 @@ export default function WhatsAppPreview({ message, senderName = 'Synq', linkUrl,
                   className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed wrap-break-word whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message) }}
                 />
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">{time}</span>
-                  <Check size={12} className="text-blue-500" />
+                <div className="flex items-center justify-end mt-1">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 pr-1">{time}</span>
+                  <Check size={12} className="text-gray-500" />
+                  <Check size={12} className="text-gray-500 -ml-2" />
                 </div>
               </div>
 

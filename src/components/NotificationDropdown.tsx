@@ -1,7 +1,6 @@
 'use client';
 
 import { Bell, Loader2, X } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { notificationService, type Notification, type NotificationType } from '@/services/notification.service';
@@ -38,11 +37,9 @@ function formatDate(dateStr: string): string {
 }
 
 export default function NotificationDropdown() {
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +53,6 @@ export default function NotificationDropdown() {
       return [];
     } finally {
       setLoading(false);
-      setHasLoaded(true);
     }
   }, []);
 
@@ -84,16 +80,10 @@ export default function NotificationDropdown() {
     return readIds.includes(notification.id) ? total : total + 1;
   }, 0);
 
+  // Load read state on mount so the unread badge reflects previous session
   useEffect(() => {
     loadReadState();
-    loadNotifications();
-  }, [loadNotifications, loadReadState]);
-
-  useEffect(() => {
-    if (isOpen && !hasLoaded) {
-      loadNotifications();
-    }
-  }, [isOpen, hasLoaded, loadNotifications]);
+  }, [loadReadState]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -105,34 +95,16 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleToggle = async () => {
+  const handleToggle = () => {
     if (!isOpen) {
-      const items = await loadNotifications();
-      await markAllAsRead(items);
+      // Open immediately so the dropdown shows the loading spinner right away
+      setLoading(true);
+      setIsOpen(true);
+      loadNotifications().then((items) => markAllAsRead(items));
+    } else {
+      setIsOpen(false);
     }
-    setIsOpen((prev) => !prev);
   };
-
-  useEffect(() => {
-    const refreshOnFocus = () => {
-      loadNotifications();
-    };
-    const refreshOnVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        loadNotifications();
-      }
-    };
-    window.addEventListener('focus', refreshOnFocus);
-    document.addEventListener('visibilitychange', refreshOnVisibility);
-    return () => {
-      window.removeEventListener('focus', refreshOnFocus);
-      document.removeEventListener('visibilitychange', refreshOnVisibility);
-    };
-  }, [loadNotifications]);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [pathname, loadNotifications]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -161,7 +133,7 @@ export default function NotificationDropdown() {
           </div>
 
           <div className="max-h-80 overflow-y-auto">
-            {loading && !hasLoaded ? (
+            {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 size={20} className="animate-spin text-slate-400" />
               </div>

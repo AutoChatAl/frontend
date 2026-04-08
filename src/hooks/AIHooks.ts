@@ -134,6 +134,34 @@ export function useAIConfig() {
     }
   }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, addToast]);
 
+  const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
+    setSchedulingQueryEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ schedulingQueryEnabled: enabled, schedulingBookingEnabled });
+      addToast('success', enabled ? 'Consulta de disponibilidade ativada.' : 'Consulta de disponibilidade desativada.');
+    } catch {
+      setSchedulingQueryEnabled(!enabled);
+      addToast('error', 'Erro ao atualizar configuração de agendamento.');
+    } finally {
+      setSaving(false);
+    }
+  }, [schedulingBookingEnabled, addToast]);
+
+  const toggleSchedulingBooking = useCallback(async (enabled: boolean) => {
+    setSchedulingBookingEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ schedulingQueryEnabled, schedulingBookingEnabled: enabled });
+      addToast('success', enabled ? 'Criação de agendamentos ativada.' : 'Criação de agendamentos desativada.');
+    } catch {
+      setSchedulingBookingEnabled(!enabled);
+      addToast('error', 'Erro ao atualizar configuração de agendamento.');
+    } finally {
+      setSaving(false);
+    }
+  }, [schedulingQueryEnabled, addToast]);
+
   const toggleChannel = useCallback(
     async (channelId: string) => {
       setSaving(true);
@@ -238,5 +266,7 @@ export function useAIConfig() {
     addProduct,
     updateProduct,
     deleteProduct,
+    toggleSchedulingQuery,
+    toggleSchedulingBooking,
   };
 }

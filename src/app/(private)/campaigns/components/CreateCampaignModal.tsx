@@ -53,6 +53,7 @@ interface CreateCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  addToast: (type: 'success' | 'error', message: string) => void;
 }
 
 function getInitials(name: string): string {
@@ -156,7 +157,7 @@ function SectionHeader({
   );
 }
 
-export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: CreateCampaignModalProps) {
+export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToast }: CreateCampaignModalProps) {
   const [loading, setLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<'create' | 'dispatch' | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -164,7 +165,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const [groups, setGroups] = useState<Group[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [contactFilter, setContactFilter] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [dispatchResult, setDispatchResult] = useState<DispatchResult | null>(null);
   const [imageFileName, setImageFileName] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -175,7 +175,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const loadInitialData = useCallback(async () => {
     try {
       setLoadingData(true);
-      setError(null);
       const fetchedLimits = await planLimitsService.getLimits();
       setLimits(fetchedLimits);
       const [whatsappChannels, groupsList] = await Promise.all([
@@ -221,7 +220,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         });
       setGroups(normalizedGroups);
     } catch {
-      setError('Não foi possível carregar canais e contatos. Tente novamente.');
+      addToast('error', 'Não foi possível carregar canais e contatos. Tente novamente.');
     } finally {
       setLoadingData(false);
     }
@@ -262,12 +261,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     try {
       setLoading(true);
       setLoadingType('create');
-      setError(null);
       await campaignService.createCampaign(formData);
       onSuccess();
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar campanha. Tente novamente.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao criar campanha. Tente novamente.');
     } finally {
       setLoading(false);
       setLoadingType(null);
@@ -279,7 +277,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     try {
       setLoading(true);
       setLoadingType('dispatch');
-      setError(null);
 
       const campaign = await campaignService.createCampaign(formData);
 
@@ -295,7 +292,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
       onSuccess();
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar e disparar a campanha.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao criar e disparar a campanha.');
     } finally {
       setLoading(false);
       setLoadingType(null);
@@ -307,7 +304,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     setFormData(INITIAL_FORM);
     setErrors({});
     setContactFilter('');
-    setError(null);
     setDispatchResult(null);
     setImageFileName('');
     if (imageInputRef.current) imageInputRef.current.value = '';
@@ -417,7 +413,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
     setFormData((prev) => {
       const isRemoving = prev.contactIds.includes(contactId);
       if (!isRemoving && prev.contactIds.length >= maxContacts) {
-        setError(`Limite de ${maxContacts} contatos por campanha atingido.`);
+        addToast('error', `Limite de ${maxContacts} contatos por campanha atingido.`);
         return prev;
       }
       return {
@@ -447,7 +443,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
   const selectAllContacts = () => {
     const ids = channelContacts.map((c) => c.id).slice(0, maxContacts);
     if (channelContacts.length > maxContacts) {
-      setError(`Limite de ${maxContacts} contatos. Apenas os ${maxContacts} primeiros foram selecionados.`);
+      addToast('error', `Limite de ${maxContacts} contatos. Apenas os ${maxContacts} primeiros foram selecionados.`);
     }
     setFormData((prev) => ({ ...prev, contactIds: ids }));
   };
@@ -540,16 +536,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess }: Crea
         </div>
       ) : (
         <div className="space-y-8">
-          {error && (
-            <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</p>
-              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
-                <X size={15} />
-              </button>
-            </div>
-          )}
-
           <section>
             <SectionHeader step={1} label="Informações" />
             <div className="space-y-4">

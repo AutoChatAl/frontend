@@ -8,6 +8,9 @@ export interface DashboardMetrics {
   totalContacts: number;
   activeChannels: number;
   totalCampaigns: number;
+  aiSent?: number;
+  automatedSent?: number;
+  manualSent?: number;
   daily: { date: string; sent: number; received: number; read: number }[];
 }
 
