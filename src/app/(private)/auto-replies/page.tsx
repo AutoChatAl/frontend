@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  FileText,
   Image as ImageIcon,
   MessageCircle,
   Mic,
@@ -177,7 +178,7 @@ export default function AutoRepliesPage() {
                         <div>
                           <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Responder com:</p>
                           <div className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 space-y-1">
-                            {(rule.replyType === 'TEXT' || rule.replyType === 'TEXT_AND_AUDIO') && rule.replyMessage && (
+                            {['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_AND_DOCUMENT'].includes(rule.replyType) && rule.replyMessage && (
                               <p className="line-clamp-3 whitespace-pre-wrap">{rule.replyMessage}</p>
                             )}
                             {rule.channelType === 'INSTAGRAM' && rule.replyLinkDescription && (
@@ -193,7 +194,7 @@ export default function AutoRepliesPage() {
                                 </div>
                               </div>
                             )}
-                            {(rule.replyType === 'AUDIO' || rule.replyType === 'TEXT_AND_AUDIO') && (
+                            {['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'DOCUMENT_AND_AUDIO'].includes(rule.replyType) && (
                               <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
                                 <Mic size={14} />
                                 <span className="text-xs font-medium">Mensagem de áudio</span>
@@ -203,6 +204,12 @@ export default function AutoRepliesPage() {
                               <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
                                 <ImageIcon size={14} />
                                 <span className="text-xs font-medium">Imagem enviada</span>
+                              </div>
+                            )}
+                            {['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(rule.replyType) && (
+                              <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                                <FileText size={14} />
+                                <span className="text-xs font-medium">Documento enviado</span>
                               </div>
                             )}
                           </div>

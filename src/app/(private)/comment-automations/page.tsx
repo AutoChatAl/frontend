@@ -3,12 +3,15 @@
 import {
   AlertCircle,
   ExternalLink,
+  Image as ImageIcon,
   Instagram,
   MessageSquare,
+  Mic,
   Pencil,
   Plus,
   Send,
   Trash2,
+  Type,
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 
@@ -30,6 +33,15 @@ const MATCH_MODE_LABELS: Record<string, string> = {
   CONTAINS: 'Contém',
   EXACT: 'Exata',
   STARTS_WITH: 'Começa com',
+};
+
+const REPLY_TYPE_LABELS: Record<string, { label: string; icon: typeof Type }> = {
+  TEXT: { label: 'Texto', icon: Type },
+  AUDIO: { label: 'Áudio', icon: Mic },
+  TEXT_AND_AUDIO: { label: 'Texto + Áudio', icon: Mic },
+  IMAGE: { label: 'Imagem', icon: ImageIcon },
+  TEXT_AND_IMAGE: { label: 'Texto + Imagem', icon: ImageIcon },
+  IMAGE_AND_AUDIO: { label: 'Imagem + Áudio', icon: Mic },
 };
 
 export default function CommentAutomationsPage() {
@@ -178,6 +190,16 @@ export default function CommentAutomationsPage() {
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded-full">
                         <Send size={10} /> Envia DM
                       </span>
+                      {rule.dmReplyType && rule.dmReplyType !== 'TEXT' && (() => {
+                        const rt = REPLY_TYPE_LABELS[rule.dmReplyType];
+                        if (!rt) return null;
+                        const Icon = rt.icon;
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 rounded-full">
+                            <Icon size={10} /> {rt.label}
+                          </span>
+                        );
+                      })()}
                       {rule.oncePerUser && (
                         <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
                           1x por pessoa
@@ -214,7 +236,21 @@ export default function CommentAutomationsPage() {
                           <Send size={10} /> DM enviada:
                         </p>
                         <div className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 space-y-1">
-                          <p className="line-clamp-2 whitespace-pre-wrap">{rule.dmMessage}</p>
+                          {rule.dmMessage && (
+                            <p className="line-clamp-2 whitespace-pre-wrap">{rule.dmMessage}</p>
+                          )}
+                          {rule.dmAudioBase64 && (
+                            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                              <Mic size={12} />
+                              <span className="text-xs font-medium">Mensagem de áudio</span>
+                            </div>
+                          )}
+                          {rule.dmImageBase64 && (
+                            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                              <ImageIcon size={12} />
+                              <span className="text-xs font-medium">Imagem anexada</span>
+                            </div>
+                          )}
                           {rule.dmLinkUrl && (
                             <div className="pt-0.5">
                               <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
