@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  FileText,
   Image as ImageIcon,
   Loader2,
   MessageCircle,
@@ -168,6 +169,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   const [dispatchResult, setDispatchResult] = useState<DispatchResult | null>(null);
   const [imageFileName, setImageFileName] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [documentFileName, setDocumentFileName] = useState('');
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<CreateCampaignInput>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [limits, setLimits] = useState<PlanLimits | null>(null);
@@ -307,6 +310,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     setDispatchResult(null);
     setImageFileName('');
     if (imageInputRef.current) imageInputRef.current.value = '';
+    setDocumentFileName('');
+    if (documentInputRef.current) documentInputRef.current.value = '';
     onClose();
   };
 
@@ -356,6 +361,51 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     });
     setImageFileName('');
     if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, document: 'O documento deve ter no máximo 10MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        messageMeta: {
+          ...(prev.messageMeta ?? {}),
+          documentBase64: base64,
+          documentMimeType: file.type || 'application/octet-stream',
+          documentName: file.name,
+        },
+      }));
+      setDocumentFileName(file.name);
+      setErrors((prev) => ({ ...prev, document: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeDocument = () => {
+    setFormData((prev) => {
+      const nextMeta = { ...(prev.messageMeta ?? {}) };
+      delete nextMeta.documentBase64;
+      delete nextMeta.documentMimeType;
+      delete nextMeta.documentName;
+      const next = { ...prev };
+      if (Object.keys(nextMeta).length > 0) {
+        next.messageMeta = nextMeta;
+      } else {
+        delete next.messageMeta;
+      }
+      return next;
+    });
+    setDocumentFileName('');
+    if (documentInputRef.current) documentInputRef.current.value = '';
   };
 
   const handleSourceTypeChange = (newSourceType: 'CHANNEL' | 'GROUP') => {
@@ -661,6 +711,48 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 )}
               </div>
 
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <FileText size={14} className="text-indigo-500" />
+                  Documento <span className="text-slate-400 font-normal">(opcional, até 10MB)</span>
+                </label>
+                <input
+                  ref={documentInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleDocumentUpload}
+                  className="hidden"
+                />
+                {documentFileName ? (
+                  <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                    <FileText size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{documentFileName}</span>
+                    <button
+                      type="button"
+                      onClick={removeDocument}
+                      className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => documentInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                  >
+                    <Upload size={16} />
+                    <span className="text-sm font-medium">Selecionar documento da campanha</span>
+                  </button>
+                )}
+                {errors.document && (
+                  <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    {errors.document}
+                  </p>
+                )}
+              </div>
+
               {(formData.message.trim() || formData.messageMeta?.imageBase64) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -675,6 +767,12 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                     <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                       <ImageIcon size={12} />
                       Imagem será enviada junto com a campanha.
+                    </div>
+                  )}
+                  {formData.messageMeta?.documentBase64 && (
+                    <div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                      <FileText size={12} />
+                      Documento será enviado junto com a campanha.
                     </div>
                   )}
                 </div>
