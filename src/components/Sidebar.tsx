@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
 import { supportChatService } from '@/services/support-chat.service';
@@ -23,9 +24,6 @@ interface SidebarProps {
     userName?: string;
     userRole?: string;
     userInitials?: string;
-    planName?: string;
-    planUsage?: string;
-    planProgress?: number;
 }
 
 const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount }: SidebarItemProps) => {
@@ -74,11 +72,15 @@ export default function Sidebar({
   userName = 'John Doe',
   userRole = 'Admin',
   userInitials = 'JD',
-  planName = 'Plano Basic',
-  planUsage = '7.5k / 10k mensagens',
-  planProgress = 70,
 }: SidebarProps) {
   const router = useRouter();
+  const { planName, usage, isTrialing, trialDaysRemaining } = useSubscription();
+
+  const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
+  const msgUsed = usage?.messages?.used ?? 0;
+  const msgLimit = usage?.messages?.limit ?? 0;
+  const planUsage = msgLimit > 0 ? `${formatCount(msgUsed)} / ${formatCount(msgLimit)} mensagens` : '';
+  const planProgress = msgLimit > 0 ? Math.min(100, Math.round((msgUsed / msgLimit) * 100)) : 0;
 
   const {
     activeTab,
@@ -244,10 +246,18 @@ export default function Sidebar({
 
         <div className="p-4 border-t border-slate-100 dark:border-slate-700">
           {!sidebarCollapsed && (
-            <div className="bg-linear-to-r from-indigo-50 to-violet-50 dark:from-slate-700 dark:to-slate-800 p-3 rounded-xl border border-indigo-100 dark:border-slate-600 mb-4">
+            <div
+              onClick={() => router.push('/settings?tab=billing')}
+              className="bg-linear-to-r from-indigo-50 to-violet-50 dark:from-slate-700 dark:to-slate-800 p-3 rounded-xl border border-indigo-100 dark:border-slate-600 mb-4 cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500 transition-colors"
+            >
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
                 <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{planName}</span>
+                {isTrialing && (
+                  <span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
+                    Trial {trialDaysRemaining}d
+                  </span>
+                )}
               </div>
               <div className="w-full bg-white dark:bg-slate-600 rounded-full h-1.5 mb-1 overflow-hidden">
                 <div className="bg-indigo-500 h-full" style={{ width: `${planProgress}%` }}></div>
