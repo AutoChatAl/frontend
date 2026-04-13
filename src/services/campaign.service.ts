@@ -1,5 +1,6 @@
 import type { Campaign, CampaignRun, CreateCampaignInput, UpdateCampaignInput } from '@/types/Campaign';
 import { apiClient } from '@/utils/ApiClient';
+import { getErrorFromResponse } from '@/utils/ErrorHandling';
 
 interface BackendResponse<T> {
   data: T;
@@ -14,7 +15,8 @@ function normalizeId<T extends { id?: string; _id?: string }>(obj: T): T {
 
 function extractData<T>(response: { success: boolean; data?: unknown }, errorMsg: string): T {
   if (!response.success || !response.data) {
-    throw new Error(errorMsg);
+    const reason = getErrorFromResponse(response as Parameters<typeof getErrorFromResponse>[0]);
+    throw new Error(reason || errorMsg);
   }
 
   const body = response.data as Record<string, unknown>;

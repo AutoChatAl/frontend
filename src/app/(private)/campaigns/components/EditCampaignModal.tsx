@@ -290,7 +290,32 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     try {
       setLoading(true);
       setError(null);
-      await campaignService.updateCampaign(campaign.id, formData);
+
+      const payload: UpdateCampaignInput = {
+        name: formData.name,
+        message: formData.message,
+        sourceType: formData.sourceType,
+        channelIds: formData.channelIds,
+        contactIds: formData.contactIds,
+        status: formData.status ?? 'ACTIVE',
+        messageType: formData.messageType ?? 'TEXT',
+      };
+
+      if (formData.description?.trim()) payload.description = formData.description;
+      if (formData.linkUrl?.trim()) payload.linkUrl = formData.linkUrl;
+      if (formData.linkLabel?.trim()) payload.linkLabel = formData.linkLabel;
+      if (formData.groupId?.trim()) payload.groupId = formData.groupId;
+      if (formData.messageTag) payload.messageTag = formData.messageTag;
+      if (formData.frequency) payload.frequency = formData.frequency;
+      if (formData.executionHour !== undefined) payload.executionHour = formData.executionHour;
+      if (formData.scheduledDate) payload.scheduledDate = formData.scheduledDate;
+
+      const meta = formData.messageMeta as Record<string, unknown> | undefined;
+      if (meta && Object.keys(meta).length > 0) {
+        payload.messageMeta = meta as NonNullable<UpdateCampaignInput['messageMeta']>;
+      }
+
+      await campaignService.updateCampaign(campaign.id, payload);
       onSuccess();
       handleClose();
     } catch (err) {
