@@ -224,7 +224,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (isOpen) {

@@ -1,6 +1,6 @@
 ﻿import type { InstagramAccount, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
-import { apiClient } from '@/utils/ApiClient';
 import { getErrorMessage } from '@/types/ErrorCode';
+import { apiClient } from '@/utils/ApiClient';
 
 function throwApiError(response: { data?: unknown }, fallback: string): never {
   const body = response.data as { reason?: string } | undefined;
