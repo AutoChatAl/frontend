@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ExternalLink,
+  FileText,
   Image as ImageIcon,
   Loader2,
   MessageCircle,
@@ -51,6 +52,9 @@ const REPLY_TYPES = [
   { value: 'IMAGE' as const, label: 'Imagem', icon: ImageIcon },
   { value: 'TEXT_AND_IMAGE' as const, label: 'Texto + Imagem', icon: MessageCircle },
   { value: 'IMAGE_AND_AUDIO' as const, label: 'Imagem + Áudio', icon: Mic },
+  { value: 'DOCUMENT' as const, label: 'Documento', icon: FileText },
+  { value: 'TEXT_AND_DOCUMENT' as const, label: 'Texto + Doc', icon: FileText },
+  { value: 'DOCUMENT_AND_AUDIO' as const, label: 'Doc + Áudio', icon: FileText },
 ] as const;
 
 function stripWhatsAppFormatting(text: string) {
@@ -79,8 +83,10 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
   });
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const [audioFileName, setAudioFileName] = useState<string>('');
   const [imageFileName, setImageFileName] = useState<string>('');
+  const [documentFileName, setDocumentFileName] = useState<string>('');
 
   const loadChannels = useCallback(async () => {
     try {
@@ -128,12 +134,14 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       setErrors({});
       setAudioFileName('');
       setImageFileName('');
+      setDocumentFileName('');
     }
   }, [isOpen, loadChannels]);
 
-  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE'].includes(formData.replyType ?? 'TEXT');
-  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_AND_DOCUMENT'].includes(formData.replyType ?? 'TEXT');
+  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'DOCUMENT_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
+  const needsDocument = ['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const isInstagram = formData.channelType === 'INSTAGRAM';
   const hasLinkButton = !!formData.replyLinkUrl?.trim();
 
@@ -149,6 +157,9 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     }
     if (needsImage && !formData.replyImageBase64) {
       newErrors.replyImage = 'Envie uma imagem';
+    }
+    if (needsDocument && !formData.replyDocumentBase64) {
+      newErrors.replyDocument = 'Envie um documento';
     }
     if (formData.replyLinkUrl && !/^https?:\/\/.+/.test(formData.replyLinkUrl)) {
       newErrors.replyLinkUrl = 'Informe uma URL válida (ex: https://exemplo.com)';
@@ -238,6 +249,42 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, replyDocument: 'O documento deve ter no máximo 10MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        replyDocumentBase64: base64,
+        replyDocumentMimeType: file.type,
+        replyDocumentName: file.name,
+      }));
+      setDocumentFileName(file.name);
+      setErrors((prev) => ({ ...prev, replyDocument: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeDocument = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      delete next.replyDocumentBase64;
+      delete next.replyDocumentMimeType;
+      delete next.replyDocumentName;
+      return next;
+    });
+    setDocumentFileName('');
+    if (documentInputRef.current) documentInputRef.current.value = '';
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
 
@@ -266,7 +313,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     setErrors((prev) => ({ ...prev, channelId: '' }));
   };
 
-  const hasContent = formData.keyword && (formData.replyMessage || formData.replyAudioBase64 || formData.replyImageBase64);
+  const hasContent = formData.keyword && (formData.replyMessage || formData.replyAudioBase64 || formData.replyImageBase64 || formData.replyDocumentBase64);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nova Auto-Resposta" size="md">
@@ -389,7 +436,7 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
             Tipo de resposta
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {REPLY_TYPES.map((opt) => {
+            {REPLY_TYPES.filter((opt) => !isInstagram || !['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(opt.value)).map((opt) => {
               const disabled = false;
               return (
                 <button
@@ -537,6 +584,48 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           </div>
         )}
 
+        {needsDocument && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Documento
+            </label>
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+              onChange={handleDocumentUpload}
+              className="hidden"
+            />
+            {documentFileName ? (
+              <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                <FileText size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{documentFileName}</span>
+                <button
+                  type="button"
+                  onClick={removeDocument}
+                  className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => documentInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+              >
+                <Upload size={18} />
+                <span className="text-sm font-medium">Clique para enviar um documento (máx. 10MB)</span>
+              </button>
+            )}
+            {errors.replyDocument && (
+              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle size={12} /> {errors.replyDocument}
+              </p>
+            )}
+          </div>
+        )}
+
         {needsText && (
           <div>
             <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -663,6 +752,17 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
                     <div className="flex items-center gap-1.5 mb-1 text-indigo-600 dark:text-indigo-400">
                       <ImageIcon size={14} />
                       <span className="text-xs font-medium">Imagem anexada</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {needsDocument && formData.replyDocumentBase64 && (
+                <div className="flex justify-start">
+                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                      <FileText size={14} />
+                      <span className="text-xs font-medium">{documentFileName || 'Documento anexado'}</span>
                     </div>
                   </div>
                 </div>

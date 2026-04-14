@@ -3,13 +3,18 @@
 import {
   AlertCircle,
   ExternalLink,
+  Image as ImageIcon,
   Instagram,
   Loader2,
   MessageCircle,
   MessageSquare,
+  Mic,
   Send,
+  Trash2,
+  Type,
+  Upload,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
@@ -39,6 +44,15 @@ const MATCH_MODES = [
   { value: 'STARTS_WITH', label: 'Começa com', description: 'O comentário começa com a palavra-chave' },
 ] as const;
 
+const REPLY_TYPES = [
+  { value: 'TEXT' as const, label: 'Texto', icon: Type },
+  { value: 'AUDIO' as const, label: 'Áudio', icon: Mic },
+  { value: 'TEXT_AND_AUDIO' as const, label: 'Texto + Áudio', icon: MessageCircle },
+  { value: 'IMAGE' as const, label: 'Imagem', icon: ImageIcon },
+  { value: 'TEXT_AND_IMAGE' as const, label: 'Texto + Imagem', icon: MessageCircle },
+  { value: 'IMAGE_AND_AUDIO' as const, label: 'Imagem + Áudio', icon: Mic },
+] as const;
+
 export default function CreateCommentAutomationModal({ isOpen, onClose, onSuccess }: CreateCommentAutomationModalProps) {
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -53,11 +67,17 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
     triggerOnAnyComment: false,
     commentReplyEnabled: true,
     commentReplyMessage: '',
+    dmReplyType: 'TEXT',
     dmMessage: '',
     postFilter: 'ALL',
     oncePerUser: true,
     enabled: true,
   });
+
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [audioFileName, setAudioFileName] = useState<string>('');
+  const [imageFileName, setImageFileName] = useState<string>('');
 
   const loadChannels = useCallback(async () => {
     try {
@@ -86,14 +106,22 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
         triggerOnAnyComment: false,
         commentReplyEnabled: true,
         commentReplyMessage: '',
+        dmReplyType: 'TEXT',
         dmMessage: '',
         postFilter: 'ALL',
         oncePerUser: true,
         enabled: true,
       });
       setErrors({});
+      setAudioFileName('');
+      setImageFileName('');
     }
   }, [isOpen, loadChannels]);
+
+  const dmReplyType = formData.dmReplyType ?? 'TEXT';
+  const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE'].includes(dmReplyType);
+  const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO'].includes(dmReplyType);
+  const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(dmReplyType);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -104,14 +132,98 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
     if (formData.commentReplyEnabled && !formData.commentReplyMessage?.trim()) {
       newErrors.commentReplyMessage = 'Informe a resposta ao comentário';
     }
-    if (!formData.dmMessage?.trim()) {
+    if (needsText && !formData.dmMessage?.trim()) {
       newErrors.dmMessage = 'Informe a mensagem da DM';
+    }
+    if (needsAudio && !formData.dmAudioBase64) {
+      newErrors.dmAudio = 'Envie um arquivo de áudio';
+    }
+    if (needsImage && !formData.dmImageBase64) {
+      newErrors.dmImage = 'Envie uma imagem';
     }
     if (formData.dmLinkUrl && !/^https?:\/\/.+/.test(formData.dmLinkUrl)) {
       newErrors.dmLinkUrl = 'Informe uma URL válida (ex: https://exemplo.com)';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      setErrors((prev) => ({ ...prev, dmAudio: 'O arquivo deve ser um áudio.' }));
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmAudio: 'O áudio deve ter no máximo 5MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        dmAudioBase64: base64,
+        dmAudioMimeType: file.type,
+      }));
+      setAudioFileName(file.name);
+      setErrors((prev) => ({ ...prev, dmAudio: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAudio = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      delete next.dmAudioBase64;
+      delete next.dmAudioMimeType;
+      return next;
+    });
+    setAudioFileName('');
+    if (audioInputRef.current) audioInputRef.current.value = '';
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrors((prev) => ({ ...prev, dmImage: 'O arquivo deve ser uma imagem.' }));
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 2MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1] ?? '';
+      setFormData((prev) => ({
+        ...prev,
+        dmImageBase64: base64,
+        dmImageMimeType: file.type,
+      }));
+      setImageFileName(file.name);
+      setErrors((prev) => ({ ...prev, dmImage: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      delete next.dmImageBase64;
+      delete next.dmImageMimeType;
+      return next;
+    });
+    setImageFileName('');
+    if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
   const handleSubmit = async () => {
@@ -296,14 +408,28 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
                 rows={3}
                 error={errors.commentReplyMessage}
               />
-              <p className="text-xs text-slate-400 mt-1">
-                Use <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">{'{{username}}'}</code> para inserir o @ da pessoa
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      commentReplyMessage: (prev.commentReplyMessage ?? '') + '{{username}}',
+                    }));
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors"
+                >
+                  <span>@</span> Inserir {'{{username}}'}
+                </button>
+                <p className="text-xs text-slate-400">
+                  Será substituído pelo @ da pessoa
+                </p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* DM Message */}
+        {/* DM Section */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Send size={16} className="text-indigo-500" />
@@ -312,55 +438,185 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
             </label>
           </div>
 
-          <Textarea
-            value={formData.dmMessage ?? ''}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, dmMessage: e.target.value }));
-              setErrors((prev) => ({ ...prev, dmMessage: '' }));
-            }}
-            placeholder="Ex: Oi {{username}}! Vi que você se interessou pelo nosso produto. Aqui está o link exclusivo..."
-            rows={4}
-            error={errors.dmMessage}
-          />
-          <p className="text-xs text-slate-400">
-            Use <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">{'{{username}}'}</code> para inserir o @ da pessoa
-          </p>
-
-          {/* Optional link button */}
+          {/* Reply type selector */}
           <div>
-            <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              <ExternalLink size={14} className="text-indigo-500" />
-              Botão de link na DM <span className="text-slate-400 font-normal">(opcional)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Tipo de resposta
             </label>
-            <div className="space-y-2">
-              <Input
-                type="url"
-                value={formData.dmLinkUrl ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, dmLinkUrl: e.target.value }));
-                  setErrors((prev) => ({ ...prev, dmLinkUrl: '' }));
-                }}
-                placeholder="https://exemplo.com/oferta"
-                error={errors.dmLinkUrl}
-              />
-              {formData.dmLinkUrl && (
-                <>
-                  <Input
-                    type="text"
-                    value={formData.dmLinkLabel ?? ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkLabel: e.target.value }))}
-                    placeholder="Texto do botão (ex: Ver oferta)"
-                  />
-                  <Textarea
-                    value={formData.dmLinkDescription ?? ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkDescription: e.target.value }))}
-                    placeholder="Descrição do card (opcional, máx 80 caracteres)"
-                    rows={2}
-                  />
-                </>
-              )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {REPLY_TYPES.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, dmReplyType: opt.value }))}
+                  className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 text-center transition-all ${
+                    dmReplyType === opt.value
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <opt.icon size={16} />
+                  <p className="text-sm font-medium text-slate-800 dark:text-white">{opt.label}</p>
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Text message */}
+          {needsText && (
+            <div>
+              <Textarea
+                value={formData.dmMessage ?? ''}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, dmMessage: e.target.value }));
+                  setErrors((prev) => ({ ...prev, dmMessage: '' }));
+                }}
+                placeholder="Ex: Oi {{username}}! Vi que você se interessou pelo nosso produto. Aqui está o link exclusivo..."
+                rows={4}
+                error={errors.dmMessage}
+              />
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      dmMessage: (prev.dmMessage ?? '') + '{{username}}',
+                    }));
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors"
+                >
+                  <span>@</span> Inserir {'{{username}}'}
+                </button>
+                <p className="text-xs text-slate-400">
+                  Será substituído pelo @ da pessoa
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Audio upload */}
+          {needsAudio && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Arquivo de áudio
+              </label>
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleAudioUpload}
+                className="hidden"
+              />
+              {audioFileName ? (
+                <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                  <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
+                  <button
+                    type="button"
+                    onClick={removeAudio}
+                    className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                >
+                  <Upload size={18} />
+                  <span className="text-sm font-medium">Clique para enviar um áudio (máx. 5MB)</span>
+                </button>
+              )}
+              {errors.dmAudio && (
+                <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={12} /> {errors.dmAudio}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Image upload */}
+          {needsImage && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Imagem
+              </label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              {imageFileName ? (
+                <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                  <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="text-red-400 hover:text-red-600 transition-colors shrink-0"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                >
+                  <Upload size={18} />
+                  <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
+                </button>
+              )}
+              {errors.dmImage && (
+                <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle size={12} /> {errors.dmImage}
+                </p>
+              )}
+            </div>
+          )}
+
+          {needsText && (
+            <div>
+              <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <ExternalLink size={14} className="text-indigo-500" />
+                Botão de link na DM <span className="text-slate-400 font-normal">(opcional)</span>
+              </label>
+              <div className="space-y-2">
+                <Input
+                  type="url"
+                  value={formData.dmLinkUrl ?? ''}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, dmLinkUrl: e.target.value }));
+                    setErrors((prev) => ({ ...prev, dmLinkUrl: '' }));
+                  }}
+                  placeholder="https://exemplo.com/oferta"
+                  error={errors.dmLinkUrl}
+                />
+                {formData.dmLinkUrl && (
+                  <>
+                    <Input
+                      type="text"
+                      value={formData.dmLinkLabel ?? ''}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkLabel: e.target.value }))}
+                      placeholder="Texto do botão (ex: Ver oferta)"
+                    />
+                    <Textarea
+                      value={formData.dmLinkDescription ?? ''}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkDescription: e.target.value }))}
+                      placeholder="Descrição do card (opcional, máx 80 caracteres)"
+                      rows={2}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Options */}
@@ -378,7 +634,7 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
         </div>
 
         {/* Preview */}
-        {(formData.commentReplyMessage || formData.dmMessage) && (
+        {(formData.commentReplyMessage || formData.dmMessage || formData.dmAudioBase64 || formData.dmImageBase64) && (
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
               Preview
@@ -413,21 +669,46 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
               )}
 
               {/* DM preview */}
-              {formData.dmMessage && (
+              {(formData.dmMessage || formData.dmAudioBase64 || formData.dmImageBase64) && (
                 <div>
                   <p className="text-[10px] font-medium text-indigo-500 mb-1.5 uppercase tracking-wider flex items-center gap-1">
                     <Send size={10} /> DM enviada automaticamente
                   </p>
-                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden max-w-[85%]">
-                    <div className="px-3 py-2">
-                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                        {formData.dmMessage.replace(/\{\{username\}\}/gi, '@usuario')}
-                      </p>
-                    </div>
-                    {formData.dmLinkUrl && (
-                      <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-700">
-                        <div className="w-full text-center rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-800 dark:text-white font-semibold py-2 text-sm">
-                          {formData.dmLinkLabel || 'Saiba mais'}
+                  <div className="space-y-2 max-w-[85%]">
+                    {/* Text message */}
+                    {needsText && formData.dmMessage && (
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                        <div className="px-3 py-2">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                            {formData.dmMessage.replace(/\{\{username\}\}/gi, '@usuario')}
+                          </p>
+                        </div>
+                        {formData.dmLinkUrl && (
+                          <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-700">
+                            <div className="w-full text-center rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-800 dark:text-white font-semibold py-2 text-sm">
+                              {formData.dmLinkLabel || 'Saiba mais'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Audio preview */}
+                    {needsAudio && formData.dmAudioBase64 && (
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                          <Mic size={14} />
+                          <span className="text-xs font-medium">Mensagem de áudio</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image preview */}
+                    {needsImage && formData.dmImageBase64 && (
+                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                          <ImageIcon size={14} />
+                          <span className="text-xs font-medium">Imagem anexada</span>
                         </div>
                       </div>
                     )}
