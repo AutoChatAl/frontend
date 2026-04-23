@@ -397,19 +397,19 @@ export default function Home() {
               <h4 className="text-white font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="/privacidade" className="hover:text-white transition-colors">
                     Privacidade
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
+                  <Link href="/termos" className="hover:text-white transition-colors">
                     Termos de Uso
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    LGPD
-                  </a>
+                  <Link href="/exclusao-de-dados" className="hover:text-white transition-colors">
+                    Exclusão de Dados
+                  </Link>
                 </li>
               </ul>
             </div>
