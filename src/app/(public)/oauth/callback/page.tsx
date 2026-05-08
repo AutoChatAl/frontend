@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -29,11 +29,11 @@ export default function OAuthCallbackPage() {
         }
       } else {
         setStatus('error');
-        setErrorMessage('Parametros invalidos');
+        setErrorMessage('Parâmetros inválidos');
       }
     } catch {
       setStatus('error');
-      setErrorMessage('Erro inesperado ao processar a conexao.');
+      setErrorMessage('Erro inesperado ao processar a conexão.');
     }
   }, []);
 
@@ -65,7 +65,7 @@ export default function OAuthCallbackPage() {
               <Loader2 size={56} className="text-purple-500 animate-spin" />
             </div>
             <h1 className="text-xl font-semibold text-slate-800">Conectando...</h1>
-            <p className="text-slate-500">Aguarde enquanto processamos a conexao.</p>
+            <p className="text-slate-500">Aguarde enquanto processamos a conexão.</p>
           </>
         )}
 
@@ -81,7 +81,7 @@ export default function OAuthCallbackPage() {
               Sua conta do Instagram foi conectada com sucesso ao Synq.
             </p>
             <p className="text-sm text-slate-400">
-              Esta janela sera fechada em {countdown}s...
+              Esta janela será fechada em {countdown}s...
             </p>
             <button
               type="button"
@@ -100,9 +100,9 @@ export default function OAuthCallbackPage() {
                 <XCircle size={48} className="text-red-500" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">Erro na conexao</h1>
+            <h1 className="text-2xl font-bold text-slate-800">Erro na conexão</h1>
             <p className="text-slate-500">
-              Nao foi possivel conectar sua conta do Instagram.
+              Não foi possível conectar sua conta do Instagram.
             </p>
             {errorMessage && (
               <div className="bg-red-50 border border-red-100 rounded-lg p-3">
@@ -110,7 +110,7 @@ export default function OAuthCallbackPage() {
               </div>
             )}
             <p className="text-sm text-slate-400">
-              Esta janela sera fechada em {countdown}s...
+              Esta janela será fechada em {countdown}s...
             </p>
             <button
               type="button"
