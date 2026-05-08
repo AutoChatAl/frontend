@@ -1,13 +1,13 @@
 'use client';
 
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export const dynamic = 'force-dynamic';
 
 type Status = 'loading' | 'success' | 'error';
 
-function OAuthCallbackContent() {
+export default function OAuthCallbackPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(3);
@@ -29,11 +29,11 @@ function OAuthCallbackContent() {
         }
       } else {
         setStatus('error');
-        setErrorMessage('Parâmetros inválidos');
+        setErrorMessage('Parametros invalidos');
       }
     } catch {
       setStatus('error');
-      setErrorMessage('Erro inesperado ao processar a conexão.');
+      setErrorMessage('Erro inesperado ao processar a conexao.');
     }
   }, []);
 
@@ -44,7 +44,7 @@ function OAuthCallbackContent() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          window.close();
+          try { window.close(); } catch { /* ignorado */ }
           return 0;
         }
         return prev - 1;
@@ -55,7 +55,7 @@ function OAuthCallbackContent() {
   }, [status]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6">
         <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 -mt-8 mb-6" />
 
@@ -65,7 +65,7 @@ function OAuthCallbackContent() {
               <Loader2 size={56} className="text-purple-500 animate-spin" />
             </div>
             <h1 className="text-xl font-semibold text-slate-800">Conectando...</h1>
-            <p className="text-slate-500">Aguarde enquanto processamos a conexão.</p>
+            <p className="text-slate-500">Aguarde enquanto processamos a conexao.</p>
           </>
         )}
 
@@ -81,10 +81,11 @@ function OAuthCallbackContent() {
               Sua conta do Instagram foi conectada com sucesso ao Synq.
             </p>
             <p className="text-sm text-slate-400">
-              Esta janela será fechada em {countdown}s...
+              Esta janela sera fechada em {countdown}s...
             </p>
             <button
-              onClick={() => window.close()}
+              type="button"
+              onClick={() => { try { window.close(); } catch { /* ignorado */ } }}
               className="mt-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
             >
               Fechar janela
@@ -99,9 +100,9 @@ function OAuthCallbackContent() {
                 <XCircle size={48} className="text-red-500" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">Erro na conexão</h1>
+            <h1 className="text-2xl font-bold text-slate-800">Erro na conexao</h1>
             <p className="text-slate-500">
-              Não foi possível conectar sua conta do Instagram.
+              Nao foi possivel conectar sua conta do Instagram.
             </p>
             {errorMessage && (
               <div className="bg-red-50 border border-red-100 rounded-lg p-3">
@@ -109,10 +110,11 @@ function OAuthCallbackContent() {
               </div>
             )}
             <p className="text-sm text-slate-400">
-              Esta janela será fechada em {countdown}s...
+              Esta janela sera fechada em {countdown}s...
             </p>
             <button
-              onClick={() => window.close()}
+              type="button"
+              onClick={() => { try { window.close(); } catch { /* ignorado */ } }}
               className="mt-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors"
             >
               Fechar janela
@@ -122,8 +124,4 @@ function OAuthCallbackContent() {
       </div>
     </div>
   );
-}
-
-export default function OAuthCallbackPage() {
-  return <OAuthCallbackContent />;
 }
