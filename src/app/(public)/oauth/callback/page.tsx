@@ -4,6 +4,8 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 type Status = 'loading' | 'success' | 'error';
 
 function OAuthCallbackContent() {
