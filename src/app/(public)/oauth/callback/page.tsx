@@ -49,7 +49,6 @@ function OAuthCallbackContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6">
-        {/* Instagram gradient bar */}
         <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 -mt-8 mb-6" />
 
         {status === 'loading' && (
