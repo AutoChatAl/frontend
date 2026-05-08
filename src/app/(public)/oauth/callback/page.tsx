@@ -15,17 +15,26 @@ function OAuthCallbackContent() {
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    const igConnected = searchParams.get('ig_connected');
-    const igError = searchParams.get('ig_error');
+    try {
+      const igConnected = searchParams.get('ig_connected');
+      const igError = searchParams.get('ig_error');
 
-    if (igConnected === 'true') {
-      setStatus('success');
-    } else if (igError) {
+      if (igConnected === 'true') {
+        setStatus('success');
+      } else if (igError) {
+        setStatus('error');
+        try {
+          setErrorMessage(decodeURIComponent(igError));
+        } catch {
+          setErrorMessage(igError);
+        }
+      } else {
+        setStatus('error');
+        setErrorMessage('Parâmetros inválidos');
+      }
+    } catch {
       setStatus('error');
-      setErrorMessage(decodeURIComponent(igError));
-    } else {
-      setStatus('error');
-      setErrorMessage('Parâmetros inválidos');
+      setErrorMessage('Erro inesperado ao processar a conexão.');
     }
   }, [searchParams]);
 
