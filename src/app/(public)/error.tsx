@@ -10,6 +10,7 @@ export default function PublicError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // eslint-disable-next-line no-console
     console.error('[PublicLayout] Erro capturado:', error);
   }, [error]);
 
