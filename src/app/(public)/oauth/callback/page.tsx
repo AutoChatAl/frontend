@@ -1,23 +1,22 @@
 'use client';
 
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const dynamic = 'force-dynamic';
 
 type Status = 'loading' | 'success' | 'error';
 
 function OAuthCallbackContent() {
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     try {
-      const igConnected = searchParams.get('ig_connected');
-      const igError = searchParams.get('ig_error');
+      const params = new URLSearchParams(window.location.search);
+      const igConnected = params.get('ig_connected');
+      const igError = params.get('ig_error');
 
       if (igConnected === 'true') {
         setStatus('success');
@@ -36,7 +35,7 @@ function OAuthCallbackContent() {
       setStatus('error');
       setErrorMessage('Erro inesperado ao processar a conexão.');
     }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -126,15 +125,5 @@ function OAuthCallbackContent() {
 }
 
 export default function OAuthCallbackPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-          <Loader2 size={40} className="text-purple-500 animate-spin" />
-        </div>
-      }
-    >
-      <OAuthCallbackContent />
-    </Suspense>
-  );
+  return <OAuthCallbackContent />;
 }
