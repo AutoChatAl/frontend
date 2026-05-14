@@ -19,6 +19,9 @@ export interface CommentAutomation {
   dmDocumentBase64?: string;
   dmDocumentMimeType?: string;
   dmDocumentName?: string;
+  dmAudioAttachmentId?: string;
+  dmImageAttachmentId?: string;
+  dmDocumentAttachmentId?: string;
   dmLinkUrl?: string;
   dmLinkLabel?: string;
   dmLinkDescription?: string;

@@ -151,23 +151,29 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('audio/')) {
-      setErrors((prev) => ({ ...prev, dmAudio: 'O arquivo deve ser um áudio.' }));
+    const lowerType = (file.type || '').toLowerCase();
+    const lowerName = (file.name || '').toLowerCase();
+    const isAcceptedMime = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/x-wav'].includes(lowerType);
+    const isAcceptedExt = /\.(mp3|m4a|wav|aac|mp4)$/i.test(lowerName);
+
+    if (!isAcceptedMime && !isAcceptedExt) {
+      setErrors((prev) => ({ ...prev, dmAudio: 'Formato não suportado pelo Instagram. Use MP3, M4A, AAC, WAV ou MP4.' }));
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, dmAudio: 'O áudio deve ter no máximo 5MB.' }));
+    if (file.size > 25 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmAudio: 'O áudio deve ter no máximo 25MB.' }));
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
+      const normalizedMime = isAcceptedMime ? lowerType : 'audio/mp4';
       setFormData((prev) => ({
         ...prev,
         dmAudioBase64: base64,
-        dmAudioMimeType: file.type,
+        dmAudioMimeType: normalizedMime,
       }));
       setAudioFileName(file.name);
       setErrors((prev) => ({ ...prev, dmAudio: '' }));
@@ -190,23 +196,29 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrors((prev) => ({ ...prev, dmImage: 'O arquivo deve ser uma imagem.' }));
+    const lowerType = (file.type || '').toLowerCase();
+    const lowerName = (file.name || '').toLowerCase();
+    const isAcceptedMime = ['image/png', 'image/jpeg', 'image/jpg'].includes(lowerType);
+    const isAcceptedExt = /\.(png|jpe?g)$/i.test(lowerName);
+
+    if (!isAcceptedMime && !isAcceptedExt) {
+      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ser PNG ou JPEG.' }));
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 2MB.' }));
+    if (file.size > 8 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 8MB.' }));
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
+      const normalizedMime = isAcceptedMime ? lowerType : 'image/jpeg';
       setFormData((prev) => ({
         ...prev,
         dmImageBase64: base64,
-        dmImageMimeType: file.type,
+        dmImageMimeType: normalizedMime,
       }));
       setImageFileName(file.name);
       setErrors((prev) => ({ ...prev, dmImage: '' }));
@@ -443,6 +455,16 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
                 </button>
               ))}
             </div>
+            {(dmReplyType === 'AUDIO' || dmReplyType === 'IMAGE' || dmReplyType === 'IMAGE_AND_AUDIO') && (
+              <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                    A mídia é entregue via <strong>Private Reply</strong> do Instagram diretamente pelo <strong>ID do comentário</strong>, então <strong>funciona mesmo se a pessoa nunca te mandou DM antes</strong> nem segue sua conta — desde que tenha comentado nos últimos 7 dias.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Text message */}
@@ -487,7 +509,7 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
               <input
                 ref={audioInputRef}
                 type="file"
-                accept="audio/*"
+                accept=".mp3,.m4a,.wav,.aac,.mp4,audio/mpeg,audio/mp4,audio/m4a,audio/x-m4a,audio/aac,audio/wav"
                 onChange={handleAudioUpload}
                 className="hidden"
               />
@@ -510,7 +532,7 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
                   className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
                 >
                   <Upload size={18} />
-                  <span className="text-sm font-medium">Clique para enviar um áudio (máx. 5MB)</span>
+                  <span className="text-sm font-medium">Clique para enviar um áudio (AAC, M4A, WAV, MP4 — máx. 25MB)</span>
                 </button>
               )}
               {errors.dmAudio && (
@@ -530,7 +552,7 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
               <input
                 ref={imageInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                 onChange={handleImageUpload}
                 className="hidden"
               />
@@ -553,7 +575,7 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
                   className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
                 >
                   <Upload size={18} />
-                  <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
+                  <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 8MB)</span>
                 </button>
               )}
               {errors.dmImage && (
