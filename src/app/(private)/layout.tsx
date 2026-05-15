@@ -54,7 +54,7 @@ export default function PrivateLayout({
   }
 
   const userName = user?.name || user?.email || '';
-  const userRole = user?.role === 'collaborator' ? 'Colaborador' : 'Admin';
+  const userRole = user?.role;
   const userInitials = userName
     .split(' ')
     .filter(Boolean)

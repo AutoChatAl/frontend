@@ -1,7 +1,5 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
   CardNumberElement,
@@ -10,6 +8,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -21,13 +20,19 @@ import {
   RefreshCw,
   User,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
-import Modal from './Modal';
-import Button from './Button';
 import { subscriptionService } from '@/services/subscription.service';
 import type { Plan } from '@/types/Subscription';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
+import Button from './Button';
+import Modal from './Modal';
+
+const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+if (process.env.NODE_ENV !== 'production' && !stripePublicKey) {
+  console.error('[PlanCheckoutModal] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not configured — card payments will fail.');
+}
+const stripePromise = loadStripe(stripePublicKey ?? '');
 
 type Step = 'personal' | 'card' | 'pix' | 'success';
 
@@ -44,6 +49,22 @@ function formatCPF(value: string) {
     .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
 }
 
+function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(digits[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(digits[10]);
+}
+
 function formatPhone(value: string) {
   return value
     .replace(/\D/g, '')
@@ -51,8 +72,6 @@ function formatPhone(value: string) {
     .replace(/(\d{2})(\d)/, '($1) $2')
     .replace(/(\d{5})(\d{1,4})$/, '$1-$2');
 }
-
-// ── Personal data step ────────────────────────────────────────────────
 
 interface PersonalFormProps {
   onNext: (data: { name: string; cpf: string; phone: string }) => void;
@@ -71,8 +90,7 @@ function PersonalForm({ onNext, plan, initialName = '', initialCpf = '', initial
   const validate = () => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = 'Nome obrigatório';
-    const cpfClean = cpf.replace(/\D/g, '');
-    if (cpfClean.length !== 11) e.cpf = 'CPF inválido';
+    if (!isValidCPF(cpf)) e.cpf = 'CPF inválido';
     const phoneClean = phone.replace(/\D/g, '');
     if (phoneClean.length < 10) e.phone = 'Telefone inválido';
     return e;
@@ -317,13 +335,18 @@ function PixStep({ plan, onDone }: PixStepProps) {
   const loadPixData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const data = await subscriptionService.createPixIntent(plan.slug);
-    if (data) {
-      setPixData({ qrCodeImageUrl: data.qrCodeImageUrl, qrCodeString: data.qrCodeString, expiresAt: data.expiresAt });
-    } else {
+    try {
+      const data = await subscriptionService.createPixIntent(plan.slug);
+      if (data) {
+        setPixData({ qrCodeImageUrl: data.qrCodeImageUrl, qrCodeString: data.qrCodeString, expiresAt: data.expiresAt });
+      } else {
+        setError('Não foi possível gerar o QR Code PIX.');
+      }
+    } catch {
       setError('Não foi possível gerar o QR Code PIX.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [plan.slug]);
 
   useEffect(() => { loadPixData(); }, [loadPixData]);

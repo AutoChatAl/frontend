@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+
 import { subscriptionService } from '@/services/subscription.service';
 import type { SubscriptionStatus_Full, UsageSummary, Plan, AiPlan } from '@/types/Subscription';
 
@@ -35,8 +36,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       ]);
       setStatus(s);
       setUsage(u);
-    } catch {
-      // Keep current state on error
+    } catch (err) {
+      // Handle error (optional: you might want to set an error state here)
+      console.error('Failed to refresh subscription data:', err);
     } finally {
       setLoading(false);
     }

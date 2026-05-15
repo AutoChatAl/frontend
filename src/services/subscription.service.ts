@@ -6,6 +6,7 @@ import type {
   SubscriptionStatus_Full,
   UsageSummary,
   Invoice,
+  UpcomingInvoice,
   EffectiveLimits,
 } from '@/types/Subscription';
 
@@ -67,6 +68,14 @@ class SubscriptionService {
       if (res.success && res.data) return res.data as Invoice[];
     } catch {}
     return [];
+  }
+
+  async getUpcomingInvoice(): Promise<UpcomingInvoice | null> {
+    try {
+      const res = await apiClient.get<UpcomingInvoice>('/subscription/upcoming-invoice');
+      if (res.success && res.data) return res.data as UpcomingInvoice;
+    } catch {}
+    return null;
   }
 
   async createCheckoutSession(planSlug: string, successUrl: string, cancelUrl: string): Promise<string | null> {

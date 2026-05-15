@@ -29,7 +29,7 @@ import PlanCheckoutModal from '@/components/PlanCheckoutModal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
-import type { Plan, AiPlan, Invoice } from '@/types/Subscription';
+import type { Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
 
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -46,6 +46,7 @@ export default function BillingTab() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [upcomingInvoice, setUpcomingInvoice] = useState<UpcomingInvoice | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
@@ -58,6 +59,7 @@ export default function BillingTab() {
 
   useEffect(() => {
     subscriptionService.getInvoices().then(setInvoices).catch(() => {});
+    subscriptionService.getUpcomingInvoice().then(setUpcomingInvoice).catch(() => {});
     Promise.all([subscriptionService.getPlans(), subscriptionService.getAiPlans()])
       .then(([p, a]) => { setPlans(p); setAiPlans(a); })
       .catch(() => {});
@@ -65,23 +67,21 @@ export default function BillingTab() {
 
   const handleChangePlan = async (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
-    if (hasActiveSub) {
+    if (hasActiveSub && !isTrialing) {
       setLoading(true);
-      const result = await subscriptionService.changePlan(selectedPlan.slug);
-      if (result.success) {
-        await refresh();
-        setShowPlanModal(false);
-      } else {
-        setShowPlanModal(false);
-        setPixFallback({
-          fetchData: async () => {
-            const d = await subscriptionService.createPixIntent(selectedPlan.slug);
-            if (!d) return null;
-            return { ...d, description: d.planName };
-          },
-        });
+      try {
+        const result = await subscriptionService.changePlan(selectedPlan.slug);
+        if (result.success) {
+          await refresh();
+          setShowPlanModal(false);
+        } else {
+          addToast('error', result.error ?? 'Erro ao alterar plano.');
+        }
+      } catch (err: any) {
+        addToast('error', err?.message ?? 'Erro ao alterar plano.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     } else {
       setCheckoutPlan(selectedPlan);
       setShowPlanModal(false);
@@ -91,15 +91,20 @@ export default function BillingTab() {
 
   const handleAddExtra = async (type: 'instance' | 'collaborator') => {
     setLoading(true);
-    const result = type === 'instance'
-      ? await subscriptionService.addExtraInstance()
-      : await subscriptionService.addExtraCollaborator();
-    if (result.success) {
-      await refresh();
-    } else {
-      setPixFallback({ fetchData: () => subscriptionService.createPixIntentForExtra(type) });
+    try {
+      const result = type === 'instance'
+        ? await subscriptionService.addExtraInstance()
+        : await subscriptionService.addExtraCollaborator();
+      if (result.success) {
+        await refresh();
+      } else {
+        setPixFallback({ fetchData: () => subscriptionService.createPixIntentForExtra(type) });
+      }
+    } catch (err: any) {
+      addToast('error', err?.message ?? 'Erro ao adicionar recurso extra.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRemoveExtra = async (type: 'instance' | 'collaborator') => {
@@ -286,11 +291,29 @@ export default function BillingTab() {
       {/* Invoice History */}
       <Card className="p-4 sm:p-6">
         <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">Histórico de Faturas</h3>
-        {invoices.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Nenhuma fatura encontrada</p>
-        ) : (
-          <div className="space-y-2">
-            {invoices.map((inv) => (
+        <div className="space-y-2">
+          {upcomingInvoice && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300">
+                  <CreditCard size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-white">Próxima cobrança</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {upcomingInvoice.date ? new Date(upcomingInvoice.date).toLocaleDateString('pt-BR') : '—'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 ml-11 sm:ml-0">
+                {formatBRL(upcomingInvoice.amountCents)}
+              </span>
+            </div>
+          )}
+          {invoices.length === 0 && !upcomingInvoice ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Nenhuma fatura encontrada</p>
+          ) : (
+            invoices.map((inv) => (
               <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${inv.status === 'paid' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>
@@ -314,9 +337,9 @@ export default function BillingTab() {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </Card>
 
       {/* Manage Subscription Modal */}

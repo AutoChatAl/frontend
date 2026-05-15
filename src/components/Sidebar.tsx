@@ -64,6 +64,7 @@ function getReadableRole(role?: string): string {
   if (normalized === 'admin') return 'Administrador';
   if (normalized === 'owner') return 'Usuário';
   if (normalized === 'member') return 'Usuário';
+  if (normalized === 'collaborator') return 'Colaborador';
   return role || 'Usuário';
 }
 

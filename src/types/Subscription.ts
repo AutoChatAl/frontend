@@ -134,3 +134,8 @@ export interface Invoice {
   pdfUrl: string | null;
   hostedUrl: string | null;
 }
+
+export interface UpcomingInvoice {
+  amountCents: number;
+  date: string | null;
+}
