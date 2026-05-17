@@ -36,7 +36,6 @@ export default function SyncContactsModal({
 
     try {
       setSyncing(true);
-      setError(null);
 
       const result = await contactService.syncContacts(selectedChannelId);
       setSelectedChannelId('');

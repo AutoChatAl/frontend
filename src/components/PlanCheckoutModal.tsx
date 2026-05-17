@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   Elements,
@@ -27,7 +27,7 @@ import { useToast, ToastContainer } from './Toast';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 if (process.env.NODE_ENV !== 'production' && !stripePublicKey) {
-  console.error('[PlanCheckoutModal] NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not configured — card payments will fail.');
+  console.warn('Stripe public key is not set. Please define NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your environment variables.');
 }
 const stripePromise = loadStripe(stripePublicKey ?? '');
 
@@ -51,15 +51,15 @@ function isValidCPF(cpf: string): boolean {
   if (digits.length !== 11) return false;
   if (/^(\d)\1{10}$/.test(digits)) return false;
   let sum = 0;
-  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+  for (let i = 0; i < 9; i++) sum += parseInt(digits.charAt(i), 10) * (10 - i);
   let rem = (sum * 10) % 11;
-  if (rem === 10 || rem === 11) rem = 0;
-  if (rem !== parseInt(digits[9])) return false;
+  if (rem === 10) rem = 0;
+  if (rem !== parseInt(digits.charAt(9), 10)) return false;
   sum = 0;
-  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+  for (let i = 0; i < 10; i++) sum += parseInt(digits.charAt(i), 10) * (11 - i);
   rem = (sum * 10) % 11;
-  if (rem === 10 || rem === 11) rem = 0;
-  return rem === parseInt(digits[10]);
+  if (rem === 10) rem = 0;
+  return rem === parseInt(digits.charAt(10), 10);
 }
 
 function formatPhone(value: string) {
@@ -161,8 +161,6 @@ function PersonalForm({ onNext, plan, initialName = '', initialCpf = '', initial
   );
 }
 
-// ── Card payment step ─────────────────────────────────────────────────
-
 interface CardFormProps {
   plan: Plan;
   personal: { name: string; cpf: string; phone: string };
@@ -202,8 +200,8 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
     let result: { success: boolean; requiresAction?: boolean; clientSecret?: string } | null = null;
     try {
       result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal);
-    } catch (err: any) {
-      addToast('error', err?.message ?? 'Pagamento recusado.');
+    } catch (err: unknown) {
+      addToast('error', err instanceof Error ? err.message : 'Pagamento recusado.');
       setLoading(false);
       return;
     }
@@ -215,7 +213,6 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
     }
 
     if (result.requiresAction && result.clientSecret) {
-      // Handle 3D Secure
       const { error: confirmError } = await stripe.confirmCardPayment(result.clientSecret);
       if (confirmError) {
         addToast('error', confirmError.message ?? 'Autenticação do cartão falhou.');

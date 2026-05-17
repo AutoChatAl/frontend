@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
   CardNumberElement,
@@ -10,10 +8,14 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { CreditCard, Lock } from 'lucide-react';
-import Modal from './Modal';
-import Button from './Button';
+import { useState } from 'react';
+
 import { subscriptionService } from '@/services/subscription.service';
+
+import Button from './Button';
+import Modal from './Modal';
 import { useToast, ToastContainer } from './Toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
