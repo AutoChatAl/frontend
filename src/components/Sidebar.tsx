@@ -256,7 +256,7 @@ export default function Sidebar({
                 <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{planName}</span>
                 {isTrialing && (
                   <span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
-                    Trial {trialDaysRemaining}d
+                    Período de Teste
                   </span>
                 )}
               </div>
