@@ -24,7 +24,6 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import CardPaymentModal from '@/components/CardPaymentModal';
 import Modal from '@/components/Modal';
-import PixFallbackModal, { type PixFallbackData } from '@/components/PixFallbackModal';
 import PlanCheckoutModal from '@/components/PlanCheckoutModal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -55,7 +54,7 @@ export default function BillingTab() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pixFallback, setPixFallback] = useState<{ fetchData: () => Promise<PixFallbackData | null> } | null>(null);
+
 
   useEffect(() => {
     subscriptionService.getInvoices().then(setInvoices).catch(() => {});
@@ -98,7 +97,7 @@ export default function BillingTab() {
       if (result.success) {
         await refresh();
       } else {
-        setPixFallback({ fetchData: () => subscriptionService.createPixIntentForExtra(type) });
+        addToast('error', result.error ?? 'Erro ao adicionar recurso extra.');
       }
     } catch (err: any) {
       addToast('error', err?.message ?? 'Erro ao adicionar recurso extra.');
@@ -503,13 +502,6 @@ export default function BillingTab() {
           onSuccess={() => refresh()}
         />
       )}
-
-      <PixFallbackModal
-        isOpen={!!pixFallback}
-        onClose={() => setPixFallback(null)}
-        onSuccess={() => { setPixFallback(null); refresh(); }}
-        fetchData={pixFallback?.fetchData ?? (async () => null)}
-      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

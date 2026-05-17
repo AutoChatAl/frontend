@@ -12,21 +12,18 @@ import { loadStripe } from '@stripe/stripe-js';
 import {
   ArrowLeft,
   CheckCircle2,
-  Clock,
-  Copy,
   CreditCard,
   Lock,
-  QrCode,
-  RefreshCw,
   User,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { subscriptionService } from '@/services/subscription.service';
 import type { Plan } from '@/types/Subscription';
 
 import Button from './Button';
 import Modal from './Modal';
+import { useToast, ToastContainer } from './Toast';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 if (process.env.NODE_ENV !== 'production' && !stripePublicKey) {
@@ -34,7 +31,7 @@ if (process.env.NODE_ENV !== 'production' && !stripePublicKey) {
 }
 const stripePromise = loadStripe(stripePublicKey ?? '');
 
-type Step = 'personal' | 'card' | 'pix' | 'success';
+type Step = 'personal' | 'card' | 'success';
 
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -170,24 +167,20 @@ interface CardFormProps {
   plan: Plan;
   personal: { name: string; cpf: string; phone: string };
   onSuccess: () => void;
-  onPixFallback: () => void;
   onBack: () => void;
 }
 
-function CardForm({ plan, personal, onSuccess, onPixFallback, onBack }: CardFormProps) {
+function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [cardDeclined, setCardDeclined] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
 
     setLoading(true);
-    setError(null);
-    setCardDeclined(false);
 
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) { setLoading(false); return; }
@@ -200,7 +193,7 @@ function CardForm({ plan, personal, onSuccess, onPixFallback, onBack }: CardForm
     });
 
     if (pmError) {
-      setError(pmError.message ?? 'Erro ao processar cartão.');
+      addToast('error', pmError.message ?? 'Erro ao processar cartão.');
       setLoading(false);
       return;
     }
@@ -210,16 +203,13 @@ function CardForm({ plan, personal, onSuccess, onPixFallback, onBack }: CardForm
     try {
       result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal);
     } catch (err: any) {
-      const msg = err?.message ?? 'Pagamento recusado.';
-      setError(msg);
-      setCardDeclined(true);
+      addToast('error', err?.message ?? 'Pagamento recusado.');
       setLoading(false);
       return;
     }
 
     if (!result) {
-      setError('Erro ao processar pagamento. Tente novamente.');
-      setCardDeclined(true);
+      addToast('error', 'Erro ao processar pagamento. Tente novamente.');
       setLoading(false);
       return;
     }
@@ -228,8 +218,7 @@ function CardForm({ plan, personal, onSuccess, onPixFallback, onBack }: CardForm
       // Handle 3D Secure
       const { error: confirmError } = await stripe.confirmCardPayment(result.clientSecret);
       if (confirmError) {
-        setError(confirmError.message ?? 'Autenticação do cartão falhou.');
-        setCardDeclined(true);
+        addToast('error', confirmError.message ?? 'Autenticação do cartão falhou.');
         setLoading(false);
         return;
       }
@@ -290,176 +279,12 @@ function CardForm({ plan, personal, onSuccess, onPixFallback, onBack }: CardForm
         </div>
       </div>
 
-      {error && (
-        <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2">
-          {error}
-        </div>
-      )}
-
       <Button type="submit" className="w-full justify-center" disabled={loading || !stripe}>
         <CreditCard size={16} className="mr-1" />
         {loading ? 'Processando...' : `Pagar ${formatBRL(plan.priceCents)}/mês`}
       </Button>
-
-      {cardDeclined && (
-        <button
-          type="button"
-          onClick={onPixFallback}
-          className="w-full text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline pt-1"
-        >
-          Pagar com PIX em vez disso
-        </button>
-      )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </form>
-  );
-}
-
-// ── PIX payment step ──────────────────────────────────────────────────
-
-interface PixStepProps {
-  plan: Plan;
-  onDone: () => void;
-}
-
-function PixStep({ plan, onDone }: PixStepProps) {
-  const [pixData, setPixData] = useState<{
-    qrCodeImageUrl: string | null;
-    qrCodeString: string | null;
-    expiresAt: string | null;
-  } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState('');
-
-  const loadPixData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await subscriptionService.createPixIntent(plan.slug);
-      if (data) {
-        setPixData({ qrCodeImageUrl: data.qrCodeImageUrl, qrCodeString: data.qrCodeString, expiresAt: data.expiresAt });
-      } else {
-        setError('Não foi possível gerar o QR Code PIX.');
-      }
-    } catch {
-      setError('Não foi possível gerar o QR Code PIX.');
-    } finally {
-      setLoading(false);
-    }
-  }, [plan.slug]);
-
-  useEffect(() => { loadPixData(); }, [loadPixData]);
-
-  useEffect(() => {
-    if (!pixData?.expiresAt) return;
-    const tick = () => {
-      const diff = new Date(pixData.expiresAt!).getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft('Expirado'); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [pixData?.expiresAt]);
-
-  const handleCopy = async () => {
-    if (!pixData?.qrCodeString) return;
-    await navigator.clipboard.writeText(pixData.qrCodeString);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-        <div>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wide">Pagar via PIX</p>
-          <p className="text-sm font-semibold text-slate-800 dark:text-white">{plan.name}</p>
-        </div>
-        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-          {formatBRL(plan.priceCents)}<span className="text-xs font-normal text-slate-500">/mês</span>
-        </span>
-      </div>
-
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-10 gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Gerando QR Code...</p>
-        </div>
-      )}
-
-      {error && !loading && (
-        <div className="text-center py-6 space-y-3">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          <Button size="sm" variant="secondary" onClick={loadPixData}>
-            <RefreshCw size={14} className="mr-1" /> Tentar novamente
-          </Button>
-        </div>
-      )}
-
-      {pixData && !loading && (
-        <>
-          <div className="flex flex-col items-center gap-3">
-            {pixData.qrCodeImageUrl ? (
-              <div className="p-3 bg-white rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={pixData.qrCodeImageUrl} alt="QR Code PIX" className="w-44 h-44 object-contain" />
-              </div>
-            ) : (
-              <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2">
-                <QrCode size={72} className="text-slate-400" />
-                <p className="text-xs text-slate-500">Use o código copia e cola abaixo</p>
-              </div>
-            )}
-
-            {timeLeft && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                <Clock size={12} />
-                <span>Expira em: <strong>{timeLeft}</strong></span>
-              </div>
-            )}
-          </div>
-
-          {pixData.qrCodeString && (
-            <div>
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Código PIX copia e cola:</p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={pixData.qrCodeString}
-                  className="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 truncate font-mono"
-                />
-                <button
-                  onClick={handleCopy}
-                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 shrink-0"
-                  title="Copiar código"
-                >
-                  {copied ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 space-y-1.5">
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Como pagar:</p>
-            <ol className="text-xs text-slate-500 dark:text-slate-400 space-y-1 list-none">
-              <li>1. Abra o app do seu banco</li>
-              <li>2. Escolha pagar com PIX</li>
-              <li>3. Escaneie o QR Code ou use o código copia e cola</li>
-              <li>4. Confirme o pagamento — ativação é automática</li>
-            </ol>
-          </div>
-        </>
-      )}
-
-      <Button className="w-full justify-center" onClick={onDone}>
-        <CheckCircle2 size={16} className="mr-1" /> Já paguei
-      </Button>
-    </div>
   );
 }
 
@@ -496,7 +321,6 @@ export default function PlanCheckoutModal({ isOpen, onClose, plan, onSuccess, in
   const stepTitle: Record<Step, string> = {
     personal: 'Seus dados',
     card: 'Pagamento com cartão',
-    pix: 'Pagar com PIX',
     success: 'Pagamento confirmado!',
   };
 
@@ -517,18 +341,15 @@ export default function PlanCheckoutModal({ isOpen, onClose, plan, onSuccess, in
           initialPhone={personal.phone}
           onNext={(data) => { setPersonal(data); setStep('card'); }}
         />
-      ) : step === 'card' ? (
+      ) : (
         <Elements stripe={stripePromise}>
           <CardForm
             plan={plan}
             personal={personal}
             onSuccess={handleSuccess}
-            onPixFallback={() => setStep('pix')}
             onBack={() => setStep('personal')}
           />
         </Elements>
-      ) : (
-        <PixStep plan={plan} onDone={handleSuccess} />
       )}
     </Modal>
   );

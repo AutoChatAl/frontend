@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 'use client';
 
-import { AlertCircle, Check, Loader2, Plus, Save, Tag, Trash2, X } from 'lucide-react';
+import { Check, Loader2, Plus, Save, Tag, Trash2, X } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
 import Modal from '@/components/Modal';
+import { useToast, ToastContainer } from '@/components/Toast';
 import { contactService } from '@/services/contact.service';
 import { tagService, type Tag as TagType } from '@/services/tag.service';
 import type { Contact } from '@/types/Contact';
@@ -19,7 +20,7 @@ interface EditContactModalProps {
 export default function EditContactModal({ isOpen, contact, onClose, onSuccess }: EditContactModalProps) {
   const [loading, setLoading] = useState(false);
   const [loadingTags, setLoadingTags] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
   const [displayName, setDisplayName] = useState('');
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [allTags, setAllTags] = useState<TagType[]>([]);
@@ -44,7 +45,6 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
       loadTags();
       setDisplayName(contact.displayName || '');
       setSelectedTagId(contact.tags?.[0]?.tagId ?? null);
-      setError(null);
       setNewTagName('');
       setShowNewTagInput(false);
     }
@@ -54,7 +54,6 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
     if (!contact) return;
     try {
       setLoading(true);
-      setError(null);
       await contactService.updateContact(contact.id, {
         ...(displayName.trim() ? { displayName: displayName.trim() } : {}),
         tagIds: selectedTagId ? [selectedTagId] : [],
@@ -63,7 +62,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
       handleClose();
     } catch (err) {
       console.error('Erro ao atualizar contato:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar contato.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar contato.');
     } finally {
       setLoading(false);
     }
@@ -81,7 +80,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
       setShowNewTagInput(false);
     } catch (err) {
       console.error('Erro ao criar tag:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao criar tag.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao criar tag.');
     } finally {
       setCreatingTag(false);
     }
@@ -120,15 +119,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
         </div>
       ) : (
         <div className="space-y-6">
-          {error && (
-            <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</p>
-              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 shrink-0">
-                <X size={15} />
-              </button>
-            </div>
-          )}
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
 
           <section>
             <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">

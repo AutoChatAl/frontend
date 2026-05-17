@@ -14,6 +14,7 @@ import { CreditCard, Lock } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
 import { subscriptionService } from '@/services/subscription.service';
+import { useToast, ToastContainer } from './Toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
 
@@ -22,14 +23,13 @@ function CardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
 
     setLoading(true);
-    setError(null);
 
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) { setLoading(false); return; }
@@ -41,7 +41,7 @@ function CardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
     });
 
     if (pmError) {
-      setError(pmError.message ?? 'Erro ao processar cartão.');
+      addToast('error', pmError.message ?? 'Erro ao processar cartão.');
       setLoading(false);
       return;
     }
@@ -49,7 +49,7 @@ function CardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
     // Confirm with SetupIntent
     const clientSecret = await subscriptionService.createSetupIntent();
     if (!clientSecret) {
-      setError('Erro ao criar setup intent. Tente novamente.');
+      addToast('error', 'Erro ao criar setup intent. Tente novamente.');
       setLoading(false);
       return;
     }
@@ -59,7 +59,7 @@ function CardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
     });
 
     if (confirmError) {
-      setError(confirmError.message ?? 'Erro ao confirmar cartão.');
+      addToast('error', confirmError.message ?? 'Erro ao confirmar cartão.');
       setLoading(false);
       return;
     }
@@ -120,12 +120,7 @@ function CardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: ()
         </div>
       </div>
 
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2">
-          {error}
-        </p>
-      )}
-
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="flex gap-3 pt-2">
         <Button type="button" variant="secondary" className="flex-1 justify-center" onClick={onCancel} disabled={loading}>
           Cancelar
