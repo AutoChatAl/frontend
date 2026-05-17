@@ -40,7 +40,7 @@ function formatNumber(n: number) {
 }
 
 export default function BillingTab() {
-  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, refresh } = useSubscription();
+  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
@@ -499,7 +499,12 @@ export default function BillingTab() {
             cpf: sub?.customerCpf ?? '',
             phone: sub?.customerPhone ?? '',
           }}
-          onSuccess={() => refresh()}
+          onSuccess={async () => {
+            await refreshAfterPurchase({
+              expectPlanId: checkoutPlan.id,
+              expectActive: true,
+            });
+          }}
         />
       )}
 

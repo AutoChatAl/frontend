@@ -291,7 +291,7 @@ interface PlanCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   plan: Plan;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
   initialPersonal?: { name?: string; cpf?: string; phone?: string };
 }
 
@@ -309,9 +309,13 @@ export default function PlanCheckoutModal({ isOpen, onClose, plan, onSuccess, in
     onClose();
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     setStep('success');
-    onSuccess();
+    try {
+      await onSuccess();
+    } catch (err) {
+      console.error('Subscription refresh after purchase failed:', err);
+    }
     setTimeout(handleClose, 2000);
   };
 

@@ -10,14 +10,17 @@ import { subscriptionService } from '@/services/subscription.service';
 
 export default function PlansSuccessPage() {
   const router = useRouter();
-  const { refresh } = useSubscription();
+  const { refreshAfterPurchase } = useSubscription();
 
   useEffect(() => {
+    // The user just came back from Stripe Checkout. Poll our /status endpoint
+    // until the webhook has marked the plan active and cleared trialEnd before
+    // letting them land on /dashboard with stale subscription state.
     subscriptionService.clearCache();
-    refresh();
+    refreshAfterPurchase({ expectActive: true, tries: 8 });
     const timer = setTimeout(() => router.push('/dashboard'), 5000);
     return () => clearTimeout(timer);
-  }, [refresh, router]);
+  }, [refreshAfterPurchase, router]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">

@@ -10,6 +10,12 @@ interface SubscriptionContextType {
   usage: UsageSummary | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  /**
+   * Used after a paid subscription action. Polls /status until the plan id or
+   * trial flag change, then updates state. This protects against the brief
+   * window where the Stripe webhook hasn't reflected the new plan yet.
+   */
+  refreshAfterPurchase: (opts?: { expectPlanId?: string; expectActive?: boolean; tries?: number }) => Promise<void>;
   // Derived
   isTrialing: boolean;
   trialDaysRemaining: number;
@@ -44,6 +50,37 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshAfterPurchase = useCallback(
+    async (opts?: { expectPlanId?: string; expectActive?: boolean; tries?: number }) => {
+      const maxTries = opts?.tries ?? 5;
+      const delay = 600;
+      for (let i = 0; i < maxTries; i++) {
+        subscriptionService.clearCache();
+        try {
+          const [s, u] = await Promise.all([
+            subscriptionService.getStatus(),
+            subscriptionService.getUsage(),
+          ]);
+          setStatus(s);
+          setUsage(u);
+          const sub = s?.subscription;
+          const trialActive = !!(sub?.trialEnd && new Date(sub.trialEnd) > new Date());
+          const planMatches = opts?.expectPlanId ? sub?.planId === opts.expectPlanId : true;
+          const activeMatches = opts?.expectActive ? sub?.status === 'active' && !trialActive : true;
+          if (planMatches && activeMatches) {
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to refresh subscription data:', err);
+        }
+        await new Promise((r) => setTimeout(r, delay));
+      }
+      setLoading(false);
+    },
+    [],
+  );
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -71,8 +108,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }, [status]);
 
   const value = useMemo(
-    () => ({ status, usage, loading, refresh, ...derived }),
-    [status, usage, loading, refresh, derived],
+    () => ({ status, usage, loading, refresh, refreshAfterPurchase, ...derived }),
+    [status, usage, loading, refresh, refreshAfterPurchase, derived],
   );
 
   return (

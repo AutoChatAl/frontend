@@ -33,7 +33,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 export default function PlansPage() {
-  const { status, isTrialing, refresh } = useSubscription();
+  const { status, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
@@ -165,7 +165,14 @@ export default function PlansPage() {
             cpf: status?.subscription?.customerCpf ?? '',
             phone: status?.subscription?.customerPhone ?? '',
           }}
-          onSuccess={() => refresh()}
+          onSuccess={async () => {
+            // Poll for the new plan id / cleared trial so the UI shows the new plan
+            // even before the Stripe webhook lands.
+            await refreshAfterPurchase({
+              expectPlanId: selectedPlan.id,
+              expectActive: true,
+            });
+          }}
         />
       )}
 
