@@ -19,6 +19,7 @@ interface SubscriptionContextType {
   // Derived
   isTrialing: boolean;
   trialDaysRemaining: number;
+  trialEnd: string | null;
   planName: string;
   hasAiPlan: boolean;
   isActive: boolean;
@@ -99,6 +100,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     return {
       isTrialing,
       trialDaysRemaining,
+      trialEnd: sub?.trialEnd ?? null,
       planName: status?.plan?.name ?? 'Sem plano',
       hasAiPlan: !!status?.aiPlan || !!status?.plan?.aiIncluded,
       isActive,

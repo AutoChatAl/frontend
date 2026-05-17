@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 export default function TrialBanner() {
-  const { isTrialing, trialDaysRemaining } = useSubscription();
+  const { isTrialing, trialDaysRemaining, trialEnd } = useSubscription();
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return sessionStorage.getItem('trial_banner_dismissed') === 'true';
@@ -30,7 +30,10 @@ export default function TrialBanner() {
       <div className="flex items-center gap-2 min-w-0">
         <Clock size={16} className="shrink-0" />
         <span className="text-sm font-medium truncate">
-          Seu período de teste termina em {trialDaysRemaining} {trialDaysRemaining === 1 ? 'dia' : 'dias'}
+          Seu período de teste termina em{' '}
+          {trialEnd
+            ? new Date(trialEnd).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : `${trialDaysRemaining} ${trialDaysRemaining === 1 ? 'dia' : 'dias'}`}
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">

@@ -187,7 +187,7 @@ export default function BillingTab() {
               {planName}
               {isTrialing && (
                 <span className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
-                  Trial
+                  Período de Teste
                 </span>
               )}
             </h3>
