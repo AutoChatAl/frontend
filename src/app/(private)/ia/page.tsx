@@ -6,6 +6,8 @@ import { useState } from 'react';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { useAIConfig } from '@/hooks/AIHooks';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import AiPlanGate from './components/AiPlanGate';
 
 import AIChannelsList from './components/AIChannelsList';
 import AIIdentitySection from './components/AIIdentitySection';
@@ -15,6 +17,7 @@ import AISchedulingSection from './components/AISchedulingSection';
 import AITabs from './components/AITabs';
 
 export default function IAPage() {
+  const { hasAiPlan, loading: subLoading } = useSubscription();
   const [activeTab, setActiveTab] = useState('general');
   const {
     segment,
@@ -48,8 +51,12 @@ export default function IAPage() {
     visibleTabs,
   } = useAIConfig();
 
-  if (loading) {
+  if (subLoading || loading) {
     return <PageLoader message="Carregando configurações de IA" />;
+  }
+
+  if (!hasAiPlan) {
+    return <AiPlanGate />;
   }
 
   return (

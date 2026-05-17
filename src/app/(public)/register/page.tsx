@@ -44,7 +44,7 @@ export default function RegisterPage() {
 
     try {
       await authService.register(formData);
-      router.push('/campaigns');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
     } finally {

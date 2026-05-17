@@ -1,15 +1,14 @@
 'use client';
 
 import {
-  AlertTriangle,
   MessageCircle,
   RefreshCw,
-  X,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import Modal from '@/components/Modal';
 import ModalActions from '@/components/ModalActions';
+import { useToast, ToastContainer } from '@/components/Toast';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 
@@ -28,7 +27,7 @@ export default function SyncContactsModal({
 }: SyncContactsModalProps) {
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
 
   const connectedWA = whatsappChannels.filter((ch) => ch.status === 'CONNECTED');
 
@@ -37,15 +36,13 @@ export default function SyncContactsModal({
 
     try {
       setSyncing(true);
-      setError(null);
 
       const result = await contactService.syncContacts(selectedChannelId);
       setSelectedChannelId('');
-      setError(null);
       onClose();
       onSuccess({ created: result.created, updated: result.updated });
     } catch (err) {
-      setError(
+      addToast('error',
         err instanceof Error
           ? err.message
           : 'Não foi possível sincronizar os contatos. Verifique se o canal está conectado e tente novamente.',
@@ -58,26 +55,13 @@ export default function SyncContactsModal({
   const handleClose = () => {
     if (syncing) return;
     setSelectedChannelId('');
-    setError(null);
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Sincronizar Contatos" size="sm">
       <div className="space-y-5">
-        {error && (
-          <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 dark:text-red-400 flex-1">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-600 shrink-0"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        )}
-
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
         <div>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
             Selecione o canal WhatsApp para importar contatos

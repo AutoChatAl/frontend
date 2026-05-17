@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
+import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 import type { WhatsappConnectResponse } from '@/types/Channel';
 
@@ -30,7 +31,7 @@ export default function WhatsAppCreateModal({
   const [phone, setPhone] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, addToast, removeToast } = useToast();
   const createdChannelId = useRef<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
@@ -44,7 +45,6 @@ export default function WhatsAppCreateModal({
         setPhone('');
         setQrCode(null);
         setPairingCode(null);
-        setError(null);
         createdChannelId.current = null;
       }, 300);
     }
@@ -74,13 +74,12 @@ export default function WhatsAppCreateModal({
     e.preventDefault();
 
     if (!name.trim()) {
-      setError('Por favor, insira um nome para a instância');
+      addToast('error', 'Por favor, insira um nome para a instância');
       return;
     }
 
     try {
       setState('creating');
-      setError(null);
 
       const response = await onCreate({
         name: name.trim(),
@@ -105,11 +104,11 @@ export default function WhatsAppCreateModal({
           setState('connected');
         }
       } else {
-        setError('Erro ao obter código de conexão');
+        addToast('error', 'Erro ao obter código de conexão');
         setState('form');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro inesperado, tente novamente mais tarde.');
+      addToast('error', err instanceof Error ? err.message : 'Ocorreu um erro inesperado, tente novamente mais tarde.');
       setState('form');
     }
   };
@@ -145,12 +144,7 @@ export default function WhatsAppCreateModal({
             </div>
           </div>
 
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
-            </div>
-          )}
-
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
           <div className="flex gap-3 pt-6">
             <Button type="button" onClick={onClose} variant="secondary" className="flex-1 justify-center">
                 Cancelar
@@ -251,11 +245,6 @@ export default function WhatsAppCreateModal({
             </div>
           )}
 
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 rounded-lg w-full mt-4">
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
-            </div>
-          )}
         </div>
       );
 

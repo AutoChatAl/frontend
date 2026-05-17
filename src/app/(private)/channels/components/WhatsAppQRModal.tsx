@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
+import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 import type { WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
 
@@ -28,8 +29,9 @@ export default function WhatsAppQRModal({
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function WhatsAppQRModal({
   const loadQRCode = async () => {
     try {
       setLoading(true);
-      setError(null);
+      setFailed(false);
       const response = await onGetQRCode(channelId);
 
       if (response.ok) {
@@ -83,10 +85,12 @@ export default function WhatsAppQRModal({
         const status = response.raw?.instance?.status || response.raw?.status;
         setIsConnected(status === 'open');
       } else {
-        setError('Erro ao obter QR Code');
+        addToast('error', 'Erro ao obter QR Code');
+        setFailed(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao obter QR Code');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao obter QR Code');
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -138,16 +142,14 @@ export default function WhatsAppQRModal({
           </div>
         ) : (
           <>
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
             {loading ? (
               <div className="flex flex-col items-center justify-center py-10">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500" />
                 <p className="text-gray-600 dark:text-gray-400 mt-4 text-sm font-medium">Carregando...</p>
               </div>
-            ) : error ? (
+            ) : failed ? (
               <div className="text-center py-8">
-                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 rounded-lg p-4 mb-4">
-                  <p className="text-red-600 dark:text-red-400 font-medium">{error}</p>
-                </div>
                 <Button onClick={handleRefresh} variant="primary">
                   Tentar Novamente
                 </Button>
