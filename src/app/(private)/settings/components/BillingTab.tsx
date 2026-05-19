@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   CreditCard,
   BarChart2,
+  Loader2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -54,7 +55,10 @@ export default function BillingTab() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const [loadingExtra, setLoadingExtra] = useState<null | 'instance' | 'collaborator'>(null);
+  const [confirmExtra, setConfirmExtra] = useState<{ type: 'instance' | 'collaborator' } | null>(null);
+  const [confirmPlanChange, setConfirmPlanChange] = useState<Plan | null>(null);
+  const [confirmAiPlan, setConfirmAiPlan] = useState<AiPlan | null>(null);
 
   useEffect(() => {
     subscriptionService.getInvoices().then(setInvoices).catch(() => {});
@@ -64,23 +68,11 @@ export default function BillingTab() {
       .catch(() => {});
   }, []);
 
-  const handleChangePlan = async (selectedPlan: Plan) => {
+  const handleChangePlan = (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
     if (hasActiveSub && !isTrialing) {
-      setLoading(true);
-      try {
-        const result = await subscriptionService.changePlan(selectedPlan.slug);
-        if (result.success) {
-          await refresh();
-          setShowPlanModal(false);
-        } else {
-          addToast('error', result.error ?? 'Erro ao alterar plano.');
-        }
-      } catch (err: any) {
-        addToast('error', err?.message ?? 'Erro ao alterar plano.');
-      } finally {
-        setLoading(false);
-      }
+      setShowPlanModal(false);
+      setConfirmPlanChange(selectedPlan);
     } else {
       setCheckoutPlan(selectedPlan);
       setShowPlanModal(false);
@@ -88,43 +80,76 @@ export default function BillingTab() {
     }
   };
 
-  const handleAddExtra = async (type: 'instance' | 'collaborator') => {
+  const handleConfirmPlanChange = async () => {
+    if (!confirmPlanChange) return;
     setLoading(true);
+    try {
+      const result = await subscriptionService.changePlan(confirmPlanChange.slug);
+      if (result.success) {
+        await refresh();
+        setConfirmPlanChange(null);
+        addToast('success', `Plano alterado para ${confirmPlanChange.name} com sucesso!`);
+      } else {
+        addToast('error', result.error ?? 'Erro ao alterar plano.');
+      }
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao alterar plano.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddExtra = async (type: 'instance' | 'collaborator') => {
+    setLoadingExtra(type);
     try {
       const result = type === 'instance'
         ? await subscriptionService.addExtraInstance()
         : await subscriptionService.addExtraCollaborator();
       if (result.success) {
         await refresh();
+        addToast('success', type === 'instance' ? 'Instância extra adicionada com sucesso!' : 'Colaborador extra adicionado com sucesso!');
       } else {
         addToast('error', result.error ?? 'Erro ao adicionar recurso extra.');
       }
-    } catch (err: any) {
-      addToast('error', err?.message ?? 'Erro ao adicionar recurso extra.');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao adicionar recurso extra.');
     } finally {
-      setLoading(false);
+      setLoadingExtra(null);
     }
   };
 
   const handleRemoveExtra = async (type: 'instance' | 'collaborator') => {
-    setLoading(true);
-    const result = type === 'instance'
-      ? await subscriptionService.removeExtraInstance()
-      : await subscriptionService.removeExtraCollaborator();
-    if (result.success) {
-      await refresh();
-    } else {
-      addToast('error', result.error ?? 'Erro ao remover recurso extra.');
+    setLoadingExtra(type);
+    try {
+      const result = type === 'instance'
+        ? await subscriptionService.removeExtraInstance()
+        : await subscriptionService.removeExtraCollaborator();
+      if (result.success) {
+        await refresh();
+        addToast('success', type === 'instance' ? 'Instância extra removida com sucesso!' : 'Colaborador extra removido com sucesso!');
+      } else {
+        addToast('error', result.error ?? 'Erro ao remover recurso extra.');
+      }
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao remover recurso extra.');
+    } finally {
+      setLoadingExtra(null);
     }
-    setLoading(false);
   };
 
-  const handleAiPlan = async (aiPlanSlug: string) => {
+  const handleSelectAiPlan = (selectedAiPlan: AiPlan) => {
+    setShowAiModal(false);
+    setConfirmAiPlan(selectedAiPlan);
+  };
+
+  const handleConfirmAiPlan = async () => {
+    if (!confirmAiPlan) return;
     setLoading(true);
-    const result = await subscriptionService.addOrChangeAiPlan(aiPlanSlug);
+    const result = await subscriptionService.addOrChangeAiPlan(confirmAiPlan.slug);
     if (result.success) {
       await refresh();
-      setShowAiModal(false);
+      addToast('success', hasAiPlan ? `Plano de IA alterado para ${confirmAiPlan.name} com sucesso!` : `Plano de IA ${confirmAiPlan.name} ativado com sucesso!`);
+      setConfirmAiPlan(null);
     } else {
       addToast('error', result.error ?? 'Erro ao ativar plano de IA.');
     }
@@ -255,12 +280,12 @@ export default function BillingTab() {
                 <p className="text-xs text-slate-500">R$ 24,90/mês cada</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleRemoveExtra('instance')} disabled={loading || (sub?.extraInstances ?? 0) === 0}
+                <button onClick={() => handleRemoveExtra('instance')} disabled={loadingExtra !== null || (sub?.extraInstances ?? 0) === 0}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
-                  <Minus size={16} />
+                  {loadingExtra === 'instance' ? <Loader2 size={16} className="animate-spin" /> : <Minus size={16} />}
                 </button>
                 <span className="text-sm font-bold w-6 text-center text-slate-700 dark:text-slate-200">{sub?.extraInstances ?? 0}</span>
-                <button onClick={() => handleAddExtra('instance')} disabled={loading}
+                <button onClick={() => setConfirmExtra({ type: 'instance' })} disabled={loadingExtra !== null}
                   className="p-1 rounded-lg text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-30">
                   <Plus size={16} />
                 </button>
@@ -272,12 +297,12 @@ export default function BillingTab() {
                 <p className="text-xs text-slate-500">R$ 19,90/mês cada</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleRemoveExtra('collaborator')} disabled={loading || (sub?.extraCollaborators ?? 0) === 0}
+                <button onClick={() => handleRemoveExtra('collaborator')} disabled={loadingExtra !== null || (sub?.extraCollaborators ?? 0) === 0}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
-                  <Minus size={16} />
+                  {loadingExtra === 'collaborator' ? <Loader2 size={16} className="animate-spin" /> : <Minus size={16} />}
                 </button>
                 <span className="text-sm font-bold w-6 text-center text-slate-700 dark:text-slate-200">{sub?.extraCollaborators ?? 0}</span>
-                <button onClick={() => handleAddExtra('collaborator')} disabled={loading}
+                <button onClick={() => setConfirmExtra({ type: 'collaborator' })} disabled={loadingExtra !== null}
                   className="p-1 rounded-lg text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-30">
                   <Plus size={16} />
                 </button>
@@ -471,7 +496,7 @@ export default function BillingTab() {
                 {isCurrent ? (
                   <Button size="sm" className="w-full justify-center" variant="secondary" disabled>Plano Atual</Button>
                 ) : (
-                  <Button size="sm" className="w-full justify-center" onClick={() => handleAiPlan(ap.slug)} disabled={loading}>
+                  <Button size="sm" className="w-full justify-center" onClick={() => handleSelectAiPlan(ap)} disabled={loading}>
                     {hasAiPlan ? 'Mudar' : 'Ativar'}
                   </Button>
                 )}
@@ -480,13 +505,6 @@ export default function BillingTab() {
           })}
         </div>
       </Modal>
-
-      {/* Card Payment Modal */}
-      <CardPaymentModal
-        isOpen={showCardModal}
-        onClose={() => setShowCardModal(false)}
-        onSuccess={() => refresh()}
-      />
 
       {/* Plan Checkout Modal (card + PIX) */}
       {checkoutPlan && (
@@ -507,6 +525,174 @@ export default function BillingTab() {
           }}
         />
       )}
+
+      {/* Extra Add-on Confirmation Modal */}
+      <Modal
+        isOpen={!!confirmExtra}
+        onClose={() => setConfirmExtra(null)}
+        title={confirmExtra?.type === 'instance' ? 'Adicionar instância extra?' : 'Adicionar colaborador extra?'}
+        size="sm"
+      >
+        {confirmExtra && (
+          <div className="space-y-4">
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                {confirmExtra.type === 'instance' ? 'Instância Extra' : 'Colaborador Extra'}
+              </p>
+              <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                {confirmExtra.type === 'instance' ? 'R$ 24,90' : 'R$ 19,90'}
+                <span className="text-sm font-normal text-slate-500">/mês</span>
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                Total após adição:{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  {confirmExtra.type === 'instance'
+                    ? (sub?.extraInstances ?? 0) + 1
+                    : (sub?.extraCollaborators ?? 0) + 1}{' '}
+                  {confirmExtra.type === 'instance' ? 'instância(s) extra' : 'colaborador(es) extra'}
+                </span>
+              </p>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Será cobrado o valor proporcional aos dias restantes do ciclo atual. A partir do próximo ciclo, o valor será incluído integralmente na sua fatura.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 justify-center"
+                onClick={async () => {
+                  const { type } = confirmExtra;
+                  setConfirmExtra(null);
+                  await handleAddExtra(type);
+                }}
+                loading={loadingExtra !== null}
+                loadingText="Adicionando..."
+              >
+                Confirmar
+              </Button>
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmExtra(null)} disabled={loading}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Plan Change Confirmation Modal */}
+      <Modal
+        isOpen={!!confirmPlanChange}
+        onClose={() => setConfirmPlanChange(null)}
+        title="Confirmar troca de plano"
+        size="sm"
+      >
+        {confirmPlanChange && (
+          <div className="space-y-4">
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Plano atual</p>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{planName}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-500 dark:text-slate-400">Novo plano</p>
+                <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                  {confirmPlanChange.name} — {formatBRL(confirmPlanChange.priceCents)}/mês
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CreditCard size={15} className="text-slate-400" />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  {sub?.stripePaymentMethodLast4 ? `Cartão •••• ${sub.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowCardModal(true)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                {sub?.stripePaymentMethodLast4 ? 'Alterar' : 'Adicionar'}
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 justify-center"
+                onClick={handleConfirmPlanChange}
+                loading={loading}
+                loadingText="Alterando..."
+              >
+                Confirmar troca
+              </Button>
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmPlanChange(null)} disabled={loading}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* AI Plan Confirmation Modal */}
+      <Modal
+        isOpen={!!confirmAiPlan}
+        onClose={() => setConfirmAiPlan(null)}
+        title={hasAiPlan ? 'Confirmar troca de plano de IA' : 'Confirmar ativação de IA'}
+        size="sm"
+      >
+        {confirmAiPlan && (
+          <div className="space-y-4">
+            <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+              {hasAiPlan && (
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Plano atual</p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{aiPlan?.name}</p>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-500 dark:text-slate-400">{hasAiPlan ? 'Novo plano' : 'Plano selecionado'}</p>
+                <p className="text-sm font-bold text-violet-600 dark:text-violet-400">
+                  {confirmAiPlan.name} — {formatBRL(confirmAiPlan.priceCents)}/mês
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CreditCard size={15} className="text-slate-400" />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  {sub?.stripePaymentMethodLast4 ? `Cartão •••• ${sub.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowCardModal(true)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                {sub?.stripePaymentMethodLast4 ? 'Alterar' : 'Adicionar'}
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 justify-center"
+                onClick={handleConfirmAiPlan}
+                loading={loading}
+                loadingText={hasAiPlan ? 'Alterando...' : 'Ativando...'}
+              >
+                {hasAiPlan ? 'Confirmar troca' : 'Ativar IA'}
+              </Button>
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmAiPlan(null)} disabled={loading}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Card Payment Modal — rendered last so it appears above all other modals */}
+      <CardPaymentModal
+        isOpen={showCardModal}
+        onClose={() => setShowCardModal(false)}
+        onSuccess={() => refresh()}
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

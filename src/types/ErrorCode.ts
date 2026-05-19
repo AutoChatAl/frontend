@@ -16,6 +16,7 @@
   | 'CHANNEL_PROVIDER_MISMATCH'
   | 'CHANNEL_MISSING_CREDENTIALS'
   | 'CHANNEL_DELETE_FAILED'
+  | 'CHANNEL_NOT_INSTAGRAM'
   | 'INSTAGRAM_TOKEN_EXPIRED'
   | 'INSTAGRAM_SEND_FAILED'
   | 'INSTAGRAM_OPTIN_SEND_FAILED'
@@ -84,6 +85,7 @@ export const ERROR_MESSAGES: Record<ErrorReason, string> = {
   CHANNEL_PROVIDER_MISMATCH: 'Provedor do canal incompativel.',
   CHANNEL_MISSING_CREDENTIALS: 'Credenciais do canal ausentes.',
   CHANNEL_DELETE_FAILED: 'Falha ao deletar canal.',
+  CHANNEL_NOT_INSTAGRAM: 'Este recurso só funciona com canais Instagram.',
 
   INSTAGRAM_TOKEN_EXPIRED: 'Token do Instagram expirado. Reconecte a conta.',
   INSTAGRAM_SEND_FAILED: 'Falha ao enviar mensagem no Instagram.',

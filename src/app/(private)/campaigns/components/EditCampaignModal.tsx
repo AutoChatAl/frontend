@@ -284,6 +284,13 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         newErrors.group = 'Selecione um grupo';
     }
 
+    if (!formData.frequency)
+      newErrors.frequency = 'Selecione a frequência';
+    if (formData.frequency === 'ONCE' && !formData.scheduledDate)
+      newErrors.scheduledDate = 'Selecione uma data de execução';
+    if (formData.frequency && formData.executionHour === undefined)
+      newErrors.executionHour = 'Selecione um horário de execução';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1151,12 +1158,12 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   <Repeat size={14} className="inline mr-1.5 -mt-0.5" />
-                  Frequencia
+                  Frequência <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {([
                     { value: 'DAILY', label: 'Todo dia', desc: 'Executa diariamente' },
-                    { value: 'ONCE', label: 'Dia especifico', desc: 'Executa uma unica vez' },
+                    { value: 'ONCE', label: 'Dia específico', desc: 'Executa uma única vez' },
                   ] as const).map((opt) => {
                     const isSelected = formData.frequency === opt.value;
                     return (
@@ -1168,10 +1175,13 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                             frequency: opt.value,
                             scheduledDate: opt.value === 'DAILY' ? undefined : prev.scheduledDate,
                           }));
+                          clearFieldError('frequency');
                         }}
                         className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                           ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
+                          : errors.frequency
+                            ? 'border-red-400 hover:border-red-400 bg-white dark:bg-slate-900'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'
                         }`}
                       >
                         <span className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</span>
@@ -1180,6 +1190,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                     );
                   })}
                 </div>
+                <FieldError msg={errors.frequency} />
               </div>
 
               {formData.frequency === 'ONCE' && (
@@ -1190,9 +1201,13 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                   </label>
                   <DatePicker
                     value={formData.scheduledDate ?? ''}
-                    onChange={(v) => setFormData({ ...formData, scheduledDate: v })}
+                    onChange={(v) => {
+                      setFormData({ ...formData, scheduledDate: v });
+                      clearFieldError('scheduledDate');
+                    }}
                     placeholder="Selecione uma data"
                   />
+                  <FieldError msg={errors.scheduledDate} />
                 </div>
               )}
 
@@ -1200,7 +1215,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     <Clock size={14} className="inline mr-1.5 -mt-0.5" />
-                    Hora de Execucao
+                    Hora de Execução <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {EXECUTION_HOURS.map((hour) => {
@@ -1209,10 +1224,15 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                         <button
                           key={hour}
                           type="button"
-                          onClick={() => setFormData({ ...formData, executionHour: hour })}
+                          onClick={() => {
+                            setFormData({ ...formData, executionHour: hour });
+                            clearFieldError('executionHour');
+                          }}
                           className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${isSelected
                             ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
+                            : errors.executionHour
+                              ? 'border-red-400 hover:border-red-400 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
                           }`}
                         >
                           {String(hour).padStart(2, '0')}:00
@@ -1220,6 +1240,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                       );
                     })}
                   </div>
+                  <FieldError msg={errors.executionHour} />
                 </div>
               )}
             </div>
