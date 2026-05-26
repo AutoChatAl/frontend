@@ -16,6 +16,7 @@ interface SidebarItemProps {
     onClick: () => void;
     collapsed: boolean;
     badgeCount?: number | undefined;
+    tourId?: string;
 }
 
 interface SidebarProps {
@@ -28,10 +29,11 @@ interface SidebarProps {
     planProgress?: number;
 }
 
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount }: SidebarItemProps) => {
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId }: SidebarItemProps) => {
   return (
     <button
       onClick={onClick}
+      {...(tourId ? { 'data-tour': tourId } : {})}
       className={`
         flex items-center gap-3 w-full px-3 py-3 rounded-lg transition-all duration-200 relative
         ${active
@@ -238,6 +240,7 @@ export default function Sidebar({
               onClick={() => handleMenuClick(item)}
               collapsed={sidebarCollapsed}
               badgeCount={item.badgeCount}
+              tourId={`sidebar-${item.id}`}
             />
           ))}
         </nav>
@@ -314,6 +317,7 @@ export default function Sidebar({
               }}
               collapsed={false}
               badgeCount={item.badgeCount}
+              tourId={`sidebar-${item.id}`}
             />
           ))}
         </nav>

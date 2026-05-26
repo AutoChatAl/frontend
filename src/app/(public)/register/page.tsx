@@ -44,7 +44,8 @@ export default function RegisterPage() {
 
     try {
       await authService.register(formData);
-      router.push('/campaigns');
+      // Após cadastrar, manda pra home/dashboard — é lá que o onboarding começa.
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
     } finally {

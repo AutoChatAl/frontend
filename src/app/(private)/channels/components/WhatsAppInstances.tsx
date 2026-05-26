@@ -74,12 +74,14 @@ export default function WhatsAppInstances() {
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isOwner && (
-          <AddChannelCard
-            title="Nova Instância"
-            subtitle="Escanear QR Code"
-            colorClass="emerald"
-            onClick={handleOpenCreateModal}
-          />
+          <div data-tour="channels-add">
+            <AddChannelCard
+              title="Nova Instância"
+              subtitle="Escanear QR Code"
+              colorClass="emerald"
+              onClick={handleOpenCreateModal}
+            />
+          </div>
         )}
 
         {instances.map((inst) => (

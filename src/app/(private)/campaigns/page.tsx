@@ -251,15 +251,17 @@ export default function CampaignsPage() {
       </div>
 
       {campaigns.length === 0 ? (
-        <EmptyState
-          icon={<Play size={20} />}
-          title="Nenhuma campanha criada ainda"
-          action={{
-            label: 'Criar primeira campanha',
-            icon: <Plus size={16} />,
-            onClick: () => setIsCreateModalOpen(true),
-          }}
-        />
+        <div data-tour="campaigns-new">
+          <EmptyState
+            icon={<Play size={20} />}
+            title="Nenhuma campanha criada ainda"
+            action={{
+              label: 'Criar primeira campanha',
+              icon: <Plus size={16} />,
+              onClick: () => setIsCreateModalOpen(true),
+            }}
+          />
+        </div>
       ) : (
         <Table
           columns={columns}

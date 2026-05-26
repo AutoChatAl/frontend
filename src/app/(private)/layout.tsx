@@ -4,9 +4,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import Sidebar from '@/components/Sidebar';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
+import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -105,28 +107,33 @@ export default function PrivateLayout({
     ? Math.min(Math.round((messageUsage.count / messageUsage.limit) * 100), 100)
     : 0;
   const isAdmin = user?.role === 'admin';
+  // Onboarding fica desativado para admins de suporte (área de admin, não de cliente)
+  const onboardingEnabled = isAuthenticated && !isAdmin;
 
   return (
     <ThemeProvider>
       <SidebarProvider showSupportTab={isAdmin}>
         <ChannelStatusProvider>
           <SupportChatProvider>
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar
-                userName={userName}
-                userRole={userRole}
-                userInitials={userInitials}
-                planUsage={planUsageText}
-                planProgress={planProgress}
-              />
-              <div className="flex flex-col flex-1">
-                <Header />
-                <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
-                  {children}
-                </main>
+            <OnboardingProvider enabled={onboardingEnabled}>
+              <div className="flex h-screen overflow-hidden">
+                <Sidebar
+                  userName={userName}
+                  userRole={userRole}
+                  userInitials={userInitials}
+                  planUsage={planUsageText}
+                  planProgress={planProgress}
+                />
+                <div className="flex flex-col flex-1">
+                  <Header />
+                  <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
+                    {children}
+                  </main>
+                </div>
               </div>
-            </div>
-            {!isAdmin && <SupportChatWidget />}
+              {!isAdmin && <SupportChatWidget />}
+              {onboardingEnabled && <OnboardingTour />}
+            </OnboardingProvider>
           </SupportChatProvider>
         </ChannelStatusProvider>
       </SidebarProvider>

@@ -15,17 +15,24 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
+  // IMPORTANTE: o valor inicial precisa ser idêntico no servidor e no cliente,
+  // senão a hidratação quebra. Por isso começamos sempre com `false` e só
+  // lemos o localStorage dentro de useEffect (depois do mount).
+  const [darkMode, setDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // No mount, lê a preferência salva
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        setDarkMode(true);
+      }
+    }
     setMounted(true);
   }, []);
 
+  // Aplica a classe `dark` no <html> e persiste a preferência
   useEffect(() => {
     if (!mounted) return;
 
@@ -50,10 +57,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setDarkMode,
   };
 
-  if (!mounted) {
-    return null;
-  }
-
+  // SEMPRE renderiza os filhos — não retornamos `null` condicionalmente, pois
+  // isso quebrava a hidratação (server enviava conteúdo, client renderizava
+  // null, React esculhambava a reconciliação).
   return (
     <ThemeContext.Provider value={value}>
       {children}

@@ -208,7 +208,9 @@ export default function SchedulingPage() {
         </button>
       </div>
 
-      <SchedulingTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <div data-tour="scheduling-tabs">
+        <SchedulingTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
 
       {activeTab === 'calendar' && (
         <CalendarView

@@ -39,7 +39,9 @@ const SettingsPage = () => {
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500 overflow-x-hidden">
       <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">Configurações Gerais</h2>
 
-      <SettingsNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <div data-tour="settings-nav">
+        <SettingsNav activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
 
       <div className="space-y-6">
         {TABS[activeTab]}

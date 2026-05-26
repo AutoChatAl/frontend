@@ -142,9 +142,11 @@ export default function CommentAutomationsPage() {
           </div>
         </div>
 
-        <Button icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
-          Nova Automação
-        </Button>
+        <div data-tour="comment-automations-new">
+          <Button icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
+            Nova Automação
+          </Button>
+        </div>
       </header>
 
       {/* How it works banner */}

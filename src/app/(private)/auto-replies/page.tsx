@@ -124,9 +124,11 @@ export default function AutoRepliesPage() {
           </p>
         </div>
 
-        <Button icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
-          Nova Auto-Resposta
-        </Button>
+        <div data-tour="auto-replies-new">
+          <Button icon={<Plus size={16} />} onClick={() => setIsCreateOpen(true)}>
+            Nova Auto-Resposta
+          </Button>
+        </div>
       </header>
 
       {rules.length === 0 ? (

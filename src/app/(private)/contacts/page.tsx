@@ -357,9 +357,11 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => setIsSyncModalOpen(true)}>
-          Sincronizar Contatos
-        </Button>
+        <div data-tour="contacts-sync">
+          <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => setIsSyncModalOpen(true)}>
+            Sincronizar Contatos
+          </Button>
+        </div>
       </header>
 
       {contacts.length === 0 && !query ? (
