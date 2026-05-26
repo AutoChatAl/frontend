@@ -11,8 +11,8 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { useOnboarding } from '@/contexts/OnboardingContext';
 import type { TourPlacement, TourStep } from '@/components/onboarding/tours';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 interface Rect {
   top: number;
@@ -103,22 +103,22 @@ function getTooltipPos(rect: Rect | null, placement: TourPlacement): { top: numb
   let left = 0;
 
   switch (placement) {
-    case 'right':
-      top = rect.top + rect.height / 2 - estimatedHeight / 3;
-      left = rect.left + rect.width + TOOLTIP_GAP;
-      break;
-    case 'left':
-      top = rect.top + rect.height / 2 - estimatedHeight / 3;
-      left = rect.left - TOOLTIP_GAP - tooltipWidth;
-      break;
-    case 'bottom':
-      top = rect.top + rect.height + TOOLTIP_GAP;
-      left = rect.left + rect.width / 2 - tooltipWidth / 2;
-      break;
-    case 'top':
-      top = rect.top - TOOLTIP_GAP - estimatedHeight;
-      left = rect.left + rect.width / 2 - tooltipWidth / 2;
-      break;
+  case 'right':
+    top = rect.top + rect.height / 2 - estimatedHeight / 3;
+    left = rect.left + rect.width + TOOLTIP_GAP;
+    break;
+  case 'left':
+    top = rect.top + rect.height / 2 - estimatedHeight / 3;
+    left = rect.left - TOOLTIP_GAP - tooltipWidth;
+    break;
+  case 'bottom':
+    top = rect.top + rect.height + TOOLTIP_GAP;
+    left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    break;
+  case 'top':
+    top = rect.top - TOOLTIP_GAP - estimatedHeight;
+    left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    break;
   }
 
   // Clamp na viewport (em mobile prende com mais margem)

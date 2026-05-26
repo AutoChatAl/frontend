@@ -12,9 +12,6 @@ import {
   type ReactNode,
 } from 'react';
 
-import { useSidebar } from '@/contexts/SidebarContext';
-import { authService } from '@/services/auth.service';
-import { onboardingService, type OnboardingState } from '@/services/onboarding.service';
 import {
   findTourByPathname,
   ONBOARDING_VERSION,
@@ -22,6 +19,9 @@ import {
   type TourConfig,
   type TourStep,
 } from '@/components/onboarding/tours';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { authService } from '@/services/auth.service';
+import { onboardingService, type OnboardingState } from '@/services/onboarding.service';
 
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_SELECTOR_PREFIX = '[data-tour="sidebar-';
