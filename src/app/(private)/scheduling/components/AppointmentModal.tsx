@@ -4,6 +4,7 @@ import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, L
 import { useState, useMemo } from 'react';
 
 import DatePicker from '@/components/DatePicker';
+import Select from '@/components/Select';
 import TimePicker from '@/components/TimePicker';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
@@ -363,18 +364,19 @@ export default function AppointmentModal({
                   </div>
                 </div>
               ) : (
-                <select
+                <Select
                   value={productId}
-                  onChange={(e) => setProductId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-                >
-                  <option value="">Nenhum produto selecionado</option>
-                  {localProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.priceCents > 0 ? `- R$ ${(p.priceCents / 100).toFixed(2)}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Nenhum produto selecionado"
+                  onChange={(v) => setProductId(v)}
+                  clearable
+                  onClear={() => setProductId('')}
+                  leftIcon={<Package size={14} />}
+                  options={localProducts.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                    description: p.priceCents > 0 ? `R$ ${(p.priceCents / 100).toFixed(2)}` : undefined,
+                  }))}
+                />
               )}
             </div>
 

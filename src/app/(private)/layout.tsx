@@ -124,9 +124,9 @@ export default function PrivateLayout({
                   planUsage={planUsageText}
                   planProgress={planProgress}
                 />
-                <div className="flex flex-col flex-1">
+                <div className="flex flex-col flex-1 min-w-0">
                   <Header />
-                  <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
+                  <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
                     {children}
                   </main>
                 </div>

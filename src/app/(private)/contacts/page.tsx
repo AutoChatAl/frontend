@@ -22,6 +22,7 @@ import IconButton from '@/components/IconButton';
 import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { cartRecoveryService } from '@/services/cart-recovery.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
@@ -243,7 +244,22 @@ export default function ContactsPage() {
         limit: PAGE_SIZE,
       });
 
-      setContacts((prev) => (append ? [...prev, ...result.data] : result.data));
+      const ids = result.data.map((c) => c.id);
+      const stats = await cartRecoveryService.getContactsStats(ids).catch(() => []);
+      const statsMap = new Map(stats.map((s) => [s.contactId, s]));
+
+      const enriched = result.data.map((c) => {
+        const s = statsMap.get(c.id);
+        return {
+          ...c,
+          salesCount: s?.salesCount ?? 0,
+          salesValueCents: s?.salesValueCents ?? 0,
+          abandonedCount: s?.abandonedCount ?? 0,
+          abandonedValueCents: s?.abandonedValueCents ?? 0,
+        };
+      });
+
+      setContacts((prev) => (append ? [...prev, ...enriched] : enriched));
       setTotal(result.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar contatos');

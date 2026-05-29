@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare } from 'lucide-react';
+import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -46,6 +46,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling' },
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies' },
   { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies' },
+  { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'campaigns' },
   { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia' },
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
 ];
