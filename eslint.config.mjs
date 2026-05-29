@@ -8,9 +8,7 @@ import tseslint from 'typescript-eslint';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 const compat = new FlatCompat({ baseDirectory: __dirname });
-
 const config = [
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
@@ -21,7 +19,6 @@ const config = [
       'next-env.d.ts',
     ],
   },
-
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts,tsx}'],
     plugins: { import: pluginImport },
@@ -91,5 +88,4 @@ const config = [
   },
   ...tseslint.configs.recommended,
 ];
-
 export default config;

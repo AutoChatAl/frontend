@@ -1,5 +1,4 @@
 'use client';
-
 import { RefreshCw, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
@@ -11,20 +10,13 @@ import { authService } from '@/services/auth.service';
 import type { WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
 
 interface WhatsAppQRModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  channelId: string;
-  onGetQRCode: (channelId: string) => Promise<WhatsAppQRCodeRawResponse>;
-  onCheckStatus: (channelId: string) => Promise<WhatsAppStatusResponse>;
+    isOpen: boolean;
+    onClose: () => void;
+    channelId: string;
+    onGetQRCode: (channelId: string) => Promise<WhatsAppQRCodeRawResponse>;
+    onCheckStatus: (channelId: string) => Promise<WhatsAppStatusResponse>;
 }
-
-export default function WhatsAppQRModal({
-  isOpen,
-  onClose,
-  channelId,
-  onGetQRCode,
-  onCheckStatus,
-}: WhatsAppQRModalProps) {
+export default function WhatsAppQRModal({ isOpen, onClose, channelId, onGetQRCode, onCheckStatus }: WhatsAppQRModalProps) {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -33,7 +25,6 @@ export default function WhatsAppQRModal({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const esRef = useRef<EventSource | null>(null);
-
   useEffect(() => {
     if (isOpen && channelId) {
       loadQRCode();
@@ -42,72 +33,65 @@ export default function WhatsAppQRModal({
       esRef.current?.close();
       esRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, channelId]);
-
   useEffect(() => {
-    if (!isOpen || !channelId || isConnected) return;
+    if (!isOpen || !channelId || isConnected)
+      return;
     const token = authService.getToken();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const url = `${apiUrl}/channels/whatsapp/${channelId}/events?token=${encodeURIComponent(token || '')}`;
     const es = new EventSource(url);
     esRef.current = es;
-
     es.addEventListener('connected', () => {
       setIsConnected(true);
       es.close();
       setTimeout(() => onClose(), 2000);
     });
-
     return () => {
       es.close();
       esRef.current = null;
     };
   }, [isOpen, channelId, isConnected, onClose]);
-
   const loadQRCode = async () => {
     try {
       setLoading(true);
       setFailed(false);
       const response = await onGetQRCode(channelId);
-
       if (response.ok) {
         const qr = response.qr || response.raw?.instance?.qrcode || null;
         const paircode = response.raw?.instance?.paircode || response.raw?.paircode;
-
         setQrCode(qr);
-        setPairingCode(
-          typeof paircode === 'string' && paircode.trim() !== ''
-            ? paircode
-            : null,
-        );
-
+        setPairingCode(typeof paircode === 'string' && paircode.trim() !== ''
+          ? paircode
+          : null);
         const status = response.raw?.instance?.status || response.raw?.status;
         setIsConnected(status === 'open');
-      } else {
+      }
+      else {
         addToast('error', 'Erro ao obter QR Code');
         setFailed(true);
       }
-    } catch (err) {
+    }
+    catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Erro ao obter QR Code');
       setFailed(true);
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };
-
   const checkStatus = async () => {
     try {
       setCheckingStatus(true);
       const response = await onCheckStatus(channelId);
-
       if (response.ok) {
         if (response.connected) {
           setIsConnected(true);
           setTimeout(() => {
             onClose();
           }, 2000);
-        } else if (response.status) {
+        }
+        else if (response.status) {
           const { state } = response.status;
           if (state === 'open' || response.status.jid) {
             setIsConnected(true);
@@ -117,147 +101,114 @@ export default function WhatsAppQRModal({
           }
         }
       }
-    } catch (_err) {
-    } finally {
+    }
+    catch (_err) {
+    }
+    finally {
       setCheckingStatus(false);
     }
   };
-
   const handleRefresh = () => {
     loadQRCode();
   };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Conectar WhatsApp">
-      <div className="px-2 pb-2">
-        {isConnected ? (
-          <div className="flex flex-col items-center justify-center py-6">
-            <CheckCircle className="w-16 h-16 text-emerald-500 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+  return (<Modal isOpen={isOpen} onClose={onClose} title="Conectar WhatsApp">
+    <div className="px-2 pb-2">
+      {isConnected ? (<div className="flex flex-col items-center justify-center py-6">
+        <CheckCircle className="w-16 h-16 text-emerald-500 mb-4"/>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               Conectado com sucesso!
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm text-sm">
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm text-sm">
               Sua instância do WhatsApp está conectada e pronta para uso.
-            </p>
-          </div>
-        ) : (
-          <>
-            <ToastContainer toasts={toasts} onRemove={removeToast} />
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-10">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500" />
-                <p className="text-gray-600 dark:text-gray-400 mt-4 text-sm font-medium">Carregando...</p>
-              </div>
-            ) : failed ? (
-              <div className="text-center py-8">
-                <Button onClick={handleRefresh} variant="primary">
+        </p>
+      </div>) : (<>
+        <ToastContainer toasts={toasts} onRemove={removeToast}/>
+        {loading ? (<div className="flex flex-col items-center justify-center py-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"/>
+          <p className="text-gray-600 dark:text-gray-400 mt-4 text-sm font-medium">Carregando...</p>
+        </div>) : failed ? (<div className="text-center py-8">
+          <Button onClick={handleRefresh} variant="primary">
                   Tentar Novamente
-                </Button>
+          </Button>
+        </div>) : (<div className="flex flex-col items-center">
+          {qrCode && (<div className="w-full max-w-sm mb-5">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-950 p-3 rounded-lg mb-4 border border-slate-200 dark:border-slate-800">
+                <Image src={qrCode} alt="QR Code" width={300} height={300} className="w-full h-auto"/>
               </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                {qrCode && (
-                  <div className="w-full max-w-sm mb-5">
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                      <div className="bg-white dark:bg-slate-950 p-3 rounded-lg mb-4 border border-slate-200 dark:border-slate-800">
-                        <Image
-                          src={qrCode}
-                          alt="QR Code"
-                          width={300}
-                          height={300}
-                          className="w-full h-auto"
-                        />
-                      </div>
-                      <div className="space-y-2.5">
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {pairingCode && (
-                  <div className="w-full max-w-sm mb-6">
-                    <div className={`bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 ${qrCode ? 'mt-3' : ''}`}>
-                      <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 text-center">
-                        {qrCode ? 'Ou use o código de pareamento' : 'Código de pareamento'}
-                      </h4>
-                      <div className="bg-white dark:bg-slate-950 px-4 py-3 rounded-lg mb-4 border border-blue-200 dark:border-blue-700">
-                        <p className="text-3xl font-mono font-bold text-center text-blue-600 dark:text-blue-400 tracking-wider">
-                          {pairingCode}
-                        </p>
-                      </div>
-                      <div className="space-y-2.5">
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span> → <span className="font-semibold">Conectar um aparelho</span></p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">&ldquo;Conectar com número de telefone&rdquo;</span></p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">Digite o código: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{pairingCode}</span></p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 mt-3">
-                  <Button
-                    onClick={handleRefresh}
-                    variant="secondary"
-                    icon={<RefreshCw size={16} />}
-                    disabled={loading}
-                  >
-                    Atualizar
-                  </Button>
-                  <Button
-                    onClick={checkStatus}
-                    variant="primary"
-                    disabled={checkingStatus}
-                  >
-                    {checkingStatus ? 'Verificando...' : 'Verificar Status'}
-                  </Button>
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
                 </div>
-
-                {checkingStatus && (
-                  <div className="flex items-center gap-2 mt-4">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Verificando conexão...
-                    </p>
-                  </div>
-                )}
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
+                </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
-    </Modal>
-  );
+            </div>
+          </div>)}
+
+          {pairingCode && (<div className="w-full max-w-sm mb-6">
+            <div className={`bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 ${qrCode ? 'mt-3' : ''}`}>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 text-center">
+                {qrCode ? 'Ou use o código de pareamento' : 'Código de pareamento'}
+              </h4>
+              <div className="bg-white dark:bg-slate-950 px-4 py-3 rounded-lg mb-4 border border-blue-200 dark:border-blue-700">
+                <p className="text-3xl font-mono font-bold text-center text-blue-600 dark:text-blue-400 tracking-wider">
+                  {pairingCode}
+                </p>
+              </div>
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span> → <span className="font-semibold">Conectar um aparelho</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">&ldquo;Conectar com número de telefone&rdquo;</span></p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Digite o código: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{pairingCode}</span></p>
+                </div>
+              </div>
+            </div>
+          </div>)}
+
+          <div className="flex gap-3 mt-3">
+            <Button onClick={handleRefresh} variant="secondary" icon={<RefreshCw size={16}/>} disabled={loading}>
+                    Atualizar
+            </Button>
+            <Button onClick={checkStatus} variant="primary" disabled={checkingStatus}>
+              {checkingStatus ? 'Verificando...' : 'Verificar Status'}
+            </Button>
+          </div>
+
+          {checkingStatus && (<div className="flex items-center gap-2 mt-4">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Verificando conexão...
+            </p>
+          </div>)}
+        </div>)}
+      </>)}
+    </div>
+  </Modal>);
 }

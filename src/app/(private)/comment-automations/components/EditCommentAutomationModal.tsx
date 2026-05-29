@@ -1,19 +1,5 @@
 'use client';
-
-import {
-  AlertCircle,
-  ExternalLink,
-  Image as ImageIcon,
-  Instagram,
-  Loader2,
-  MessageCircle,
-  MessageSquare,
-  Mic,
-  Send,
-  Trash2,
-  Type,
-  Upload,
-} from 'lucide-react';
+import { AlertCircle, ExternalLink, Image as ImageIcon, Instagram, Loader2, MessageCircle, MessageSquare, Mic, Send, Trash2, Type, Upload } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Checkbox from '@/components/Checkbox';
@@ -27,24 +13,21 @@ import type { InstagramAccount } from '@/types/Channel';
 import type { CommentAutomation, UpdateCommentAutomationInput } from '@/types/CommentAutomation';
 
 interface Channel {
-  id: string;
-  name: string;
-  status: string;
+    id: string;
+    name: string;
+    status: string;
 }
-
 interface EditCommentAutomationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  automation: CommentAutomation;
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    automation: CommentAutomation;
 }
-
 const MATCH_MODES = [
   { value: 'CONTAINS', label: 'Contém', description: 'O comentário contém a palavra-chave' },
   { value: 'EXACT', label: 'Exata', description: 'O comentário é exatamente a palavra-chave' },
   { value: 'STARTS_WITH', label: 'Começa com', description: 'O comentário começa com a palavra-chave' },
 ] as const;
-
 const REPLY_TYPES = [
   { value: 'TEXT' as const, label: 'Texto', icon: Type },
   { value: 'AUDIO' as const, label: 'Áudio', icon: Mic },
@@ -53,20 +36,16 @@ const REPLY_TYPES = [
   { value: 'TEXT_AND_IMAGE' as const, label: 'Texto + Imagem', icon: MessageCircle },
   { value: 'IMAGE_AND_AUDIO' as const, label: 'Imagem + Áudio', icon: Mic },
 ] as const;
-
 export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess, automation }: EditCommentAutomationModalProps) {
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [formData, setFormData] = useState<UpdateCommentAutomationInput>({});
-
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [audioFileName, setAudioFileName] = useState<string>('');
   const [imageFileName, setImageFileName] = useState<string>('');
-
   const loadChannels = useCallback(async () => {
     try {
       setLoadingData(true);
@@ -77,12 +56,13 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
         status: ch.status,
       }));
       setChannels(allChannels);
-    } catch {
-    } finally {
+    }
+    catch {
+    }
+    finally {
       setLoadingData(false);
     }
   }, []);
-
   useEffect(() => {
     if (isOpen && automation) {
       loadChannels();
@@ -103,28 +83,34 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
         oncePerUser: automation.oncePerUser,
         enabled: automation.enabled,
       };
-      if (automation.dmAudioBase64 !== undefined) data.dmAudioBase64 = automation.dmAudioBase64;
-      if (automation.dmAudioMimeType !== undefined) data.dmAudioMimeType = automation.dmAudioMimeType;
-      if (automation.dmImageBase64 !== undefined) data.dmImageBase64 = automation.dmImageBase64;
-      if (automation.dmImageMimeType !== undefined) data.dmImageMimeType = automation.dmImageMimeType;
-      if (automation.dmDocumentBase64 !== undefined) data.dmDocumentBase64 = automation.dmDocumentBase64;
-      if (automation.dmDocumentMimeType !== undefined) data.dmDocumentMimeType = automation.dmDocumentMimeType;
-      if (automation.dmDocumentName !== undefined) data.dmDocumentName = automation.dmDocumentName;
+      if (automation.dmAudioBase64 !== undefined)
+        data.dmAudioBase64 = automation.dmAudioBase64;
+      if (automation.dmAudioMimeType !== undefined)
+        data.dmAudioMimeType = automation.dmAudioMimeType;
+      if (automation.dmImageBase64 !== undefined)
+        data.dmImageBase64 = automation.dmImageBase64;
+      if (automation.dmImageMimeType !== undefined)
+        data.dmImageMimeType = automation.dmImageMimeType;
+      if (automation.dmDocumentBase64 !== undefined)
+        data.dmDocumentBase64 = automation.dmDocumentBase64;
+      if (automation.dmDocumentMimeType !== undefined)
+        data.dmDocumentMimeType = automation.dmDocumentMimeType;
+      if (automation.dmDocumentName !== undefined)
+        data.dmDocumentName = automation.dmDocumentName;
       setFormData(data);
       setErrors({});
       setAudioFileName(automation.dmAudioBase64 ? 'Áudio salvo' : '');
       setImageFileName(automation.dmImageBase64 ? 'Imagem salva' : '');
     }
   }, [isOpen, automation, loadChannels]);
-
   const dmReplyType = formData.dmReplyType ?? 'TEXT';
   const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE'].includes(dmReplyType);
   const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO'].includes(dmReplyType);
   const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(dmReplyType);
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.channelId) newErrors.channelId = 'Selecione um canal Instagram';
+    if (!formData.channelId)
+      newErrors.channelId = 'Selecione um canal Instagram';
     if (!formData.triggerOnAnyComment && !formData.keyword?.trim()) {
       newErrors.keyword = 'Informe a palavra-chave ou ative "Qualquer comentário"';
     }
@@ -146,26 +132,22 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file)
+      return;
     const lowerType = (file.type || '').toLowerCase();
     const lowerName = (file.name || '').toLowerCase();
     const isAcceptedMime = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/x-wav'].includes(lowerType);
     const isAcceptedExt = /\.(mp3|m4a|wav|aac|mp4)$/i.test(lowerName);
-
     if (!isAcceptedMime && !isAcceptedExt) {
       setErrors((prev) => ({ ...prev, dmAudio: 'Formato não suportado pelo Instagram. Use MP3, M4A, AAC, WAV ou MP4.' }));
       return;
     }
-
     if (file.size > 25 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, dmAudio: 'O áudio deve ter no máximo 25MB.' }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
@@ -180,7 +162,6 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
     };
     reader.readAsDataURL(file);
   };
-
   const removeAudio = () => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -189,28 +170,25 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
       return next;
     });
     setAudioFileName('');
-    if (audioInputRef.current) audioInputRef.current.value = '';
+    if (audioInputRef.current)
+      audioInputRef.current.value = '';
   };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file)
+      return;
     const lowerType = (file.type || '').toLowerCase();
     const lowerName = (file.name || '').toLowerCase();
     const isAcceptedMime = ['image/png', 'image/jpeg', 'image/jpg'].includes(lowerType);
     const isAcceptedExt = /\.(png|jpe?g)$/i.test(lowerName);
-
     if (!isAcceptedMime && !isAcceptedExt) {
       setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ser PNG ou JPEG.' }));
       return;
     }
-
     if (file.size > 8 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 8MB.' }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
@@ -225,7 +203,6 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
     };
     reader.readAsDataURL(file);
   };
-
   const removeImage = () => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -234,419 +211,247 @@ export default function EditCommentAutomationModal({ isOpen, onClose, onSuccess,
       return next;
     });
     setImageFileName('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (imageInputRef.current)
+      imageInputRef.current.value = '';
   };
-
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!validate())
+      return;
     try {
       setLoading(true);
       await commentAutomationService.update(automation.id, formData);
       onSuccess();
       onClose();
-    } catch (err) {
+    }
+    catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Erro ao atualizar automação' });
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };
+  return (<Modal isOpen={isOpen} onClose={onClose} title="Editar Automação de Comentário" size="md">
+    <div className="space-y-5">
+      {errors.general && (<div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+        <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5"/>
+        <p className="text-sm text-red-700 dark:text-red-400 flex-1">{errors.general}</p>
+      </div>)}
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Editar Automação de Comentário" size="md">
-      <div className="space-y-5">
-        {errors.general && (
-          <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 dark:text-red-400 flex-1">{errors.general}</p>
-          </div>
-        )}
-
-        {/* Channel selection */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Canal Instagram
-          </label>
-          {loadingData ? (
-            <div className="flex items-center gap-2 py-3">
-              <Loader2 size={16} className="animate-spin text-slate-400" />
-              <span className="text-sm text-slate-400">Carregando canais...</span>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {channels.map((channel) => {
-                const isSelected = formData.channelId === channel.id;
-                return (
-                  <label
-                    key={channel.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                      isSelected
-                        ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="channel"
-                      value={channel.id}
-                      checked={isSelected}
-                      onChange={() => {
-                        setFormData((prev) => ({ ...prev, channelId: channel.id }));
-                        setErrors((prev) => ({ ...prev, channelId: '' }));
-                      }}
-                      className="sr-only"
-                    />
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-pink-100 dark:bg-pink-900/30">
-                      <Instagram size={16} className="text-pink-600 dark:text-pink-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        @{channel.name}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      channel.status === 'CONNECTED'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                        : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                    }`}>
-                      {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-          {errors.channelId && (
-            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} /> {errors.channelId}
-            </p>
-          )}
-        </div>
-
-        {/* Trigger */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Gatilho
-          </label>
-
-          <Checkbox
-            checked={formData.triggerOnAnyComment ?? false}
-            onChange={(checked) => setFormData((prev) => ({ ...prev, triggerOnAnyComment: checked }))}
-            label="Qualquer comentário"
-            description="Dispara para todos os comentários, independente do conteúdo"
-          />
-
-          {!formData.triggerOnAnyComment && (
-            <>
-              <Input
-                label="Palavra-chave"
-                type="text"
-                value={formData.keyword ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, keyword: e.target.value }));
-                  setErrors((prev) => ({ ...prev, keyword: '' }));
-                }}
-                placeholder="Ex: quero, eu quero, link, preço..."
-                error={errors.keyword}
-              />
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Modo de correspondência
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {MATCH_MODES.map((mode) => (
-                    <button
-                      key={mode.value}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, matchMode: mode.value }))}
-                      className={`p-2.5 rounded-xl border-2 text-center transition-all ${
-                        formData.matchMode === mode.value
-                          ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <p className="text-sm font-medium text-slate-800 dark:text-white">{mode.label}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{mode.description}</p>
-                    </button>
-                  ))}
-                </div>
+        </label>
+        {loadingData ? (<div className="flex items-center gap-2 py-3">
+          <Loader2 size={16} className="animate-spin text-slate-400"/>
+          <span className="text-sm text-slate-400">Carregando canais...</span>
+        </div>) : (<div className="space-y-2">
+          {channels.map((channel) => {
+            const isSelected = formData.channelId === channel.id;
+            return (<label key={channel.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+              ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+              <input type="radio" name="channel" value={channel.id} checked={isSelected} onChange={() => {
+                setFormData((prev) => ({ ...prev, channelId: channel.id }));
+                setErrors((prev) => ({ ...prev, channelId: '' }));
+              }} className="sr-only"/>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-pink-100 dark:bg-pink-900/30">
+                <Instagram size={16} className="text-pink-600 dark:text-pink-400"/>
               </div>
-            </>
-          )}
-        </div>
-
-        {/* Comment Reply */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <MessageSquare size={16} className="text-pink-500" />
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Resposta ao comentário <span className="text-slate-400 font-normal">(pública)</span>
-            </label>
-          </div>
-
-          <Checkbox
-            checked={formData.commentReplyEnabled ?? true}
-            onChange={(checked) => setFormData((prev) => ({ ...prev, commentReplyEnabled: checked }))}
-            label="Responder o comentário publicamente"
-            description="Envia uma resposta visível abaixo do comentário da pessoa"
-          />
-
-          {formData.commentReplyEnabled && (
-            <div>
-              <Textarea
-                value={formData.commentReplyMessage ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, commentReplyMessage: e.target.value }));
-                  setErrors((prev) => ({ ...prev, commentReplyMessage: '' }));
-                }}
-                placeholder="Ex: Obrigado pelo comentário! Enviamos as informações no seu direct {{username}}"
-                rows={3}
-                error={errors.commentReplyMessage}
-              />
-              <div className="flex items-center gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      commentReplyMessage: (prev.commentReplyMessage ?? '') + '{{username}}',
-                    }));
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors"
-                >
-                  <span>@</span> Inserir {'{{username}}'}
-                </button>
-                <p className="text-xs text-slate-400">
-                  Será substituído pelo @ da pessoa
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        @{channel.name}
                 </p>
               </div>
-            </div>
-          )}
-        </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${channel.status === 'CONNECTED'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
+              </span>
+            </label>);
+          })}
+        </div>)}
+        {errors.channelId && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12}/> {errors.channelId}
+        </p>)}
+      </div>
 
-        {/* DM Section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Send size={16} className="text-indigo-500" />
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Mensagem no Direct <span className="text-red-400">*</span>
-            </label>
-          </div>
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Gatilho
+        </label>
 
-          {/* Reply type selector */}
+        <Checkbox checked={formData.triggerOnAnyComment ?? false} onChange={(checked) => setFormData((prev) => ({ ...prev, triggerOnAnyComment: checked }))} label="Qualquer comentário" description="Dispara para todos os comentários, independente do conteúdo"/>
+
+        {!formData.triggerOnAnyComment && (<>
+          <Input label="Palavra-chave" type="text" value={formData.keyword ?? ''} onChange={(e) => {
+            setFormData((prev) => ({ ...prev, keyword: e.target.value }));
+            setErrors((prev) => ({ ...prev, keyword: '' }));
+          }} placeholder="Ex: quero, eu quero, link, preço..." error={errors.keyword}/>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Tipo de resposta
+                  Modo de correspondência
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {REPLY_TYPES.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, dmReplyType: opt.value }))}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 text-center transition-all ${
-                    dmReplyType === opt.value
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <opt.icon size={16} />
-                  <p className="text-sm font-medium text-slate-800 dark:text-white">{opt.label}</p>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {MATCH_MODES.map((mode) => (<button key={mode.value} type="button" onClick={() => setFormData((prev) => ({ ...prev, matchMode: mode.value }))} className={`p-2.5 rounded-xl border-2 text-center transition-all ${formData.matchMode === mode.value
+                ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+                <p className="text-sm font-medium text-slate-800 dark:text-white">{mode.label}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{mode.description}</p>
+              </button>))}
             </div>
-            {(dmReplyType === 'AUDIO' || dmReplyType === 'IMAGE' || dmReplyType === 'IMAGE_AND_AUDIO') && (
-              <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
-                    A mídia é entregue via <strong>Private Reply</strong> do Instagram diretamente pelo <strong>ID do comentário</strong>, então <strong>funciona mesmo se a pessoa nunca te mandou DM antes</strong> nem segue sua conta — desde que tenha comentado nos últimos 7 dias.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* Text message */}
-          {needsText && (
-            <div>
-              <Textarea
-                value={formData.dmMessage ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, dmMessage: e.target.value }));
-                  setErrors((prev) => ({ ...prev, dmMessage: '' }));
-                }}
-                placeholder="Ex: Oi {{username}}! Vi que você se interessou pelo nosso produto..."
-                rows={4}
-                error={errors.dmMessage}
-              />
-              <div className="flex items-center gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      dmMessage: (prev.dmMessage ?? '') + '{{username}}',
-                    }));
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors"
-                >
-                  <span>@</span> Inserir {'{{username}}'}
-                </button>
-                <p className="text-xs text-slate-400">
-                  Será substituído pelo @ da pessoa
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Audio upload */}
-          {needsAudio && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Arquivo de áudio
-              </label>
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept=".mp3,.m4a,.wav,.aac,.mp4,audio/mpeg,audio/mp4,audio/m4a,audio/x-m4a,audio/aac,audio/wav"
-                onChange={handleAudioUpload}
-                className="hidden"
-              />
-              {audioFileName ? (
-                <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                  <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
-                  <button
-                    type="button"
-                    onClick={removeAudio}
-                    className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => audioInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-                >
-                  <Upload size={18} />
-                  <span className="text-sm font-medium">Clique para enviar um áudio (AAC, M4A, WAV, MP4 — máx. 25MB)</span>
-                </button>
-              )}
-              {errors.dmAudio && (
-                <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle size={12} /> {errors.dmAudio}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Image upload */}
-          {needsImage && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Imagem
-              </label>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              {imageFileName ? (
-                <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                  <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => imageInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-                >
-                  <Upload size={18} />
-                  <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 8MB)</span>
-                </button>
-              )}
-              {errors.dmImage && (
-                <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle size={12} /> {errors.dmImage}
-                </p>
-              )}
-            </div>
-          )}
-
-          {needsText && (
-            <div>
-              <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                <ExternalLink size={14} className="text-indigo-500" />
-                Botão de link na DM <span className="text-slate-400 font-normal">(opcional)</span>
-              </label>
-              <div className="space-y-2">
-                <Input
-                  type="url"
-                  value={formData.dmLinkUrl ?? ''}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, dmLinkUrl: e.target.value }));
-                    setErrors((prev) => ({ ...prev, dmLinkUrl: '' }));
-                  }}
-                  placeholder="https://exemplo.com/oferta"
-                  error={errors.dmLinkUrl}
-                />
-                {formData.dmLinkUrl && (
-                  <>
-                    <Input
-                      type="text"
-                      value={formData.dmLinkLabel ?? ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkLabel: e.target.value }))}
-                      placeholder="Texto do botão (ex: Ver oferta)"
-                    />
-                    <Textarea
-                      value={formData.dmLinkDescription ?? ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkDescription: e.target.value }))}
-                      placeholder="Descrição do card (opcional, máx 80 caracteres)"
-                      rows={2}
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Options */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Opções
-          </label>
-
-          <Checkbox
-            checked={formData.oncePerUser ?? true}
-            onChange={(checked) => setFormData((prev) => ({ ...prev, oncePerUser: checked }))}
-            label="Enviar DM apenas uma vez por pessoa"
-            description="Evita enviar a mesma DM várias vezes para quem comentar mais de uma vez"
-          />
-        </div>
-
-        <ModalActions
-          onCancel={onClose}
-          onConfirm={handleSubmit}
-          confirmLabel="Salvar Alterações"
-          confirmIcon={<MessageCircle size={16} />}
-          loading={loading}
-          loadingText="Salvando..."
-        />
+        </>)}
       </div>
-    </Modal>
-  );
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={16} className="text-pink-500"/>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Resposta ao comentário <span className="text-slate-400 font-normal">(pública)</span>
+          </label>
+        </div>
+
+        <Checkbox checked={formData.commentReplyEnabled ?? true} onChange={(checked) => setFormData((prev) => ({ ...prev, commentReplyEnabled: checked }))} label="Responder o comentário publicamente" description="Envia uma resposta visível abaixo do comentário da pessoa"/>
+
+        {formData.commentReplyEnabled && (<div>
+          <Textarea value={formData.commentReplyMessage ?? ''} onChange={(e) => {
+            setFormData((prev) => ({ ...prev, commentReplyMessage: e.target.value }));
+            setErrors((prev) => ({ ...prev, commentReplyMessage: '' }));
+          }} placeholder="Ex: Obrigado pelo comentário! Enviamos as informações no seu direct {{username}}" rows={3} error={errors.commentReplyMessage}/>
+          <div className="flex items-center gap-2 mt-1">
+            <button type="button" onClick={() => {
+              setFormData((prev) => ({
+                ...prev,
+                commentReplyMessage: (prev.commentReplyMessage ?? '') + '{{username}}',
+              }));
+            }} className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors">
+              <span>@</span> Inserir {'{{username}}'}
+            </button>
+            <p className="text-xs text-slate-400">
+                  Será substituído pelo @ da pessoa
+            </p>
+          </div>
+        </div>)}
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Send size={16} className="text-indigo-500"/>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Mensagem no Direct <span className="text-red-400">*</span>
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Tipo de resposta
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {REPLY_TYPES.map((opt) => (<button key={opt.value} type="button" onClick={() => setFormData((prev) => ({ ...prev, dmReplyType: opt.value }))} className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 text-center transition-all ${dmReplyType === opt.value
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+              <opt.icon size={16}/>
+              <p className="text-sm font-medium text-slate-800 dark:text-white">{opt.label}</p>
+            </button>))}
+          </div>
+          {(dmReplyType === 'AUDIO' || dmReplyType === 'IMAGE' || dmReplyType === 'IMAGE_AND_AUDIO') && (<div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
+            <div className="flex items-start gap-2">
+              <AlertCircle size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"/>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                    A mídia é entregue via <strong>Private Reply</strong> do Instagram diretamente pelo <strong>ID do comentário</strong>, então <strong>funciona mesmo se a pessoa nunca te mandou DM antes</strong> nem segue sua conta — desde que tenha comentado nos últimos 7 dias.
+              </p>
+            </div>
+          </div>)}
+        </div>
+
+        {needsText && (<div>
+          <Textarea value={formData.dmMessage ?? ''} onChange={(e) => {
+            setFormData((prev) => ({ ...prev, dmMessage: e.target.value }));
+            setErrors((prev) => ({ ...prev, dmMessage: '' }));
+          }} placeholder="Ex: Oi {{username}}! Vi que você se interessou pelo nosso produto..." rows={4} error={errors.dmMessage}/>
+          <div className="flex items-center gap-2 mt-1">
+            <button type="button" onClick={() => {
+              setFormData((prev) => ({
+                ...prev,
+                dmMessage: (prev.dmMessage ?? '') + '{{username}}',
+              }));
+            }} className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60 transition-colors">
+              <span>@</span> Inserir {'{{username}}'}
+            </button>
+            <p className="text-xs text-slate-400">
+                  Será substituído pelo @ da pessoa
+            </p>
+          </div>
+        </div>)}
+
+        {needsAudio && (<div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Arquivo de áudio
+          </label>
+          <input ref={audioInputRef} type="file" accept=".mp3,.m4a,.wav,.aac,.mp4,audio/mpeg,audio/mp4,audio/m4a,audio/x-m4a,audio/aac,audio/wav" onChange={handleAudioUpload} className="hidden"/>
+          {audioFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+            <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
+            <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
+            <button type="button" onClick={removeAudio} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
+              <Trash2 size={16}/>
+            </button>
+          </div>) : (<button type="button" onClick={() => audioInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+            <Upload size={18}/>
+            <span className="text-sm font-medium">Clique para enviar um áudio (AAC, M4A, WAV, MP4 — máx. 25MB)</span>
+          </button>)}
+          {errors.dmAudio && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+            <AlertCircle size={12}/> {errors.dmAudio}
+          </p>)}
+        </div>)}
+
+        {needsImage && (<div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Imagem
+          </label>
+          <input ref={imageInputRef} type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" onChange={handleImageUpload} className="hidden"/>
+          {imageFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+            <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
+            <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
+            <button type="button" onClick={removeImage} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
+              <Trash2 size={16}/>
+            </button>
+          </div>) : (<button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+            <Upload size={18}/>
+            <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 8MB)</span>
+          </button>)}
+          {errors.dmImage && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+            <AlertCircle size={12}/> {errors.dmImage}
+          </p>)}
+        </div>)}
+
+        {needsText && (<div>
+          <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <ExternalLink size={14} className="text-indigo-500"/>
+                Botão de link na DM <span className="text-slate-400 font-normal">(opcional)</span>
+          </label>
+          <div className="space-y-2">
+            <Input type="url" value={formData.dmLinkUrl ?? ''} onChange={(e) => {
+              setFormData((prev) => ({ ...prev, dmLinkUrl: e.target.value }));
+              setErrors((prev) => ({ ...prev, dmLinkUrl: '' }));
+            }} placeholder="https://exemplo.com/oferta" error={errors.dmLinkUrl}/>
+            {formData.dmLinkUrl && (<>
+              <Input type="text" value={formData.dmLinkLabel ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkLabel: e.target.value }))} placeholder="Texto do botão (ex: Ver oferta)"/>
+              <Textarea value={formData.dmLinkDescription ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, dmLinkDescription: e.target.value }))} placeholder="Descrição do card (opcional, máx 80 caracteres)" rows={2}/>
+            </>)}
+          </div>
+        </div>)}
+      </div>
+
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Opções
+        </label>
+
+        <Checkbox checked={formData.oncePerUser ?? true} onChange={(checked) => setFormData((prev) => ({ ...prev, oncePerUser: checked }))} label="Enviar DM apenas uma vez por pessoa" description="Evita enviar a mesma DM várias vezes para quem comentar mais de uma vez"/>
+      </div>
+
+      <ModalActions onCancel={onClose} onConfirm={handleSubmit} confirmLabel="Salvar Alterações" confirmIcon={<MessageCircle size={16}/>} loading={loading} loadingText="Salvando..."/>
+    </div>
+  </Modal>);
 }

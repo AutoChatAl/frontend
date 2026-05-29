@@ -1,5 +1,4 @@
 'use client';
-
 import React, { type ReactNode, useRef, useCallback, useEffect } from 'react';
 
 import Button from './Button';
@@ -7,160 +6,106 @@ import Card from './Card';
 import SearchBar from './SearchBar';
 
 interface Column<T> {
-  header: string;
-  accessor: keyof T | ((row: T) => ReactNode);
-  className?: string;
-  render?: (value: unknown, row: T) => ReactNode;
+    header: string;
+    accessor: keyof T | ((row: T) => ReactNode);
+    className?: string;
+    render?: (value: unknown, row: T) => ReactNode;
 }
-
 interface TableProps<T> {
-  columns: Column<T>[];
-  data: T[];
-  actions?: {
-    searchBar?: {
-      placeholder?: string;
-      value?: string;
-      onChange?: (value: string) => void;
+    columns: Column<T>[];
+    data: T[];
+    actions?: {
+        searchBar?: {
+            placeholder?: string;
+            value?: string;
+            onChange?: (value: string) => void;
+        };
+        buttons?: Array<{
+            label: string;
+            icon?: ReactNode;
+            onClick: () => void;
+            variant?: 'primary' | 'secondary' | 'ghost';
+        }>;
     };
-    buttons?: Array<{
-      label: string;
-      icon?: ReactNode;
-      onClick: () => void;
-      variant?: 'primary' | 'secondary' | 'ghost';
-    }>;
-  };
-  renderActions?: (row: T) => ReactNode;
-  renderMobileCard?: (row: T) => ReactNode;
-  getRowClassName?: (row: T) => string;
-  onLoadMore?: () => void;
-  hasMore?: boolean;
-  loadingMore?: boolean;
+    renderActions?: (row: T) => ReactNode;
+    renderMobileCard?: (row: T) => ReactNode;
+    getRowClassName?: (row: T) => string;
+    onLoadMore?: () => void;
+    hasMore?: boolean;
+    loadingMore?: boolean;
 }
-
-export default function Table<T extends { id: number | string }>({
-  columns,
-  data,
-  actions,
-  renderActions,
-  renderMobileCard,
-  getRowClassName,
-  onLoadMore,
-  hasMore,
-  loadingMore,
-}: TableProps<T>) {
+export default function Table<T extends {
+    id: number | string;
+}>({ columns, data, actions, renderActions, renderMobileCard, getRowClassName, onLoadMore, hasMore, loadingMore }: TableProps<T>) {
   const sentinelRef = useRef<HTMLDivElement>(null);
-
-  const handleIntersect = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      if (entries[0]?.isIntersecting && hasMore && !loadingMore && onLoadMore) {
-        onLoadMore();
-      }
-    },
-    [hasMore, loadingMore, onLoadMore],
-  );
-
+  const handleIntersect = useCallback((entries: IntersectionObserverEntry[]) => {
+    if (entries[0]?.isIntersecting && hasMore && !loadingMore && onLoadMore) {
+      onLoadMore();
+    }
+  }, [hasMore, loadingMore, onLoadMore]);
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !onLoadMore) return;
+    if (!el || !onLoadMore)
+      return;
     const observer = new IntersectionObserver(handleIntersect, { rootMargin: '200px' });
     observer.observe(el);
     return () => observer.disconnect();
   }, [handleIntersect, onLoadMore]);
+  return (<div className="space-y-4">
+    {actions && (<div className="flex flex-wrap justify-end gap-2">
+      {actions.searchBar && (<SearchBar placeholder={actions.searchBar.placeholder ?? ''} value={actions.searchBar.value ?? ''} onChange={actions.searchBar.onChange ?? ((_v: string) => { })}/>)}
+      {actions.buttons?.map((button) => (<Button key={button.label} onClick={button.onClick} icon={button.icon} variant={button.variant || 'primary'}>
+        {button.label}
+      </Button>))}
+    </div>)}
 
-  return (
-    <div className="space-y-4">
-      {actions && (
-        <div className="flex flex-wrap justify-end gap-2">
-          {actions.searchBar && (
-            <SearchBar
-              placeholder={actions.searchBar.placeholder ?? ''}
-              value={actions.searchBar.value ?? ''}
-              onChange={actions.searchBar.onChange ?? ((_v: string) => {})}
-            />
-          )}
-          {actions.buttons?.map((button) => (
-            <Button
-              key={button.label}
-              onClick={button.onClick}
-              icon={button.icon}
-              variant={button.variant || 'primary'}
-            >
-              {button.label}
-            </Button>
-          ))}
-        </div>
-      )}
+    {renderMobileCard && (<div className="flex flex-col gap-3 md:hidden">
+      {data.map((row) => (<React.Fragment key={row.id}>
+        {renderMobileCard(row)}
+      </React.Fragment>))}
+    </div>)}
 
-      {renderMobileCard && (
-        <div className="flex flex-col gap-3 md:hidden">
-          {data.map((row) => (
-            <React.Fragment key={row.id}>
-              {renderMobileCard(row)}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
+    <Card className={`overflow-hidden ${renderMobileCard ? 'hidden md:block' : ''}`}>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+              {columns.map((column) => (<th key={column.header} className={`p-4 font-semibold ${column.className || ''}`}>
+                {column.header}
+              </th>))}
+              {renderActions && (<th className="p-4 font-semibold text-right">Ações</th>)}
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {data.map((row) => {
+              const rowClass = getRowClassName ? getRowClassName(row) : '';
+              return (<tr key={row.id} className={`transition-colors group ${rowClass
+                ? rowClass
+                : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/30 border-b border-slate-50 dark:border-slate-700/50'}`}>
+                {columns.map((column) => {
+                  const value: ReactNode = typeof column.accessor === 'function'
+                    ? column.accessor(row)
+                    : (row[column.accessor] as unknown as ReactNode);
+                  return (<td key={column.header} className={`p-4 ${column.className || ''}`}>
+                    {column.render ? column.render(value, row) : value}
+                  </td>);
+                })}
+                {renderActions && (<td className="p-4 text-right">
+                  {renderActions(row)}
+                </td>)}
+              </tr>);
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      <Card className={`overflow-hidden ${renderMobileCard ? 'hidden md:block' : ''}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
-                {columns.map((column) => (
-                  <th key={column.header} className={`p-4 font-semibold ${column.className || ''}`}>
-                    {column.header}
-                  </th>
-                ))}
-                {renderActions && (
-                  <th className="p-4 font-semibold text-right">Ações</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {data.map((row) => {
-                const rowClass = getRowClassName ? getRowClassName(row) : '';
-                return (
-                  <tr
-                    key={row.id}
-                    className={`transition-colors group ${rowClass
-                      ? rowClass
-                      : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/30 border-b border-slate-50 dark:border-slate-700/50'}`}
-                  >
-                    {columns.map((column) => {
-                      const value: ReactNode = typeof column.accessor === 'function'
-                        ? column.accessor(row)
-                        : (row[column.accessor] as unknown as ReactNode);
+      {onLoadMore && (<div ref={!renderMobileCard ? sentinelRef : undefined} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+        {loadingMore ? 'Carregando...' : ''}
+      </div>)}
+    </Card>
 
-                      return (
-                        <td key={column.header} className={`p-4 ${column.className || ''}`}>
-                          {column.render ? column.render(value, row) : value}
-                        </td>
-                      );
-                    })}
-                    {renderActions && (
-                      <td className="p-4 text-right">
-                        {renderActions(row)}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {onLoadMore && (
-          <div ref={!renderMobileCard ? sentinelRef : undefined} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500">
-            {loadingMore ? 'Carregando...' : ''}
-          </div>
-        )}
-      </Card>
-
-      {renderMobileCard && onLoadMore && (
-        <div ref={sentinelRef} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500 md:hidden">
-          {loadingMore ? 'Carregando...' : ''}
-        </div>
-      )}
-    </div>
-  );
+    {renderMobileCard && onLoadMore && (<div ref={sentinelRef} className="py-3 text-center text-xs text-slate-400 dark:text-slate-500 md:hidden">
+      {loadingMore ? 'Carregando...' : ''}
+    </div>)}
+  </div>);
 }
