@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useWhatsAppInstances } from '@/hooks/ChannelHook';
 import { authService } from '@/services/auth.service';
 
@@ -16,6 +17,7 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 export default function WhatsAppInstances() {
   const { instances, loading, createInstance, connectInstance, getQRCode, getStatus, deleteInstance, refetch } = useWhatsAppInstances();
   const { refetchWhatsApp } = useChannelStatus();
+  const { isInactive } = useSubscription();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -28,6 +30,10 @@ export default function WhatsAppInstances() {
     setIsOwner(!user?.role || user.role === 'owner' || (user.permissions ?? []).includes('channels'));
   }, []);
   const handleOpenCreateModal = () => {
+    if (isInactive) {
+      addToast('error', 'Sua assinatura está inativa. Reative seu plano para conectar canais.');
+      return;
+    }
     setShowCreateModal(true);
   };
   const handleRefresh = async (id: string | number) => {

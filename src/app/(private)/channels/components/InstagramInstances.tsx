@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useInstagramAccounts } from '@/hooks/ChannelHook';
 import { authService } from '@/services/auth.service';
 
@@ -15,6 +16,7 @@ import ChannelInstanceCard from './ChannelInstanceCard';
 export default function InstagramInstances() {
   const { accounts, loading, deleteAccount, getOAuthUrl, refetch } = useInstagramAccounts();
   const { refetchInstagram } = useChannelStatus();
+  const { isInactive } = useSubscription();
   const [connecting, setConnecting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -25,6 +27,10 @@ export default function InstagramInstances() {
     setIsOwner(!user?.role || user.role === 'owner' || (user.permissions ?? []).includes('channels'));
   }, []);
   const handleConnectInstagram = async () => {
+    if (isInactive) {
+      addToast('error', 'Sua assinatura está inativa. Reative seu plano para conectar canais.');
+      return;
+    }
     try {
       setConnecting(true);
       const url = await getOAuthUrl();

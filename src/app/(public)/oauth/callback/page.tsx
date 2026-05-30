@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 
 export const dynamic = 'force-dynamic';
 type Status = 'loading' | 'success' | 'error';
+const ERROR_MESSAGES: Record<string, string> = {
+  subscription_inactive: 'Sua assinatura está inativa. Reative seu plano para conectar canais.',
+  missing_params: 'Parâmetros inválidos na conexão.',
+};
+function friendlyError(code: string): string {
+  return ERROR_MESSAGES[code] ?? code;
+}
 export default function OAuthCallbackPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -19,10 +26,10 @@ export default function OAuthCallbackPage() {
       else if (igError) {
         setStatus('error');
         try {
-          setErrorMessage(decodeURIComponent(igError));
+          setErrorMessage(friendlyError(decodeURIComponent(igError)));
         }
         catch {
-          setErrorMessage(igError);
+          setErrorMessage(friendlyError(igError));
         }
       }
       else {
