@@ -20,6 +20,8 @@ interface SubscriptionContextType {
     planName: string;
     hasAiPlan: boolean;
     isActive: boolean;
+    isCanceled: boolean;
+    isInactive: boolean;
     plan: Plan | null;
     aiPlan: AiPlan | null;
 }
@@ -86,6 +88,8 @@ export function SubscriptionProvider({ children }: {
     const sub = status?.subscription;
     const isTrialing = !!(sub?.status === 'active' && sub?.trialEnd && new Date(sub.trialEnd) > new Date());
     const isActive = sub?.status === 'active';
+    const isCanceled = sub?.status === 'canceled';
+    const isInactive = !!sub && sub.status !== 'active';
     let trialDaysRemaining = 0;
     if (isTrialing && sub?.trialEnd) {
       const diff = new Date(sub.trialEnd).getTime() - Date.now();
@@ -95,9 +99,11 @@ export function SubscriptionProvider({ children }: {
       isTrialing,
       trialDaysRemaining,
       trialEnd: sub?.trialEnd ?? null,
-      planName: status?.plan?.name ?? 'Sem plano',
+      planName: isCanceled ? 'Sem plano' : (status?.plan?.name ?? 'Sem plano'),
       hasAiPlan: !!status?.aiPlan || !!status?.plan?.aiIncluded,
       isActive,
+      isCanceled,
+      isInactive,
       plan: status?.plan ?? null,
       aiPlan: status?.aiPlan ?? null,
     };

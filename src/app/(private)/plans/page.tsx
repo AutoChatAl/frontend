@@ -29,7 +29,7 @@ const PLAN_COLORS: Record<string, string> = {
   dominio: 'from-violet-500 to-purple-700',
 };
 export default function PlansPage() {
-  const { status, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
+  const { status, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function PlansPage() {
     subscriptionService.getPlans().then(setPlans).catch(() => { });
   }, []);
   const handleSelect = async (plan: Plan) => {
-    if (isTrialing || !status?.subscription?.stripeSubscriptionId) {
+    if (isTrialing || isCanceled || !status?.subscription?.stripeSubscriptionId) {
       setSelectedPlan(plan);
       setShowCheckoutModal(true);
       return;
@@ -63,7 +63,7 @@ export default function PlansPage() {
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {plans.map((plan) => {
-        const isCurrent = plan.id === currentPlanId;
+        const isCurrent = !isCanceled && plan.id === currentPlanId;
         const isHighlighted = plan.slug === 'crescimento';
         const Icon = PLAN_ICONS[plan.slug] ?? Sparkles;
         const gradient = PLAN_COLORS[plan.slug] ?? 'from-indigo-500 to-violet-600';

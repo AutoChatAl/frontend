@@ -1,6 +1,6 @@
 'use client';
 import { CheckCircle, Download, MessageSquare, Megaphone, Reply, MessageCircle, MonitorSmartphone, Users, Contact, Bot, Plus, Minus, Crown, AlertTriangle, CreditCard, BarChart2, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -21,7 +21,7 @@ function formatNumber(n: number) {
   return n.toLocaleString('pt-BR');
 }
 export default function BillingTab() {
-  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
+  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
@@ -36,8 +36,11 @@ export default function BillingTab() {
   const [loading, setLoading] = useState(false);
   const [loadingExtra, setLoadingExtra] = useState<null | 'instance' | 'collaborator'>(null);
   const [confirmExtra, setConfirmExtra] = useState<{
-        type: 'instance' | 'collaborator';
-    } | null>(null);
+    type: 'instance' | 'collaborator';
+  } | null>(null);
+  const [confirmRemoveExtra, setConfirmRemoveExtra] = useState<{
+    type: 'instance' | 'collaborator';
+  } | null>(null);
   const [confirmPlanChange, setConfirmPlanChange] = useState<Plan | null>(null);
   const [confirmAiPlan, setConfirmAiPlan] = useState<AiPlan | null>(null);
   const [showCancelImmediatelyModal, setShowCancelImmediatelyModal] = useState(false);
@@ -45,16 +48,27 @@ export default function BillingTab() {
   const [cancelStep, setCancelStep] = useState<1 | 2>(1);
   const [cancelCountdown, setCancelCountdown] = useState(5);
   const [cancelConfirmText, setCancelConfirmText] = useState('');
+  const [showCancelAiModal, setShowCancelAiModal] = useState(false);
+  const reloadBilling = useCallback(async () => {
+    try {
+      const [inv, upcoming] = await Promise.all([
+        subscriptionService.getInvoices(),
+        subscriptionService.getUpcomingInvoice(),
+      ]);
+      setInvoices(inv);
+      setUpcomingInvoice(upcoming);
+    }
+    catch { /* histórico é não-crítico — falha silenciosa */ }
+  }, []);
   useEffect(() => {
-    subscriptionService.getInvoices().then(setInvoices).catch(() => { });
-    subscriptionService.getUpcomingInvoice().then(setUpcomingInvoice).catch(() => { });
+    reloadBilling();
     Promise.all([subscriptionService.getPlans(), subscriptionService.getAiPlans()])
       .then(([p, a]) => { setPlans(p); setAiPlans(a); })
       .catch(() => { });
-  }, []);
+  }, [reloadBilling]);
   const handleChangePlan = (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
-    if (hasActiveSub && !isTrialing) {
+    if (hasActiveSub && !isTrialing && !isCanceled) {
       setShowPlanModal(false);
       setConfirmPlanChange(selectedPlan);
     }
@@ -72,6 +86,7 @@ export default function BillingTab() {
       const result = await subscriptionService.changePlan(confirmPlanChange.slug);
       if (result.success) {
         await refresh();
+        await reloadBilling();
         setConfirmPlanChange(null);
         addToast('success', `Plano alterado para ${confirmPlanChange.name} com sucesso!`);
       }
@@ -94,6 +109,7 @@ export default function BillingTab() {
         : await subscriptionService.addExtraCollaborator();
       if (result.success) {
         await refresh();
+        await reloadBilling();
         addToast('success', type === 'instance' ? 'Instância extra adicionada com sucesso!' : 'Colaborador extra adicionado com sucesso!');
       }
       else {
@@ -115,6 +131,7 @@ export default function BillingTab() {
         : await subscriptionService.removeExtraCollaborator();
       if (result.success) {
         await refresh();
+        await reloadBilling();
         addToast('success', type === 'instance' ? 'Instância extra removida com sucesso!' : 'Colaborador extra removido com sucesso!');
       }
       else {
@@ -139,6 +156,7 @@ export default function BillingTab() {
     const result = await subscriptionService.addOrChangeAiPlan(confirmAiPlan.slug);
     if (result.success) {
       await refresh();
+      await reloadBilling();
       addToast('success', hasAiPlan ? `Plano de IA alterado para ${confirmAiPlan.name} com sucesso!` : `Plano de IA ${confirmAiPlan.name} ativado com sucesso!`);
       setConfirmAiPlan(null);
     }
@@ -147,11 +165,27 @@ export default function BillingTab() {
     }
     setLoading(false);
   };
+  const handleCancelAiPlan = async () => {
+    setLoading(true);
+    const result = await subscriptionService.removeAiPlan();
+    if (result.success) {
+      await refresh();
+      await reloadBilling();
+      setShowCancelAiModal(false);
+      setShowAiModal(false);
+      addToast('success', 'Plano de IA cancelado. Seu plano principal continua ativo.');
+    }
+    else {
+      addToast('error', result.error ?? 'Erro ao cancelar plano de IA.');
+    }
+    setLoading(false);
+  };
   const handleCancelSubscription = async () => {
     setLoading(true);
     const result = await subscriptionService.cancelSubscription();
     if (result.success) {
       await refresh();
+      await reloadBilling();
       setShowManageModal(false);
       closeCancelModal();
       addToast('success', 'Assinatura cancelada com efeito imediato.');
@@ -209,7 +243,10 @@ export default function BillingTab() {
           <h3 className="text-xl sm:text-2xl font-bold mt-1 text-slate-900 dark:text-white flex items-center gap-2">
             {planName}
             {isTrialing && (<span className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
-                  Período de Teste
+              Período de Teste
+            </span>)}
+            {isCanceled && (<span className="text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
+              Cancelado
             </span>)}
           </h3>
         </div>
@@ -237,7 +274,7 @@ export default function BillingTab() {
                     setShowCardModal(true);
                   }}
                 >
-                  <CreditCard size={14}/> Atualizar cartão
+                  <CreditCard size={14} /> Atualizar cartão
                 </Button>
               </div>
             </div>
@@ -245,36 +282,61 @@ export default function BillingTab() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button className="flex-1 justify-center" onClick={() => setShowPlanModal(true)}>
-          <Crown size={15}/> Alterar Plano
+      {isCanceled && (
+        <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-900/20 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-800 dark:text-red-300">Assinatura cancelada</p>
+              <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                O acesso aos recursos pagos foi encerrado. Assine um plano para criar instâncias, campanhas, canais e disparar mensagens novamente.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCanceled ? (
+        <Button className="w-full justify-center" onClick={() => setShowPlanModal(true)}>
+          <Crown size={15} /> Assinar novamente
         </Button>
-        <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowManageModal(true)}>
-          <BarChart2 size={15}/> Gerenciar
-        </Button>
-        <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowCardModal(true)}>
-          <CreditCard size={15}/>
-          {sub?.stripePaymentMethodLast4 ? `•••• ${sub.stripePaymentMethodLast4}` : 'Adicionar Cartão'}
-        </Button>
-      </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button className="flex-1 justify-center" onClick={() => setShowPlanModal(true)}>
+            <Crown size={15} /> Alterar Plano
+          </Button>
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowManageModal(true)}>
+            <BarChart2 size={15} /> Gerenciar
+          </Button>
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowCardModal(true)}>
+            <CreditCard size={15} />
+            {sub?.stripePaymentMethodLast4 ? `•••• ${sub.stripePaymentMethodLast4}` : 'Adicionar Cartão'}
+          </Button>
+        </div>
+      )}
     </Card>
 
     {isPaidActive && (<Card className="p-4 sm:p-6">
       <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-        <Bot size={18}/> Plano de IA
+        <Bot size={18} /> Plano de IA
       </h3>
-      {hasAiPlan ? (<div className="flex items-center justify-between">
+      {hasAiPlan ? (<div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{aiPlan?.name ?? 'IA Incluída'}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {aiPlan ? formatBRL(aiPlan.priceCents) + '/mês' : 'Incluído no plano'}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setShowAiModal(true)}>Gerenciar</Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button size="sm" variant="secondary" onClick={() => setShowAiModal(true)}>Gerenciar</Button>
+          {aiPlan && (<Button size="sm" variant="danger" onClick={() => setShowCancelAiModal(true)}>
+            Cancelar IA
+          </Button>)}
+        </div>
       </div>) : (<div className="text-center py-4">
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Nenhum plano de IA ativo</p>
         <Button size="sm" onClick={() => setShowAiModal(true)}>
-          <Bot size={14}/> Ativar IA
+          <Bot size={14} /> Ativar IA
         </Button>
       </div>)}
     </Card>)}
@@ -288,12 +350,12 @@ export default function BillingTab() {
             <p className="text-xs text-slate-500">R$ 24,90/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => handleRemoveExtra('instance')} disabled={loadingExtra !== null || (sub?.extraInstances ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
-              {loadingExtra === 'instance' ? <Loader2 size={16} className="animate-spin"/> : <Minus size={16}/>}
+            <button onClick={() => setConfirmRemoveExtra({ type: 'instance' })} disabled={loadingExtra !== null || (sub?.extraInstances ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
+              {loadingExtra === 'instance' ? <Loader2 size={16} className="animate-spin" /> : <Minus size={16} />}
             </button>
             <span className="text-sm font-bold w-6 text-center text-slate-700 dark:text-slate-200">{sub?.extraInstances ?? 0}</span>
             <button onClick={() => setConfirmExtra({ type: 'instance' })} disabled={loadingExtra !== null} className="p-1 rounded-lg text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-30">
-              <Plus size={16}/>
+              <Plus size={16} />
             </button>
           </div>
         </div>
@@ -303,12 +365,12 @@ export default function BillingTab() {
             <p className="text-xs text-slate-500">R$ 19,90/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => handleRemoveExtra('collaborator')} disabled={loadingExtra !== null || (sub?.extraCollaborators ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
-              {loadingExtra === 'collaborator' ? <Loader2 size={16} className="animate-spin"/> : <Minus size={16}/>}
+            <button onClick={() => setConfirmRemoveExtra({ type: 'collaborator' })} disabled={loadingExtra !== null || (sub?.extraCollaborators ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
+              {loadingExtra === 'collaborator' ? <Loader2 size={16} className="animate-spin" /> : <Minus size={16} />}
             </button>
             <span className="text-sm font-bold w-6 text-center text-slate-700 dark:text-slate-200">{sub?.extraCollaborators ?? 0}</span>
             <button onClick={() => setConfirmExtra({ type: 'collaborator' })} disabled={loadingExtra !== null} className="p-1 rounded-lg text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-30">
-              <Plus size={16}/>
+              <Plus size={16} />
             </button>
           </div>
         </div>
@@ -321,7 +383,7 @@ export default function BillingTab() {
         {upcomingInvoice && (<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300">
-              <CreditCard size={16}/>
+              <CreditCard size={16} />
             </div>
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-white">Próxima cobrança</p>
@@ -337,7 +399,7 @@ export default function BillingTab() {
         {invoices.length === 0 && !upcomingInvoice ? (<p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Nenhuma fatura encontrada</p>) : (invoices.map((inv) => (<div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${inv.status === 'paid' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>
-              <CheckCircle size={16}/>
+              <CheckCircle size={16} />
             </div>
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-white">{inv.number || inv.id.slice(-8)}</p>
@@ -351,7 +413,7 @@ export default function BillingTab() {
               {formatBRL(inv.amountCents)}
             </span>
             {inv.pdfUrl && (<a href={inv.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1">
-              <Download size={16}/>
+              <Download size={16} />
             </a>)}
           </div>
         </div>)))}
@@ -360,20 +422,20 @@ export default function BillingTab() {
 
     {sub && sub.status !== 'canceled' && (<Card className="p-4 sm:p-6 border border-red-200 dark:border-red-900/60">
       <h3 className="text-base font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">
-        <AlertTriangle size={16}/> Zona de Perigo
+        <AlertTriangle size={16} /> Zona de Perigo
       </h3>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Cancele sua assinatura com efeito imediato.
+        Cancele sua assinatura com efeito imediato.
       </p>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/40">
         <div>
           <p className="text-sm font-semibold text-slate-800 dark:text-white">Cancelar plano</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                O acesso ao plano e aos recursos pagos é encerrado imediatamente.
+            O acesso ao plano e aos recursos pagos é encerrado imediatamente.
           </p>
         </div>
         <Button variant="danger" size="sm" className="shrink-0" onClick={openCancelModal} disabled={loading}>
-              Cancelar plano
+          Cancelar plano
         </Button>
       </div>
     </Card>)}
@@ -389,7 +451,7 @@ export default function BillingTab() {
           const pct = isUnlimited || limit === 0 ? 0 : Math.min(100, Math.round((used / limit) * 100));
           const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-indigo-500';
           return (<div key={label} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
-            <Icon size={14} className="text-slate-400 dark:text-slate-500 shrink-0"/>
+            <Icon size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center mb-1.5">
                 <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
@@ -398,7 +460,7 @@ export default function BillingTab() {
                 </span>
               </div>
               {!isUnlimited && limit > 0 && (<div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1">
-                <div className={`h-1 rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }}/>
+                <div className={`h-1 rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
               </div>)}
             </div>
             {!isUnlimited && limit > 0 && (<span className={`text-xs font-medium w-9 text-right tabular-nums ${pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-500' : 'text-slate-400'}`}>{pct}%</span>)}
@@ -413,7 +475,7 @@ export default function BillingTab() {
             setShowManageModal(false);
             openCancelModal();
           }}>
-              Cancelar assinatura
+            Cancelar assinatura
           </Button>
         </div>
       </div>
@@ -422,7 +484,7 @@ export default function BillingTab() {
     <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title="Escolher Plano" size="lg">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((p) => {
-          const isCurrent = p.id === sub?.planId;
+          const isCurrent = !isCanceled && p.id === sub?.planId;
           return (<div key={p.id} className={`border rounded-xl p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{p.name}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
@@ -440,7 +502,7 @@ export default function BillingTab() {
               <li>• Suporte {p.limits.supportLevel === 'vip' ? 'VIP' : '24h'}</li>
             </ul>
             {isCurrent ? (<Button size="sm" className="w-full justify-center" disabled>Plano Atual</Button>) : (<Button size="sm" className="w-full justify-center" onClick={() => handleChangePlan(p)} disabled={loading}>
-                    Escolher
+              Escolher
             </Button>)}
           </div>);
         })}
@@ -481,7 +543,8 @@ export default function BillingTab() {
         expectPlanId: checkoutPlan.id,
         expectActive: true,
       });
-    }}/>)}
+      await reloadBilling();
+    }} />)}
 
     <Modal isOpen={!!confirmExtra} onClose={() => setConfirmExtra(null)} title={confirmExtra?.type === 'instance' ? 'Adicionar instância extra?' : 'Adicionar colaborador extra?'} size="sm">
       {confirmExtra && (<div className="space-y-4">
@@ -494,7 +557,7 @@ export default function BillingTab() {
             <span className="text-sm font-normal text-slate-500">/mês</span>
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Total após adição:{' '}
+            Total após adição:{' '}
             <span className="font-medium text-slate-700 dark:text-slate-300">
               {confirmExtra.type === 'instance'
                 ? (sub?.extraInstances ?? 0) + 1
@@ -504,7 +567,7 @@ export default function BillingTab() {
           </p>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-              Será cobrado o valor proporcional aos dias restantes do ciclo atual. A partir do próximo ciclo, o valor será incluído integralmente na sua fatura.
+          Será cobrado o valor proporcional aos dias restantes do ciclo atual. A partir do próximo ciclo, o valor será incluído integralmente na sua fatura.
         </p>
         <div className="flex gap-2">
           <Button className="flex-1 justify-center" onClick={async () => {
@@ -512,10 +575,38 @@ export default function BillingTab() {
             setConfirmExtra(null);
             await handleAddExtra(type);
           }} loading={loadingExtra !== null} loadingText="Adicionando...">
-                Confirmar
+            Confirmar
           </Button>
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmExtra(null)} disabled={loading}>
-                Cancelar
+            Cancelar
+          </Button>
+        </div>
+      </div>)}
+    </Modal>
+
+    <Modal isOpen={!!confirmRemoveExtra} onClose={() => setConfirmRemoveExtra(null)} title={confirmRemoveExtra?.type === 'instance' ? 'Remover instância extra?' : 'Remover colaborador extra?'} size="sm">
+      {confirmRemoveExtra && (<div className="space-y-4">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+          <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
+              Sem crédito proporcional
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 opacity-80">
+              {confirmRemoveExtra.type === 'instance' ? 'A instância extra' : 'O colaborador extra'} será removido e não haverá crédito ou estorno pelo período já pago. A cobrança apenas deixa de ser incluída a partir da próxima fatura.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmRemoveExtra(null)} disabled={loadingExtra !== null}>
+            Manter
+          </Button>
+          <Button variant="danger" className="flex-1 justify-center" onClick={async () => {
+            const { type } = confirmRemoveExtra;
+            setConfirmRemoveExtra(null);
+            await handleRemoveExtra(type);
+          }} loading={loadingExtra !== null} loadingText="Removendo...">
+            Remover
           </Button>
         </div>
       </div>)}
@@ -538,7 +629,7 @@ export default function BillingTab() {
 
         <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
           <div className="flex items-center gap-2">
-            <CreditCard size={15} className="text-slate-400"/>
+            <CreditCard size={15} className="text-slate-400" />
             <span className="text-sm text-slate-700 dark:text-slate-300">
               {sub?.stripePaymentMethodLast4 ? `Cartão •••• ${sub.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
             </span>
@@ -550,10 +641,10 @@ export default function BillingTab() {
 
         <div className="flex gap-2">
           <Button className="flex-1 justify-center" onClick={handleConfirmPlanChange} loading={loading} loadingText="Alterando...">
-                Confirmar troca
+            Confirmar troca
           </Button>
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmPlanChange(null)} disabled={loading}>
-                Cancelar
+            Cancelar
           </Button>
         </div>
       </div>)}
@@ -576,7 +667,7 @@ export default function BillingTab() {
 
         <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
           <div className="flex items-center gap-2">
-            <CreditCard size={15} className="text-slate-400"/>
+            <CreditCard size={15} className="text-slate-400" />
             <span className="text-sm text-slate-700 dark:text-slate-300">
               {sub?.stripePaymentMethodLast4 ? `Cartão •••• ${sub.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
             </span>
@@ -591,26 +682,56 @@ export default function BillingTab() {
             {hasAiPlan ? 'Confirmar troca' : 'Ativar IA'}
           </Button>
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmAiPlan(null)} disabled={loading}>
-                Cancelar
+            Cancelar
           </Button>
         </div>
       </div>)}
     </Modal>
 
+    <Modal isOpen={showCancelAiModal} onClose={() => setShowCancelAiModal(false)} title="Cancelar plano de IA?" size="sm">
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+          <Bot size={18} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-violet-700 dark:text-violet-400 mb-1">
+              {aiPlan?.name ?? 'Plano de IA'}{aiPlan ? ` — ${formatBRL(aiPlan.priceCents)}/mês` : ''}
+            </p>
+            <p className="text-xs text-violet-600 dark:text-violet-400 opacity-80">
+              Seu plano principal <span className="font-semibold">{planName}</span> continua ativo. Apenas os recursos de IA serão desativados e a cobrança da IA será removida da próxima fatura.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+          <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-600 dark:text-amber-400 opacity-90">
+            Seus recursos de IA serão cancelados imediatamente. A cobrança deixará de ser incluída a partir da próxima fatura. Para ter acesso aos recursos de IA novamente, será necessário escolher um plano de IA ativo.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowCancelAiModal(false)} disabled={loading}>
+            Manter IA
+          </Button>
+          <Button variant="danger" className="flex-1 justify-center" onClick={handleCancelAiPlan} loading={loading} loadingText="Cancelando...">
+            Cancelar plano de IA
+          </Button>
+        </div>
+      </div>
+    </Modal>
+
     <Modal isOpen={showCancelImmediatelyModal && cancelStep === 1} onClose={closeCancelModal} title="Você está prestes a perder tudo isso" size="md">
       <div className="space-y-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-            Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você perde acesso imediato a:
+          Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você perde acesso imediato a:
         </p>
         <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           {[
-            { icon: <MonitorSmartphone size={16}/>, label: 'Instâncias WhatsApp/Instagram', value: plan ? `${plan.limits.maxInstances} instâncias` : '—' },
-            { icon: <Megaphone size={16}/>, label: 'Campanhas de disparo', value: plan ? `${plan.limits.maxCampaigns} campanhas` : '—' },
-            { icon: <Contact size={16}/>, label: 'Contatos', value: plan ? formatNumber(plan.limits.maxContacts) : '—' },
-            { icon: <Reply size={16}/>, label: 'Respostas automáticas', value: plan ? `${plan.limits.maxAutoReplies} respostas` : '—' },
-            { icon: <Users size={16}/>, label: 'Colaboradores', value: plan ? `${plan.limits.maxCollaborators} colaboradores` : '—' },
-            { icon: <MessageSquare size={16}/>, label: 'Mensagens por mês', value: plan ? formatNumber(plan.limits.maxMessagesPerMonth) : '—' },
-            ...(plan?.aiIncluded || hasAiPlan ? [{ icon: <Bot size={16}/>, label: 'IA integrada (agente virtual)', value: 'Incluído no plano' }] : []),
+            { icon: <MonitorSmartphone size={16} />, label: 'Instâncias WhatsApp/Instagram', value: plan ? `${plan.limits.maxInstances} instâncias` : '—' },
+            { icon: <Megaphone size={16} />, label: 'Campanhas de disparo', value: plan ? `${plan.limits.maxCampaigns} campanhas` : '—' },
+            { icon: <Contact size={16} />, label: 'Contatos', value: plan ? formatNumber(plan.limits.maxContacts) : '—' },
+            { icon: <Reply size={16} />, label: 'Respostas automáticas', value: plan ? `${plan.limits.maxAutoReplies} respostas` : '—' },
+            { icon: <Users size={16} />, label: 'Colaboradores', value: plan ? `${plan.limits.maxCollaborators} colaboradores` : '—' },
+            { icon: <MessageSquare size={16} />, label: 'Mensagens por mês', value: plan ? formatNumber(plan.limits.maxMessagesPerMonth) : '—' },
+            ...(plan?.aiIncluded || hasAiPlan ? [{ icon: <Bot size={16} />, label: 'IA integrada (agente virtual)', value: 'Incluído no plano' }] : []),
           ].map((item, i) => (<div key={i} className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800">
             <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <span className="text-green-500">{item.icon}</span>
@@ -621,7 +742,7 @@ export default function BillingTab() {
         </div>
         <div className="flex gap-2 pt-1">
           <Button variant="secondary" className="flex-1 justify-center" onClick={closeCancelModal}>
-              Quero manter meu plano
+            Quero manter meu plano
           </Button>
           <Button variant="danger" className="flex-1 justify-center" onClick={() => setCancelStep(2)} disabled={cancelCountdown > 0}>
             {cancelCountdown > 0 ? `Continuar (${cancelCountdown}s)` : 'Continuar mesmo assim'}
@@ -633,28 +754,28 @@ export default function BillingTab() {
     <Modal isOpen={showCancelImmediatelyModal && cancelStep === 2} onClose={closeCancelModal} title="Confirmar cancelamento" size="sm">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-          <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
+          <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
-                Cancelamento com efeito imediato
+              Cancelamento com efeito imediato
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400 opacity-80">
-                Seu acesso aos recursos pagos será encerrado assim que você confirmar.
+              Seu acesso aos recursos pagos será encerrado assim que você confirmar.
             </p>
           </div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1.5">
-              Digite <span className="font-mono font-semibold">confirmar</span> para prosseguir
+            Digite <span className="font-mono font-semibold">confirmar</span> para prosseguir
           </label>
-          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400"/>
+          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400" />
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setCancelStep(1)} disabled={loading}>
-              Voltar
+            Voltar
           </Button>
           <Button variant="danger" className="flex-1 justify-center" onClick={handleCancelSubscription} loading={loading} loadingText="Cancelando..." disabled={cancelConfirmText !== 'confirmar'}>
-              Cancelar plano
+            Cancelar plano
           </Button>
         </div>
       </div>
@@ -679,6 +800,6 @@ export default function BillingTab() {
       }}
     />
 
-    <ToastContainer toasts={toasts} onRemove={removeToast}/>
+    <ToastContainer toasts={toasts} onRemove={removeToast} />
   </div>);
 }

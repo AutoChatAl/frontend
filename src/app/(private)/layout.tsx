@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
@@ -62,6 +63,7 @@ export default function PrivateLayout({ children }: Readonly<{
                 <Header />
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
                   <TrialBanner />
+                  <SubscriptionBanner />
                   {children}
                 </main>
               </div>
