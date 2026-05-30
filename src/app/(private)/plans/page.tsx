@@ -29,7 +29,7 @@ const PLAN_COLORS: Record<string, string> = {
   dominio: 'from-violet-500 to-purple-700',
 };
 export default function PlansPage() {
-  const { status, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
+  const { status, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
@@ -39,7 +39,8 @@ export default function PlansPage() {
     subscriptionService.getPlans().then(setPlans).catch(() => { });
   }, []);
   const handleSelect = async (plan: Plan) => {
-    if (isTrialing || !status?.subscription?.stripeSubscriptionId) {
+    // Trial ou assinatura cancelada → contrata via checkout (não há plano ativo a alterar).
+    if (isTrialing || isCanceled || !status?.subscription?.stripeSubscriptionId) {
       setSelectedPlan(plan);
       setShowCheckoutModal(true);
       return;
@@ -54,7 +55,7 @@ export default function PlansPage() {
     }
     setLoading(null);
   };
-  const currentPlanId = status?.subscription?.planId;
+  const currentPlanId = isTrialing || isCanceled ? undefined : status?.subscription?.planId;
   return (<div className="max-w-5xl mx-auto">
     <div className="text-center mb-8">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Escolha seu plano</h1>
@@ -72,7 +73,7 @@ export default function PlansPage() {
                   Mais Popular
           </span>)}
 
-          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-4`}>
+          <div className={`w-10 h-10 rounded-xl bg-linear-to-br ${gradient} flex items-center justify-center mb-4`}>
             <Icon size={20} className="text-white"/>
           </div>
 

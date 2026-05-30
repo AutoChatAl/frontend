@@ -21,7 +21,7 @@ function formatNumber(n: number) {
   return n.toLocaleString('pt-BR');
 }
 export default function BillingTab() {
-  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, refresh, refreshAfterPurchase } = useSubscription();
+  const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
@@ -54,7 +54,8 @@ export default function BillingTab() {
   }, []);
   const handleChangePlan = (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
-    if (hasActiveSub && !isTrialing) {
+    // Assinatura cancelada não tem plano ativo no Stripe — contrata via checkout (nova assinatura).
+    if (hasActiveSub && !isTrialing && !isCanceled) {
       setShowPlanModal(false);
       setConfirmPlanChange(selectedPlan);
     }
@@ -207,15 +208,18 @@ export default function BillingTab() {
         <div>
           <p className="text-indigo-600 dark:text-indigo-400 text-xs uppercase tracking-wider font-semibold">Plano Atual</p>
           <h3 className="text-xl sm:text-2xl font-bold mt-1 text-slate-900 dark:text-white flex items-center gap-2">
-            {planName}
+            {isCanceled ? 'Nenhum plano ativo' : planName}
             {isTrialing && (<span className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
                   Período de Teste
             </span>)}
+            {isCanceled && (<span className="text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
+                  Cancelado
+            </span>)}
           </h3>
         </div>
-        <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium self-start">
+        {!isCanceled && (<span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium self-start">
           {plan ? formatBRL(plan.priceCents) + '/mês' : 'Gratuito'}
-        </span>
+        </span>)}
       </div>
 
       {hasFailedPayment && (
@@ -247,9 +251,9 @@ export default function BillingTab() {
 
       <div className="flex flex-col sm:flex-row gap-2">
         <Button className="flex-1 justify-center" onClick={() => setShowPlanModal(true)}>
-          <Crown size={15}/> Alterar Plano
+          <Crown size={15}/> {isCanceled ? 'Assinar Plano' : 'Alterar Plano'}
         </Button>
-        <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowManageModal(true)}>
+        <Button variant="secondary" className="flex-1 justify-center" disabled={isCanceled} onClick={() => setShowManageModal(true)}>
           <BarChart2 size={15}/> Gerenciar
         </Button>
         <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowCardModal(true)}>
@@ -422,7 +426,8 @@ export default function BillingTab() {
     <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title="Escolher Plano" size="lg">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((p) => {
-          const isCurrent = p.id === sub?.planId;
+          // No trial ou com assinatura cancelada nenhum plano é "atual" — todos podem ser contratados.
+          const isCurrent = !isTrialing && !isCanceled && p.id === sub?.planId;
           return (<div key={p.id} className={`border rounded-xl p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{p.name}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
@@ -662,6 +667,7 @@ export default function BillingTab() {
 
     <CardPaymentModal
       isOpen={showCardModal}
+      hasExistingCard={!!sub?.stripePaymentMethodLast4}
       onClose={() => {
         setShowCardModal(false);
         setRegularizingCard(false);

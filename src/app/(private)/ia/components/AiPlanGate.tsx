@@ -1,9 +1,11 @@
 'use client';
-import { Bot, MessageSquare, Calendar, Package, Check, Sparkles } from 'lucide-react';
+import { Bot, MessageSquare, Calendar, Package, Check, Sparkles, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import CardPaymentModal from '@/components/CardPaymentModal';
+import Modal from '@/components/Modal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
@@ -13,23 +15,31 @@ function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 export default function AiPlanGate() {
-  const { refresh } = useSubscription();
+  const { status, refresh } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [confirmAiPlan, setConfirmAiPlan] = useState<AiPlan | null>(null);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     subscriptionService.getAiPlans().then(setAiPlans).catch(() => { });
   }, []);
-  const handleActivate = async (slug: string) => {
-    setLoading(slug);
-    const result = await subscriptionService.addOrChangeAiPlan(slug);
+  const sub = status?.subscription;
+  const hasCard = !!sub?.stripePaymentMethodLast4;
+  const handleConfirmAiPlan = async () => {
+    if (!confirmAiPlan)
+      return;
+    setLoading(true);
+    const result = await subscriptionService.addOrChangeAiPlan(confirmAiPlan.slug);
     if (result.success) {
       await refresh();
+      addToast('success', `Plano de IA ${confirmAiPlan.name} ativado com sucesso!`);
+      setConfirmAiPlan(null);
     }
     else {
       addToast('error', result.error ?? 'Erro ao ativar plano de IA.');
     }
-    setLoading(null);
+    setLoading(false);
   };
   return (<div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
 
@@ -95,12 +105,56 @@ export default function AiPlanGate() {
                   Regras até {ap.limits.maxCustomRulesChars} caracteres
             </li>
           </ul>
-          <Button className="w-full justify-center" onClick={() => handleActivate(ap.slug)} disabled={loading === ap.slug}>
-            {loading === ap.slug ? 'Ativando...' : 'Ativar IA'}
+          <Button className="w-full justify-center" onClick={() => setConfirmAiPlan(ap)} disabled={loading}>
+              Ativar IA
           </Button>
         </Card>))}
       </div>
     </div>
+
+    <Modal isOpen={!!confirmAiPlan} onClose={() => setConfirmAiPlan(null)} title="Confirmar ativação de IA" size="sm">
+      {confirmAiPlan && (<div className="space-y-4">
+        <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400">Plano selecionado</p>
+            <p className="text-sm font-bold text-violet-600 dark:text-violet-400">
+              {confirmAiPlan.name} — {formatBRL(confirmAiPlan.priceCents)}/mês
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+          <div className="flex items-center gap-2">
+            <CreditCard size={15} className="text-slate-400"/>
+            <span className="text-sm text-slate-700 dark:text-slate-300">
+              {hasCard ? `Cartão •••• ${sub?.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
+            </span>
+          </div>
+          <button onClick={() => setShowCardModal(true)} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+            {hasCard ? 'Editar' : 'Adicionar'}
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button className="flex-1 justify-center" onClick={handleConfirmAiPlan} loading={loading} loadingText="Ativando..." disabled={!hasCard}>
+              Ativar IA
+          </Button>
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmAiPlan(null)} disabled={loading}>
+              Cancelar
+          </Button>
+        </div>
+        {!hasCard && (<p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            Adicione um cartão para ativar o plano de IA.
+        </p>)}
+      </div>)}
+    </Modal>
+
+    <CardPaymentModal
+      isOpen={showCardModal}
+      hasExistingCard={hasCard}
+      onClose={() => setShowCardModal(false)}
+      onSuccess={async () => { await refresh(); }}
+    />
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

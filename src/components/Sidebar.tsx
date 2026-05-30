@@ -60,7 +60,7 @@ function getReadableRole(role?: string): string {
 }
 export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', userRole = 'Admin', userInitials = 'JD' }: SidebarProps) {
   const router = useRouter();
-  const { planName, usage, isTrialing, trialDaysRemaining: _trialDaysRemaining } = useSubscription();
+  const { planName, usage, isTrialing, isCanceled, trialDaysRemaining: _trialDaysRemaining } = useSubscription();
   const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
   const msgUsed = usage?.messages?.used ?? 0;
   const msgLimit = usage?.messages?.limit ?? 0;
@@ -190,7 +190,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         {!sidebarCollapsed && (<div onClick={() => router.push('/settings?tab=billing')} className="bg-linear-to-r from-indigo-50 to-violet-50 dark:from-slate-700 dark:to-slate-800 p-3 rounded-xl border border-indigo-100 dark:border-slate-600 mb-4 cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500 transition-colors">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400"/>
-            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{planName}</span>
+            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{isCanceled ? 'Plano cancelado' : planName}</span>
             {isTrialing && (<span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
                     Período de Teste
             </span>)}

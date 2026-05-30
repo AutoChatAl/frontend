@@ -11,9 +11,10 @@ import Modal from './Modal';
 import { useToast, ToastContainer } from './Toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '');
-function CardForm({ onSuccess, onCancel }: {
+function CardForm({ onSuccess, onCancel, hasExistingCard }: {
   onSuccess: (result: { paymentRecovered: boolean }) => void;
     onCancel: () => void;
+    hasExistingCard: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -115,7 +116,7 @@ function CardForm({ onSuccess, onCancel }: {
       </Button>
       <Button type="submit" className="flex-1 justify-center" disabled={loading || !stripe}>
         <CreditCard size={16} className="mr-1"/>
-        {loading ? 'Salvando...' : 'Salvar Cartão'}
+        {loading ? 'Salvando...' : hasExistingCard ? 'Salvar Alterações' : 'Salvar Cartão'}
       </Button>
     </div>
   </form>);
@@ -124,15 +125,16 @@ interface CardPaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: (result: { paymentRecovered: boolean }) => void;
+    hasExistingCard?: boolean;
 }
-export default function CardPaymentModal({ isOpen, onClose, onSuccess }: CardPaymentModalProps) {
+export default function CardPaymentModal({ isOpen, onClose, onSuccess, hasExistingCard = false }: CardPaymentModalProps) {
   const handleSuccess = (result: { paymentRecovered: boolean }) => {
     onSuccess?.(result);
     onClose();
   };
-  return (<Modal isOpen={isOpen} onClose={onClose} title="Adicionar Cartão" size="sm">
+  return (<Modal isOpen={isOpen} onClose={onClose} title={hasExistingCard ? 'Editar Cartão' : 'Adicionar Cartão'} size="sm">
     <Elements stripe={stripePromise}>
-      <CardForm onSuccess={handleSuccess} onCancel={onClose}/>
+      <CardForm onSuccess={handleSuccess} onCancel={onClose} hasExistingCard={hasExistingCard}/>
     </Elements>
   </Modal>);
 }
