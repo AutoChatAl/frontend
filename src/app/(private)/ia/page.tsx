@@ -16,7 +16,9 @@ import AISchedulingSection from './components/AISchedulingSection';
 import AITabs from './components/AITabs';
 
 export default function IAPage() {
-  const { hasAiPlan, loading: subLoading } = useSubscription();
+  const { hasAiPlan, loading: subLoading, status } = useSubscription();
+  const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
+  const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');
   const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, products, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
   if (subLoading || loading) {
@@ -44,7 +46,7 @@ export default function IAPage() {
 
     {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} triggerSettings={triggerSettings} onCustomRulesChange={setCustomRules} onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))}/>)}
 
-    {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
+    {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
 
     {(activeTab === 'general' || activeTab === 'triggers') && (<div className="flex justify-end pt-4">
       <button onClick={saveConfig} disabled={saving} className="w-full sm:w-auto px-6 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors">
