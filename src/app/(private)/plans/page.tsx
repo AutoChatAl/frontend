@@ -18,6 +18,10 @@ function formatNumber(n: number) {
     return 'Ilimitado';
   return n.toLocaleString('pt-BR');
 }
+// Preço por mensagem excedente (centavos fracionados, ex.: 1.8 => R$ 0,018/msg).
+function formatPricePerMsg(cents: number) {
+  return `R$ ${(cents / 100).toFixed(3).replace('.', ',')}`;
+}
 const PLAN_ICONS: Record<string, typeof Zap> = {
   impulso: Zap,
   crescimento: Sparkles,
@@ -99,7 +103,7 @@ export default function PlansPage() {
             </li>
             <li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
-              {formatNumber(plan.limits.maxMessagesPerMonth)} mensagens/mês
+              {formatNumber(plan.limits.maxMessagesPerMonth)} mensagens/mês <span className="text-indigo-500">*</span>
             </li>
             <li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
@@ -118,6 +122,10 @@ export default function PlansPage() {
                   Suporte {plan.limits.supportLevel === 'vip' ? 'VIP' : '24h'}
             </li>
           </ul>
+
+          <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500 mb-4">
+            <span className="text-indigo-500">*</span> Ao exceder o limite mensal, as mensagens excedentes são cobradas como excedente: {formatPricePerMsg(plan.limits.extraMessagePriceCents)}/msg.
+          </p>
 
           {isCurrent ? (<Button className="w-full justify-center" disabled>Plano Atual</Button>) : (<Button className="w-full justify-center" variant={isHighlighted ? 'primary' : 'secondary'} onClick={() => handleSelect(plan)} disabled={loading === plan.slug}>
             {loading === plan.slug ? 'Aguarde...' : 'Escolher Plano'}

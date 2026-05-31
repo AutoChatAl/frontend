@@ -14,6 +14,10 @@ import type { AiPlan } from '@/types/Subscription';
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
+// Preço por mensagem de IA excedente (centavos fracionados, ex.: 4.0 => R$ 0,040/msg).
+function formatPricePerMsg(cents: number) {
+  return `R$ ${(cents / 100).toFixed(3).replace('.', ',')}`;
+}
 export default function AiPlanGate() {
   const { status, refresh } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
@@ -86,7 +90,7 @@ export default function AiPlanGate() {
             </li>
             <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={14} className="text-emerald-500 shrink-0"/>
-              {ap.limits.maxAiMessagesPerMonth} mensagens IA
+              {ap.limits.maxAiMessagesPerMonth} mensagens IA <span className="text-violet-500">*</span>
             </li>
             <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={14} className="text-emerald-500 shrink-0"/>
@@ -105,6 +109,9 @@ export default function AiPlanGate() {
                   Regras até {ap.limits.maxCustomRulesChars} caracteres
             </li>
           </ul>
+          <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500 mb-4">
+            <span className="text-violet-500">*</span> Ao exceder o limite mensal, as mensagens de IA excedentes são cobradas como excedente: {formatPricePerMsg(ap.limits.extraAiMessagePriceCents)}/msg.
+          </p>
           <Button className="w-full justify-center" onClick={() => setConfirmAiPlan(ap)} disabled={loading}>
               Ativar IA
           </Button>

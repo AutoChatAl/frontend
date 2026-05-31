@@ -32,6 +32,7 @@ export interface Plan {
 export interface AiPlanLimits {
     maxChannels: number;
     maxAiMessagesPerMonth: number;
+    extraAiMessagePriceCents: number;
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
     maxProducts: number;
