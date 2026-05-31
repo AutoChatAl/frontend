@@ -9,6 +9,7 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import { useToast, ToastContainer } from '@/components/Toast';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService, type AuthUser, type Permission } from '@/services/auth.service';
 import { collaboratorService, type Member, type Invite } from '@/services/collaborator.service';
 
@@ -62,6 +63,17 @@ export default function MembersTab() {
     } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
+  const { usage, planName } = useSubscription();
+  // Limite de colaboradores do plano (já inclui extras contratados). -1 = ilimitado.
+  // Enquanto o uso não carregou, assume ilimitado para não bloquear indevidamente — o backend é a barreira final.
+  const collaboratorLimit = usage?.collaborators?.limit ?? -1;
+  const isUnlimitedCollaborators = collaboratorLimit === -1;
+  // Vagas consumidas = colaboradores aceitos + convites pendentes (cada pendente ocupará uma vaga).
+  const usedCollaboratorSlots = members.filter((m) => m.role === 'collaborator').length + invites.length;
+  const atCollaboratorLimit = !isUnlimitedCollaborators && usedCollaboratorSlots >= collaboratorLimit;
+  const collaboratorLimitMessage = collaboratorLimit === 0
+    ? `O plano ${planName} não inclui colaboradores. Faça upgrade para convidar.`
+    : `Limite de ${collaboratorLimit} colaborador${collaboratorLimit === 1 ? '' : 'es'} do plano ${planName} atingido.`;
   async function loadData() {
     try {
       const [u, m, i] = await Promise.all([
@@ -94,6 +106,10 @@ export default function MembersTab() {
   async function handleSendInvite() {
     if (!inviteEmail || invitePermissions.length === 0) {
       addToast('error', 'Preencha o email e selecione ao menos uma permissão.');
+      return;
+    }
+    if (atCollaboratorLimit) {
+      addToast('error', collaboratorLimitMessage);
       return;
     }
     setInviteSending(true);
@@ -174,11 +190,19 @@ export default function MembersTab() {
               Equipe
           </h3>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie quem tem acesso ao painel.</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            {isUnlimitedCollaborators
+              ? 'Colaboradores ilimitados'
+              : `${usedCollaboratorSlots} / ${collaboratorLimit} colaboradores`}
+          </p>
         </div>
-        <Button size="sm" icon={<Plus size={14}/>} className="self-start sm:self-auto" onClick={() => setShowInviteModal(true)}>
+        <Button size="sm" icon={<Plus size={14}/>} className="self-start sm:self-auto" disabled={atCollaboratorLimit} onClick={() => setShowInviteModal(true)}>
             Convidar Membro
         </Button>
       </div>
+      {atCollaboratorLimit && (<div className="mb-4 sm:mb-6 -mt-1 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10 px-3.5 py-2.5">
+        <p className="text-xs text-amber-700 dark:text-amber-400">{collaboratorLimitMessage}</p>
+      </div>)}
 
       <div className="space-y-3">
         {members.map((member) => (<div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 border border-slate-100 dark:border-slate-700 rounded-xl">

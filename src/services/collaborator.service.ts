@@ -61,6 +61,9 @@ class CollaboratorService {
       if (data?.reason === 'INVITE_ALREADY_PENDING') {
         throw new Error('Já existe um convite pendente para este email.');
       }
+      if (data?.reason === 'COLLABORATOR_LIMIT_REACHED') {
+        throw new Error('Seu plano não permite mais colaboradores. Faça upgrade do plano para convidar mais.');
+      }
       if (data?.reason === 'EMAIL_SEND_FAILED') {
         throw new Error('Não foi possível enviar o email de convite.');
       }
