@@ -2,6 +2,7 @@
 import { Clock, Plus, Trash2, Calendar, Save, Loader2, Ban, AlertCircle, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
+import Select from '@/components/Select';
 import TimePicker from '@/components/TimePicker';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
@@ -75,9 +76,17 @@ export default function BusinessHoursConfig({ businessHours, onSave, schedulingR
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Define o intervalo padrão entre horários disponíveis.
       </p>
-      <select value={slotDuration} onChange={(e) => setSlotDuration(Number(e.target.value))} className="px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        {[15, 20, 30, 45, 60, 90, 120].map((m) => (<option key={m} value={m}>{m} minutos</option>))}
-      </select>
+      <div className="w-40">
+        <Select
+          value={String(slotDuration)}
+          onChange={(v) => setSlotDuration(Number(v))}
+          leftIcon={<Clock size={14}/>}
+          options={[15, 20, 30, 45, 60, 90, 120].map((m) => ({
+            value: String(m),
+            label: `${m} minutos`,
+          }))}
+        />
+      </div>
     </div>
 
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">

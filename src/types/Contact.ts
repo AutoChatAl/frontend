@@ -25,6 +25,10 @@ export interface Contact {
     awaitingHumanSince?: string | null;
     identities?: ContactIdentity[];
     tags?: ContactTag[];
+    salesCount?: number;
+    salesValueCents?: number;
+    abandonedCount?: number;
+    abandonedValueCents?: number;
 }
 export interface ListContactsParams {
     search?: string;

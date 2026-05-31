@@ -37,11 +37,6 @@ function getTooltipWidth(): number {
   return Math.min(MAX_TOOLTIP_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
 }
 
-/**
- * Procura todos os elementos que casam com o seletor e retorna o primeiro
- * realmente visível (largura e altura > 0). Importante porque no mobile há um
- * sidebar desktop hidden e um sidebar mobile visível com o mesmo data-tour.
- */
 function getRect(selector: string | null): Rect | null {
   if (!selector || typeof window === 'undefined') return null;
   const els = Array.from(document.querySelectorAll(selector)) as HTMLElement[];
