@@ -20,6 +20,10 @@ function formatNumber(n: number) {
     return 'Ilimitado';
   return n.toLocaleString('pt-BR');
 }
+// Preço por mensagem excedente (centavos fracionados, ex.: 1.8 => R$ 0,018/msg).
+function formatPricePerMsg(cents: number) {
+  return `R$ ${(cents / 100).toFixed(3).replace('.', ',')}`;
+}
 export default function BillingTab() {
   const { status, usage, planName, hasAiPlan, aiPlan, plan, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
@@ -500,12 +504,15 @@ export default function BillingTab() {
               <li>• {p.limits.maxInstances} instâncias</li>
               <li>• {p.limits.maxCampaigns} campanhas</li>
               <li>• {formatNumber(p.limits.maxContacts)} contatos</li>
-              <li>• {formatNumber(p.limits.maxMessagesPerMonth)} msgs/mês</li>
+              <li>• {formatNumber(p.limits.maxMessagesPerMonth)} msgs/mês <span className="text-indigo-500">*</span></li>
               <li>• {p.limits.maxAutoReplies} auto respostas</li>
               <li>• {p.limits.maxCollaborators} colaboradores</li>
               {p.aiIncluded && <li>• IA inclusa</li>}
               <li>• Suporte {p.limits.supportLevel === 'vip' ? 'VIP' : '24h'}</li>
             </ul>
+            <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 mb-3">
+              <span className="text-indigo-500">*</span> Mensagens que excederem o limite mensal são cobradas como excedente: {formatPricePerMsg(p.limits.extraMessagePriceCents)}/msg.
+            </p>
             {isCurrent ? (<Button size="sm" className="w-full justify-center" disabled>Plano Atual</Button>) : (<Button size="sm" className="w-full justify-center" onClick={() => handleChangePlan(p)} disabled={loading}>
               Escolher
             </Button>)}
@@ -525,12 +532,15 @@ export default function BillingTab() {
             </p>
             <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 mb-4">
               <li>• {ap.limits.maxChannels} {ap.limits.maxChannels === 1 ? 'canal' : 'canais'}</li>
-              <li>• {formatNumber(ap.limits.maxAiMessagesPerMonth)} msgs IA/mês</li>
+              <li>• {formatNumber(ap.limits.maxAiMessagesPerMonth)} msgs IA/mês <span className="text-violet-500">*</span></li>
               <li>• Consultar agenda</li>
               {ap.limits.schedulingBookingEnabled && <li>• Agendamento</li>}
               <li>• {ap.limits.maxProducts === -1 ? 'Produtos ilimitados' : `${ap.limits.maxProducts} produtos`}</li>
               <li>• Regras até {formatNumber(ap.limits.maxCustomRulesChars)} caracteres</li>
             </ul>
+            <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 mb-3">
+              <span className="text-violet-500">*</span> Mensagens de IA que excederem o limite mensal são cobradas como excedente: {formatPricePerMsg(ap.limits.extraAiMessagePriceCents)}/msg.
+            </p>
             {isCurrent ? (<Button size="sm" className="w-full justify-center" variant="secondary" disabled>Plano Atual</Button>) : (<Button size="sm" className="w-full justify-center" onClick={() => handleSelectAiPlan(ap)} disabled={loading}>
               {hasAiPlan ? 'Mudar' : 'Ativar'}
             </Button>)}
