@@ -1,18 +1,5 @@
 'use client';
-
-import {
-  AlertCircle,
-  ExternalLink,
-  FileText,
-  Image as ImageIcon,
-  Loader2,
-  MessageCircle,
-  Mic,
-  Reply,
-  Trash2,
-  Type,
-  Upload,
-} from 'lucide-react';
+import { AlertCircle, ExternalLink, FileText, Image as ImageIcon, Loader2, MessageCircle, Mic, Reply, Trash2, Type, Upload } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Checkbox from '@/components/Checkbox';
@@ -27,24 +14,21 @@ import type { CreateAutoReplyInput } from '@/types/AutoReply';
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 
 interface Channel {
-  id: string;
-  name: string;
-  type: 'WHATSAPP' | 'INSTAGRAM';
-  status: string;
+    id: string;
+    name: string;
+    type: 'WHATSAPP' | 'INSTAGRAM';
+    status: string;
 }
-
 interface CreateAutoReplyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
 }
-
 const MATCH_MODES = [
   { value: 'CONTAINS', label: 'Contém', description: 'A mensagem contém a palavra-chave' },
   { value: 'EXACT', label: 'Exata', description: 'A mensagem é exatamente a palavra-chave' },
   { value: 'STARTS_WITH', label: 'Começa com', description: 'A mensagem começa com a palavra-chave' },
 ] as const;
-
 const REPLY_TYPES = [
   { value: 'TEXT' as const, label: 'Texto', icon: Type },
   { value: 'AUDIO' as const, label: 'Áudio', icon: Mic },
@@ -56,7 +40,6 @@ const REPLY_TYPES = [
   { value: 'TEXT_AND_DOCUMENT' as const, label: 'Texto + Doc', icon: FileText },
   { value: 'DOCUMENT_AND_AUDIO' as const, label: 'Doc + Áudio', icon: FileText },
 ] as const;
-
 function stripWhatsAppFormatting(text: string) {
   return text
     .replace(/```([\s\S]*?)```/g, '$1')
@@ -64,13 +47,11 @@ function stripWhatsAppFormatting(text: string) {
     .replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '$1')
     .replace(/~([^~\n]+)~/g, '$1');
 }
-
 export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: CreateAutoReplyModalProps) {
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [formData, setFormData] = useState<CreateAutoReplyInput>({
     channelId: '',
     channelType: 'WHATSAPP',
@@ -87,7 +68,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
   const [audioFileName, setAudioFileName] = useState<string>('');
   const [imageFileName, setImageFileName] = useState<string>('');
   const [documentFileName, setDocumentFileName] = useState<string>('');
-
   const loadChannels = useCallback(async () => {
     try {
       setLoadingData(true);
@@ -95,7 +75,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
         channelsService.getWhatsAppInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
       ]);
-
       const allChannels: Channel[] = [
         ...waChannels.map((ch: WhatsAppInstance) => ({
           id: ch.id,
@@ -110,14 +89,14 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
           status: ch.status,
         })),
       ];
-
       setChannels(allChannels);
-    } catch {
-    } finally {
+    }
+    catch {
+    }
+    finally {
       setLoadingData(false);
     }
   }, []);
-
   useEffect(() => {
     if (isOpen) {
       loadChannels();
@@ -137,18 +116,18 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       setDocumentFileName('');
     }
   }, [isOpen, loadChannels]);
-
   const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_AND_DOCUMENT'].includes(formData.replyType ?? 'TEXT');
   const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'DOCUMENT_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const needsDocument = ['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const isInstagram = formData.channelType === 'INSTAGRAM';
   const hasLinkButton = !!formData.replyLinkUrl?.trim();
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.channelId) newErrors.channelId = 'Selecione um canal';
-    if (!formData.keyword.trim()) newErrors.keyword = 'Informe a palavra-chave';
+    if (!formData.channelId)
+      newErrors.channelId = 'Selecione um canal';
+    if (!formData.keyword.trim())
+      newErrors.keyword = 'Informe a palavra-chave';
     if (needsText && !formData.replyMessage?.trim()) {
       newErrors.replyMessage = 'Informe a mensagem de resposta';
     }
@@ -170,21 +149,18 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file)
+      return;
     if (!file.type.startsWith('audio/')) {
       setErrors((prev) => ({ ...prev, replyAudio: 'O arquivo deve ser um áudio.' }));
       return;
     }
-
     if (file.size > 5 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, replyAudio: 'O áudio deve ter no máximo 5MB.' }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
@@ -198,7 +174,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     };
     reader.readAsDataURL(file);
   };
-
   const removeAudio = () => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -207,23 +182,21 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       return next;
     });
     setAudioFileName('');
-    if (audioInputRef.current) audioInputRef.current.value = '';
+    if (audioInputRef.current)
+      audioInputRef.current.value = '';
   };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file)
+      return;
     if (!file.type.startsWith('image/')) {
       setErrors((prev) => ({ ...prev, replyImage: 'O arquivo deve ser uma imagem.' }));
       return;
     }
-
     if (file.size > 2 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, replyImage: 'A imagem deve ter no máximo 2MB.' }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
@@ -237,7 +210,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     };
     reader.readAsDataURL(file);
   };
-
   const removeImage = () => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -246,18 +218,17 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       return next;
     });
     setImageFileName('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (imageInputRef.current)
+      imageInputRef.current.value = '';
   };
-
   const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
+    if (!file)
+      return;
     if (file.size > 10 * 1024 * 1024) {
       setErrors((prev) => ({ ...prev, replyDocument: 'O documento deve ter no máximo 10MB.' }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(',')[1] ?? '';
@@ -272,7 +243,6 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     };
     reader.readAsDataURL(file);
   };
-
   const removeDocument = () => {
     setFormData((prev) => {
       const next = { ...prev };
@@ -282,24 +252,25 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
       return next;
     });
     setDocumentFileName('');
-    if (documentInputRef.current) documentInputRef.current.value = '';
+    if (documentInputRef.current)
+      documentInputRef.current.value = '';
   };
-
   const handleSubmit = async () => {
-    if (!validate()) return;
-
+    if (!validate())
+      return;
     try {
       setLoading(true);
       await autoReplyService.create(formData);
       onSuccess();
       onClose();
-    } catch (err) {
+    }
+    catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'Erro ao criar auto-resposta' });
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };
-
   const handleChannelSelect = (channelId: string) => {
     const channel = channels.find((c) => c.id === channelId);
     const channelType = channel?.type ?? 'WHATSAPP';
@@ -312,474 +283,274 @@ export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: Cre
     });
     setErrors((prev) => ({ ...prev, channelId: '' }));
   };
-
   const hasContent = formData.keyword && (formData.replyMessage || formData.replyAudioBase64 || formData.replyImageBase64 || formData.replyDocumentBase64);
+  return (<Modal isOpen={isOpen} onClose={onClose} title="Nova Auto-Resposta" size="md">
+    <div className="space-y-5">
+      {errors.general && (<div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+        <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5"/>
+        <p className="text-sm text-red-700 dark:text-red-400 flex-1">{errors.general}</p>
+      </div>)}
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nova Auto-Resposta" size="md">
-      <div className="space-y-5">
-        {errors.general && (
-          <div className="flex items-start gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 dark:text-red-400 flex-1">{errors.general}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Canal
-          </label>
-          {loadingData ? (
-            <div className="flex items-center gap-2 py-3">
-              <Loader2 size={16} className="animate-spin text-slate-400" />
-              <span className="text-sm text-slate-400">Carregando canais...</span>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {channels.map((channel) => {
-                const isSelected = formData.channelId === channel.id;
-                const isWA = channel.type === 'WHATSAPP';
-                return (
-                  <label
-                    key={channel.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="channel"
-                      value={channel.id}
-                      checked={isSelected}
-                      onChange={() => handleChannelSelect(channel.id)}
-                      className="sr-only"
-                    />
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isWA ? 'bg-green-100 dark:bg-green-900/30' : 'bg-pink-100 dark:bg-pink-900/30'
-                    }`}>
-                      <MessageCircle size={16} className={isWA ? 'text-green-600 dark:text-green-400' : 'text-pink-600 dark:text-pink-400'} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        {channel.name}
-                      </p>
-                      <p className="text-xs text-slate-400">{channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      channel.status === 'CONNECTED'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                        : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                    }`}>
-                      {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
-                    </span>
-                  </label>
-                );
-              })}
-              {channels.length === 0 && (
-                <p className="text-sm text-slate-400 p-3">Nenhum canal disponível. Conecte um canal primeiro.</p>
-              )}
-            </div>
-          )}
-          {errors.channelId && (
-            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-              <AlertCircle size={12} /> {errors.channelId}
-            </p>
-          )}
-        </div>
-
-        <Input
-          label="Palavra-chave / Frase"
-          type="text"
-          value={formData.keyword}
-          onChange={(e) => {
-            setFormData((prev) => ({ ...prev, keyword: e.target.value }));
-            setErrors((prev) => ({ ...prev, keyword: '' }));
-          }}
-          placeholder="Ex: eu quero, quero comprar, me ajuda..."
-          error={errors.keyword}
-        />
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Modo de correspondência
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {MATCH_MODES.map((mode) => (
-              <button
-                key={mode.value}
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, matchMode: mode.value }))}
-                className={`p-2.5 rounded-xl border-2 text-center transition-all ${
-                  formData.matchMode === mode.value
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                }`}
-              >
-                <p className="text-sm font-medium text-slate-800 dark:text-white">{mode.label}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{mode.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Checkbox
-          checked={formData.caseSensitive ?? false}
-          onChange={(checked) => setFormData((prev) => ({ ...prev, caseSensitive: checked }))}
-          label="Diferenciar maiúsculas/minúsculas"
-          description="A palavra-chave será sensível a maiúsculas e minúsculas"
-        />
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Tipo de resposta
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {REPLY_TYPES.filter((opt) => !isInstagram || !['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(opt.value)).map((opt) => {
-              const disabled = false;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setFormData((prev) => ({ ...prev, replyType: opt.value }))}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 text-center transition-all ${
-                    disabled
-                      ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-700'
-                      : formData.replyType === opt.value
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <opt.icon size={16} />
-                  <p className="text-sm font-medium text-slate-800 dark:text-white">{opt.label}</p>
-                </button>
-              );
-            })}
-          </div>
-
-        </div>
-
-        {needsText && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Mensagem de resposta
-            </label>
-            {isInstagram ? (
-              <Textarea
-                value={formData.replyMessage ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, replyMessage: e.target.value }));
-                  setErrors((prev) => ({ ...prev, replyMessage: '' }));
-                }}
-                placeholder="Ex: Aqui está seu link do Pix: https://pix.exemplo.com/12345"
-                rows={4}
-                error={errors.replyMessage}
-              />
-            ) : (
-              <>
-                <WhatsAppEditor
-                  value={formData.replyMessage ?? ''}
-                  onChange={(value) => {
-                    setFormData((prev) => ({ ...prev, replyMessage: value }));
-                    setErrors((prev) => ({ ...prev, replyMessage: '' }));
-                  }}
-                  placeholder="Digite a mensagem com formatação do WhatsApp..."
-                  rows={5}
-                  maxLength={4000}
-                  error={errors.replyMessage}
-                />
-                <div className="flex justify-end mt-1.5">
-                  <span className={`text-xs ${(formData.replyMessage?.length ?? 0) > 3600 ? 'text-amber-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {formData.replyMessage?.length ?? 0}/4000
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {needsAudio && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Arquivo de áudio
-            </label>
-            <input
-              ref={audioInputRef}
-              type="file"
-              accept="audio/*"
-              onChange={handleAudioUpload}
-              className="hidden"
-            />
-            {audioFileName ? (
-              <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
-                <button
-                  type="button"
-                  onClick={removeAudio}
-                  className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-                >
-                  <Trash2 size={16} />
-                </button>
+        </label>
+        {loadingData ? (<div className="flex items-center gap-2 py-3">
+          <Loader2 size={16} className="animate-spin text-slate-400"/>
+          <span className="text-sm text-slate-400">Carregando canais...</span>
+        </div>) : (<div className="space-y-2">
+          {channels.map((channel) => {
+            const isSelected = formData.channelId === channel.id;
+            const isWA = channel.type === 'WHATSAPP';
+            return (<label key={channel.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+              <input type="radio" name="channel" value={channel.id} checked={isSelected} onChange={() => handleChannelSelect(channel.id)} className="sr-only"/>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isWA ? 'bg-green-100 dark:bg-green-900/30' : 'bg-pink-100 dark:bg-pink-900/30'}`}>
+                <MessageCircle size={16} className={isWA ? 'text-green-600 dark:text-green-400' : 'text-pink-600 dark:text-pink-400'}/>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => audioInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-              >
-                <Upload size={18} />
-                <span className="text-sm font-medium">Clique para enviar um áudio (máx. 5MB)</span>
-              </button>
-            )}
-            {errors.replyAudio && (
-              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} /> {errors.replyAudio}
-              </p>
-            )}
-          </div>
-        )}
-
-        {needsImage && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Imagem
-            </label>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-            {imageFileName ? (
-              <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-                >
-                  <Trash2 size={16} />
-                </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                  {channel.name}
+                </p>
+                <p className="text-xs text-slate-400">{channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}</p>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-              >
-                <Upload size={18} />
-                <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
-              </button>
-            )}
-            {errors.replyImage && (
-              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} /> {errors.replyImage}
-              </p>
-            )}
-          </div>
-        )}
-
-        {needsDocument && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Documento
-            </label>
-            <input
-              ref={documentInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
-              onChange={handleDocumentUpload}
-              className="hidden"
-            />
-            {documentFileName ? (
-              <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-                <FileText size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{documentFileName}</span>
-                <button
-                  type="button"
-                  onClick={removeDocument}
-                  className="text-red-400 hover:text-red-600 transition-colors shrink-0"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => documentInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
-              >
-                <Upload size={18} />
-                <span className="text-sm font-medium">Clique para enviar um documento (máx. 10MB)</span>
-              </button>
-            )}
-            {errors.replyDocument && (
-              <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                <AlertCircle size={12} /> {errors.replyDocument}
-              </p>
-            )}
-          </div>
-        )}
-
-        {needsText && (
-          <div>
-            <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              <ExternalLink size={14} className="text-indigo-500" />
-              Botão de link <span className="text-slate-400 font-normal">(opcional)</span>
-            </label>
-            <div className="space-y-2">
-              <Input
-                type="url"
-                value={formData.replyLinkUrl ?? ''}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, replyLinkUrl: e.target.value }));
-                  setErrors((prev) => ({ ...prev, replyLinkUrl: '' }));
-                }}
-                placeholder="https://exemplo.com/link"
-                error={errors.replyLinkUrl}
-              />
-              <Input
-                type="text"
-                value={formData.replyLinkLabel ?? ''}
-                onChange={(e) => setFormData((prev) => ({ ...prev, replyLinkLabel: e.target.value }))}
-                placeholder="Texto do botão (ex: Saiba mais)"
-              />
-              {isInstagram && hasLinkButton && (
-                <Textarea
-                  value={formData.replyLinkDescription ?? ''}
-                  onChange={(e) => {
-                    setFormData((prev) => ({ ...prev, replyLinkDescription: e.target.value }));
-                    setErrors((prev) => ({ ...prev, replyLinkDescription: '' }));
-                  }}
-                  placeholder="Descrição do card no Instagram (opcional)"
-                  rows={2}
-                  error={errors.replyLinkDescription}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
-        {formData.keyword && hasContent && (
-          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-              Preview
-            </p>
-            <div className="space-y-3">
-              <div className="flex justify-end">
-                <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-2 rounded-xl rounded-tr-sm text-sm max-w-[80%]">
-                  {formData.keyword}
-                </div>
-              </div>
-
-              {needsText && formData.replyMessage && (
-                isInstagram ? (
-                  <div className="flex justify-start">
-                    {hasLinkButton ? (
-                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-tl-sm text-sm max-w-[80%] overflow-hidden">
-                        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <Reply size={10} className="text-pink-500" />
-                            <span className="text-[10px] font-semibold text-pink-500">Preview Instagram</span>
-                          </div>
-                          <p className="font-semibold text-slate-800 dark:text-white line-clamp-2">{formData.replyMessage}</p>
-                          {formData.replyLinkDescription && (
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{formData.replyLinkDescription}</p>
-                          )}
-                        </div>
-                        <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900/60">
-                          <div className="w-full text-center rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-800 dark:text-white font-semibold py-2">
-                            {formData.replyLinkLabel || 'Saiba mais'}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Reply size={10} className="text-pink-500" />
-                          <span className="text-[10px] font-semibold text-pink-500">Auto-resposta Instagram</span>
-                        </div>
-                        <p className="whitespace-pre-wrap wrap-break-word">{formData.replyMessage}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex justify-start">
-                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Reply size={10} className="text-indigo-500" />
-                        <span className="text-[10px] font-semibold text-indigo-500">Auto-resposta</span>
-                      </div>
-                      <p className="whitespace-pre-wrap wrap-break-word">{formData.replyMessage}</p>
-                      {formData.replyLinkUrl && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                          <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                            <ExternalLink size={12} />
-                            <span className="text-xs font-medium">{formData.replyLinkLabel || formData.replyLinkUrl}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              )}
-
-              {needsAudio && formData.replyAudioBase64 && (
-                <div className="flex justify-start">
-                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
-                    {!needsText && (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Reply size={10} className="text-indigo-500" />
-                        <span className="text-[10px] font-semibold text-indigo-500">Auto-resposta</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                      <Mic size={14} />
-                      <span className="text-xs font-medium">Mensagem de áudio</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {needsImage && formData.replyImageBase64 && (
-                <div className="flex justify-start">
-                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
-                    <div className="flex items-center gap-1.5 mb-1 text-indigo-600 dark:text-indigo-400">
-                      <ImageIcon size={14} />
-                      <span className="text-xs font-medium">Imagem anexada</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {needsDocument && formData.replyDocumentBase64 && (
-                <div className="flex justify-start">
-                  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
-                    <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                      <FileText size={14} />
-                      <span className="text-xs font-medium">{documentFileName || 'Documento anexado'}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <ModalActions
-          onCancel={onClose}
-          onConfirm={handleSubmit}
-          confirmLabel="Criar Auto-Resposta"
-          confirmIcon={<Reply size={16} />}
-          loading={loading}
-          loadingText="Criando..."
-        />
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${channel.status === 'CONNECTED'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
+              </span>
+            </label>);
+          })}
+          {channels.length === 0 && (<p className="text-sm text-slate-400 p-3">Nenhum canal disponível. Conecte um canal primeiro.</p>)}
+        </div>)}
+        {errors.channelId && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12}/> {errors.channelId}
+        </p>)}
       </div>
-    </Modal>
-  );
+
+      <Input label="Palavra-chave / Frase" type="text" value={formData.keyword} onChange={(e) => {
+        setFormData((prev) => ({ ...prev, keyword: e.target.value }));
+        setErrors((prev) => ({ ...prev, keyword: '' }));
+      }} placeholder="Ex: eu quero, quero comprar, me ajuda..." error={errors.keyword}/>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Modo de correspondência
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {MATCH_MODES.map((mode) => (<button key={mode.value} type="button" onClick={() => setFormData((prev) => ({ ...prev, matchMode: mode.value }))} className={`p-2.5 rounded-xl border-2 text-center transition-all ${formData.matchMode === mode.value
+            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+            <p className="text-sm font-medium text-slate-800 dark:text-white">{mode.label}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{mode.description}</p>
+          </button>))}
+        </div>
+      </div>
+
+      <Checkbox checked={formData.caseSensitive ?? false} onChange={(checked) => setFormData((prev) => ({ ...prev, caseSensitive: checked }))} label="Diferenciar maiúsculas/minúsculas" description="A palavra-chave será sensível a maiúsculas e minúsculas"/>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            Tipo de resposta
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {REPLY_TYPES.filter((opt) => !isInstagram || !['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(opt.value)).map((opt) => {
+            const disabled = false;
+            return (<button key={opt.value} type="button" disabled={disabled} onClick={() => setFormData((prev) => ({ ...prev, replyType: opt.value }))} className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 text-center transition-all ${disabled
+              ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-700'
+              : formData.replyType === opt.value
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+              <opt.icon size={16}/>
+              <p className="text-sm font-medium text-slate-800 dark:text-white">{opt.label}</p>
+            </button>);
+          })}
+        </div>
+
+      </div>
+
+      {needsText && (<div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Mensagem de resposta
+        </label>
+        {isInstagram ? (<Textarea value={formData.replyMessage ?? ''} onChange={(e) => {
+          setFormData((prev) => ({ ...prev, replyMessage: e.target.value }));
+          setErrors((prev) => ({ ...prev, replyMessage: '' }));
+        }} placeholder="Ex: Aqui está seu link do Pix: https://pix.exemplo.com/12345" rows={4} error={errors.replyMessage}/>) : (<>
+          <WhatsAppEditor value={formData.replyMessage ?? ''} onChange={(value) => {
+            setFormData((prev) => ({ ...prev, replyMessage: value }));
+            setErrors((prev) => ({ ...prev, replyMessage: '' }));
+          }} placeholder="Digite a mensagem com formatação do WhatsApp..." rows={5} maxLength={4000} error={errors.replyMessage}/>
+          <div className="flex justify-end mt-1.5">
+            <span className={`text-xs ${(formData.replyMessage?.length ?? 0) > 3600 ? 'text-amber-500' : 'text-slate-400 dark:text-slate-500'}`}>
+              {formData.replyMessage?.length ?? 0}/4000
+            </span>
+          </div>
+        </>)}
+      </div>)}
+
+      {needsAudio && (<div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Arquivo de áudio
+        </label>
+        <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden"/>
+        {audioFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+          <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
+          <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
+          <button type="button" onClick={removeAudio} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
+            <Trash2 size={16}/>
+          </button>
+        </div>) : (<button type="button" onClick={() => audioInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+          <Upload size={18}/>
+          <span className="text-sm font-medium">Clique para enviar um áudio (máx. 5MB)</span>
+        </button>)}
+        {errors.replyAudio && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12}/> {errors.replyAudio}
+        </p>)}
+      </div>)}
+
+      {needsImage && (<div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Imagem
+        </label>
+        <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} className="hidden"/>
+        {imageFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+          <ImageIcon size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
+          <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{imageFileName}</span>
+          <button type="button" onClick={removeImage} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
+            <Trash2 size={16}/>
+          </button>
+        </div>) : (<button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+          <Upload size={18}/>
+          <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
+        </button>)}
+        {errors.replyImage && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12}/> {errors.replyImage}
+        </p>)}
+      </div>)}
+
+      {needsDocument && (<div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Documento
+        </label>
+        <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" onChange={handleDocumentUpload} className="hidden"/>
+        {documentFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+          <FileText size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
+          <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{documentFileName}</span>
+          <button type="button" onClick={removeDocument} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
+            <Trash2 size={16}/>
+          </button>
+        </div>) : (<button type="button" onClick={() => documentInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
+          <Upload size={18}/>
+          <span className="text-sm font-medium">Clique para enviar um documento (máx. 10MB)</span>
+        </button>)}
+        {errors.replyDocument && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12}/> {errors.replyDocument}
+        </p>)}
+      </div>)}
+
+      {needsText && (<div>
+        <label className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <ExternalLink size={14} className="text-indigo-500"/>
+              Botão de link <span className="text-slate-400 font-normal">(opcional)</span>
+        </label>
+        <div className="space-y-2">
+          <Input type="url" value={formData.replyLinkUrl ?? ''} onChange={(e) => {
+            setFormData((prev) => ({ ...prev, replyLinkUrl: e.target.value }));
+            setErrors((prev) => ({ ...prev, replyLinkUrl: '' }));
+          }} placeholder="https://exemplo.com/link" error={errors.replyLinkUrl}/>
+          <Input type="text" value={formData.replyLinkLabel ?? ''} onChange={(e) => setFormData((prev) => ({ ...prev, replyLinkLabel: e.target.value }))} placeholder="Texto do botão (ex: Saiba mais)"/>
+          {isInstagram && hasLinkButton && (<Textarea value={formData.replyLinkDescription ?? ''} onChange={(e) => {
+            setFormData((prev) => ({ ...prev, replyLinkDescription: e.target.value }));
+            setErrors((prev) => ({ ...prev, replyLinkDescription: '' }));
+          }} placeholder="Descrição do card no Instagram (opcional)" rows={2} error={errors.replyLinkDescription}/>)}
+        </div>
+      </div>)}
+
+      {formData.keyword && hasContent && (<div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+              Preview
+        </p>
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-2 rounded-xl rounded-tr-sm text-sm max-w-[80%]">
+              {formData.keyword}
+            </div>
+          </div>
+
+          {needsText && formData.replyMessage && (isInstagram ? (<div className="flex justify-start">
+            {hasLinkButton ? (<div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-tl-sm text-sm max-w-[80%] overflow-hidden">
+              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Reply size={10} className="text-pink-500"/>
+                  <span className="text-[10px] font-semibold text-pink-500">Preview Instagram</span>
+                </div>
+                <p className="font-semibold text-slate-800 dark:text-white line-clamp-2">{formData.replyMessage}</p>
+                {formData.replyLinkDescription && (<p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{formData.replyLinkDescription}</p>)}
+              </div>
+              <div className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900/60">
+                <div className="w-full text-center rounded-xl bg-slate-100 dark:bg-slate-700/70 text-slate-800 dark:text-white font-semibold py-2">
+                  {formData.replyLinkLabel || 'Saiba mais'}
+                </div>
+              </div>
+            </div>) : (<div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Reply size={10} className="text-pink-500"/>
+                <span className="text-[10px] font-semibold text-pink-500">Auto-resposta Instagram</span>
+              </div>
+              <p className="whitespace-pre-wrap wrap-break-word">{formData.replyMessage}</p>
+            </div>)}
+          </div>) : (<div className="flex justify-start">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Reply size={10} className="text-indigo-500"/>
+                <span className="text-[10px] font-semibold text-indigo-500">Auto-resposta</span>
+              </div>
+              <p className="whitespace-pre-wrap wrap-break-word">{formData.replyMessage}</p>
+              {formData.replyLinkUrl && (<div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                  <ExternalLink size={12}/>
+                  <span className="text-xs font-medium">{formData.replyLinkLabel || formData.replyLinkUrl}</span>
+                </div>
+              </div>)}
+            </div>
+          </div>))}
+
+          {needsAudio && formData.replyAudioBase64 && (<div className="flex justify-start">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+              {!needsText && (<div className="flex items-center gap-1.5 mb-1">
+                <Reply size={10} className="text-indigo-500"/>
+                <span className="text-[10px] font-semibold text-indigo-500">Auto-resposta</span>
+              </div>)}
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                <Mic size={14}/>
+                <span className="text-xs font-medium">Mensagem de áudio</span>
+              </div>
+            </div>
+          </div>)}
+
+          {needsImage && formData.replyImageBase64 && (<div className="flex justify-start">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-1.5 mb-1 text-indigo-600 dark:text-indigo-400">
+                <ImageIcon size={14}/>
+                <span className="text-xs font-medium">Imagem anexada</span>
+              </div>
+            </div>
+          </div>)}
+
+          {needsDocument && formData.replyDocumentBase64 && (<div className="flex justify-start">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl rounded-tl-sm text-sm max-w-[80%] text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                <FileText size={14}/>
+                <span className="text-xs font-medium">{documentFileName || 'Documento anexado'}</span>
+              </div>
+            </div>
+          </div>)}
+        </div>
+      </div>)}
+
+      <ModalActions onCancel={onClose} onConfirm={handleSubmit} confirmLabel="Criar Auto-Resposta" confirmIcon={<Reply size={16}/>} loading={loading} loadingText="Criando..."/>
+    </div>
+  </Modal>);
 }

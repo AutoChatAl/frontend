@@ -9,7 +9,6 @@ class GroupService {
     }
     return response.data as Group[];
   }
-
   public async getGroup(id: string): Promise<GroupWithContacts> {
     const response = await apiClient.get<GroupWithContacts>(`/groups/${id}`);
     if (!response.success || !response.data) {
@@ -17,7 +16,6 @@ class GroupService {
     }
     return response.data as GroupWithContacts;
   }
-
   public async createGroup(data: CreateGroupInput): Promise<Group> {
     const response = await apiClient.post<Group>('/groups', data);
     if (!response.success || !response.data) {
@@ -25,7 +23,6 @@ class GroupService {
     }
     return response.data as Group;
   }
-
   public async updateGroup(id: string, data: UpdateGroupInput): Promise<Group> {
     const response = await apiClient.put<Group>(`/groups/${id}`, data);
     if (!response.success || !response.data) {
@@ -33,14 +30,12 @@ class GroupService {
     }
     return response.data as Group;
   }
-
   public async deleteGroup(id: string): Promise<void> {
     const response = await apiClient.delete(`/groups/${id}`);
     if (!response.success) {
       throw new Error('Falha ao deletar grupo. Tente novamente.');
     }
   }
-
   public async setMembers(groupId: string, contactIds: string[]): Promise<void> {
     const response = await apiClient.post(`/groups/${groupId}/members`, { contactIds });
     if (!response.success) {
@@ -48,5 +43,4 @@ class GroupService {
     }
   }
 }
-
 export const groupService = new GroupService();

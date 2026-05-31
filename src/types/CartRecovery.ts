@@ -42,6 +42,7 @@ export interface RecoveryAttempt {
   stepIndex: number;
   scheduledFor: string;
   status: RecoveryAttemptStatus;
+  channelType?: IntegrationChannelType;
   sentAt?: string;
   error?: string;
 }
@@ -88,7 +89,7 @@ export interface CreateIntegrationInput {
   platform: SalesPlatform;
   name: string;
   secret: string;
-  channelId?: string;
+  channelId?: string | undefined;
   channelType?: IntegrationChannelType;
   enabled?: boolean;
   recoverySteps?: RecoveryStep[];
@@ -97,18 +98,18 @@ export interface CreateIntegrationInput {
 export interface UpdateIntegrationInput {
   name?: string;
   secret?: string;
-  channelId?: string;
+  channelId?: string | undefined;
   channelType?: IntegrationChannelType;
   enabled?: boolean;
   recoverySteps?: RecoveryStep[];
 }
 
 export interface ListCartsParams {
-  status?: AbandonedCartStatus;
-  integrationId?: string;
-  platform?: SalesPlatform;
-  contactId?: string;
-  search?: string;
+  status?: AbandonedCartStatus | undefined;
+  integrationId?: string | undefined;
+  platform?: SalesPlatform | undefined;
+  contactId?: string | undefined;
+  search?: string | undefined;
   skip?: number;
   limit?: number;
 }

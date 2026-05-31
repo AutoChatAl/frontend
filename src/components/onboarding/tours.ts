@@ -7,7 +7,7 @@ import type { Permission } from '@/services/auth.service';
  * automático do progresso para que a NOVA experiência seja mostrada sem
  * precisar clicar em "Refazer tour" manualmente.
  */
-export const ONBOARDING_VERSION = 'v4-2026-05-26';
+export const ONBOARDING_VERSION = 'v6-2026-05-31-cart-recovery-sidebar';
 
 export type TourPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center';
 
@@ -122,6 +122,15 @@ export const TOURS: TourConfig[] = [
         title: 'Automação de comentários no Instagram',
         description:
           'Responda comentários em posts ou Reels automaticamente, e ainda envie um DM com link/cupom para cada pessoa que comentar.',
+        placement: 'right',
+      },
+      {
+        id: 'dashboard:cart-recovery-nav',
+        tourId: 'dashboard',
+        selector: '[data-tour="sidebar-cart-recovery"]',
+        title: 'Recuperação de carrinhos abandonados',
+        description:
+          'Conecte Hotmart, Kiwify, Eduzz, Monetizze e PerfectPay e o Synq dispara automaticamente mensagens no WhatsApp ou Instagram pra quem abandonou o checkout. Configure uma vez e rode no automático.',
         placement: 'right',
       },
       {
@@ -391,6 +400,34 @@ export const TOURS: TourConfig[] = [
         title: 'Calendário e configurações',
         description:
           'Veja sua agenda no calendário, e configure os horários de funcionamento e duração dos serviços nas outras abas.',
+        placement: 'bottom',
+      },
+    ],
+  },
+
+  {
+    id: 'cart-recovery',
+    pathname: '/cart-recovery',
+    label: 'Recuperação de Carrinhos',
+    permission: 'campaigns',
+    steps: [
+      {
+        id: 'cart-recovery:intro',
+        tourId: 'cart-recovery',
+        selector: null,
+        title: 'Recupere vendas perdidas no automático',
+        description:
+          'Sempre que um cliente abandonar o checkout na Hotmart, Kiwify, Eduzz, Monetizze ou PerfectPay, o Synq dispara uma sequência de mensagens no WhatsApp ou Instagram pra trazer ele de volta. Tudo configurado uma vez e rodando sozinho.',
+        placement: 'center',
+        allowMissingTarget: true,
+      },
+      {
+        id: 'cart-recovery:tabs',
+        tourId: 'cart-recovery',
+        selector: '[data-tour="cart-recovery-tabs"]',
+        title: 'Acompanhe e configure',
+        description:
+          'Em "Carrinhos" você vê em tempo real quem abandonou, o valor perdido e os recuperados. Em "Integrações" você cadastra os webhooks de cada plataforma de venda (Hotmart, Kiwify, Eduzz…) que vai alimentar o sistema com esses dados. Cada plano permite uma quantidade diferente de integrações ativas.',
         placement: 'bottom',
       },
     ],

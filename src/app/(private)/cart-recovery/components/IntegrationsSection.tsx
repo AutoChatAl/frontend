@@ -1,6 +1,7 @@
 'use client';
 
-import { Plus, Pencil, Trash2, Copy, Check, Plug, AlertCircle, MessageCircle, Instagram } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Check, Plug, AlertCircle, MessageCircle, Instagram, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import Button from '@/components/Button';
@@ -8,6 +9,7 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import { usePlanLimitCheck } from '@/contexts/SubscriptionContext';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import {
   PLATFORM_LABELS,
@@ -33,11 +35,25 @@ const PLATFORM_TONE: Record<SalesPlatform, string> = {
 };
 
 export default function IntegrationsSection({ integrations, channels, onReload, onToast }: Props) {
+  const router = useRouter();
+  const { used, limit, isAtLimit } = usePlanLimitCheck('cartRecoveryIntegrations');
+  const limitLabel = limit === -1 ? 'ilimitadas' : limit;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<CartRecoveryIntegration | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CartRecoveryIntegration | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleOpenCreate = () => {
+    if (isAtLimit) {
+      onToast(
+        'error',
+        `Você atingiu o limite de ${limit} integraç${limit === 1 ? 'ão' : 'ões'} de recuperação do seu plano. Faça upgrade para criar mais.`
+      );
+      return;
+    }
+    setIsFormOpen(true);
+  };
 
   const handleToggle = async (integration: CartRecoveryIntegration) => {
     try {
@@ -79,13 +95,42 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Conecte suas plataformas de venda. Os webhooks devem ser cadastrados no painel da plataforma usando a URL gerada para cada integração.
-        </p>
-        <Button onClick={() => setIsFormOpen(true)} icon={<Plus size={16} />}>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Conecte suas plataformas de venda. Os webhooks devem ser cadastrados no painel da plataforma usando a URL gerada para cada integração.
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {used} de {limitLabel} integraç{limit === 1 ? 'ão' : 'ões'} utilizada{used === 1 ? '' : 's'}.
+          </p>
+        </div>
+        <Button
+          onClick={handleOpenCreate}
+          icon={isAtLimit ? <Lock size={16} /> : <Plus size={16} />}
+          disabled={isAtLimit}
+          title={isAtLimit ? `Limite de ${limit} integraç${limit === 1 ? 'ão' : 'ões'} atingido` : undefined}
+          data-tour="cart-recovery-new"
+        >
           Nova integração
         </Button>
       </div>
+
+      {isAtLimit && (
+        <div className="flex flex-col items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <Lock size={16} className="mt-0.5 shrink-0" />
+            <p>
+              Você atingiu o limite de <strong>{limit}</strong> integraç{limit === 1 ? 'ão' : 'ões'} do seu plano. Faça upgrade para cadastrar mais webhooks de recuperação.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/plans')}
+            className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+          >
+            Ver planos
+          </button>
+        </div>
+      )}
 
       {hasNoChannels && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
@@ -98,11 +143,18 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
       )}
 
       {integrations.length === 0 ? (
-        <EmptyState
-          icon={<Plug size={20} />}
-          title="Nenhuma integração cadastrada"
-          description="Crie uma integração para começar a receber e recuperar carrinhos abandonados."
-        />
+        <div data-tour="cart-recovery-empty">
+          <EmptyState
+            icon={<Plug size={20} />}
+            title="Nenhuma integração cadastrada"
+            description="Crie uma integração para começar a receber e recuperar carrinhos abandonados."
+            action={
+              isAtLimit
+                ? undefined
+                : { label: 'Criar integração', icon: <Plus size={16} />, onClick: handleOpenCreate }
+            }
+          />
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {integrations.map((integration) => {

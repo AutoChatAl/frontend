@@ -26,8 +26,8 @@ interface Props {
   carts: AbandonedCart[];
   total: number;
   integrations: CartRecoveryIntegration[];
-  initialContactId?: string;
-  initialStatus?: AbandonedCartStatus;
+  initialContactId?: string | undefined;
+  initialStatus?: AbandonedCartStatus | undefined;
   onReload: (params?: ListCartsParams) => Promise<void>;
   onToast: (type: 'success' | 'error' | 'info', msg: string) => void;
 }

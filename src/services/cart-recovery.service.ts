@@ -23,8 +23,20 @@ class CartRecoveryService {
   }
 
   async createIntegration(input: CreateIntegrationInput): Promise<CartRecoveryIntegration> {
-    const response = await apiClient.post<CartRecoveryIntegration>('/cart-recovery/integrations', input);
-    if (!response.success || !response.data) throw new Error('Falha ao criar integração.');
+    const response = await apiClient.post<CartRecoveryIntegration & { reason?: string }>('/cart-recovery/integrations', input);
+    if (!response.success || !response.data) {
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      if (reason === 'CART_RECOVERY_INTEGRATION_LIMIT_EXCEEDED') {
+        throw new Error('Você atingiu o limite de integrações de recuperação do seu plano. Faça upgrade para criar mais.');
+      }
+      if (reason === 'CHANNEL_NOT_FOUND') {
+        throw new Error('Canal selecionado não foi encontrado.');
+      }
+      if (reason === 'CHANNEL_TYPE_MISMATCH') {
+        throw new Error('O canal selecionado não corresponde ao tipo escolhido.');
+      }
+      throw new Error('Falha ao criar integração.');
+    }
     return response.data;
   }
 

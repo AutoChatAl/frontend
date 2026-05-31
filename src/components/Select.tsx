@@ -16,7 +16,7 @@ import {
 export interface SelectOption<V extends string = string> {
   value: V;
   label: string;
-  description?: string;
+  description?: string | undefined;
   icon?: ReactNode;
   badge?: string;
   badgeTone?: 'default' | 'success' | 'warning' | 'danger' | 'info';

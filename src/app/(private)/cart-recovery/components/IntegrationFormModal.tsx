@@ -19,7 +19,7 @@ import type { WhatsAppInstance } from '@/types/Channel';
 export interface IntegrationChannelOption {
   id: string;
   name: string;
-  number?: string;
+  number?: string | undefined;
   type: IntegrationChannelType;
 }
 

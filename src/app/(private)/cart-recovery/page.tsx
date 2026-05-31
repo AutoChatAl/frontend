@@ -152,7 +152,7 @@ export default function CartRecoveryPage() {
 
       <SummaryCards summary={summary} integrationsCount={enabledIntegrationsCount} />
 
-      <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-200 px-1 dark:border-slate-700">
+      <div data-tour="cart-recovery-tabs" className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-200 px-1 dark:border-slate-700">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

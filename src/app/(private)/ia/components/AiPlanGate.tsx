@@ -1,0 +1,168 @@
+'use client';
+import { Bot, MessageSquare, Calendar, Package, Check, Sparkles, CreditCard } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import CardPaymentModal from '@/components/CardPaymentModal';
+import Modal from '@/components/Modal';
+import { useToast, ToastContainer } from '@/components/Toast';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { subscriptionService } from '@/services/subscription.service';
+import type { AiPlan } from '@/types/Subscription';
+
+function formatBRL(cents: number) {
+  return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+}
+// Preço por mensagem de IA excedente (centavos fracionados, ex.: 4.0 => R$ 0,040/msg).
+function formatPricePerMsg(cents: number) {
+  return `R$ ${(cents / 100).toFixed(3).replace('.', ',')}`;
+}
+export default function AiPlanGate() {
+  const { status, refresh } = useSubscription();
+  const { toasts, addToast, removeToast } = useToast();
+  const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
+  const [confirmAiPlan, setConfirmAiPlan] = useState<AiPlan | null>(null);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    subscriptionService.getAiPlans().then(setAiPlans).catch(() => { });
+  }, []);
+  const sub = status?.subscription;
+  const hasCard = !!sub?.stripePaymentMethodLast4;
+  const handleConfirmAiPlan = async () => {
+    if (!confirmAiPlan)
+      return;
+    setLoading(true);
+    const result = await subscriptionService.addOrChangeAiPlan(confirmAiPlan.slug);
+    if (result.success) {
+      await refresh();
+      addToast('success', `Plano de IA ${confirmAiPlan.name} ativado com sucesso!`);
+      setConfirmAiPlan(null);
+    }
+    else {
+      addToast('error', result.error ?? 'Erro ao ativar plano de IA.');
+    }
+    setLoading(false);
+  };
+  return (<div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+
+    <div className="text-center py-8">
+      <div className="w-16 h-16 bg-linear-to-br from-violet-500 to-purple-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-200 dark:shadow-none">
+        <Bot size={32} className="text-white"/>
+      </div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+          Desbloqueie o poder da IA para seu negócio
+      </h1>
+      <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+          Automatize respostas, qualifique leads, agende compromissos e muito mais com a inteligência artificial do Synq.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {[
+        { icon: MessageSquare, label: 'Respostas Automáticas', desc: 'IA responde seus clientes 24h' },
+        { icon: Sparkles, label: 'Qualificação de Leads', desc: 'Identifica e prioriza oportunidades' },
+        { icon: Calendar, label: 'Agendamento', desc: 'Marca compromissos automaticamente' },
+        { icon: Package, label: 'Catálogo de Produtos', desc: 'Apresenta seus produtos e serviços' },
+      ].map(({ icon: Icon, label, desc }) => (<Card key={label} className="p-4 text-center">
+        <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center mx-auto mb-2">
+          <Icon size={20} className="text-violet-600 dark:text-violet-400"/>
+        </div>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{desc}</p>
+      </Card>))}
+    </div>
+
+    <div>
+      <h2 className="text-lg font-bold text-slate-800 dark:text-white text-center mb-4">Escolha seu nível de IA</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {aiPlans.map((ap) => (<Card key={ap.id} className={`p-5 flex flex-col ${ap.slug === 'ai-nivel-2' ? 'ring-2 ring-violet-500' : ''}`}>
+          {ap.slug === 'ai-nivel-2' && (<span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-1">Recomendado</span>)}
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">{ap.name}</h3>
+          <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 my-3">
+            {formatBRL(ap.priceCents)}<span className="text-sm font-normal text-slate-500">/mês</span>
+          </p>
+          <ul className="space-y-2 flex-1 mb-4">
+            <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+              {ap.limits.maxChannels} {ap.limits.maxChannels === 1 ? 'canal conectado' : 'canais conectados'}
+            </li>
+            <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+              {ap.limits.maxAiMessagesPerMonth} mensagens IA <span className="text-violet-500">*</span>
+            </li>
+            <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+                  Consultar agenda
+            </li>
+            {ap.limits.schedulingBookingEnabled && (<li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+                    Agendamento
+            </li>)}
+            <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+              {ap.limits.maxProducts === -1 ? 'Produtos ilimitados' : `${ap.limits.maxProducts} produtos`}
+            </li>
+            <li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={14} className="text-emerald-500 shrink-0"/>
+                  Regras até {ap.limits.maxCustomRulesChars} caracteres
+            </li>
+          </ul>
+          <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500 mb-4">
+            <span className="text-violet-500">*</span> Ao exceder o limite mensal, as mensagens de IA excedentes são cobradas como excedente: {formatPricePerMsg(ap.limits.extraAiMessagePriceCents)}/msg.
+          </p>
+          <Button className="w-full justify-center" onClick={() => setConfirmAiPlan(ap)} disabled={loading}>
+              Ativar IA
+          </Button>
+        </Card>))}
+      </div>
+    </div>
+
+    <Modal isOpen={!!confirmAiPlan} onClose={() => setConfirmAiPlan(null)} title="Confirmar ativação de IA" size="sm">
+      {confirmAiPlan && (<div className="space-y-4">
+        <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400">Plano selecionado</p>
+            <p className="text-sm font-bold text-violet-600 dark:text-violet-400">
+              {confirmAiPlan.name} — {formatBRL(confirmAiPlan.priceCents)}/mês
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+          <div className="flex items-center gap-2">
+            <CreditCard size={15} className="text-slate-400"/>
+            <span className="text-sm text-slate-700 dark:text-slate-300">
+              {hasCard ? `Cartão •••• ${sub?.stripePaymentMethodLast4}` : 'Nenhum cartão cadastrado'}
+            </span>
+          </div>
+          <button onClick={() => setShowCardModal(true)} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+            {hasCard ? 'Editar' : 'Adicionar'}
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button className="flex-1 justify-center" onClick={handleConfirmAiPlan} loading={loading} loadingText="Ativando..." disabled={!hasCard}>
+              Ativar IA
+          </Button>
+          <Button variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmAiPlan(null)} disabled={loading}>
+              Cancelar
+          </Button>
+        </div>
+        {!hasCard && (<p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            Adicione um cartão para ativar o plano de IA.
+        </p>)}
+      </div>)}
+    </Modal>
+
+    <CardPaymentModal
+      isOpen={showCardModal}
+      hasExistingCard={hasCard}
+      onClose={() => setShowCardModal(false)}
+      onSuccess={async () => { await refresh(); }}
+    />
+
+    <ToastContainer toasts={toasts} onRemove={removeToast}/>
+  </div>);
+}
