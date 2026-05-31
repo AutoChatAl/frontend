@@ -5,8 +5,6 @@ const config: Config = {
     './index.html',
     './src/**/*.{ts,tsx,js,jsx,html}',
   ],
-  plugins: [
-  ],
+  plugins: [],
 };
-
 export default config;

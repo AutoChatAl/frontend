@@ -1,5 +1,4 @@
 'use client';
-
 import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2, Ban, CalendarDays } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
@@ -11,42 +10,29 @@ import type { Contact } from '@/types/Contact';
 import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment, type AppointmentType } from '@/types/Scheduling';
 
 interface AppointmentModalProps {
-  appointment: Appointment | null;
-  contacts: Contact[];
-  products: Product[];
-  initialDate: string | null;
-  initialTime: string | null;
-  slotDuration: number;
-  onSave: (data: {
-    type?: string;
-    contactId?: string;
-    productId?: string;
-    title: string;
-    description?: string;
-    startAt: string;
-    endAt: string;
-    notes?: string;
-    status?: string;
-  }) => void;
-  onDelete?: () => void;
-  onClose: () => void;
-  onProductCreated?: (product: Product) => void;
+    appointment: Appointment | null;
+    contacts: Contact[];
+    products: Product[];
+    initialDate: string | null;
+    initialTime: string | null;
+    slotDuration: number;
+    onSave: (data: {
+        type?: string;
+        contactId?: string;
+        productId?: string;
+        title: string;
+        description?: string;
+        startAt: string;
+        endAt: string;
+        notes?: string;
+        status?: string;
+    }) => void;
+    onDelete?: () => void;
+    onClose: () => void;
+    onProductCreated?: (product: Product) => void;
 }
-
-export default function AppointmentModal({
-  appointment,
-  contacts,
-  products,
-  initialDate,
-  initialTime,
-  slotDuration,
-  onSave,
-  onDelete,
-  onClose,
-  onProductCreated,
-}: AppointmentModalProps) {
+export default function AppointmentModal({ appointment, contacts, products, initialDate, initialTime, slotDuration, onSave, onDelete, onClose, onProductCreated }: AppointmentModalProps) {
   const isEditing = !!appointment;
-
   const toLocalDateTimeParts = (value: Date) => {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
@@ -58,34 +44,32 @@ export default function AppointmentModal({
       time: `${hours}:${minutes}`,
     };
   };
-
   const buildUtcIsoFromLocal = (dateValue: string, timeValue: string) => {
     const [year, month, day] = dateValue.split('-').map(Number);
     const [hours, minutes] = timeValue.split(':').map(Number);
     return new Date(year ?? 2026, (month ?? 1) - 1, day ?? 1, hours ?? 0, minutes ?? 0, 0, 0).toISOString();
   };
-
   const toLocalDateInput = (value: Date) => {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-
   const getInitialDate = () => {
-    if (appointment) return toLocalDateTimeParts(new Date(appointment.startAt)).date;
-    if (initialDate) return initialDate;
+    if (appointment)
+      return toLocalDateTimeParts(new Date(appointment.startAt)).date;
+    if (initialDate)
+      return initialDate;
     return toLocalDateInput(new Date());
   };
-
   const getInitialStartTime = () => {
     if (appointment) {
       return toLocalDateTimeParts(new Date(appointment.startAt)).time;
     }
-    if (initialTime) return initialTime;
+    if (initialTime)
+      return initialTime;
     return '09:00';
   };
-
   const getInitialEndTime = () => {
     if (appointment) {
       return toLocalDateTimeParts(new Date(appointment.endAt)).time;
@@ -99,7 +83,6 @@ export default function AppointmentModal({
     }
     return '09:30';
   };
-
   const [type, setType] = useState<AppointmentType>(appointment?.type || 'APPOINTMENT');
   const [title, setTitle] = useState(appointment?.title || '');
   const [description, setDescription] = useState(appointment?.description || '');
@@ -119,27 +102,24 @@ export default function AppointmentModal({
   const [savingProduct, setSavingProduct] = useState(false);
   const [localProducts, setLocalProducts] = useState<Product[]>(products);
   const [submitError, setSubmitError] = useState('');
-
   const minAllowedDate = useMemo(() => {
     const todayStr = toLocalDateInput(new Date());
-    if (!appointment) return todayStr;
+    if (!appointment)
+      return todayStr;
     const appointmentDate = toLocalDateTimeParts(new Date(appointment.startAt)).date;
     return appointmentDate < todayStr ? appointmentDate : todayStr;
   }, [appointment]);
-
   const filteredContacts = useMemo(() => {
-    if (!contactSearch) return contacts.slice(0, 10);
+    if (!contactSearch)
+      return contacts.slice(0, 10);
     const lower = contactSearch.toLowerCase();
-    return contacts.filter((c) =>
-      c.displayName?.toLowerCase().includes(lower) ||
-      c.identities?.some((i) => i.phoneE164?.includes(contactSearch)),
-    ).slice(0, 10);
+    return contacts.filter((c) => c.displayName?.toLowerCase().includes(lower) ||
+            c.identities?.some((i) => i.phoneE164?.includes(contactSearch))).slice(0, 10);
   }, [contacts, contactSearch]);
-
   const selectedContact = contacts.find((c) => c.id === contactId);
-
   const handleCreateProduct = async () => {
-    if (!newProductName.trim()) return;
+    if (!newProductName.trim())
+      return;
     setSavingProduct(true);
     try {
       const priceCents = newProductPrice ? Math.round(parseFloat(newProductPrice.replace(',', '.')) * 100) : 0;
@@ -153,27 +133,25 @@ export default function AppointmentModal({
       setNewProductName('');
       setNewProductPrice('');
       onProductCreated?.(created);
-    } catch {
-      // silently fail
-    } finally {
+    }
+    catch {
+    }
+    finally {
       setSavingProduct(false);
     }
   };
-
   const handleSubmit = async () => {
-    if (!title.trim() || !date || !startTime || !endTime) return;
+    if (!title.trim() || !date || !startTime || !endTime)
+      return;
     setSubmitError('');
-
     const startAt = buildUtcIsoFromLocal(date, startTime);
     const endAt = buildUtcIsoFromLocal(date, endTime);
     const startDate = new Date(startAt);
     const endDate = new Date(endAt);
-
     if (endDate <= startDate) {
       setSubmitError('O horário final deve ser após o horário inicial.');
       return;
     }
-
     setSaving(true);
     try {
       await onSave({
@@ -187,324 +165,170 @@ export default function AppointmentModal({
         ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(isEditing ? { status } : {}),
       });
-    } finally {
+    }
+    finally {
       setSaving(false);
     }
   };
-
   const statuses: AppointmentStatus[] = ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+  return (<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}/>
+    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
+      <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex items-center justify-between z-10">
+        <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+          {isEditing
+            ? (type === 'BLOCK' ? 'Editar Bloqueio' : 'Editar Agendamento')
+            : (type === 'BLOCK' ? 'Novo Bloqueio' : 'Novo Agendamento')}
+        </h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <X size={20}/>
+        </button>
+      </div>
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
-        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex items-center justify-between z-10">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            {isEditing
-              ? (type === 'BLOCK' ? 'Editar Bloqueio' : 'Editar Agendamento')
-              : (type === 'BLOCK' ? 'Novo Bloqueio' : 'Novo Agendamento')
-            }
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-            <X size={20} />
-          </button>
-        </div>
+      <div className="p-4 sm:p-5 space-y-4">
 
-        <div className="p-4 sm:p-5 space-y-4">
-          {/* Type Selector */}
-          {!isEditing && (
-            <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Tipo</label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setType('APPOINTMENT'); }}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
-                    type === 'APPOINTMENT'
-                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-400/30'
-                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  <CalendarDays size={16} />
+        {!isEditing && (<div>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Tipo</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setType('APPOINTMENT'); }} className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${type === 'APPOINTMENT'
+              ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-400/30'
+              : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>
+              <CalendarDays size={16}/>
                   Agendamento
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setType('BLOCK'); setTitle(title || 'Bloqueio'); setContactId(''); setProductId(''); }}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${
-                    type === 'BLOCK'
-                      ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 ring-2 ring-red-400/30'
-                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'
-                  }`}
-                >
-                  <Ban size={16} />
+            </button>
+            <button type="button" onClick={() => { setType('BLOCK'); setTitle(title || 'Bloqueio'); setContactId(''); setProductId(''); }} className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all border ${type === 'BLOCK'
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 ring-2 ring-red-400/30'
+              : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>
+              <Ban size={16}/>
                   Bloqueio
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Title */}
-          <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Título *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'}
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-            />
+            </button>
           </div>
+        </div>)}
 
-          {/* Contact Search (optional - hidden for blocks) */}
-          {type === 'APPOINTMENT' && (
-            <div className="relative">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <User size={14} /> Contato
-              </label>
-              {selectedContact ? (
-                <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-                  <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                    {selectedContact.displayName || 'Sem nome'}
-                  </span>
-                  <button onClick={() => { setContactId(''); setContactSearch(''); }} className="text-indigo-400 hover:text-indigo-600">
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={contactSearch}
-                    onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }}
-                    onFocus={() => setShowContactDropdown(true)}
-                    placeholder="Buscar contato..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-                  />
-                  {showContactDropdown && (
-                    <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredContacts.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-slate-400">Nenhum contato encontrado</div>
-                      ) : (
-                        filteredContacts.map((c) => (
-                          <button
-                            key={c.id}
-                            onClick={() => { setContactId(c.id); setContactSearch(''); setShowContactDropdown(false); }}
-                            className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm text-slate-700 dark:text-slate-200 transition-colors"
-                          >
-                            <div className="font-medium">{c.displayName || 'Sem nome'}</div>
-                            {c.identities?.[0]?.phoneE164 && (
-                              <div className="text-xs text-slate-400">{c.identities[0].phoneE164}</div>
-                            )}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-          )}
-
-          {/* Product */}
-          {type === 'APPOINTMENT' && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Package size={14} /> Produto / Serviço
-                </label>
-                {!showNewProduct && (
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProduct(true)}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium flex items-center gap-1 transition-colors"
-                  >
-                    <Plus size={14} /> Novo
-                  </button>
-                )}
-              </div>
-
-              {showNewProduct ? (
-                <div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/40 rounded-lg space-y-2.5">
-                  <input
-                    type="text"
-                    value={newProductName}
-                    onChange={(e) => setNewProductName(e.target.value)}
-                    placeholder="Nome do produto ou serviço"
-                    autoFocus
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-                  />
-                  <input
-                    type="text"
-                    value={newProductPrice}
-                    onChange={(e) => setNewProductPrice(e.target.value)}
-                    placeholder="Preço (opcional) ex: 50,00"
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { setShowNewProduct(false); setNewProductName(''); setNewProductPrice(''); }}
-                      className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCreateProduct}
-                      disabled={!newProductName.trim() || savingProduct}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-                    >
-                      {savingProduct ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                      Salvar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <select
-                  value={productId}
-                  onChange={(e) => setProductId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-                >
-                  <option value="">Nenhum produto selecionado</option>
-                  {localProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.priceCents > 0 ? `- R$ ${(p.priceCents / 100).toFixed(2)}` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-          )}
-
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div className="min-w-0 sm:col-span-4">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Data *</label>
-              <DatePicker
-                value={date}
-                onChange={setDate}
-                min={minAllowedDate}
-              />
-            </div>
-            <div className="min-w-0 sm:col-span-4">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <Clock size={14} /> Início *
-              </label>
-              <TimePicker
-                value={startTime}
-                onChange={setStartTime}
-              />
-            </div>
-            <div className="min-w-0 sm:col-span-4">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Fim *</label>
-              <TimePicker
-                value={endTime}
-                onChange={setEndTime}
-              />
-            </div>
-          </div>
-
-          {submitError && (
-            <div className="text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2">
-              {submitError}
-            </div>
-          )}
-
-          {/* Description */}
-          <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <FileText size={14} /> Descrição
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Detalhes do agendamento..."
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Observações</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              placeholder="Notas internas..."
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
-            />
-          </div>
-
-          {/* Status (only when editing) */}
-          {isEditing && (
-            <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Status</label>
-              <div className="flex flex-wrap gap-2">
-                {statuses.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(s)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      status === s
-                        ? STATUS_COLORS[s] + ' ring-2 ring-offset-1 ring-indigo-400 dark:ring-offset-slate-800'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                    }`}
-                  >
-                    {STATUS_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Título *</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:justify-between">
-          <div>
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Trash2 size={16} />
-                Excluir
+        {type === 'APPOINTMENT' && (<div className="relative">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <User size={14}/> Contato
+          </label>
+          {selectedContact ? (<div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              {selectedContact.displayName || 'Sem nome'}
+            </span>
+            <button onClick={() => { setContactId(''); setContactSearch(''); }} className="text-indigo-400 hover:text-indigo-600">
+              <X size={16}/>
+            </button>
+          </div>) : (<div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+            <input type="text" value={contactSearch} onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }} onFocus={() => setShowContactDropdown(true)} placeholder="Buscar contato..." className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+            {showContactDropdown && (<div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {filteredContacts.length === 0 ? (<div className="px-3 py-2 text-sm text-slate-400">Nenhum contato encontrado</div>) : (filteredContacts.map((c) => (<button key={c.id} onClick={() => { setContactId(c.id); setContactSearch(''); setShowContactDropdown(false); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm text-slate-700 dark:text-slate-200 transition-colors">
+                <div className="font-medium">{c.displayName || 'Sem nome'}</div>
+                {c.identities?.[0]?.phoneE164 && (<div className="text-xs text-slate-400">{c.identities[0].phoneE164}</div>)}
+              </button>)))}
+            </div>)}
+          </div>)}
+        </div>)}
+
+        {type === 'APPOINTMENT' && (<div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Package size={14}/> Produto / Serviço
+            </label>
+            {!showNewProduct && (<button type="button" onClick={() => setShowNewProduct(true)} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium flex items-center gap-1 transition-colors">
+              <Plus size={14}/> Novo
+            </button>)}
+          </div>
+
+          {showNewProduct ? (<div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/40 rounded-lg space-y-2.5">
+            <input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="Nome do produto ou serviço" autoFocus className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+            <input type="text" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="Preço (opcional) ex: 50,00" className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setShowNewProduct(false); setNewProductName(''); setNewProductPrice(''); }} className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors">
+                      Cancelar
               </button>
-            )}
+              <button type="button" onClick={handleCreateProduct} disabled={!newProductName.trim() || savingProduct} className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors">
+                {savingProduct ? <Loader2 size={12} className="animate-spin"/> : <Plus size={12}/>}
+                      Salvar
+              </button>
+            </div>
+          </div>) : (<select value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors">
+            <option value="">Nenhum produto selecionado</option>
+            {localProducts.map((p) => (<option key={p.id} value={p.id}>
+              {p.name} {p.priceCents > 0 ? `- R$ ${(p.priceCents / 100).toFixed(2)}` : ''}
+            </option>))}
+          </select>)}
+        </div>)}
+
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="min-w-0 sm:col-span-4">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Data *</label>
+            <DatePicker value={date} onChange={setDate} min={minAllowedDate}/>
           </div>
-          <div className="flex flex-col-reverse sm:flex-row gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            >
+          <div className="min-w-0 sm:col-span-4">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Clock size={14}/> Início *
+            </label>
+            <TimePicker value={startTime} onChange={setStartTime}/>
+          </div>
+          <div className="min-w-0 sm:col-span-4">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Fim *</label>
+            <TimePicker value={endTime} onChange={setEndTime}/>
+          </div>
+        </div>
+
+        {submitError && (<div className="text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2">
+          {submitError}
+        </div>)}
+
+        <div>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <FileText size={14}/> Descrição
+          </label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Detalhes do agendamento..." className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"/>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Observações</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Notas internas..." className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"/>
+        </div>
+
+        {isEditing && (<div>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Status</label>
+          <div className="flex flex-wrap gap-2">
+            {statuses.map((s) => (<button key={s} onClick={() => setStatus(s)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${status === s
+              ? STATUS_COLORS[s] + ' ring-2 ring-offset-1 ring-indigo-400 dark:ring-offset-slate-800'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>
+              {STATUS_LABELS[s]}
+            </button>))}
+          </div>
+        </div>)}
+      </div>
+
+      <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:justify-between">
+        <div>
+          {onDelete && (<button onClick={onDelete} className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+            <Trash2 size={16}/>
+                Excluir
+          </button>)}
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row gap-2">
+          <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
               Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !title.trim()}
-              className={`px-6 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                type === 'BLOCK'
-                  ? 'bg-red-600 hover:bg-red-700 shadow-red-200 dark:shadow-none'
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none'
-              }`}
-            >
-              {saving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <CheckCircle size={16} />
-              )}
-              {isEditing
-                ? 'Salvar Alterações'
-                : type === 'BLOCK' ? 'Criar Bloqueio' : 'Criar Agendamento'
-              }
-            </button>
-          </div>
+          </button>
+          <button onClick={handleSubmit} disabled={saving || !title.trim()} className={`px-6 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm font-medium flex items-center justify-center gap-2 transition-colors ${type === 'BLOCK'
+            ? 'bg-red-600 hover:bg-red-700 shadow-red-200 dark:shadow-none'
+            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none'}`}>
+            {saving ? (<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>) : (<CheckCircle size={16}/>)}
+            {isEditing
+              ? 'Salvar Alterações'
+              : type === 'BLOCK' ? 'Criar Bloqueio' : 'Criar Agendamento'}
+          </button>
         </div>
       </div>
     </div>
-  );
+  </div>);
 }

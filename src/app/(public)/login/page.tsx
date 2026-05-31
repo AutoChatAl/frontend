@@ -1,5 +1,4 @@
 'use client';
-
 import { ArrowDownRight, Eye, EyeOff, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,142 +18,86 @@ export default function LoginPage() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
       const result = await authService.login({
         email,
         password,
         ...(requires2FA ? { totpCode } : {}),
       });
-
       if (result.requires2FA) {
         setRequires2FA(true);
         setIsLoading(false);
         return;
       }
-
       router.push('/dashboard');
-    } catch (err) {
+    }
+    catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
-    } finally {
+    }
+    finally {
       setIsLoading(false);
     }
   };
+  return (<AuthShell title="Bem-vindo de volta!" subtitle="Insira suas credenciais para acessar sua conta.">
+    <form className="space-y-5" onSubmit={handleSubmit}>
+      {error && (<div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+        {error}
+      </div>)}
 
-  return (
-    <AuthShell title="Bem-vindo de volta!" subtitle="Insira suas credenciais para acessar sua conta.">
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        {error && (
-          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {!requires2FA ? (
-          <>
-            <Input
-              label="Email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <div>
-              <div className="flex justify-between mb-1.5">
-                <label className="text-sm font-medium text-slate-700">Senha</label>
-                <Link href="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+      {!requires2FA ? (<>
+        <Input label="Email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email"/>
+        <div>
+          <div className="flex justify-between mb-1.5">
+            <label className="text-sm font-medium text-slate-700">Senha</label>
+            <Link href="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
                   Esqueceu a senha?
-                </Link>
-              </div>
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="current-password"
-                rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                }
-              />
-            </div>
-          </>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-              <Shield size={20} className="text-indigo-600 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-indigo-800">Verificação em duas etapas</p>
-                <p className="text-xs text-indigo-600">Insira o código do seu app autenticador.</p>
-              </div>
-            </div>
-            <Input
-              label="Código 2FA"
-              type="text"
-              placeholder="000000"
-              value={totpCode}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, '').slice(0, 6);
-                setTotpCode(v);
-              }}
-              required
-              autoComplete="one-time-code"
-            />
+            </Link>
           </div>
-        )}
+          <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="current-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
+            {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+          </button>}/>
+        </div>
+      </>) : (<div className="space-y-4">
+        <div className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+          <Shield size={20} className="text-indigo-600 shrink-0"/>
+          <div>
+            <p className="text-sm font-medium text-indigo-800">Verificação em duas etapas</p>
+            <p className="text-xs text-indigo-600">Insira o código do seu app autenticador.</p>
+          </div>
+        </div>
+        <Input label="Código 2FA" type="text" placeholder="000000" value={totpCode} onChange={(e) => {
+          const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+          setTotpCode(v);
+        }} required autoComplete="one-time-code"/>
+      </div>)}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-        >
-          {isLoading ? 'Entrando...' : requires2FA ? 'Verificar e Entrar' : 'Entrar na Plataforma'}
-        </button>
+      <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none">
+        {isLoading ? 'Entrando...' : requires2FA ? 'Verificar e Entrar' : 'Entrar na Plataforma'}
+      </button>
 
-        {requires2FA && (
-          <button
-            type="button"
-            onClick={() => {
-              setRequires2FA(false);
-              setTotpCode('');
-              setError('');
-            }}
-            className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors"
-          >
+      {requires2FA && (<button type="button" onClick={() => {
+        setRequires2FA(false);
+        setTotpCode('');
+        setError('');
+      }} className="w-full text-sm text-slate-500 hover:text-slate-700 transition-colors">
             Voltar para login
-          </button>
-        )}
-      </form>
+      </button>)}
+    </form>
 
-      <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-        <p className="text-sm text-slate-500">
+    <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+      <p className="text-sm text-slate-500">
           Não tem uma conta?{' '}
-          <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
+        <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
             Criar conta grátis
-          </Link>
-        </p>
-        <Link
-          href="/"
-          className="mt-4 text-xs text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 w-full"
-        >
-          <ArrowDownRight size={12} className="rotate-180" /> Voltar para o início
         </Link>
-      </div>
-    </AuthShell>
-  );
+      </p>
+      <Link href="/" className="mt-4 text-xs text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 w-full">
+        <ArrowDownRight size={12} className="rotate-180"/> Voltar para o início
+      </Link>
+    </div>
+  </AuthShell>);
 }

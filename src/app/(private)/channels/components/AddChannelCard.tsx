@@ -1,17 +1,15 @@
 'use client';
-
 import { Plus } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 interface AddChannelCardProps {
-  onClick?: () => void;
-  icon?: ReactNode;
-  title: string;
-  subtitle: string;
-  colorClass: 'emerald' | 'fuchsia';
-  disabled?: boolean;
+    onClick?: () => void;
+    icon?: ReactNode;
+    title: string;
+    subtitle: string;
+    colorClass: 'emerald' | 'fuchsia';
+    disabled?: boolean;
 }
-
 export default function AddChannelCard({ onClick, icon, title, subtitle, colorClass, disabled }: AddChannelCardProps) {
   const colorStyles = {
     emerald: {
@@ -29,26 +27,14 @@ export default function AddChannelCard({ onClick, icon, title, subtitle, colorCl
       textColor: 'group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-400',
     },
   };
-
   const styles = colorStyles[colorClass];
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-54 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      <div
-        className={`w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 ${styles.iconBg} transition-colors`}
-      >
-        {icon || (
-          <Plus size={24} className={`text-slate-400 dark:text-slate-500 ${styles.iconColor}`} />
-        )}
-      </div>
-      <span className={`font-semibold text-slate-600 dark:text-slate-300 ${styles.textColor}`}>
-        {title}
-      </span>
-      <span className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtitle}</span>
-    </button>
-  );
+  return (<button onClick={onClick} disabled={disabled} className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-full min-h-54 w-full ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+    <div className={`w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 ${styles.iconBg} transition-colors`}>
+      {icon || (<Plus size={24} className={`text-slate-400 dark:text-slate-500 ${styles.iconColor}`}/>)}
+    </div>
+    <span className={`font-semibold text-slate-600 dark:text-slate-300 ${styles.textColor}`}>
+      {title}
+    </span>
+    <span className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtitle}</span>
+  </button>);
 }

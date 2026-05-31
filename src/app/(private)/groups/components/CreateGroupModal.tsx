@@ -1,5 +1,4 @@
 'use client';
-
 import { Search, MessageCircle, Smartphone, Check } from 'lucide-react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -10,15 +9,15 @@ import { contactService } from '@/services/contact.service';
 import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
 
-type RawContact = Contact & { _id?: string };
+type RawContact = Contact & {
+    _id?: string;
+};
 const normalizeContact = (c: RawContact): Contact => ({ ...c, id: c.id ?? c._id ?? '' });
-
 interface CreateGroupModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (name: string, contactIds: string[]) => Promise<void>;
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: (name: string, contactIds: string[]) => Promise<void>;
 }
-
 export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,13 +28,11 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
   const [maxContacts, setMaxContacts] = useState(250);
   const [limitError, setLimitError] = useState('');
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
   useEffect(() => {
     if (isOpen) {
       planLimitsService.getLimits().then((l) => setMaxContacts(l.maxContactsPerGroup));
     }
   }, [isOpen]);
-
   const searchContacts = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -45,19 +42,20 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
     try {
       const result = await contactService.listContacts({ search: query, limit: 20 });
       setSearchResults(result.data.map(normalizeContact));
-    } catch {
+    }
+    catch {
       setSearchResults([]);
-    } finally {
+    }
+    finally {
       setSearching(false);
     }
   }, []);
-
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => searchContacts(value), 350);
   };
-
   const toggleContact = (contactId: string) => {
     setSelectedIds((prev) => {
       if (prev.includes(contactId)) {
@@ -72,22 +70,23 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
       return [...prev, contactId];
     });
   };
-
   const getContactDisplay = (contact: Contact) => {
-    if (contact.displayName) return contact.displayName;
+    if (contact.displayName)
+      return contact.displayName;
     const identity = contact.identities?.[0];
-    if (identity?.phoneE164) return identity.phoneE164;
-    if (identity?.igUsername) return `@${identity.igUsername}`;
+    if (identity?.phoneE164)
+      return identity.phoneE164;
+    if (identity?.igUsername)
+      return `@${identity.igUsername}`;
     return 'Sem nome';
   };
-
   const getContactChannels = (contact: Contact) => {
     const types = new Set(contact.identities?.map((i) => i.type) || []);
     return { whatsapp: types.has('WHATSAPP'), instagram: types.has('INSTAGRAM') };
   };
-
   const handleSubmit = async () => {
-    if (!name.trim() || name.trim().length < 2 || loading) return;
+    if (!name.trim() || name.trim().length < 2 || loading)
+      return;
     setLoading(true);
     try {
       await onSubmit(name.trim(), selectedIds);
@@ -95,11 +94,11 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
       setSelectedIds([]);
       setSearchQuery('');
       setSearchResults([]);
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     setName('');
     setSelectedIds([]);
@@ -107,86 +106,51 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
     setSearchResults([]);
     onClose();
   };
+  return (<Modal isOpen={isOpen} onClose={handleClose} title="Criar Novo Grupo" size="md">
+    <div className="space-y-5">
+      <Input label="Nome do grupo" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: VIP Black Friday" autoFocus/>
 
-  return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Criar Novo Grupo" size="md">
-      <div className="space-y-5">
-        <Input
-          label="Nome do grupo"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex: VIP Black Friday"
-          autoFocus
-        />
+      <div>
+        <Input label="Selecionar contatos" type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Buscar contatos por nome ou telefone..." leftIcon={<Search size={16}/>}/>
 
-        <div>
-          <Input
-            label="Selecionar contatos"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Buscar contatos por nome ou telefone..."
-            leftIcon={<Search size={16} />}
-          />
+        {searching && (<p className="text-xs text-slate-400 mt-2">Buscando...</p>)}
 
-          {searching && (
-            <p className="text-xs text-slate-400 mt-2">Buscando...</p>
-          )}
+        {searchResults.length > 0 && (<div className="max-h-48 overflow-y-auto space-y-1 mt-2">
+          {searchResults.map((contact) => {
+            const selected = selectedIds.includes(contact.id);
+            const channels = getContactChannels(contact);
+            return (<button key={contact.id} type="button" onClick={() => toggleContact(contact.id)} className={`w-full flex items-center gap-3 p-2 rounded-lg text-left text-sm transition-colors ${selected
+              ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
+              : 'border border-transparent hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+              <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
+                {getContactDisplay(contact).charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-800 dark:text-white truncate">{getContactDisplay(contact)}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                {channels.whatsapp && <MessageCircle size={12} className="text-emerald-500"/>}
+                {channels.instagram && <Smartphone size={12} className="text-fuchsia-500"/>}
+              </div>
+              {selected && <Check size={14} className="text-indigo-600 dark:text-indigo-400"/>}
+            </button>);
+          })}
+        </div>)}
 
-          {searchResults.length > 0 && (
-            <div className="max-h-48 overflow-y-auto space-y-1 mt-2">
-              {searchResults.map((contact) => {
-                const selected = selectedIds.includes(contact.id);
-                const channels = getContactChannels(contact);
-
-                return (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => toggleContact(contact.id)}
-                    className={`w-full flex items-center gap-3 p-2 rounded-lg text-left text-sm transition-colors ${
-                      selected
-                        ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
-                        : 'border border-transparent hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
-                      {getContactDisplay(contact).charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-800 dark:text-white truncate">{getContactDisplay(contact)}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {channels.whatsapp && <MessageCircle size={12} className="text-emerald-500" />}
-                      {channels.instagram && <Smartphone size={12} className="text-fuchsia-500" />}
-                    </div>
-                    {selected && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {selectedIds.length > 0 && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              {selectedIds.length}/{maxContacts} contato{selectedIds.length > 1 ? 's' : ''} selecionado{selectedIds.length > 1 ? 's' : ''}
-            </p>
-          )}
-          {limitError && (
-            <p className="text-xs text-red-500 mt-1">{limitError}</p>
-          )}
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={handleClose} className="flex-1">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading || name.trim().length < 2} className="flex-1">
-            {loading ? 'Criando...' : 'Criar Grupo'}
-          </Button>
-        </div>
+        {selectedIds.length > 0 && (<p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+          {selectedIds.length}/{maxContacts} contato{selectedIds.length > 1 ? 's' : ''} selecionado{selectedIds.length > 1 ? 's' : ''}
+        </p>)}
+        {limitError && (<p className="text-xs text-red-500 mt-1">{limitError}</p>)}
       </div>
-    </Modal>
-  );
+
+      <div className="flex gap-3 pt-2">
+        <Button variant="secondary" onClick={handleClose} className="flex-1">
+            Cancelar
+        </Button>
+        <Button onClick={handleSubmit} disabled={loading || name.trim().length < 2} className="flex-1">
+          {loading ? 'Criando...' : 'Criar Grupo'}
+        </Button>
+      </div>
+    </div>
+  </Modal>);
 }

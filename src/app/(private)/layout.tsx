@@ -1,38 +1,27 @@
 'use client';
-
-import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import Sidebar from '@/components/Sidebar';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
+import TrialBanner from '@/components/TrialBanner';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { authService, type AuthUser } from '@/services/auth.service';
-import { type MessageUsage, planLimitsService } from '@/services/plan-limits.service';
 
-export default function PrivateLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
+export default function PrivateLayout({ children }: Readonly<{
+    children: React.ReactNode;
 }>) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [messageUsage, setMessageUsage] = useState<MessageUsage | null>(null);
-
-  const fetchUsage = useCallback(async () => {
-    try {
-      const usage = await planLimitsService.getMessageUsage();
-      setMessageUsage(usage);
-    } catch {}
-  }, []);
-
   useEffect(() => {
     const checkAuth = () => {
       if (!authService.isAuthenticated()) {
@@ -40,93 +29,47 @@ export default function PrivateLayout({
         return;
       }
       setIsAuthenticated(true);
-
       const cached = authService.getUser();
       if (cached) {
         setUser(cached);
       }
-      authService.fetchMe().then(setUser).catch(() => {});
-      fetchUsage();
+      authService.fetchMe().then(setUser).catch(() => { });
     };
-
     checkAuth();
-  }, [router, fetchUsage]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const refreshOnFocus = () => {
-      fetchUsage();
-    };
-
-    const refreshOnVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchUsage();
-      }
-    };
-
-    window.addEventListener('focus', refreshOnFocus);
-    document.addEventListener('visibilitychange', refreshOnVisibility);
-
-    return () => {
-      window.removeEventListener('focus', refreshOnFocus);
-      document.removeEventListener('visibilitychange', refreshOnVisibility);
-    };
-  }, [isAuthenticated, fetchUsage]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetchUsage();
-  }, [isAuthenticated, pathname, fetchUsage]);
-
+  }, [router]);
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Verificando autenticação...</p>
-        </div>
+    return (<div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+        <p className="mt-4 text-slate-600">Verificando autenticação...</p>
       </div>
-    );
+    </div>);
   }
-
   const userName = user?.name || user?.email || '';
-  const userRole = user?.role === 'collaborator' ? 'Colaborador' : 'Admin';
+  const userRole = user?.role;
   const userInitials = userName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w.charAt(0).toUpperCase())
     .join('');
-
-  const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
-  const planUsageText = messageUsage
-    ? `${formatCount(messageUsage.count)} / ${messageUsage.limit} mensagens`
-    : '';
-  const planProgress = messageUsage
-    ? Math.min(Math.round((messageUsage.count / messageUsage.limit) * 100), 100)
-    : 0;
   const isAdmin = user?.role === 'admin';
-  // Onboarding fica desativado para admins de suporte (área de admin, não de cliente)
+
   const onboardingEnabled = isAuthenticated && !isAdmin;
 
-  return (
-    <ThemeProvider>
+  return (<ThemeProvider>
+    <SubscriptionProvider>
       <SidebarProvider showSupportTab={isAdmin}>
         <ChannelStatusProvider>
           <SupportChatProvider>
             <OnboardingProvider enabled={onboardingEnabled}>
               <div className="flex h-screen overflow-hidden">
-                <Sidebar
-                  userName={userName}
-                  userRole={userRole}
-                  userInitials={userInitials}
-                  planUsage={planUsageText}
-                  planProgress={planProgress}
-                />
+                <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
                 <div className="flex flex-col flex-1">
                   <Header />
                   <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
+                    <TrialBanner />
+                    <SubscriptionBanner />
                     {children}
                   </main>
                 </div>
@@ -137,6 +80,6 @@ export default function PrivateLayout({
           </SupportChatProvider>
         </ChannelStatusProvider>
       </SidebarProvider>
-    </ThemeProvider>
-  );
+    </SubscriptionProvider>
+  </ThemeProvider>);
 }

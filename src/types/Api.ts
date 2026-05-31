@@ -1,6 +1,6 @@
 import type { ErrorReason } from './ErrorCode';
 
 export type ApiError = {
-  reason?: ErrorReason;
-  statusCode: number;
+    reason?: ErrorReason;
+    statusCode: number;
 };
