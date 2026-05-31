@@ -740,6 +740,17 @@ export default function BillingTab() {
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.value}</span>
           </div>))}
         </div>
+        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/70 dark:bg-red-900/15 px-3.5 py-3">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+          <div className="text-xs text-red-700 dark:text-red-300 space-y-1">
+            <p className="font-semibold">Esta ação é irreversível.</p>
+            <p>
+              Ao cancelar, o seu <span className="font-semibold">plano de IA também será cancelado</span> e
+              {' '}<span className="font-semibold">todos os colaboradores e instâncias (canais conectados) serão removidos</span> permanentemente.
+              Ao reassinar, será necessário reconvidar os colaboradores e reconectar os canais.
+            </p>
+          </div>
+        </div>
         <div className="flex gap-2 pt-1">
           <Button variant="secondary" className="flex-1 justify-center" onClick={closeCancelModal}>
             Quero manter meu plano
