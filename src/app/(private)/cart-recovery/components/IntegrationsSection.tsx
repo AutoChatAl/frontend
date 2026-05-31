@@ -148,11 +148,9 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
             icon={<Plug size={20} />}
             title="Nenhuma integração cadastrada"
             description="Crie uma integração para começar a receber e recuperar carrinhos abandonados."
-            action={
-              isAtLimit
-                ? undefined
-                : { label: 'Criar integração', icon: <Plus size={16} />, onClick: handleOpenCreate }
-            }
+            {...(!isAtLimit && {
+              action: { label: 'Criar integração', icon: <Plus size={16} />, onClick: handleOpenCreate },
+            })}
           />
         </div>
       ) : (
