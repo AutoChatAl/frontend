@@ -172,6 +172,7 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
             success: boolean;
             requiresAction?: boolean;
             clientSecret?: string;
+            error?: string;
         } | null = null;
     try {
       result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal);
@@ -183,6 +184,11 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
     }
     if (!result) {
       addToast('error', 'Erro ao processar pagamento. Tente novamente.');
+      setLoading(false);
+      return;
+    }
+    if (!result.success && result.error) {
+      addToast('error', result.error);
       setLoading(false);
       return;
     }

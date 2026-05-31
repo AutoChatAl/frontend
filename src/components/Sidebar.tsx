@@ -61,7 +61,7 @@ function getReadableRole(role?: string): string {
 export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', userRole = 'Admin', userInitials = 'JD' }: SidebarProps) {
   const router = useRouter();
   const { planName, usage, isTrialing, isCanceled, trialDaysRemaining: _trialDaysRemaining } = useSubscription();
-  const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n));
+  const formatCount = (n: number) => n.toLocaleString('pt-BR');
   const msgUsed = usage?.messages?.used ?? 0;
   const msgLimit = usage?.messages?.limit ?? 0;
   const planUsage = msgLimit > 0 ? `${formatCount(msgUsed)} / ${formatCount(msgLimit)} mensagens` : '';

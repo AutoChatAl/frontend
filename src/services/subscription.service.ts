@@ -181,6 +181,7 @@ class SubscriptionService {
         success: boolean;
         requiresAction?: boolean;
         clientSecret?: string;
+        error?: string;
     } | null> {
     try {
       const res = await apiClient.post<{
@@ -194,6 +195,7 @@ class SubscriptionService {
                     requiresAction?: boolean;
                     clientSecret?: string;
                 };
+      return { success: false, error: extractSubscriptionError(res) };
     }
     catch { }
     return null;

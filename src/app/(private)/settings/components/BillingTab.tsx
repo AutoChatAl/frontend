@@ -248,9 +248,6 @@ export default function BillingTab() {
             {isCanceled && (<span className="text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
               Cancelado
             </span>)}
-            {isCanceled && (<span className="text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
-                  Cancelado
-            </span>)}
           </h3>
         </div>
         {!isCanceled && (<span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium self-start">
