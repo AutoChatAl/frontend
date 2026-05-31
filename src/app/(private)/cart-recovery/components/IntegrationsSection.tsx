@@ -103,18 +103,15 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
             {used} de {limitLabel} integraç{limit === 1 ? 'ão' : 'ões'} utilizada{used === 1 ? '' : 's'}.
           </p>
         </div>
-        <span
+        <Button
+          onClick={handleOpenCreate}
+          icon={isAtLimit ? <Lock size={16} /> : <Plus size={16} />}
+          disabled={isAtLimit}
           title={isAtLimit ? `Limite de ${limit} integraç${limit === 1 ? 'ão' : 'ões'} atingido` : undefined}
+          data-tour="cart-recovery-new"
         >
-          <Button
-            onClick={handleOpenCreate}
-            icon={isAtLimit ? <Lock size={16} /> : <Plus size={16} />}
-            disabled={isAtLimit}
-            data-tour="cart-recovery-new"
-          >
-            Nova integração
-          </Button>
-        </span>
+          Nova integração
+        </Button>
       </div>
 
       {isAtLimit && (
