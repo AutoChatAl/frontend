@@ -1,11 +1,13 @@
 import type { AiTriggerSettings } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
+import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
 
 export interface AiConfig {
     id: string;
     enabled: boolean;
     activeChannelId: string | null;
+    activeChannelIds?: string[];
     segment: string;
     businessName: string;
     assistantName: string;
@@ -51,12 +53,18 @@ class AiService {
     };
   }
   public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled'>>): Promise<void> {
-    await apiClient.put('/ai/config', data);
+    const response = await apiClient.put('/ai/config', data);
+    if (!response.success) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao salvar configurações da IA.');
+    }
   }
   public async activateChannel(channelId: string): Promise<void> {
     const response = await apiClient.post('/ai/config/activate', { channelId });
-    if (!response.success)
-      throw new Error('Falha ao ativar canal de IA.');
+    if (!response.success) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao ativar canal de IA.');
+    }
   }
   public async deactivateAi(channelId?: string): Promise<void> {
     const response = await apiClient.post('/ai/config/deactivate', channelId ? { channelId } : {});

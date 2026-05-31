@@ -7,6 +7,7 @@ type Status = 'loading' | 'success' | 'error';
 const ERROR_MESSAGES: Record<string, string> = {
   subscription_inactive: 'Sua assinatura está inativa. Reative seu plano para conectar canais.',
   missing_params: 'Parâmetros inválidos na conexão.',
+  instance_limit: 'Limite de canais do seu plano atingido (somando WhatsApp e Instagram). Remova um canal existente ou adicione uma instância extra para conectar outro.',
 };
 function friendlyError(code: string): string {
   return ERROR_MESSAGES[code] ?? code;

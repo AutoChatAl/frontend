@@ -36,7 +36,7 @@ export function useAIConfig() {
   const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
-  const loadChannels = useCallback(async (currentActiveChannelId: string | null) => {
+  const loadChannels = useCallback(async (currentActiveChannelIds: string[]) => {
     try {
       const user = authService.getUser();
       const isOwner = !user?.role || user.role === 'owner';
@@ -62,14 +62,14 @@ export function useAIConfig() {
         id: inst.id,
         name: inst.name,
         type: 'whatsapp' as const,
-        active: inst.id === currentActiveChannelId,
+        active: currentActiveChannelIds.includes(inst.id),
         identifier: inst.whatsapp?.phoneNumber || inst.number || '',
       }));
       const igChannels: AIChannel[] = instagramAccounts.map((acc) => ({
         id: acc.id,
         name: acc.name,
         type: 'instagram' as const,
-        active: acc.id === currentActiveChannelId,
+        active: currentActiveChannelIds.includes(acc.id),
         identifier: acc.instagram?.username || '',
       }));
       setChannels([...waChannels, ...igChannels]);
@@ -94,7 +94,10 @@ export function useAIConfig() {
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
-      await loadChannels(aiConfig.activeChannelId);
+      const activeIds = aiConfig.activeChannelIds && aiConfig.activeChannelIds.length > 0
+        ? aiConfig.activeChannelIds
+        : (aiConfig.activeChannelId ? [aiConfig.activeChannelId] : []);
+      await loadChannels(activeIds);
     }
     catch {
     }
@@ -132,9 +135,9 @@ export function useAIConfig() {
       await aiService.updateConfig({ schedulingQueryEnabled: enabled, schedulingBookingEnabled });
       addToast('success', enabled ? 'Consulta de disponibilidade ativada.' : 'Consulta de disponibilidade desativada.');
     }
-    catch {
+    catch (err) {
       setSchedulingQueryEnabled(!enabled);
-      addToast('error', 'Erro ao atualizar configuração de agendamento.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração de agendamento.');
     }
     finally {
       setSaving(false);
@@ -147,9 +150,9 @@ export function useAIConfig() {
       await aiService.updateConfig({ schedulingQueryEnabled, schedulingBookingEnabled: enabled });
       addToast('success', enabled ? 'Criação de agendamentos ativada.' : 'Criação de agendamentos desativada.');
     }
-    catch {
+    catch (err) {
       setSchedulingBookingEnabled(!enabled);
-      addToast('error', 'Erro ao atualizar configuração de agendamento.');
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração de agendamento.');
     }
     finally {
       setSaving(false);
@@ -169,8 +172,8 @@ export function useAIConfig() {
       }
       await loadConfig();
     }
-    catch {
-      addToast('error', 'Erro ao alterar canal da IA.');
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao alterar canal da IA.');
     }
     finally {
       setSaving(false);

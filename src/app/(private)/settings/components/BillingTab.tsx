@@ -70,6 +70,11 @@ export default function BillingTab() {
       .then(([p, a]) => { setPlans(p); setAiPlans(a); })
       .catch(() => { });
   }, [reloadBilling]);
+  useEffect(() => {
+    if (showManageModal) {
+      refresh();
+    }
+  }, [showManageModal, refresh]);
   const handleChangePlan = (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
     if (hasActiveSub && !isTrialing && !isCanceled) {
