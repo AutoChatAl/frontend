@@ -218,11 +218,11 @@ export default function CampaignsPage() {
       </div>
     </div>
 
-    {campaigns.length === 0 ? (<EmptyState icon={<Play size={20}/>} title="Nenhuma campanha criada ainda" action={{
+    {campaigns.length === 0 ? (<div data-tour="campaigns-new"><EmptyState icon={<Play size={20}/>} title="Nenhuma campanha criada ainda" action={{
       label: 'Criar primeira campanha',
       icon: <Plus size={16}/>,
       onClick: () => setIsCreateModalOpen(true),
-    }}/>) : (<div className="space-y-4">
+    }}/></div>) : (<div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-2">
         <Button onClick={() => setShowFilters((prev) => !prev)} icon={<Filter size={16}/>} variant="secondary">Filtros</Button>
         <Button onClick={() => setIsCreateModalOpen(true)} icon={<Plus size={16}/>} variant="primary">Nova Campanha</Button>
@@ -241,38 +241,38 @@ export default function CampaignsPage() {
         </button>)}
       </Card>)}
       <Table columns={columns} data={filteredCampaigns} renderActions={(row: Campaign) => (<div className="flex justify-end gap-2">
-      <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="md" className={row.status === 'ACTIVE' ? 'text-indigo-600 dark:text-indigo-400' : ''}/>
-      <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
-    </div>)} renderMobileCard={(row: Campaign) => (<Card className="p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-slate-900 dark:text-white truncate">{row.name}</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-            {new Date(row.createdAt).toLocaleDateString('pt-BR')}
-          </p>
+        <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="md" className={row.status === 'ACTIVE' ? 'text-indigo-600 dark:text-indigo-400' : ''}/>
+        <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
+      </div>)} renderMobileCard={(row: Campaign) => (<Card className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-slate-900 dark:text-white truncate">{row.name}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              {new Date(row.createdAt).toLocaleDateString('pt-BR')}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="sm"/>
+            <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
+          </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="sm"/>
-          <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
+
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <Badge type={row.status === 'ACTIVE' ? 'success' : row.status === 'PAUSED' ? 'warning' : 'neutral'} text={row.status === 'ACTIVE' ? 'Ativa' : row.status === 'PAUSED' ? 'Pausada' : 'Concluída'}/>
+          {row.channels && row.channels.length > 0 && row.channels.map((ch) => {
+            if (!ch.channel)
+              return null;
+            return (<Badge key={ch.channelId} type={ch.channel.type.toLowerCase() || 'whatsapp'} text={ch.channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'} icon={ch.channel.type === 'WHATSAPP' ? MessageCircle : Smartphone}/>);
+          })}
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {row.runs ? row.runs.length : 0} execução{(row.runs?.length ?? 0) !== 1 ? 'ões' : ''}
+          </span>
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        <Badge type={row.status === 'ACTIVE' ? 'success' : row.status === 'PAUSED' ? 'warning' : 'neutral'} text={row.status === 'ACTIVE' ? 'Ativa' : row.status === 'PAUSED' ? 'Pausada' : 'Concluída'}/>
-        {row.channels && row.channels.length > 0 && row.channels.map((ch) => {
-          if (!ch.channel)
-            return null;
-          return (<Badge key={ch.channelId} type={ch.channel.type.toLowerCase() || 'whatsapp'} text={ch.channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'} icon={ch.channel.type === 'WHATSAPP' ? MessageCircle : Smartphone}/>);
-        })}
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          {row.runs ? row.runs.length : 0} execução{(row.runs?.length ?? 0) !== 1 ? 'ões' : ''}
-        </span>
-      </div>
-
-      {row.message && (<p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
-        {row.message}
-      </p>)}
-    </Card>)}/>
+        {row.message && (<p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
+          {row.message}
+        </p>)}
+      </Card>)}/>
       {filteredCampaigns.length === 0 && (<p className="text-center text-sm text-slate-500 dark:text-slate-400 py-6">
         Nenhuma campanha encontrada com os filtros aplicados.
       </p>)}

@@ -1,5 +1,5 @@
 'use client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -9,10 +9,12 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import DangerZone from '@/components/DangerZone';
 import Input from '@/components/Input';
 import { useToast, ToastContainer } from '@/components/Toast';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { authService } from '@/services/auth.service';
 
 export default function AccountTab() {
   const router = useRouter();
+  const { resetOnboarding } = useOnboarding();
   const [workspaceName, setWorkspaceName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
@@ -21,7 +23,24 @@ export default function AccountTab() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resettingTour, setResettingTour] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
+  async function handleRestartTour() {
+    setResettingTour(true);
+    try {
+      await resetOnboarding();
+      addToast('success', 'Tour resetado! Voltando para o início…');
+      // Vai para a home onde o welcome aparece de novo
+      setTimeout(() => router.push('/dashboard'), 600);
+    }
+    catch {
+      addToast('error', 'Não foi possível resetar o tour. Tente de novo.');
+    }
+    finally {
+      setResettingTour(false);
+    }
+  }
+
   useEffect(() => {
     authService
       .fetchMe()
@@ -90,6 +109,25 @@ export default function AccountTab() {
       <div className="flex justify-end mt-4 sm:mt-6">
         <Button onClick={handleSave} loading={saving} loadingText="Salvando..." disabled={saving} className="w-full sm:w-auto justify-center">
             Salvar Alterações
+        </Button>
+      </div>
+    </Card>
+
+    <Card className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-md shrink-0">
+            <Wand2 size={18} className="text-white"/>
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">Refazer tour guiado</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Reseta as explicações e mostra todas de novo, página por página.
+            </p>
+          </div>
+        </div>
+        <Button variant="secondary" onClick={handleRestartTour} loading={resettingTour} loadingText="Resetando..." disabled={resettingTour} className="w-full sm:w-auto justify-center">
+          Refazer tour
         </Button>
       </div>
     </Card>

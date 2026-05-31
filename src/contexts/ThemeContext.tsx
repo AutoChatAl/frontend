@@ -11,16 +11,19 @@ interface ThemeProviderProps {
     children: ReactNode;
 }
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === 'undefined')
-      return false;
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
+  const [darkMode, setDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        setDarkMode(true);
+      }
+    }
     setMounted(true);
   }, []);
+
   useEffect(() => {
     if (!mounted)
       return;
@@ -42,9 +45,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     toggleTheme,
     setDarkMode,
   };
-  if (!mounted) {
-    return null;
-  }
+
   return (<ThemeContext.Provider value={value}>
     {children}
   </ThemeContext.Provider>);

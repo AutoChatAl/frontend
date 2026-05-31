@@ -124,9 +124,11 @@ export default function CommentAutomationsPage() {
         </div>
       </div>
 
-      <Button icon={<Plus size={16}/>} onClick={() => setIsCreateOpen(true)}>
+      <div data-tour="comment-automations-new">
+        <Button icon={<Plus size={16}/>} onClick={() => setIsCreateOpen(true)}>
           Nova Automação
-      </Button>
+        </Button>
+      </div>
     </header>
 
     {rules.length === 0 ? (<EmptyState icon={<MessageSquare size={22}/>} title="Nenhuma automação de comentário" description="Crie automações para responder comentários e enviar DMs quando alguém comentar nas suas publicações do Instagram." action={{

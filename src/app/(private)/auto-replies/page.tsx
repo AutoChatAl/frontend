@@ -106,9 +106,11 @@ export default function AutoRepliesPage() {
         </p>
       </div>
 
-      <Button icon={<Plus size={16}/>} onClick={() => setIsCreateOpen(true)}>
+      <div data-tour="auto-replies-new">
+        <Button icon={<Plus size={16}/>} onClick={() => setIsCreateOpen(true)}>
           Nova Auto-Resposta
-      </Button>
+        </Button>
+      </div>
     </header>
 
     {rules.length === 0 ? (<EmptyState icon={<Reply size={22}/>} title="Nenhuma auto-resposta configurada" description="Crie regras para responder automaticamente quando um contato enviar uma palavra-chave." action={{

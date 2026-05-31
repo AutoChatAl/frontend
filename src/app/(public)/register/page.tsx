@@ -38,6 +38,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await authService.register(formData);
+      // Após cadastrar, manda pra home/dashboard — é lá que o onboarding começa.
       router.push('/dashboard');
     }
     catch (err) {

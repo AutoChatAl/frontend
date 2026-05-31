@@ -277,9 +277,11 @@ export default function ContactsPage() {
         </p>
       </div>
 
-      <Button variant="secondary" icon={<RefreshCw size={15}/>} onClick={() => setIsSyncModalOpen(true)}>
+      <div data-tour="contacts-sync">
+        <Button variant="secondary" icon={<RefreshCw size={15}/>} onClick={() => setIsSyncModalOpen(true)}>
           Sincronizar Contatos
-      </Button>
+        </Button>
+      </div>
     </header>
 
     {contacts.length === 0 && !query ? (<EmptyState icon={<Users size={22}/>} title="Nenhum contato ainda" description="Sincronize contatos via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{

@@ -33,14 +33,16 @@ export default function IAPage() {
       <p className="text-slate-500 dark:text-slate-400 text-sm">Configure o cérebro do seu assistente virtual</p>
     </div>
 
-    <AITabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs}/>
+    <div data-tour="ia-tabs">
+      <AITabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs}/>
+    </div>
 
     {activeTab === 'general' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <AIIdentitySection segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products} onSegmentChange={setSegment} onBusinessNameChange={setBusinessName} onAssistantNameChange={setAssistantName} onToneChange={setTone} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct}/>
       <AIPromptPreview segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products}/>
     </div>)}
 
-    {activeTab === 'channels' && (<div className="space-y-6">
+    {activeTab === 'channels' && (<div className="space-y-6" data-tour="ia-channels">
       <AIChannelsList channels={channels} onToggle={toggleChannel}/>
     </div>)}
 

@@ -19,6 +19,7 @@ interface SidebarItemProps {
     onClick: () => void;
     collapsed: boolean;
     badgeCount?: number | undefined;
+    tourId?: string;
 }
 interface SidebarProps {
     brandName?: string;
@@ -26,8 +27,8 @@ interface SidebarProps {
     userRole?: string;
     userInitials?: string;
 }
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount }: SidebarItemProps) => {
-  return (<button onClick={onClick} className={`
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId }: SidebarItemProps) => {
+  return (<button onClick={onClick} {...(tourId ? { 'data-tour': tourId } : {})} className={`
         flex items-center gap-3 w-full px-3 py-3 rounded-lg transition-all duration-200 relative
         ${active
       ? 'bg-indigo-100/65 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 shadow-sm'
@@ -183,7 +184,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       </div>
 
       <nav className="flex-1 p-3 space-y-2 overflow-y-auto mt-2">
-        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => handleMenuClick(item)} collapsed={sidebarCollapsed} badgeCount={item.badgeCount}/>))}
+        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => handleMenuClick(item)} collapsed={sidebarCollapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-700">
@@ -235,7 +236,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => {
           handleMenuClick(item);
           setMobileMenuOpen(false);
-        }} collapsed={false} badgeCount={item.badgeCount}/>))}
+        }} collapsed={false} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
       </nav>
     </aside>
   </>);

@@ -79,9 +79,11 @@ export default function GroupsPage() {
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Grupos de Contatos</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm">Organize listas de transmissão para seus disparos</p>
       </div>
-      <Button icon={<Plus size={16}/>} onClick={() => setCreateModalOpen(true)}>
+      <div data-tour="groups-new">
+        <Button icon={<Plus size={16}/>} onClick={() => setCreateModalOpen(true)}>
           Novo Grupo
-      </Button>
+        </Button>
+      </div>
     </div>
 
     {loading ? (<PageLoader message="Carregando grupos..."/>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
