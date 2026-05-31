@@ -1,13 +1,15 @@
 'use client';
-import { AlertCircle, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Smartphone, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { AlertCircle, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
+import Input from '@/components/Input';
 import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
@@ -36,7 +38,14 @@ function ActionsDropdown({ campaign, onEdit, onDelete }: {
       left: rect.right - 176,
     });
   }, []);
-  useEffect(() => {
+  // Calcula a posição ANTES de abrir (no mesmo batch do setOpen), para o menu já renderizar
+  // sob o botão — sem o flash em (0,0) no canto superior esquerdo.
+  const handleToggle = useCallback(() => {
+    if (!open)
+      updatePosition();
+    setOpen((prev) => !prev);
+  }, [open, updatePosition]);
+  useLayoutEffect(() => {
     if (!open)
       return;
     updatePosition();
@@ -56,7 +65,7 @@ function ActionsDropdown({ campaign, onEdit, onDelete }: {
     };
   }, [open, updatePosition]);
   return (<div ref={buttonRef}>
-    <IconButton icon={<MoreVertical size={16}/>} onClick={() => setOpen((prev) => !prev)}/>
+    <IconButton icon={<MoreVertical size={16}/>} onClick={handleToggle}/>
     {open && createPortal(<div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95 duration-150">
       <button type="button" onClick={() => {
         setOpen(false);
@@ -119,6 +128,9 @@ export default function CampaignsPage() {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [nameFilter, setNameFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState<'ALL' | 'WHATSAPP' | 'INSTAGRAM'>('ALL');
   const { toasts, addToast, removeToast } = useToast();
   useEffect(() => {
     loadCampaigns();
@@ -171,6 +183,16 @@ export default function CampaignsPage() {
       setDeletingLoading(false);
     }
   };
+  const filteredCampaigns = useMemo(() => {
+    const query = nameFilter.trim().toLowerCase();
+    return campaigns.filter((campaign) => {
+      const matchesName = query === '' || campaign.name.toLowerCase().startsWith(query);
+      const matchesChannel = channelFilter === 'ALL'
+        || (campaign.channels ?? []).some((ch) => ch.channel?.type === channelFilter);
+      return matchesName && matchesChannel;
+    });
+  }, [campaigns, nameFilter, channelFilter]);
+  const hasActiveFilters = nameFilter.trim() !== '' || channelFilter !== 'ALL';
   if (loading) {
     return <PageLoader message="Carregando campanhas..."/>;
   }
@@ -200,22 +222,25 @@ export default function CampaignsPage() {
       label: 'Criar primeira campanha',
       icon: <Plus size={16}/>,
       onClick: () => setIsCreateModalOpen(true),
-    }}/>) : (<Table columns={columns} data={campaigns} actions={{
-      buttons: [
-        {
-          label: 'Filtros',
-          icon: <Filter size={16}/>,
-          onClick: () => { },
-          variant: 'secondary',
-        },
-        {
-          label: 'Nova Campanha',
-          icon: <Plus size={16}/>,
-          onClick: () => setIsCreateModalOpen(true),
-          variant: 'primary',
-        },
-      ],
-    }} renderActions={(row: Campaign) => (<div className="flex justify-end gap-2">
+    }}/>) : (<div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button onClick={() => setShowFilters((prev) => !prev)} icon={<Filter size={16}/>} variant="secondary">Filtros</Button>
+        <Button onClick={() => setIsCreateModalOpen(true)} icon={<Plus size={16}/>} variant="primary">Nova Campanha</Button>
+      </div>
+      {showFilters && (<Card className="p-4 animate-in fade-in duration-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input label="Nome da campanha" leftIcon={<Search size={16}/>} placeholder="Filtrar por nome..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)}/>
+          <Dropdown label="Canal" value={channelFilter} onChange={(v) => setChannelFilter(v as 'ALL' | 'WHATSAPP' | 'INSTAGRAM')} options={[
+            { value: 'ALL', label: 'Todos os canais' },
+            { value: 'WHATSAPP', label: 'WhatsApp', icon: <MessageCircle size={15}/> },
+            { value: 'INSTAGRAM', label: 'Instagram', icon: <Smartphone size={15}/> },
+          ]}/>
+        </div>
+        {hasActiveFilters && (<button type="button" onClick={() => { setNameFilter(''); setChannelFilter('ALL'); }} className="mt-3 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+          Limpar filtros
+        </button>)}
+      </Card>)}
+      <Table columns={columns} data={filteredCampaigns} renderActions={(row: Campaign) => (<div className="flex justify-end gap-2">
       <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="md" className={row.status === 'ACTIVE' ? 'text-indigo-600 dark:text-indigo-400' : ''}/>
       <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
     </div>)} renderMobileCard={(row: Campaign) => (<Card className="p-4">
@@ -247,7 +272,11 @@ export default function CampaignsPage() {
       {row.message && (<p className="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
         {row.message}
       </p>)}
-    </Card>)}/>)}
+    </Card>)}/>
+      {filteredCampaigns.length === 0 && (<p className="text-center text-sm text-slate-500 dark:text-slate-400 py-6">
+        Nenhuma campanha encontrada com os filtros aplicados.
+      </p>)}
+    </div>)}
 
     <CreateCampaignModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={() => loadCampaigns()} addToast={addToast}/>
 
