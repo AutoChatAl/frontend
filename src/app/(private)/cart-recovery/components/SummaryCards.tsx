@@ -1,6 +1,7 @@
 'use client';
 
 import { ShoppingCart, TrendingUp, CheckCircle2, Plug } from 'lucide-react';
+
 import type { AbandonedCartsSummary } from '@/types/CartRecovery';
 
 interface Props {

@@ -211,7 +211,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
             Filtrando por contato vinculado
           </span>
           <Link
-            href={`/contacts`}
+            href={'/contacts'}
             className="text-xs underline hover:text-indigo-900 dark:hover:text-indigo-100"
           >
             Ver contato →

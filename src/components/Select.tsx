@@ -1,7 +1,6 @@
 'use client';
 
 import { AlertCircle, Check, ChevronDown, Search, X } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import {
   useCallback,
   useEffect,
@@ -12,6 +11,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface SelectOption<V extends string = string> {
   value: V;
@@ -101,7 +101,7 @@ export default function Select<V extends string = string>({
 
   const normalizedOptions = useMemo<SelectOption<V>[]>(
     () => options.map((o) => normalizeOption(o as RawOption<V>)),
-    [options]
+    [options],
   );
 
   const showSearch = searchable ?? normalizedOptions.length > searchThreshold;
@@ -113,13 +113,13 @@ export default function Select<V extends string = string>({
       (o) =>
         o.label.toLowerCase().includes(q) ||
         o.value.toLowerCase().includes(q) ||
-        (o.description ? o.description.toLowerCase().includes(q) : false)
+        (o.description ? o.description.toLowerCase().includes(q) : false),
     );
   }, [normalizedOptions, search, showSearch]);
 
   const selectedOption = useMemo(
     () => normalizedOptions.find((o) => o.value === currentValue) ?? null,
-    [normalizedOptions, currentValue]
+    [normalizedOptions, currentValue],
   );
 
   const computePosition = useCallback(() => {
@@ -384,7 +384,7 @@ export default function Select<V extends string = string>({
             )}
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );

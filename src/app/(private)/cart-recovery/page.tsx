@@ -1,8 +1,8 @@
 'use client';
 
 import { ShoppingCart, Plug, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
@@ -16,9 +16,9 @@ import type {
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 
 import AbandonedCartsList from './components/AbandonedCartsList';
+import type { IntegrationChannelOption } from './components/IntegrationFormModal';
 import IntegrationsSection from './components/IntegrationsSection';
 import SummaryCards from './components/SummaryCards';
-import type { IntegrationChannelOption } from './components/IntegrationFormModal';
 
 type TabId = 'carts' | 'integrations';
 
@@ -106,7 +106,7 @@ export default function CartRecoveryPage() {
       setCarts(res.data);
       setCartsTotal(res.total);
     },
-    []
+    [],
   );
 
   const reloadIntegrations = useCallback(async () => {
@@ -116,7 +116,7 @@ export default function CartRecoveryPage() {
 
   const enabledIntegrationsCount = useMemo(
     () => integrations.filter((i) => i.enabled).length,
-    [integrations]
+    [integrations],
   );
 
   if (loading) {

@@ -14,7 +14,6 @@ import {
   type RecoveryStep,
   type SalesPlatform,
 } from '@/types/CartRecovery';
-import type { WhatsAppInstance } from '@/types/Channel';
 
 export interface IntegrationChannelOption {
   id: string;
@@ -108,7 +107,7 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, channel
 
   const filteredChannels = useMemo(
     () => channels.filter((c) => c.type === channelType),
-    [channels, channelType]
+    [channels, channelType],
   );
 
   const platformConfig = useMemo(() => PLATFORM_CONFIG[platform], [platform]);

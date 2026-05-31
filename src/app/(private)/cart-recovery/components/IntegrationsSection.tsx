@@ -48,7 +48,7 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
     if (isAtLimit) {
       onToast(
         'error',
-        `Você atingiu o limite de ${limit} integraç${limit === 1 ? 'ão' : 'ões'} de recuperação do seu plano. Faça upgrade para criar mais.`
+        `Você atingiu o limite de ${limit} integraç${limit === 1 ? 'ão' : 'ões'} de recuperação do seu plano. Faça upgrade para criar mais.`,
       );
       return;
     }

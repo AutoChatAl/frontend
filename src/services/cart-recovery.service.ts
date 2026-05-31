@@ -1,4 +1,3 @@
-import { apiClient } from '@/utils/ApiClient';
 import type {
   AbandonedCart,
   AbandonedCartsSummary,
@@ -8,21 +7,22 @@ import type {
   PaginatedCarts,
   UpdateIntegrationInput,
 } from '@/types/CartRecovery';
+import { apiClient } from '@/utils/ApiClient';
 
 class CartRecoveryService {
-  async listIntegrations(): Promise<CartRecoveryIntegration[]> {
+  public async listIntegrations(): Promise<CartRecoveryIntegration[]> {
     const response = await apiClient.get<{ data: CartRecoveryIntegration[] }>('/cart-recovery/integrations');
     if (!response.success || !response.data) throw new Error('Falha ao listar integrações.');
     return response.data.data ?? [];
   }
 
-  async getIntegration(id: string): Promise<CartRecoveryIntegration> {
+  public async getIntegration(id: string): Promise<CartRecoveryIntegration> {
     const response = await apiClient.get<CartRecoveryIntegration>(`/cart-recovery/integrations/${id}`);
     if (!response.success || !response.data) throw new Error('Falha ao buscar integração.');
     return response.data;
   }
 
-  async createIntegration(input: CreateIntegrationInput): Promise<CartRecoveryIntegration> {
+  public async createIntegration(input: CreateIntegrationInput): Promise<CartRecoveryIntegration> {
     const response = await apiClient.post<CartRecoveryIntegration & { reason?: string }>('/cart-recovery/integrations', input);
     if (!response.success || !response.data) {
       const reason = (response.data as { reason?: string } | undefined)?.reason;
@@ -40,24 +40,24 @@ class CartRecoveryService {
     return response.data;
   }
 
-  async updateIntegration(id: string, input: UpdateIntegrationInput): Promise<CartRecoveryIntegration> {
+  public async updateIntegration(id: string, input: UpdateIntegrationInput): Promise<CartRecoveryIntegration> {
     const response = await apiClient.put<CartRecoveryIntegration>(`/cart-recovery/integrations/${id}`, input);
     if (!response.success || !response.data) throw new Error('Falha ao atualizar integração.');
     return response.data;
   }
 
-  async deleteIntegration(id: string): Promise<void> {
+  public async deleteIntegration(id: string): Promise<void> {
     const response = await apiClient.delete(`/cart-recovery/integrations/${id}`);
     if (!response.success) throw new Error('Falha ao excluir integração.');
   }
 
-  async toggleIntegration(id: string): Promise<CartRecoveryIntegration> {
+  public async toggleIntegration(id: string): Promise<CartRecoveryIntegration> {
     const response = await apiClient.patch<CartRecoveryIntegration>(`/cart-recovery/integrations/${id}/toggle`);
     if (!response.success || !response.data) throw new Error('Falha ao alternar integração.');
     return response.data;
   }
 
-  async listCarts(params?: ListCartsParams): Promise<PaginatedCarts> {
+  public async listCarts(params?: ListCartsParams): Promise<PaginatedCarts> {
     const qs = new URLSearchParams();
     if (params?.status) qs.append('status', params.status);
     if (params?.integrationId) qs.append('integrationId', params.integrationId);
@@ -72,26 +72,26 @@ class CartRecoveryService {
     return response.data;
   }
 
-  async getCart(id: string): Promise<AbandonedCart> {
+  public async getCart(id: string): Promise<AbandonedCart> {
     const response = await apiClient.get<AbandonedCart>(`/cart-recovery/carts/${id}`);
     if (!response.success || !response.data) throw new Error('Falha ao buscar carrinho.');
     return response.data;
   }
 
-  async deleteCart(id: string): Promise<void> {
+  public async deleteCart(id: string): Promise<void> {
     const response = await apiClient.delete(`/cart-recovery/carts/${id}`);
     if (!response.success) throw new Error('Falha ao excluir carrinho.');
   }
 
-  async getSummary(sinceDays = 30): Promise<AbandonedCartsSummary> {
+  public async getSummary(sinceDays = 30): Promise<AbandonedCartsSummary> {
     const response = await apiClient.get<AbandonedCartsSummary>(
-      `/cart-recovery/summary?sinceDays=${sinceDays}`
+      `/cart-recovery/summary?sinceDays=${sinceDays}`,
     );
     if (!response.success || !response.data) throw new Error('Falha ao buscar resumo.');
     return response.data;
   }
 
-  async getContactsStats(contactIds: string[]): Promise<Array<{
+  public async getContactsStats(contactIds: string[]): Promise<Array<{
     contactId: string;
     salesCount: number;
     salesValueCents: number;
