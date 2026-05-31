@@ -120,7 +120,7 @@ export default function NotificationsTab() {
             <p className="text-sm font-medium text-slate-800 dark:text-white">{item.title}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
           </div>
-          <ToggleSwitch defaultChecked/>
+          <ToggleSwitch defaultChecked disabled/>
         </div>))}
 
         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">

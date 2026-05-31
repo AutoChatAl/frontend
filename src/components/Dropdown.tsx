@@ -12,7 +12,7 @@ interface DropdownProps {
     error?: string | undefined;
     hint?: string | undefined;
     leftIcon?: ReactNode;
-    options: DropdownOption[];
+    options: (DropdownOption | string)[];
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
@@ -25,7 +25,9 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
   const [activeIndex, setActiveIndex] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
   const buttonId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
-  const selected = options.find((o) => o.value === value) ?? null;
+  // Aceita opções como string (value === label) ou objeto { value, label, icon } — igual ao Select nativo.
+  const opts: DropdownOption[] = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
+  const selected = opts.find((o) => o.value === value) ?? null;
   useEffect(() => {
     if (!open)
       return;
@@ -38,7 +40,7 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
   }, [open]);
   useEffect(() => {
     if (open)
-      setActiveIndex(options.findIndex((o) => o.value === value));
+      setActiveIndex(options.findIndex((o) => (typeof o === 'string' ? o : o.value) === value));
   }, [open, options, value]);
   const select = (optValue: string) => {
     onChange(optValue);
@@ -60,7 +62,7 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
       return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(options.length - 1, i + 1));
+      setActiveIndex((i) => Math.min(opts.length - 1, i + 1));
     }
     else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -68,7 +70,7 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
     }
     else if (e.key === 'Enter') {
       e.preventDefault();
-      const opt = options[activeIndex];
+      const opt = opts[activeIndex];
       if (opt)
         select(opt.value);
     }
@@ -100,7 +102,7 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
         <ChevronDown size={15} className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}/>
       </button>
       {open && (<ul role="listbox" className="absolute top-full left-0 mt-2 z-50 w-full max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150">
-        {options.map((opt, i) => {
+        {opts.map((opt, i) => {
           const isSelected = opt.value === value;
           const isActive = i === activeIndex;
           return (<li key={opt.value} role="option" aria-selected={isSelected}>

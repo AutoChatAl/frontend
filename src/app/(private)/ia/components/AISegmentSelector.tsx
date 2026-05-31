@@ -2,8 +2,8 @@
 import { Briefcase } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import Dropdown from '@/components/Dropdown';
 import Input from '@/components/Input';
-import Select from '@/components/Select';
 
 interface AISegmentSelectorProps {
     value?: string;
@@ -39,8 +39,7 @@ export default function AISegmentSelector({ value, onChange }: AISegmentSelector
     setOtherSegment(currentValue);
   }, [value, predefinedValues]);
   return (<div className="space-y-3">
-    <Select label="Segmento do Negócio" value={selectedSegment} onChange={(e) => {
-      const nextValue = e.target.value;
+    <Dropdown label="Segmento do Negócio" value={selectedSegment} onChange={(nextValue) => {
       setSelectedSegment(nextValue);
       if (nextValue === '__OTHER__') {
         onChange?.(otherSegment.trim());
