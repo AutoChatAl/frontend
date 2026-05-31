@@ -28,7 +28,7 @@ export default function AddChannelCard({ onClick, icon, title, subtitle, colorCl
     },
   };
   const styles = colorStyles[colorClass];
-  return (<button onClick={onClick} disabled={disabled} className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-54 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+  return (<button onClick={onClick} disabled={disabled} className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl ${styles.border} ${styles.bg} transition-all group h-full min-h-54 w-full ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
     <div className={`w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 ${styles.iconBg} transition-colors`}>
       {icon || (<Plus size={24} className={`text-slate-400 dark:text-slate-500 ${styles.iconColor}`}/>)}
     </div>

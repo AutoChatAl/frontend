@@ -30,7 +30,7 @@ export default function ChannelInstanceCard({ id, icon, title, subtitle, status,
     setCanManage(owner || isOwnChannel);
     setIsCollaboratorChannel(owner && !!createdBy && !!user?.id && createdBy !== user.id);
   }, [createdBy]);
-  return (<Card className="p-6 relative overflow-hidden group">
+  return (<Card className="p-6 relative overflow-hidden group h-full flex flex-col">
     <div className="flex justify-between items-start mb-4 pt-2">
       {icon}
       <div className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${status === 'connected'
@@ -46,7 +46,7 @@ export default function ChannelInstanceCard({ id, icon, title, subtitle, status,
     </p>)}
     {(!isCollaboratorChannel || !ownerName) && <div className="mb-4"/>}
 
-    <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-50 dark:border-slate-700 pt-4">
+    <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-50 dark:border-slate-700 pt-4 mt-auto">
       <span className="flex items-center gap-1">
         <Wifi size={14} className={status === 'connected'
           ? 'text-emerald-500 dark:text-emerald-400'

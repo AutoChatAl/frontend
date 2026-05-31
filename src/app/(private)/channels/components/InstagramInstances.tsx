@@ -84,7 +84,7 @@ export default function InstagramInstances() {
   }
   return (<>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {isOwner && (<div data-tour="channels-add"><AddChannelCard title="Conectar Conta" subtitle="Login Instagram" colorClass="fuchsia" onClick={handleConnectInstagram} disabled={connecting}/></div>)}
+      {isOwner && (<div data-tour="channels-add" className="h-full"><AddChannelCard title="Conectar Conta" subtitle="Login Instagram" colorClass="fuchsia" onClick={handleConnectInstagram} disabled={connecting}/></div>)}
 
       {accounts.map((account) => {
         const username = account.instagram.username || account.name || 'Sem nome';

@@ -72,7 +72,7 @@ export default function WhatsAppInstances() {
   }
   return (<>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {isOwner && (<div data-tour="channels-add"><AddChannelCard title="Nova Instância" subtitle="Escanear QR Code" colorClass="emerald" onClick={handleOpenCreateModal}/></div>)}
+      {isOwner && (<div data-tour="channels-add" className="h-full"><AddChannelCard title="Nova Instância" subtitle="Escanear QR Code" colorClass="emerald" onClick={handleOpenCreateModal}/></div>)}
 
       {instances.map((inst) => (<ChannelInstanceCard key={inst.id} id={inst.id} icon={<div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
         <MessageCircle size={24}/>
