@@ -26,7 +26,7 @@ function ChannelCard({ icon: Icon, title, subtitle, bgColor, iconColor, highligh
 }
 export default function ChannelsSection() {
   const benefits = [
-    'Sem risco de banimento (API Oficial)',
+    'Operação segura com controle de cadência',
     'Responda comentários do Instagram automaticamente',
     'Recupere carrinhos abandonados no WhatsApp',
     'Transbordo inteligente para atendentes humanos',
@@ -38,7 +38,7 @@ export default function ChannelsSection() {
 
         <div className="relative z-10 grid grid-cols-2 gap-4">
           <div className="space-y-4 mt-8">
-            <ChannelCard icon={MessageCircle} title="WhatsApp" subtitle="API Oficial" bgColor="bg-emerald-100" iconColor="text-emerald-600" delay="delay-1000"/>
+            <ChannelCard icon={MessageCircle} title="WhatsApp" subtitle="Conexão direta" bgColor="bg-emerald-100" iconColor="text-emerald-600" delay="delay-1000"/>
             <ChannelCard icon={Globe} title="Web Chat" subtitle="Widget Site" bgColor="bg-blue-100" iconColor="text-blue-600"/>
           </div>
           <div className="space-y-4">
