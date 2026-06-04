@@ -25,7 +25,7 @@ export default function AuthShell({ children, title, subtitle }: AuthShellProps)
 
         <div className="mt-12 space-y-4">
           {[
-            'Integração oficial WhatsApp & Instagram',
+            'WhatsApp e Instagram integrados em um só lugar',
             'Treinamento de IA com seus próprios dados',
             'Dashboard de métricas em tempo real',
           ].map((item, i) => (<div key={i} className="flex items-center gap-3 text-indigo-50">

@@ -2,7 +2,7 @@
 import { Loader2 } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
-interface ButtonProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     children: ReactNode;
     onClick?: () => void;
     icon?: ReactNode;
@@ -14,7 +14,7 @@ interface ButtonProps {
     loadingText?: string;
     type?: 'button' | 'submit' | 'reset';
 }
-export default function Button({ children, onClick, icon, variant = 'primary', size = 'md', className = '', disabled = false, loading = false, loadingText, type = 'button' }: ButtonProps) {
+export default function Button({ children, onClick, icon, variant = 'primary', size = 'md', className = '', disabled = false, loading = false, loadingText, type = 'button', ...rest }: ButtonProps) {
   const baseStyles = 'flex items-center gap-2 rounded-lg font-medium transition-all hover:scale-105 active:scale-95';
   const variantStyles = {
     primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-none',
@@ -30,7 +30,7 @@ export default function Button({ children, onClick, icon, variant = 'primary', s
   const isDisabled = disabled || loading;
   const displayIcon = loading ? <Loader2 size={14} className="animate-spin"/> : icon;
   const displayText = loading && loadingText ? loadingText : children;
-  return (<button type={type} onClick={onClick} disabled={isDisabled} className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${isDisabled ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}>
+  return (<button type={type} onClick={onClick} disabled={isDisabled} className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${isDisabled ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`} {...rest}>
     {displayIcon && <span className="flex shrink-0">{displayIcon}</span>}
     {displayText}
   </button>);

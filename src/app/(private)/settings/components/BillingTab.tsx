@@ -1,5 +1,5 @@
 'use client';
-import { CheckCircle, Download, MessageSquare, Megaphone, Reply, MessageCircle, MonitorSmartphone, Users, Contact, Bot, Plus, Minus, Crown, AlertTriangle, CreditCard, BarChart2, Loader2 } from 'lucide-react';
+import { CheckCircle, Download, MessageSquare, Megaphone, Reply, MessageCircle, MonitorSmartphone, Users, Contact, Bot, Plus, Minus, Crown, AlertTriangle, CreditCard, BarChart2, Loader2, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -234,6 +234,7 @@ export default function BillingTab() {
     { label: 'Contatos', icon: Contact, used: usage?.contacts?.used ?? 0, limit: usage?.contacts?.limit ?? 0 },
     { label: 'Colaboradores', icon: Users, used: usage?.collaborators?.used ?? 0, limit: usage?.collaborators?.limit ?? 0 },
     { label: 'Comentários', icon: MessageCircle, used: usage?.commentAutomations?.used ?? 0, limit: usage?.commentAutomations?.limit ?? 0 },
+    { label: 'Recuperação carrinho', icon: ShoppingCart, used: usage?.cartRecoveryIntegrations?.used ?? 0, limit: usage?.cartRecoveryIntegrations?.limit ?? 0 },
     { label: 'Msgs IA', icon: Bot, used: usage?.aiMessages?.used ?? 0, limit: usage?.aiMessages?.limit ?? 0 },
     { label: 'Msgs IA extras', icon: Bot, used: usage?.extraAiMessages?.used ?? 0, limit: usage?.extraAiMessages?.limit ?? -1 },
   ];
@@ -506,6 +507,7 @@ export default function BillingTab() {
               <li>• {formatNumber(p.limits.maxContacts)} contatos</li>
               <li>• {formatNumber(p.limits.maxMessagesPerMonth)} msgs/mês <span className="text-indigo-500">*</span></li>
               <li>• {p.limits.maxAutoReplies} auto respostas</li>
+              <li>• {p.limits.maxCartRecoveryIntegrations ?? 0} integraç{(p.limits.maxCartRecoveryIntegrations ?? 0) === 1 ? 'ão' : 'ões'} de recuperação</li>
               <li>• {p.limits.maxCollaborators} colaboradores</li>
               {p.aiIncluded && <li>• IA inclusa</li>}
               <li>• Suporte {p.limits.supportLevel === 'vip' ? 'VIP' : '24h'}</li>
@@ -744,6 +746,7 @@ export default function BillingTab() {
             { icon: <Megaphone size={16} />, label: 'Campanhas de disparo', value: plan ? `${plan.limits.maxCampaigns} campanhas` : '—' },
             { icon: <Contact size={16} />, label: 'Contatos', value: plan ? formatNumber(plan.limits.maxContacts) : '—' },
             { icon: <Reply size={16} />, label: 'Respostas automáticas', value: plan ? `${plan.limits.maxAutoReplies} respostas` : '—' },
+            { icon: <ShoppingCart size={16} />, label: 'Integrações de recuperação de carrinho', value: plan ? `${plan.limits.maxCartRecoveryIntegrations ?? 0} integraç${(plan.limits.maxCartRecoveryIntegrations ?? 0) === 1 ? 'ão' : 'ões'}` : '—' },
             { icon: <Users size={16} />, label: 'Colaboradores', value: plan ? `${plan.limits.maxCollaborators} colaboradores` : '—' },
             { icon: <MessageSquare size={16} />, label: 'Mensagens por mês', value: plan ? formatNumber(plan.limits.maxMessagesPerMonth) : '—' },
             ...(plan?.aiIncluded || hasAiPlan ? [{ icon: <Bot size={16} />, label: 'IA integrada (agente virtual)', value: 'Incluído no plano' }] : []),

@@ -1,5 +1,6 @@
 'use client';
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { MessageCircle, Smartphone, CheckCircle2, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
 import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
@@ -88,6 +89,48 @@ export const columns = [
       return (<div className="flex flex-wrap gap-1">
         {tags.length > 0 ? (tags.map((t) => t.tag.name === 'Aguardando atendimento' ? (<Badge key={t.tagId} type="error" text={t.tag.name}/>) : (<Badge key={t.tagId} type="tag" text={t.tag.name}/>))) : (<span className="text-slate-400 text-xs italic">Sem tags</span>)}
       </div>);
+    },
+  },
+  {
+    header: 'Vendas',
+    accessor: 'salesCount' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const count = row.salesCount ?? 0;
+      const value = row.salesValueCents ?? 0;
+      if (count === 0) {
+        return <span className="text-xs text-slate-400 italic">—</span>;
+      }
+      return (
+        <Link
+          href={`/cart-recovery?contactId=${row.id}&status=RECOVERED`}
+          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+          title={`${count} venda(s) — ${(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
+        >
+          <CheckCircle2 size={12} />
+          {count} · {(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        </Link>
+      );
+    },
+  },
+  {
+    header: 'Carrinhos',
+    accessor: 'abandonedCount' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const count = row.abandonedCount ?? 0;
+      const value = row.abandonedValueCents ?? 0;
+      if (count === 0) {
+        return <span className="text-xs text-slate-400 italic">—</span>;
+      }
+      return (
+        <Link
+          href={`/cart-recovery?contactId=${row.id}&status=ABANDONED`}
+          className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+          title={`${count} abandono(s) — ${(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
+        >
+          <ShoppingCart size={12} />
+          {count} · {(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        </Link>
+      );
     },
   },
   {
