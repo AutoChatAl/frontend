@@ -2,6 +2,7 @@
 import { AlertCircle, ExternalLink, FileText, Image as ImageIcon, Loader2, MessageCircle, Mic, Reply, Trash2, Type, Upload } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import AudioPicker from '@/components/AudioPicker';
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
@@ -12,6 +13,8 @@ import { autoReplyService } from '@/services/auto-reply.service';
 import { channelsService } from '@/services/channels.service';
 import type { AutoReply, UpdateAutoReplyInput } from '@/types/AutoReply';
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
+import { AUDIO_UPLOAD, validateAudioFile } from '@/utils/audio';
+import { getChannelStatusBadgeClasses, getChannelStatusLabel } from '@/utils/channelStatus';
 
 interface Channel {
     id: string;
@@ -53,7 +56,6 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [audioFileName, setAudioFileName] = useState<string>('');
@@ -131,7 +133,7 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
       setImageFileName(autoReply.replyImageBase64 ? 'Imagem existente' : '');
       setDocumentFileName(autoReply.replyDocumentBase64 ? (autoReply.replyDocumentName || 'Documento existente') : '');
     }
-  }, [isOpen, autoReply, loadChannels]);
+  }, [isOpen, autoReply, loadChannels, buildFormData]);
   const needsText = ['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_AND_DOCUMENT'].includes(formData.replyType ?? 'TEXT');
   const needsAudio = ['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'DOCUMENT_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
   const needsImage = ['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(formData.replyType ?? 'TEXT');
@@ -165,41 +167,24 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file)
-      return;
-    if (!file.type.startsWith('audio/')) {
-      setErrors((prev) => ({ ...prev, replyAudio: 'O arquivo deve ser um áudio.' }));
+  const handleAudioChange = (value: { base64: string; mimeType: string; fileName: string } | null) => {
+    if (!value) {
+      setFormData((prev) => {
+        const next = { ...prev };
+        delete next.replyAudioBase64;
+        delete next.replyAudioMimeType;
+        return next;
+      });
+      setAudioFileName('');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, replyAudio: 'O áudio deve ter no máximo 5MB.' }));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1] ?? '';
-      setFormData((prev) => ({
-        ...prev,
-        replyAudioBase64: base64,
-        replyAudioMimeType: file.type,
-      }));
-      setAudioFileName(file.name);
-      setErrors((prev) => ({ ...prev, replyAudio: '' }));
-    };
-    reader.readAsDataURL(file);
-  };
-  const removeAudio = () => {
-    setFormData((prev) => {
-      const next = { ...prev };
-      delete next.replyAudioBase64;
-      delete next.replyAudioMimeType;
-      return next;
-    });
-    setAudioFileName('');
-    if (audioInputRef.current)
-      audioInputRef.current.value = '';
+    setFormData((prev) => ({
+      ...prev,
+      replyAudioBase64: value.base64,
+      replyAudioMimeType: value.mimeType,
+    }));
+    setAudioFileName(value.fileName);
+    setErrors((prev) => ({ ...prev, replyAudio: '' }));
   };
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -330,10 +315,8 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
                 </p>
                 <p className="text-xs text-slate-400">{channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}</p>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${channel.status === 'CONNECTED'
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getChannelStatusBadgeClasses(channel.status)}`}>
+                {getChannelStatusLabel(channel.status)}
               </span>
             </label>);
           })}
@@ -405,25 +388,14 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
         </>)}
       </div>)}
 
-      {needsAudio && (<div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Arquivo de áudio
-        </label>
-        <input ref={audioInputRef} type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden"/>
-        {audioFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-          <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
-          <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
-          <button type="button" onClick={removeAudio} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
-            <Trash2 size={16}/>
-          </button>
-        </div>) : (<button type="button" onClick={() => audioInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
-          <Upload size={18}/>
-          <span className="text-sm font-medium">Clique para enviar um áudio (máx. 5MB)</span>
-        </button>)}
-        {errors.replyAudio && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-          <AlertCircle size={12}/> {errors.replyAudio}
-        </p>)}
-      </div>)}
+      {needsAudio && (<AudioPicker
+        value={formData.replyAudioBase64 ? { base64: formData.replyAudioBase64, mimeType: formData.replyAudioMimeType ?? 'audio/wav', fileName: audioFileName || 'audio' } : null}
+        onChange={handleAudioChange}
+        maxBytes={AUDIO_UPLOAD.autoReply.maxBytes}
+        accept={AUDIO_UPLOAD.autoReply.accept}
+        validateUpload={validateAudioFile}
+        error={errors.replyAudio}
+      />)}
 
       {needsImage && (<div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
