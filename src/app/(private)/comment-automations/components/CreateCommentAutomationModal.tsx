@@ -179,8 +179,8 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
       setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ser PNG ou JPEG.' }));
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 8MB.' }));
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 10MB.' }));
       return;
     }
     const reader = new FileReader();
@@ -425,7 +425,7 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
             </button>
           </div>) : (<button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
             <Upload size={18}/>
-            <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 8MB)</span>
+            <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 10MB)</span>
           </button>)}
           {errors.dmImage && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
             <AlertCircle size={12}/> {errors.dmImage}

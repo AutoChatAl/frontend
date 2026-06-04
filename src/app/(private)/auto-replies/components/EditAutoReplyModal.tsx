@@ -209,8 +209,8 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
       setErrors((prev) => ({ ...prev, replyImage: 'O arquivo deve ser uma imagem.' }));
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, replyImage: 'A imagem deve ter no máximo 2MB.' }));
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, replyImage: 'A imagem deve ter no máximo 10MB.' }));
       return;
     }
     const reader = new FileReader();
@@ -438,7 +438,7 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
           </button>
         </div>) : (<button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
           <Upload size={18}/>
-          <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 2MB)</span>
+          <span className="text-sm font-medium">Clique para enviar uma imagem (máx. 10MB)</span>
         </button>)}
         {errors.replyImage && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
           <AlertCircle size={12}/> {errors.replyImage}
