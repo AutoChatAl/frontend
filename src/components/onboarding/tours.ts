@@ -7,7 +7,7 @@ import type { Permission } from '@/services/auth.service';
  * automático do progresso para que a NOVA experiência seja mostrada sem
  * precisar clicar em "Refazer tour" manualmente.
  */
-export const ONBOARDING_VERSION = 'v6-2026-05-31-cart-recovery-sidebar';
+export const ONBOARDING_VERSION = 'v8-2026-06-08-welcome-fix';
 
 export type TourPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center';
 

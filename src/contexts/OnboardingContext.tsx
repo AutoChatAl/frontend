@@ -25,7 +25,6 @@ import { onboardingService, type OnboardingState } from '@/services/onboarding.s
 
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_SELECTOR_PREFIX = '[data-tour="sidebar-';
-const VERSION_KEY = 'onboarding_version';
 
 interface OnboardingContextValue {
   /** Estado bruto vindo do backend (steps concluídos, tours pulados etc.). */
@@ -56,29 +55,6 @@ interface OnboardingContextValue {
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined);
 
-const LOCAL_KEY = 'onboarding_dismissed_v1';
-
-function readLocalDismissed(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as string[];
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function writeLocalDismissed(set: Set<string>) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(Array.from(set)));
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
 interface OnboardingProviderProps {
   children: ReactNode;
   enabled: boolean;
@@ -93,40 +69,31 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
     skippedTours: [],
     welcomeCompletedAt: null,
     finishedAt: null,
+    version: null,
   });
   const [loaded, setLoaded] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
-  const dismissedRef = useRef<Set<string>>(new Set());
   // Lembra se o tour foi quem abriu o drawer mobile, para fechar depois
   const openedMobileMenuRef = useRef<boolean>(false);
 
-  // Carrega o estado do backend uma vez (e fallback do localStorage).
-  // Antes disso, compara a versão salva com a versão atual dos tours —
-  // se mudou, reseta automaticamente para que melhorias/reordenações
-  // apareçam para o usuário sem ele precisar fazer nada.
+
   useEffect(() => {
     if (!enabled) return;
-    dismissedRef.current = readLocalDismissed();
     let cancelled = false;
-
-    const versionMatches =
-      typeof window !== 'undefined' &&
-      localStorage.getItem(VERSION_KEY) === ONBOARDING_VERSION;
 
     const ensureLoaded = async () => {
       try {
-        const fresh = versionMatches
-          ? await onboardingService.fetch()
-          : await onboardingService.reset();
+        let fresh = await onboardingService.fetch();
         if (cancelled) return;
-        setState(fresh);
-        if (!versionMatches && typeof window !== 'undefined') {
-          // Limpa o "welcome dismissed" local também, pra mostrar o modal de novo
-          dismissedRef.current = new Set();
-          writeLocalDismissed(dismissedRef.current);
-          localStorage.setItem(VERSION_KEY, ONBOARDING_VERSION);
+        if (fresh.version !== ONBOARDING_VERSION) {
+          await onboardingService.reset();
+          if (cancelled) return;
+          fresh = await onboardingService.update({ version: ONBOARDING_VERSION });
+          if (cancelled) return;
         }
+        setState(fresh);
+        setShowWelcome(!fresh.finishedAt && !fresh.welcomeCompletedAt);
       } catch {
         /* mantém estado inicial */
       } finally {
@@ -140,14 +107,9 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
     };
   }, [enabled]);
 
-  // Decide se mostra o modal de boas-vindas: usuário novo, nunca completou welcome,
-  // não pulou tudo, e está autenticado.
   useEffect(() => {
     if (!enabled || !loaded) return;
-    const dismissed = dismissedRef.current.has('welcome');
-    const finished = !!state.finishedAt;
-    const welcomeDone = !!state.welcomeCompletedAt;
-    setShowWelcome(!dismissed && !finished && !welcomeDone);
+    setShowWelcome(!state.finishedAt && !state.welcomeCompletedAt);
   }, [enabled, loaded, state.welcomeCompletedAt, state.finishedAt]);
 
   const activeTour = useMemo<TourConfig | null>(() => {
@@ -175,14 +137,6 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
     return tour;
   }, [enabled, loaded, pathname, showWelcome, state.skippedTours, state.completedSteps, state.finishedAt]);
 
-  // Snapshot estável dos steps do tour ativo. É CRÍTICO que essa lista NÃO
-  // recalcule a cada `markStepCompleted`, senão o array encolhe a cada clique
-  // em "Próximo" e o `activeIndex` acaba pulando steps (foi o que estava
-  // acontecendo: Visão Geral pulava direto pra Canais).
-  //
-  // Tiramos o snapshot apenas quando o tour ATIVA (id muda) — capturamos os
-  // steps que ainda não foram concluídos naquele momento. A partir daí, a
-  // ordem e o tamanho ficam congelados até o usuário sair do tour.
   const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
 
   useEffect(() => {
@@ -248,9 +202,11 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
   }, [activeTour]);
 
   const startTour = useCallback(() => {
-    dismissedRef.current.add('welcome');
-    writeLocalDismissed(dismissedRef.current);
     setShowWelcome(false);
+    setState((prev) => ({
+      ...prev,
+      welcomeCompletedAt: prev.welcomeCompletedAt ?? new Date().toISOString(),
+    }));
     onboardingService
       .update({ welcomeCompleted: true })
       .then(setState)
@@ -258,8 +214,6 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
   }, []);
 
   const skipAll = useCallback(() => {
-    dismissedRef.current.add('welcome');
-    writeLocalDismissed(dismissedRef.current);
     setShowWelcome(false);
     const allTourIds = TOURS.map((t) => t.id);
     setState((prev) => ({
@@ -274,11 +228,6 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
       .catch(() => {});
   }, []);
 
-  // Em mobile, quando o step ativo aponta para um item da sidebar, abre o
-  // drawer mobile automaticamente — senão o seletor nunca acharia o elemento.
-  // Quando o step deixa de apontar para a sidebar (ou o tour acaba), fecha o
-  // drawer, mas só se foi o tour quem abriu (não fechamos um drawer que o
-  // usuário já tinha aberto manualmente).
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
     if (window.innerWidth >= MOBILE_BREAKPOINT) return;
@@ -299,13 +248,9 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
   }, [enabled, activeStep, setMobileMenuOpen]);
 
   const resetOnboarding = useCallback(async () => {
-    dismissedRef.current = new Set();
-    writeLocalDismissed(dismissedRef.current);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(VERSION_KEY, ONBOARDING_VERSION);
-    }
     try {
-      const fresh = await onboardingService.reset();
+      await onboardingService.reset();
+      const fresh = await onboardingService.update({ version: ONBOARDING_VERSION });
       setState(fresh);
       setShowWelcome(true);
       setActiveIndex(0);

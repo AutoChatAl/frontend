@@ -5,6 +5,7 @@ export interface OnboardingState {
   skippedTours: string[];
   welcomeCompletedAt: string | null;
   finishedAt: string | null;
+  version: string | null;
 }
 
 interface UpdatePayload {
@@ -13,6 +14,7 @@ interface UpdatePayload {
   skipTour?: string;
   welcomeCompleted?: boolean;
   finished?: boolean;
+  version?: string;
 }
 
 const EMPTY_STATE: OnboardingState = {
@@ -20,6 +22,7 @@ const EMPTY_STATE: OnboardingState = {
   skippedTours: [],
   welcomeCompletedAt: null,
   finishedAt: null,
+  version: null,
 };
 
 class OnboardingService {
@@ -47,6 +50,7 @@ class OnboardingService {
       skippedTours: Array.isArray(state.skippedTours) ? state.skippedTours : [],
       welcomeCompletedAt: state.welcomeCompletedAt ?? null,
       finishedAt: state.finishedAt ?? null,
+      version: state.version ?? null,
     };
   }
 }
