@@ -77,7 +77,6 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
   // Lembra se o tour foi quem abriu o drawer mobile, para fechar depois
   const openedMobileMenuRef = useRef<boolean>(false);
 
-
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
