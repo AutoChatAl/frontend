@@ -2,6 +2,7 @@
 import { AlertCircle, ExternalLink, Image as ImageIcon, Instagram, Loader2, MessageCircle, MessageSquare, Mic, Send, Trash2, Type, Upload } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import AudioPicker from '@/components/AudioPicker';
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
@@ -11,6 +12,8 @@ import { channelsService } from '@/services/channels.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
 import type { InstagramAccount } from '@/types/Channel';
 import type { CreateCommentAutomationInput } from '@/types/CommentAutomation';
+import { AUDIO_UPLOAD, validateCommentAudioFile } from '@/utils/audio';
+import { getChannelStatusBadgeClasses, getChannelStatusLabel } from '@/utils/channelStatus';
 
 interface Channel {
     id: string;
@@ -54,7 +57,6 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
     oncePerUser: true,
     enabled: true,
   });
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [audioFileName, setAudioFileName] = useState<string>('');
   const [imageFileName, setImageFileName] = useState<string>('');
@@ -126,46 +128,24 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file)
-      return;
-    const lowerType = (file.type || '').toLowerCase();
-    const lowerName = (file.name || '').toLowerCase();
-    const isAcceptedMime = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/wav', 'audio/x-wav'].includes(lowerType);
-    const isAcceptedExt = /\.(mp3|m4a|wav|aac|mp4)$/i.test(lowerName);
-    if (!isAcceptedMime && !isAcceptedExt) {
-      setErrors((prev) => ({ ...prev, dmAudio: 'Formato não suportado pelo Instagram. Use MP3, M4A, AAC, WAV ou MP4.' }));
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, dmAudio: 'O áudio deve ter no máximo 25MB.' }));
+  const handleAudioChange = (value: { base64: string; mimeType: string; fileName: string } | null) => {
+    if (!value) {
+      setFormData((prev) => {
+        const next = { ...prev };
+        delete next.dmAudioBase64;
+        delete next.dmAudioMimeType;
+        return next;
+      });
+      setAudioFileName('');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1] ?? '';
-      const normalizedMime = isAcceptedMime ? lowerType : 'audio/mp4';
-      setFormData((prev) => ({
-        ...prev,
-        dmAudioBase64: base64,
-        dmAudioMimeType: normalizedMime,
-      }));
-      setAudioFileName(file.name);
-      setErrors((prev) => ({ ...prev, dmAudio: '' }));
-    };
-    reader.readAsDataURL(file);
-  };
-  const removeAudio = () => {
-    setFormData((prev) => {
-      const next = { ...prev };
-      delete next.dmAudioBase64;
-      delete next.dmAudioMimeType;
-      return next;
-    });
-    setAudioFileName('');
-    if (audioInputRef.current)
-      audioInputRef.current.value = '';
+    setFormData((prev) => ({
+      ...prev,
+      dmAudioBase64: value.base64,
+      dmAudioMimeType: value.mimeType,
+    }));
+    setAudioFileName(value.fileName);
+    setErrors((prev) => ({ ...prev, dmAudio: '' }));
   };
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,8 +159,8 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
       setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ser PNG ou JPEG.' }));
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 8MB.' }));
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, dmImage: 'A imagem deve ter no máximo 10MB.' }));
       return;
     }
     const reader = new FileReader();
@@ -268,10 +248,8 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
                 </p>
                 <p className="text-xs text-slate-400">Instagram</p>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${channel.status === 'CONNECTED'
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                {channel.status === 'CONNECTED' ? 'Conectado' : channel.status}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getChannelStatusBadgeClasses(channel.status)}`}>
+                {getChannelStatusLabel(channel.status)}
               </span>
             </label>);
           })}
@@ -392,25 +370,14 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
           </div>
         </div>)}
 
-        {needsAudio && (<div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Arquivo de áudio
-          </label>
-          <input ref={audioInputRef} type="file" accept=".mp3,.m4a,.wav,.aac,.mp4,audio/mpeg,audio/mp4,audio/m4a,audio/x-m4a,audio/aac,audio/wav" onChange={handleAudioUpload} className="hidden"/>
-          {audioFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
-            <Mic size={18} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
-            <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{audioFileName}</span>
-            <button type="button" onClick={removeAudio} className="text-red-400 hover:text-red-600 transition-colors shrink-0">
-              <Trash2 size={16}/>
-            </button>
-          </div>) : (<button type="button" onClick={() => audioInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
-            <Upload size={18}/>
-            <span className="text-sm font-medium">Clique para enviar um áudio (AAC, M4A, WAV, MP4 — máx. 25MB)</span>
-          </button>)}
-          {errors.dmAudio && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle size={12}/> {errors.dmAudio}
-          </p>)}
-        </div>)}
+        {needsAudio && (<AudioPicker
+          value={formData.dmAudioBase64 ? { base64: formData.dmAudioBase64, mimeType: formData.dmAudioMimeType ?? 'audio/wav', fileName: audioFileName || 'audio' } : null}
+          onChange={handleAudioChange}
+          maxBytes={AUDIO_UPLOAD.comment.maxBytes}
+          accept={AUDIO_UPLOAD.comment.accept}
+          validateUpload={validateCommentAudioFile}
+          error={errors.dmAudio}
+        />)}
 
         {needsImage && (<div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -425,7 +392,7 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
             </button>
           </div>) : (<button type="button" onClick={() => imageInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors">
             <Upload size={18}/>
-            <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 8MB)</span>
+            <span className="text-sm font-medium">Clique para enviar uma imagem (PNG ou JPEG — máx. 10MB)</span>
           </button>)}
           {errors.dmImage && (<p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
             <AlertCircle size={12}/> {errors.dmImage}
@@ -467,7 +434,7 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
           {!formData.triggerOnAnyComment && formData.keyword && (<div>
             <p className="text-[10px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Comentário do usuário</p>
             <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shrink-0"/>
+              <div className="w-6 h-6 rounded-full bg-linear-to-br from-purple-500 to-pink-500 shrink-0"/>
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300">
                 {formData.keyword}
               </div>
@@ -479,7 +446,7 @@ export default function CreateCommentAutomationModal({ isOpen, onClose, onSucces
               <MessageSquare size={10}/> Resposta ao comentário
             </p>
             <div className="flex items-start gap-2 ml-8">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 shrink-0"/>
+              <div className="w-5 h-5 rounded-full bg-linear-to-br from-indigo-500 to-violet-500 shrink-0"/>
               <div className="bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-slate-300">
                 {formData.commentReplyMessage.replace(/\{\{username\}\}/gi, '@usuario')}
               </div>

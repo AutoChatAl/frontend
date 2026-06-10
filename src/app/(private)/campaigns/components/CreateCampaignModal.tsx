@@ -287,8 +287,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       setErrors((prev) => ({ ...prev, message: 'O arquivo precisa ser uma imagem válida.' }));
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, message: 'A imagem deve ter no máximo 2MB.' }));
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, message: 'A imagem deve ter no máximo 10MB.' }));
       return;
     }
     const reader = new FileReader();
@@ -573,7 +573,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
               <ImageIcon size={14} className="text-indigo-500"/>
-                  Imagem <span className="text-slate-400 font-normal">(opcional, até 2MB)</span>
+                  Imagem <span className="text-slate-400 font-normal">(opcional, até 10MB)</span>
             </label>
             <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageUpload} className="hidden"/>
             {imageFileName ? (<div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl">
