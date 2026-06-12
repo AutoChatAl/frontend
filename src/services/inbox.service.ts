@@ -1,0 +1,69 @@
+import { authService } from '@/services/auth.service';
+import type { InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia } from '@/types/Inbox';
+import { apiClient } from '@/utils/ApiClient';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+class InboxService {
+  public async listConversations(filters: InboxListFilters = {}): Promise<InboxConversation[]> {
+    const query = new URLSearchParams();
+    if (filters.channelType) query.set('channelType', filters.channelType);
+    if (filters.search?.trim()) query.set('search', filters.search.trim());
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await apiClient.get<{ conversations: InboxConversation[] }>(`/inbox/conversations${suffix}`);
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível carregar as conversas.');
+    }
+    return response.data.conversations;
+  }
+
+  public async listMessages(conversationId: string): Promise<InboxMessage[]> {
+    const response = await apiClient.get<{ messages: InboxMessage[] }>(`/inbox/conversations/${conversationId}/messages`);
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível carregar as mensagens.');
+    }
+    return response.data.messages;
+  }
+
+  public async sendMessage(conversationId: string, body: string, media?: InboxOutgoingMedia): Promise<InboxConversation> {
+    const payload: { body?: string; media?: InboxOutgoingMedia } = {};
+    if (body.trim()) payload.body = body.trim();
+    if (media) payload.media = media;
+    const response = await apiClient.post<{ conversation: InboxConversation }>(
+      `/inbox/conversations/${conversationId}/messages`,
+      payload,
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível enviar a mensagem.');
+    }
+    return response.data.conversation;
+  }
+
+  public async markRead(conversationId: string): Promise<void> {
+    await apiClient.post(`/inbox/conversations/${conversationId}/read`);
+  }
+
+  public async sendTyping(conversationId: string): Promise<void> {
+    await apiClient.post(`/inbox/conversations/${conversationId}/typing`).catch(() => {});
+  }
+
+  public async getSummary(): Promise<{ unreadCount: number }> {
+    const response = await apiClient.get<{ unreadCount: number }>('/inbox/summary');
+    if (!response.success || !response.data) {
+      return { unreadCount: 0 };
+    }
+    return response.data;
+  }
+
+  public getInboxEventsUrl(): string {
+    const token = authService.getToken();
+    return `${API_URL}/inbox/events?token=${encodeURIComponent(token || '')}`;
+  }
+
+  public getConversationEventsUrl(conversationId: string): string {
+    const token = authService.getToken();
+    return `${API_URL}/inbox/conversations/${conversationId}/events?token=${encodeURIComponent(token || '')}`;
+  }
+}
+
+export const inboxService = new InboxService();
