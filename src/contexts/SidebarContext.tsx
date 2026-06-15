@@ -1,5 +1,5 @@
 'use client';
-import { Users, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -40,6 +40,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels' },
   { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns' },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts' },
+  { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'contacts' },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling' },
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies' },
   { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies' },
