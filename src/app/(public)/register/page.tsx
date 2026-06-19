@@ -38,8 +38,9 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await authService.register(formData);
-      // Após cadastrar, manda pra home/dashboard — é lá que o onboarding começa.
-      router.push('/dashboard');
+      // Após cadastrar, leva para a tela de primeiros passos (checklist de setup).
+      // É opcional e não bloqueia: o usuário pode pular e configurar tudo depois.
+      router.push('/comecar');
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
