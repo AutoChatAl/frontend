@@ -63,7 +63,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
     const role = user?.role;
     const permissions = user?.permissions ?? [];
     let items: MenuItem[];
-    if (!role || role === 'owner') {
+    if (!role || role === 'owner' || role === 'admin') {
       items = [...ALL_MENU_ITEMS];
     }
     else {
