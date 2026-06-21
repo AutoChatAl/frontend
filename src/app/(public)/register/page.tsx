@@ -38,9 +38,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await authService.register(formData);
-      // Após cadastrar, leva para a tela de primeiros passos (checklist de setup).
-      // É opcional e não bloqueia: o usuário pode pular e configurar tudo depois.
-      router.push('/comecar');
+      router.push('/get-started');
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');

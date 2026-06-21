@@ -96,7 +96,6 @@ export default function ComecarPage() {
   const campaignDone = campaignCount > 0;
   const hasAnyChannel = whatsappDone || instagramDone;
 
-  // Persiste no backend quando uma etapa é detectada como concluída.
   useEffect(() => {
     const doneById: Record<string, boolean> = {
       whatsapp: whatsappDone,
@@ -152,11 +151,7 @@ export default function ComecarPage() {
 
   const goToDashboard = useCallback(async () => {
     setLeaving(true);
-    try {
-      await setupOnboardingService.update({ finished: true });
-    } catch {
-      /* mesmo que falhe a persistência, seguimos para o painel */
-    }
+    await setupOnboardingService.update({ finished: true }).catch(() => {});
     router.push('/dashboard');
   }, [router]);
 
