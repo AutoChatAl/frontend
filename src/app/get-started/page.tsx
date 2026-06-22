@@ -1,7 +1,7 @@
 'use client';
-import { Bot, Instagram, MessageCircle, MessageSquare, PartyPopper, Send, Sparkles } from 'lucide-react';
+import { Bot, Instagram, Lock, MessageCircle, MessageSquare, PartyPopper, Send, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import CreateAutoReplyModal from '@/app/(private)/auto-replies/components/CreateAutoReplyModal';
 import CreateCampaignModal from '@/app/(private)/campaigns/components/CreateCampaignModal';
@@ -13,8 +13,10 @@ import { useInstagramAccounts, useWhatsAppInstances } from '@/hooks/ChannelHook'
 import { authService } from '@/services/auth.service';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { campaignService } from '@/services/campaign.service';
+import { channelsService } from '@/services/channels.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
 import { setupOnboardingService } from '@/services/setup-onboarding.service';
+import type { WhatsAppInstance } from '@/types/Channel';
 
 import SetupStepCard, { type SetupStepAccent, type SetupStepStatus } from './components/SetupStepCard';
 
@@ -27,17 +29,25 @@ interface StepDef {
   done: boolean;
   actionLabel: string;
   onAction: () => void;
+  canSkip?: boolean;
   locked?: boolean;
   lockedHint?: string;
   actionLoading?: boolean;
 }
 
-export default function ComecarPage() {
+export default function GetStartedPage() {
   const router = useRouter();
   const { toasts, addToast, removeToast } = useToast();
 
   const { instances, refetch: refetchWhatsApp, createInstance, connectInstance } = useWhatsAppInstances();
   const { accounts, refetch: refetchInstagram, getOAuthUrl } = useInstagramAccounts();
+
+  const refetchWaRef = useRef(refetchWhatsApp);
+  const refetchIgRef = useRef(refetchInstagram);
+  useEffect(() => {
+    refetchWaRef.current = refetchWhatsApp;
+    refetchIgRef.current = refetchInstagram;
+  });
 
   const [checking, setChecking] = useState(true);
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
@@ -150,10 +160,39 @@ export default function ComecarPage() {
   }, [getOAuthUrl, refetchInstagram, addToast]);
 
   const goToDashboard = useCallback(async () => {
+    if (!hasAnyChannel) return;
     setLeaving(true);
     await setupOnboardingService.update({ finished: true }).catch(() => {});
     router.push('/dashboard');
-  }, [router]);
+  }, [hasAnyChannel, router]);
+
+  const checkWhatsAppConnection = useCallback(async () => {
+    const list = await channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]);
+    const pending = list.filter((i) => i.status !== 'CONNECTED');
+    if (pending.length > 0) {
+      await Promise.all(pending.map((i) => channelsService.getWhatsAppStatus(i.id).catch(() => null)));
+    }
+    await refetchWaRef.current().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!waModalOpen) return;
+    const interval = setInterval(() => void checkWhatsAppConnection(), 3000);
+    return () => clearInterval(interval);
+  }, [waModalOpen, checkWhatsAppConnection]);
+
+  useEffect(() => {
+    if (whatsappDone && waModalOpen) setWaModalOpen(false);
+  }, [whatsappDone, waModalOpen]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void checkWhatsAppConnection();
+      void refetchIgRef.current().catch(() => {});
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [checkWhatsAppConnection]);
 
   const steps: StepDef[] = [
     {
@@ -163,6 +202,7 @@ export default function ComecarPage() {
       title: 'Conecte seu WhatsApp',
       description: 'Escaneie um QR Code e comece a atender, automatizar respostas e disparar campanhas pelo WhatsApp.',
       done: whatsappDone,
+      canSkip: false,
       actionLabel: 'Conectar WhatsApp',
       onAction: () => setWaModalOpen(true),
     },
@@ -173,6 +213,7 @@ export default function ComecarPage() {
       title: 'Conecte seu Instagram',
       description: 'Faça login com sua conta para responder DMs e automatizar comentários e mensagens diretas.',
       done: instagramDone,
+      canSkip: false,
       actionLabel: connectingInstagram ? 'Abrindo...' : 'Conectar Instagram',
       actionLoading: connectingInstagram,
       onAction: () => void handleConnectInstagram(),
@@ -231,18 +272,9 @@ export default function ComecarPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-            <Sparkles size={18} />
-            <span className="text-sm font-bold tracking-tight">Synq</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => void goToDashboard()}
-            className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
-            Pular por agora
-          </button>
+        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+          <Sparkles size={18} />
+          <span className="text-sm font-bold tracking-tight">Synq</span>
         </div>
 
         <header className="mt-8">
@@ -266,8 +298,8 @@ export default function ComecarPage() {
                 Bem-vindo{firstName ? `, ${firstName}` : ''}!
               </h1>
               <p className="mt-2 text-slate-500 dark:text-slate-400">
-                Vamos deixar sua conta pronta em poucos passos. Faça agora ou deixe para depois — você pode
-                configurar tudo isso quando quiser pelo menu.
+                Conecte pelo menos um canal (WhatsApp ou Instagram) para continuar. Os demais passos são
+                opcionais — você pode configurá-los quando quiser pelo menu.
               </p>
             </>
           )}
@@ -304,6 +336,7 @@ export default function ComecarPage() {
                 actionLabel={step.actionLabel}
                 onAction={step.onAction}
                 onSkip={() => handleSkip(step.id)}
+                canSkip={step.canSkip ?? true}
                 locked={step.locked ?? false}
                 {...(step.lockedHint ? { lockedHint: step.lockedHint } : {})}
                 actionLoading={step.actionLoading ?? false}
@@ -313,13 +346,26 @@ export default function ComecarPage() {
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-3">
-          <Button onClick={() => void goToDashboard()} variant="primary" size="lg" loading={leaving} loadingText="Abrindo painel...">
+          <Button
+            onClick={() => void goToDashboard()}
+            variant="primary"
+            size="lg"
+            loading={leaving}
+            loadingText="Abrindo painel..."
+            disabled={!hasAnyChannel}
+          >
             Ir para o painel
           </Button>
-          {!allDone && (
-            <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-              Você não precisa terminar agora. Tudo isso continua disponível no menu a qualquer momento.
+          {!hasAnyChannel ? (
+            <p className="inline-flex items-center gap-1.5 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+              <Lock size={12} /> Conecte o WhatsApp ou o Instagram para continuar.
             </p>
+          ) : (
+            !allDone && (
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                Os demais passos são opcionais e continuam disponíveis no menu a qualquer momento.
+              </p>
+            )
           )}
         </div>
       </div>
@@ -329,7 +375,7 @@ export default function ComecarPage() {
           isOpen={waModalOpen}
           onClose={() => {
             setWaModalOpen(false);
-            void refetchWhatsApp();
+            void checkWhatsAppConnection();
           }}
           onCreate={createInstance}
           onConnect={connectInstance}
