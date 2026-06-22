@@ -1,9 +1,9 @@
 'use client';
-import { Bot, Menu, Sparkles, LogOut, X } from 'lucide-react';
+import { Bot, Menu, Sparkles, LogOut, X, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
+import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
@@ -47,6 +47,35 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount,
     </div>
   </button>);
 };
+interface SidebarSectionsProps {
+    items: MenuItem[];
+    activeTab: string;
+    collapsed: boolean;
+    collapsedGroups: Set<MenuGroupId>;
+    onItemClick: (item: MenuItem) => void;
+    onToggleGroup: (id: MenuGroupId) => void;
+}
+const SidebarSections = ({ items, activeTab, collapsed, collapsedGroups, onItemClick, onToggleGroup }: SidebarSectionsProps) => {
+  return (<>
+    {MENU_GROUPS.map((group) => {
+      const groupItems = items.filter((item) => item.group === group.id);
+      if (groupItems.length === 0)
+        return null;
+      // Só seções com rótulo e fora do modo ícone podem recolher.
+      const hasHeader = !!group.label && !collapsed;
+      const groupCollapsed = hasHeader && collapsedGroups.has(group.id);
+      return (<div key={group.id} className="space-y-1 mt-4 first:mt-0">
+        {group.label && (collapsed
+          ? (<div className="mx-2 mb-2 border-t border-slate-100 dark:border-slate-700/60" aria-hidden/>)
+          : (<button type="button" onClick={() => onToggleGroup(group.id)} aria-expanded={!groupCollapsed} className="flex items-center justify-between w-full px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors select-none">
+            <span>{group.label}</span>
+            <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${groupCollapsed ? '-rotate-90' : ''}`}/>
+          </button>))}
+        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+      </div>);
+    })}
+  </>);
+};
 function getReadableRole(role?: string): string {
   const normalized = (role || '').toLowerCase();
   if (normalized === 'admin')
@@ -70,6 +99,20 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
   const { activeTab, sidebarCollapsed, mobileMenuOpen, menuItems, setActiveTab, toggleSidebar, setMobileMenuOpen } = useSidebar();
   const [humanQueueCount, setHumanQueueCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  // Grupos recolhidos pelo usuário — começa vazio, todas as seções abertas.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<MenuGroupId>>(new Set());
+  const toggleGroup = (groupId: MenuGroupId) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      }
+      else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
   const hasSupportTab = useMemo(() => menuItems.some((item) => item.id === 'suporte'), [menuItems]);
   useEffect(() => {
     let mounted = true;
@@ -183,8 +226,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-2 overflow-y-auto mt-2">
-        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => handleMenuClick(item)} collapsed={sidebarCollapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+      <nav className="flex-1 p-3 overflow-y-auto mt-2">
+        <SidebarSections items={menuItemsWithBadges} activeTab={activeTab} collapsed={sidebarCollapsed} collapsedGroups={collapsedGroups} onItemClick={handleMenuClick} onToggleGroup={toggleGroup}/>
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-700">
@@ -232,11 +275,11 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <X size={24}/>
         </button>
       </div>
-      <nav className="p-4 space-y-4">
-        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => {
+      <nav className="p-4">
+        <SidebarSections items={menuItemsWithBadges} activeTab={activeTab} collapsed={false} collapsedGroups={collapsedGroups} onItemClick={(item) => {
           handleMenuClick(item);
           setMobileMenuOpen(false);
-        }} collapsed={false} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+        }} onToggleGroup={toggleGroup}/>
       </nav>
     </aside>
   </>);

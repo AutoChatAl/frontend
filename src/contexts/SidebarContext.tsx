@@ -5,6 +5,25 @@ import { createContext, useContext, useState, useEffect, useMemo, type ReactNode
 
 import { authService, type Permission } from '@/services/auth.service';
 
+export type MenuGroupId = 'main' | 'audience' | 'engagement' | 'automation' | 'system';
+
+export interface MenuGroup {
+    id: MenuGroupId;
+    label: string | null;
+}
+
+/**
+ * Ordem e rótulos das seções da sidebar. A seção `main` não tem rótulo —
+ * agrupa a visão geral e a conexão de canais (base do workspace).
+ */
+export const MENU_GROUPS: MenuGroup[] = [
+  { id: 'main', label: null },
+  { id: 'audience', label: 'Público' },
+  { id: 'engagement', label: 'Engajamento' },
+  { id: 'automation', label: 'Automação' },
+  { id: 'system', label: 'Sistema' },
+];
+
 export interface MenuItem {
     id: string;
     icon: React.ComponentType<{
@@ -12,6 +31,7 @@ export interface MenuItem {
         className?: string;
     }>;
     text: string;
+    group: MenuGroupId;
     href?: string;
     badgeCount?: number;
     permission?: Permission;
@@ -35,18 +55,23 @@ interface SidebarProviderProps {
     showSupportTab?: boolean;
 }
 const ALL_MENU_ITEMS: MenuItem[] = [
-  { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard' },
-  { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups' },
-  { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels' },
-  { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns' },
-  { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts' },
-  { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'contacts' },
-  { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling' },
-  { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies' },
-  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies' },
-  { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'campaigns' },
-  { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia' },
-  { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings' },
+  // Base do workspace — sem rótulo de seção.
+  { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard', group: 'main' },
+  { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
+  // Público — quem você alcança.
+  { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
+  { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
+  // Engajamento — disparos e ações proativas.
+  { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns', group: 'engagement' },
+  { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'contacts', group: 'engagement' },
+  { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'campaigns', group: 'engagement' },
+  { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
+  // Automação — respostas e IA.
+  { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
+  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
+  { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia', group: 'automation' },
+  // Sistema.
+  { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
 ];
 export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menuItems: customMenuItems, showSupportTab = true }: SidebarProviderProps) {
   const pathname = usePathname();
@@ -64,7 +89,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
     const role = user?.role;
     const permissions = user?.permissions ?? [];
     let items: MenuItem[];
-    if (!role || role === 'owner') {
+    if (!role || role === 'owner' || role === 'admin') {
       items = [...ALL_MENU_ITEMS];
     }
     else {
@@ -75,7 +100,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
       });
     }
     if (showSupportTab) {
-      items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte' });
+      items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
     }
     return items;
   }, [customMenuItems, showSupportTab]);

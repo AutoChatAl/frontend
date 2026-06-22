@@ -4,3 +4,7 @@ declare module '*.css' {
     };
     export default content;
 }
+
+interface Window {
+    dataLayer?: Record<string, unknown>[];
+}
