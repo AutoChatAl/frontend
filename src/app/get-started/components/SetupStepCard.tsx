@@ -14,6 +14,7 @@ interface SetupStepCardProps {
   actionLabel: string;
   onAction: () => void;
   onSkip: () => void;
+  canSkip?: boolean;
   locked?: boolean;
   lockedHint?: string;
   actionLoading?: boolean;
@@ -51,6 +52,7 @@ export default function SetupStepCard({
   actionLabel,
   onAction,
   onSkip,
+  canSkip = true,
   locked = false,
   lockedHint,
   actionLoading = false,
@@ -112,7 +114,7 @@ export default function SetupStepCard({
               {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
               {actionLabel}
             </button>
-            {!isSkipped && (
+            {canSkip && !isSkipped && (
               <button
                 type="button"
                 onClick={onSkip}
