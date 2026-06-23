@@ -10,6 +10,7 @@ import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
 import InstagramSection from './components/InstagramSection';
 import PricingSection from './components/PricingSection';
+import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 import WhatsAppSection from './components/WhatsAppSection';
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
       <FaqSection />
       <FinalCta />
       <Footer />
+      <WhatsAppFloatingButton />
     </div>
   );
 }
