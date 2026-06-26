@@ -9,6 +9,7 @@ import Modal from '@/components/Modal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 import type { WhatsappConnectResponse, WhatsAppStatusResponse } from '@/types/Channel';
+import { extractPhoneDigits, formatPhoneNumber } from '@/utils/phone';
 
 interface WhatsAppCreateModalProps {
     isOpen: boolean;
@@ -200,11 +201,15 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
   };
   const handlePhoneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim()) {
+    if (!phone) {
       addToast('error', 'Por favor, insira o número do WhatsApp');
       return;
     }
-    void startConnection(phone.trim());
+    if (phone.length < 12) {
+      addToast('error', 'Informe o número completo com código do país e DDD.');
+      return;
+    }
+    void startConnection(phone);
   };
   const renderContent = () => {
     switch (state) {
@@ -244,7 +249,7 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
       </form>);
     case 'phone':
       return (<form onSubmit={handlePhoneSubmit} className="space-y-5">
-        <Input id="phone" label="Número do WhatsApp *" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: 5511999999999" hint="Inclua o código do país e o DDD, apenas números." required/>
+        <Input id="phone" label="Número do WhatsApp *" type="tel" inputMode="numeric" value={formatPhoneNumber(phone)} onChange={(e) => setPhone(extractPhoneDigits(e.target.value))} placeholder="Ex: +55 (11) 99999-9999" hint="Inclua o código do país (DDI) e o DDD." required/>
 
         <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20">
           <p className="text-xs text-blue-700 dark:text-blue-300">

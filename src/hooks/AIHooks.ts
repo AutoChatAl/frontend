@@ -39,7 +39,7 @@ export function useAIConfig() {
   const loadChannels = useCallback(async (currentActiveChannelIds: string[]) => {
     try {
       const user = authService.getUser();
-      const isOwner = !user?.role || user.role === 'owner';
+      const isOwner = !user?.role || user.role === 'owner' || user.role === 'admin';
       if (isOwner) {
         const allChannels = await aiService.listChannels();
         const mapped: AIChannel[] = allChannels.map((ch) => ({

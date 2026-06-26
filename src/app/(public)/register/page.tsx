@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
+import { extractPhoneDigits, formatPhoneNumber } from '@/utils/phone';
 
 import AuthShell from '../components/AuthShell';
 
@@ -16,6 +17,7 @@ export default function RegisterPage() {
     name: '',
     workspaceName: '',
     email: '',
+    phone: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +33,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (formData.phone.length < 12) {
+      setError('Informe um telefone válido com código do país (DDI) e DDD.');
+      return;
+    }
     if (!acceptTerms) {
       setError('Você precisa aceitar os Termos de Serviço e Política de Privacidade');
       return;
@@ -56,6 +62,7 @@ export default function RegisterPage() {
       <Input label="Nome Completo" type="text" name="name" placeholder="João Silva" value={formData.name} onChange={handleChange} autoComplete="name"/>
       <Input label="Nome da Empresa" type="text" name="workspaceName" placeholder="Minha Loja Ltda" value={formData.workspaceName} onChange={handleChange} required minLength={2}/>
       <Input label="Email" type="email" name="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} required autoComplete="email"/>
+      <Input label="Telefone" type="tel" name="phone" inputMode="numeric" placeholder="+55 (11) 99999-9999" value={formatPhoneNumber(formData.phone)} onChange={(e) => setFormData((prev) => ({ ...prev, phone: extractPhoneDigits(e.target.value) }))} required autoComplete="tel" hint="Inclua o código do país (DDI) e o DDD."/>
       <div>
         <Input label="Senha" type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required minLength={8} autoComplete="new-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
           {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
