@@ -83,7 +83,7 @@ export default function WhatsAppInstances() {
       setShowCreateModal(false);
       refetch();
       refetchWhatsApp();
-    }} onCreate={createInstance} onConnect={connectInstance}/>)}
+    }} onCreate={createInstance} onConnect={connectInstance} onDelete={deleteInstance} onCheckStatus={getStatus}/>)}
 
     {showQRModal && selectedChannelId && (<WhatsAppQRModal isOpen={showQRModal} onClose={() => {
       setShowQRModal(false);

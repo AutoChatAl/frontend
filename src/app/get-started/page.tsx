@@ -39,7 +39,7 @@ export default function GetStartedPage() {
   const router = useRouter();
   const { toasts, addToast, removeToast } = useToast();
 
-  const { instances, refetch: refetchWhatsApp, createInstance, connectInstance } = useWhatsAppInstances();
+  const { instances, refetch: refetchWhatsApp, createInstance, connectInstance, deleteInstance, getStatus } = useWhatsAppInstances();
   const { accounts, refetch: refetchInstagram, getOAuthUrl } = useInstagramAccounts();
 
   const refetchWaRef = useRef(refetchWhatsApp);
@@ -270,7 +270,7 @@ export default function GetStartedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
         <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
           <Sparkles size={18} />
@@ -315,7 +315,7 @@ export default function GetStartedPage() {
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 transition-all duration-500"
+                className="h-full rounded-full bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500 transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -379,6 +379,8 @@ export default function GetStartedPage() {
           }}
           onCreate={createInstance}
           onConnect={connectInstance}
+          onDelete={deleteInstance}
+          onCheckStatus={getStatus}
         />
       )}
 
