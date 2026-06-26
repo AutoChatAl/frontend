@@ -27,7 +27,7 @@ export default function WhatsAppInstances() {
   const { toasts, addToast, removeToast } = useToast();
   useEffect(() => {
     const user = authService.getUser();
-    setIsOwner(!user?.role || user.role === 'owner' || (user.permissions ?? []).includes('channels'));
+    setIsOwner(!user?.role || user.role === 'owner' || user.role === 'admin' || (user.permissions ?? []).includes('channels'));
   }, []);
   const handleOpenCreateModal = () => {
     if (isInactive) {
