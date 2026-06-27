@@ -1,8 +1,9 @@
 'use client';
-import { Bot, Menu, Sparkles, LogOut, X } from 'lucide-react';
+import { Menu, Sparkles, LogOut, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import Logo from '@/components/Logo';
 import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
@@ -174,12 +175,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         `}>
       <div className="h-16 flex items-center justify-center border-b border-slate-100 dark:border-slate-700 px-4">
         <div className="flex items-center gap-2 w-full overflow-hidden">
-          <div className="w-8 h-8 bg-linear-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm shadow-indigo-200 dark:shadow-none">
-            <Bot size={18} className="text-white"/>
-          </div>
-          {!sidebarCollapsed && (<span className="font-bold text-lg text-slate-800 dark:text-white tracking-tight">
-            {brandName}
-          </span>)}
+          <Logo size="sm" showText={!sidebarCollapsed} />
         </div>
       </div>
 

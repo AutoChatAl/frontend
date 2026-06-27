@@ -15,25 +15,22 @@ const STAGES = [
     icon: ShoppingCart,
     title: 'Cliente abandona',
     subtitle: 'Detecção em tempo real',
-    color: 'text-red-500',
-    bg: 'bg-red-50',
-    ring: 'ring-red-200',
+    color: 'text-red-400',
+    ring: 'ring-red-500/30',
   },
   {
     icon: MessageCircle,
     title: 'Synq dispara',
     subtitle: 'WhatsApp ou Instagram',
-    color: 'text-indigo-600',
-    bg: 'bg-indigo-50',
-    ring: 'ring-indigo-200',
+    color: 'text-indigo-400',
+    ring: 'ring-indigo-500/30',
   },
   {
     icon: CreditCard,
     title: 'Venda recuperada',
     subtitle: 'PIX, cartão ou boleto',
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    ring: 'ring-emerald-200',
+    color: 'text-emerald-400',
+    ring: 'ring-emerald-400/40',
   },
 ];
 
@@ -43,10 +40,10 @@ export default function CartRecoverySection() {
   return (
     <section
       id="carrinho"
-      className="py-24 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden"
+      className="py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden"
     >
-      <div className="absolute inset-0 [background-image:radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.15),transparent_60%),radial-gradient(circle_at_70%_80%,rgba(217,70,239,0.12),transparent_60%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.15),transparent_60%),radial-gradient(circle_at_70%_80%,rgba(217,70,239,0.12),transparent_60%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-size-[40px_40px]" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div
@@ -63,7 +60,7 @@ export default function CartRecoverySection() {
 
           <h2 className="text-3xl sm:text-5xl font-bold text-white mb-5 tracking-tight">
             Recupere as vendas que estão{' '}
-            <span className="bg-gradient-to-r from-amber-300 to-fuchsia-300 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-amber-300 to-fuchsia-300 bg-clip-text text-transparent">
               escapando do seu checkout
             </span>
           </h2>
@@ -86,8 +83,8 @@ export default function CartRecoverySection() {
                 transition={{ delay: i * 0.15, duration: 0.5 }}
                 className="relative"
               >
-                <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.06] transition-colors">
-                  <div className={`inline-flex w-12 h-12 rounded-xl ${stage.bg} items-center justify-center mb-4 ring-1 ${stage.ring}`}>
+                <div className="bg-white/6 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-colors">
+                  <div className={`inline-flex w-12 h-12 rounded-xl items-center justify-center mb-4 ring-1 ${stage.ring}`}>
                     <Icon size={22} className={stage.color} />
                   </div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -115,7 +112,10 @@ export default function CartRecoverySection() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-3 space-y-4"
           >
-            <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5 flex items-start gap-4">
+            <div className="relative bg-white/6 backdrop-blur-sm border border-white/10 rounded-2xl p-5 flex items-start gap-4">
+              <span className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900/80 backdrop-blur-sm border border-red-500/40 text-red-200">
+                Etapa 1
+              </span>
               <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0 ring-1 ring-red-500/30">
                 <AlertCircle size={18} className="text-red-400" />
               </div>
@@ -136,10 +136,13 @@ export default function CartRecoverySection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3, duration: 0.4 }}
-              className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5 flex items-start gap-4 ml-6"
+              className="relative bg-white/6 backdrop-blur-sm border border-white/10 rounded-2xl p-5 flex items-start gap-4 ml-6"
             >
+              <span className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900/80 backdrop-blur-sm border border-indigo-500/40 text-indigo-200">
+                Etapa 2
+              </span>
               <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 ring-1 ring-indigo-500/30">
-                <MessageCircle size={18} className="text-indigo-400" />
+                <MessageCircle size={18} className="text-indigo-300" />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-slate-400 mb-0.5">14:32 · Synq enviou no WhatsApp</p>
@@ -159,10 +162,13 @@ export default function CartRecoverySection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.6, duration: 0.4 }}
-              className="bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/30 rounded-2xl p-5 flex items-start gap-4 ml-12"
+              className="relative bg-white/6 backdrop-blur-sm border border-emerald-400/30 rounded-2xl p-5 flex items-start gap-4 ml-12"
             >
+              <span className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900/80 backdrop-blur-sm border border-emerald-400/50 text-emerald-200">
+                Etapa 3
+              </span>
               <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 ring-1 ring-emerald-400/40">
-                <CheckCircle2 size={18} className="text-emerald-400" />
+                <CheckCircle2 size={18} className="text-emerald-300" />
               </div>
               <div className="flex-1">
                 <p className="text-xs text-emerald-200 mb-0.5">14:48 · Compra finalizada</p>
@@ -184,17 +190,19 @@ export default function CartRecoverySection() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2 space-y-4"
           >
-            <div className="bg-gradient-to-br from-indigo-600 to-fuchsia-600 rounded-2xl p-6 shadow-2xl shadow-indigo-900/40">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-2">
+            <div className="bg-white/6 backdrop-blur-sm border border-violet-400/50 rounded-2xl p-6 shadow-lg shadow-violet-500/20">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-300 mb-2">
                 Performance média
               </p>
-              <p className="text-4xl font-bold text-white mb-1">+32%</p>
-              <p className="text-sm text-indigo-100">
+              <p className="text-4xl font-bold bg-linear-to-r from-indigo-300 to-fuchsia-300 bg-clip-text text-transparent mb-1">
+                +32%
+              </p>
+              <p className="text-sm text-slate-300">
                 de faturamento recuperado em lojas Synq nos primeiros 30 dias
               </p>
             </div>
 
-            <div className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5">
+            <div className="bg-white/6 backdrop-blur-sm border border-white/10 rounded-2xl p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
                 Integrações nativas
               </p>
@@ -202,13 +210,13 @@ export default function CartRecoverySection() {
                 {INTEGRATIONS.map((name) => (
                   <span
                     key={name}
-                    className="px-2.5 py-1 text-xs font-medium bg-white/[0.06] text-slate-200 rounded-md border border-white/10"
+                    className="px-2.5 py-1 text-xs font-medium bg-white/6 text-slate-200 rounded-md border border-white/10"
                   >
                     {name}
                   </span>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-500 mt-3">
+              <p className="text-[11px] text-slate-400 mt-3">
                 + webhook genérico para qualquer plataforma
               </p>
             </div>

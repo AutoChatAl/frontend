@@ -62,7 +62,7 @@ export default function SupportPage() {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isRoleChecking, setIsRoleChecking] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -102,7 +102,7 @@ export default function SupportPage() {
       })
       .finally(() => {
         if (mounted) {
-          setIsRoleChecking(false);
+          setAuthChecked(true);
         }
       });
     return () => {
@@ -152,26 +152,26 @@ export default function SupportPage() {
     }
   }, []);
   useEffect(() => {
-    if (isRoleChecking || !isAdmin)
+    if (!isAdmin)
       return;
     loadConversations(false).catch(() => { });
-  }, [isAdmin, isRoleChecking, loadConversations]);
+  }, [isAdmin, loadConversations]);
   useEffect(() => {
-    if (isRoleChecking || !isAdmin)
+    if (!isAdmin)
       return;
     if (!selectedConversationId) {
       setMessages([]);
       return;
     }
     loadMessages(selectedConversationId).catch(() => { });
-  }, [isAdmin, isRoleChecking, selectedConversationId, loadMessages]);
+  }, [isAdmin, selectedConversationId, loadMessages]);
   useEffect(() => {
     if (!selectedConversationId || threadLoading)
       return;
     scrollThreadToBottom();
   }, [messages, selectedConversationId, threadLoading, scrollThreadToBottom]);
   useEffect(() => {
-    if (isRoleChecking || !isAdmin)
+    if (!isAdmin)
       return;
     const source = new EventSource(supportChatService.getWorkspaceEventsUrl());
     const syncWorkspace = () => {
@@ -187,9 +187,9 @@ export default function SupportPage() {
       source.removeEventListener('conversation.deleted', syncWorkspace);
       source.close();
     };
-  }, [isAdmin, isRoleChecking, loadConversations]);
+  }, [isAdmin, loadConversations]);
   useEffect(() => {
-    if (isRoleChecking || !isAdmin)
+    if (!isAdmin)
       return undefined;
     if (!selectedConversationId)
       return undefined;
@@ -243,7 +243,7 @@ export default function SupportPage() {
       source.removeEventListener('conversation.closed', syncConversation);
       source.close();
     };
-  }, [currentUserId, isAdmin, isRoleChecking, selectedConversationId, loadConversations, loadMessages]);
+  }, [currentUserId, isAdmin, selectedConversationId, loadConversations, loadMessages]);
   const handleSend = async () => {
     if (!selectedConversationId)
       return;
@@ -317,11 +317,8 @@ export default function SupportPage() {
       setDeleting(false);
     }
   };
-  if (isRoleChecking) {
-    return (<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
-      <Loader2 size={18} className="mr-2 animate-spin"/>
-        Validando permissões...
-    </div>);
+  if (!authChecked) {
+    return null;
   }
   if (!isAdmin) {
     return null;

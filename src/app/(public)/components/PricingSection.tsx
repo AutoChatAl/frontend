@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Check, Crown, Sparkles, Zap } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -17,20 +17,14 @@ function formatNumber(n: number): string {
   return n.toLocaleString('pt-BR');
 }
 
-const PLAN_META: Record<PlanSlug, { icon: typeof Zap; gradient: string; tagline: string }> = {
+const PLAN_META: Record<PlanSlug, { tagline: string }> = {
   impulso: {
-    icon: Zap,
-    gradient: 'from-blue-500 to-indigo-600',
     tagline: 'Para começar a vender no automático',
   },
   crescimento: {
-    icon: Sparkles,
-    gradient: 'from-indigo-500 to-fuchsia-600',
     tagline: 'Para escalar atendimento e campanhas',
   },
   dominio: {
-    icon: Crown,
-    gradient: 'from-fuchsia-500 to-pink-600',
     tagline: 'Operação completa com IA inclusa',
   },
 };
@@ -181,7 +175,6 @@ export default function PricingSection() {
         <div className="grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {displayPlans.map((plan, i) => {
             const meta = PLAN_META[plan.slug] ?? PLAN_META.impulso;
-            const Icon = meta.icon;
             const isFeatured = plan.slug === featuredSlug;
             const features = buildFeatures(plan);
 
@@ -192,41 +185,35 @@ export default function PricingSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-50px' }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className={`relative rounded-2xl p-6 lg:p-8 flex flex-col ${
+                className={`relative rounded-2xl p-6 lg:p-8 flex flex-col bg-white text-slate-900 ${
                   isFeatured
-                    ? 'bg-slate-900 text-white shadow-2xl shadow-indigo-900/20 ring-1 ring-indigo-500/30 scale-100 lg:scale-105'
-                    : 'bg-white text-slate-900 border border-slate-200'
+                    ? 'border-2 border-violet-500 shadow-2xl shadow-violet-500/20 scale-100 lg:scale-105'
+                    : 'border border-slate-200'
                 }`}
               >
                 {isFeatured && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-lg">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-700 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-lg">
                     Mais escolhido
                   </span>
                 )}
 
-                <div
-                  className={`inline-flex w-11 h-11 rounded-xl bg-gradient-to-br ${meta.gradient} items-center justify-center mb-4 shadow-md`}
-                >
-                  <Icon size={20} className="text-white" />
-                </div>
-
-                <h3 className={`text-xl font-bold ${isFeatured ? 'text-white' : 'text-slate-900'}`}>
+                <h3 className="text-xl font-bold text-slate-900">
                   {plan.name}
                 </h3>
-                <p className={`text-sm mb-5 ${isFeatured ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className="text-sm mb-5 text-slate-500">
                   {meta.tagline}
                 </p>
 
                 <div className="mb-5">
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-sm ${isFeatured ? 'text-slate-400' : 'text-slate-500'}`}>R$</span>
-                    <span className={`text-4xl font-bold ${isFeatured ? 'text-white' : 'text-slate-900'}`}>
+                    <span className="text-sm text-slate-500">R$</span>
+                    <span className="text-4xl font-bold text-slate-900">
                       {formatBRL(plan.priceCents)}
                     </span>
-                    <span className={`text-sm ${isFeatured ? 'text-slate-400' : 'text-slate-500'}`}>/mês</span>
+                    <span className="text-sm text-slate-500">/mês</span>
                   </div>
                   {plan.limits.extraMessagePriceCents > 0 && (
-                    <p className={`text-[11px] mt-1 ${isFeatured ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <p className="text-[11px] mt-1 text-slate-400">
                       Excedente: R$ {(plan.limits.extraMessagePriceCents / 100).toFixed(3).replace('.', ',')} / mensagem
                     </p>
                   )}
@@ -236,8 +223,8 @@ export default function PricingSection() {
                   href="/register"
                   className={`block w-full text-center py-3 rounded-lg font-semibold text-sm mb-6 transition-all ${
                     isFeatured
-                      ? 'bg-white text-slate-900 hover:bg-slate-100'
-                      : 'bg-slate-900 text-white hover:bg-indigo-600'
+                      ? 'bg-violet-600 text-white hover:bg-violet-700'
+                      : 'bg-slate-900 text-white hover:bg-violet-700'
                   }`}
                 >
                   Começar 7 dias grátis
@@ -246,18 +233,10 @@ export default function PricingSection() {
                 <ul className="space-y-2.5 flex-1">
                   {features.map((feat, k) => (
                     <li key={k} className="flex items-start gap-2.5 text-sm">
-                      <div
-                        className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                          isFeatured ? 'bg-indigo-500/20' : 'bg-emerald-100'
-                        }`}
-                      >
-                        <Check
-                          size={10}
-                          strokeWidth={3}
-                          className={isFeatured ? 'text-indigo-300' : 'text-emerald-600'}
-                        />
+                      <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isFeatured ? 'bg-violet-100' : 'bg-emerald-100'}`}>
+                        <Check size={10} strokeWidth={3} className={`${isFeatured ? 'text-violet-600' : 'text-emerald-600'}`} />
                       </div>
-                      <span className={isFeatured ? 'text-slate-300' : 'text-slate-700'}>{feat}</span>
+                      <span className="text-slate-700">{feat}</span>
                     </li>
                   ))}
                 </ul>
@@ -274,13 +253,11 @@ export default function PricingSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-16 max-w-5xl mx-auto"
           >
-            <div className="bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50 border border-violet-200 rounded-2xl p-6 lg:p-8">
+            <div className="bg-transparent rounded-2xl p-6 lg:p-8">
               <div className="flex items-start gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-md shrink-0">
-                  <Sparkles size={18} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-900">Add-on Synq IA</h3>
+
+                <div className="flex-1 text-center">
+                  <h3 className="text-lg font-bold text-black">Add-on Synq IA</h3>
                   <p className="text-sm text-slate-600">
                     Adicione inteligência artificial em qualquer plano. Plug & play, treinável e com tom da sua marca.
                   </p>

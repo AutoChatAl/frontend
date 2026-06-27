@@ -1,8 +1,10 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ArrowRight, Menu, X, Zap } from 'lucide-react';
+import { ArrowRight, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
+import Logo from '@/components/Logo';
 
 const NAV_LINKS = [
   { href: '#funcionalidades', label: 'Funcionalidades' },
@@ -37,10 +39,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-            <Zap size={18} className="text-white" fill="white" />
-          </div>
-          <span className="font-bold text-lg text-slate-900">Synq</span>
+          <Logo size="md" priority imgClassName="group-hover:scale-105 transition-transform" textClassName="text-slate-900" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-7">

@@ -184,7 +184,7 @@ export default function WhatsAppSection() {
             ))}
           </ul>
 
-          <div className="grid grid-cols-3 gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+          <div className="text-center grid grid-cols-3 gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
             <div>
               <p className="text-2xl font-bold text-emerald-700">1.2s</p>
               <p className="text-[11px] text-slate-600 mt-0.5">Tempo médio de resposta</p>
