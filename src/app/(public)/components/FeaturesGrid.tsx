@@ -56,8 +56,8 @@ const FEATURES = [
   },
   {
     icon: ShieldCheck,
-    title: 'Conexão estável',
-    description: 'Integrações com Instagram via API Meta e WhatsApp com controle de cadência para operar com segurança.',
+    title: 'Segurança anti-bloqueio',
+    description: 'Instagram via API oficial Meta e WhatsApp com cadência controlada para proteger seus números.',
     color: 'from-slate-700 to-slate-900',
   },
 ];
@@ -74,13 +74,13 @@ export default function FeaturesGrid() {
           className="max-w-2xl mx-auto text-center mb-14"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-3">
-            Tudo no mesmo lugar
+            Funcionalidades
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
-            Uma plataforma. <span className="text-indigo-600">Toda sua operação.</span>
+            Tudo o que a Synq faz, <span className="text-indigo-600">em uma só plataforma</span>
           </h2>
           <p className="text-base text-slate-600">
-            Substitua múltiplas ferramentas por uma única central de atendimento, vendas e marketing.
+            Atendimento, vendas, automações, CRM e relatórios no mesmo lugar — substitua várias ferramentas por uma central única.
           </p>
         </motion.div>
 

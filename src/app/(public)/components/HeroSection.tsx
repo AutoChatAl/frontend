@@ -56,14 +56,14 @@ export default function HeroSection() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            Atendimento e vendas automatizadas com IA
+            Atendimento e vendas com IA · WhatsApp e Instagram
           </motion.div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-[1.1] mb-6 tracking-tight">
-            Transforme cada{' '}
+            Transforme conversas do WhatsApp e Instagram em{' '}
             <span className="relative inline-block">
               <span className="relative z-10 bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
-                conversa
+                vendas no automático
               </span>
               <motion.span
                 initial={{ scaleX: 0 }}
@@ -72,14 +72,13 @@ export default function HeroSection() {
                 className="absolute -bottom-1 left-0 right-0 h-3 bg-fuchsia-200/60 -z-0 origin-left rounded"
               />
             </span>
-            <br />
-            em uma venda no piloto automático
           </h1>
 
           <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-            A Synq centraliza <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
-            <strong className="text-slate-900">recuperação de carrinho</strong> em uma só plataforma — com
-            IA treinada no seu negócio respondendo 24h por dia.
+            A Synq é a plataforma que reúne <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
+            <strong className="text-slate-900">recuperação de carrinho</strong> em um só lugar — com uma IA
+            treinada no seu negócio que atende clientes, responde DMs e comentários, recupera carrinhos
+            abandonados e fecha vendas 24 horas por dia.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
