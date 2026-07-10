@@ -1,9 +1,10 @@
 'use client';
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { BadgeCheck, MessageCircle, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 
 import InstagramInstances from '@/app/(private)/channels/components/InstagramInstances';
 import WhatsAppInstances from '@/app/(private)/channels/components/WhatsAppInstances';
+import WhatsAppOfficialInstances from '@/app/(private)/channels/components/WhatsAppOfficialInstances';
 
 export default function ChannelsPage() {
   const [activeTab, setActiveTab] = useState('whatsapp');
@@ -18,13 +19,17 @@ export default function ChannelsPage() {
         <button onClick={() => setActiveTab('whatsapp')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'whatsapp' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
           <MessageCircle size={16}/> WhatsApp
         </button>
+        <button onClick={() => setActiveTab('whatsapp-official')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'whatsapp-official' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+          <BadgeCheck size={16}/> WhatsApp Oficial
+        </button>
         <button onClick={() => setActiveTab('instagram')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'instagram' ? 'bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
           <Smartphone size={16}/> Instagram
         </button>
       </div>
     </div>
 
-    {activeTab === 'whatsapp' ? <WhatsAppInstances /> : <InstagramInstances />}
+    {activeTab === 'whatsapp' && <WhatsAppInstances />}
+    {activeTab === 'whatsapp-official' && <WhatsAppOfficialInstances />}
+    {activeTab === 'instagram' && <InstagramInstances />}
   </div>);
 }
-;

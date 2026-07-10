@@ -1,5 +1,5 @@
 'use client';
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { BadgeCheck, MessageCircle, Smartphone } from 'lucide-react';
 
 import type { AIChannel } from '@/types/AI';
 
@@ -9,7 +9,8 @@ interface AIChannelCardProps {
     onToggle: (id: string) => void;
 }
 export default function AIChannelCard({ channel, active, onToggle }: AIChannelCardProps) {
-  const isWhatsApp = channel.type === 'whatsapp';
+  const isOfficial = channel.type === 'whatsapp_official';
+  const isWhatsApp = channel.type === 'whatsapp' || isOfficial;
   return (<div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 sm:p-4 border rounded-xl transition-all ${active
     ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm'
     : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 opacity-75'}`}>
@@ -17,7 +18,7 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
       <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-700 shadow-sm ${isWhatsApp
         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
         : 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400'}`}>
-        {isWhatsApp ? <MessageCircle size={22}/> : <Smartphone size={22}/>}
+        {isOfficial ? <BadgeCheck size={22}/> : isWhatsApp ? <MessageCircle size={22}/> : <Smartphone size={22}/>}
       </div>
       <div>
         <div className="flex items-center gap-2">
@@ -25,7 +26,7 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
           <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase ${isWhatsApp
             ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
             : 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-100 dark:border-fuchsia-800'}`}>
-            {channel.type}
+            {isOfficial ? 'whatsapp oficial' : channel.type}
           </span>
         </div>
         {channel.ownerName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">

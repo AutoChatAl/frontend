@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 export interface AIChannel {
     id: string;
     name: string;
-    type: 'whatsapp' | 'instagram';
+    type: 'whatsapp' | 'instagram' | 'whatsapp_official';
     active: boolean;
     identifier: string;
     createdBy?: string | null;

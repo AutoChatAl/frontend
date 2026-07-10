@@ -5,6 +5,7 @@ import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
 import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
+import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AIChannel } from '@/types/AI';
 import type { Product } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
@@ -45,7 +46,7 @@ export function useAIConfig() {
         const mapped: AIChannel[] = allChannels.map((ch) => ({
           id: ch.id,
           name: ch.name,
-          type: ch.type.toLowerCase() as 'whatsapp' | 'instagram',
+          type: ch.type.toLowerCase() as AIChannel['type'],
           active: ch.aiEnabled,
           identifier: '',
           createdBy: ch.createdBy,
@@ -54,8 +55,9 @@ export function useAIConfig() {
         setChannels(mapped);
         return;
       }
-      const [whatsappInstances, instagramAccounts] = await Promise.all([
+      const [whatsappInstances, officialInstances, instagramAccounts] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
+        whatsappOfficialService.getInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
       ]);
       const waChannels: AIChannel[] = whatsappInstances.map((inst) => ({
@@ -65,6 +67,13 @@ export function useAIConfig() {
         active: currentActiveChannelIds.includes(inst.id),
         identifier: inst.whatsapp?.phoneNumber || inst.number || '',
       }));
+      const officialChannels: AIChannel[] = officialInstances.map((inst) => ({
+        id: inst.id,
+        name: inst.whatsappOfficial.verifiedName || inst.name,
+        type: 'whatsapp_official' as const,
+        active: currentActiveChannelIds.includes(inst.id),
+        identifier: inst.whatsappOfficial.displayPhoneNumber || '',
+      }));
       const igChannels: AIChannel[] = instagramAccounts.map((acc) => ({
         id: acc.id,
         name: acc.name,
@@ -72,7 +81,7 @@ export function useAIConfig() {
         active: currentActiveChannelIds.includes(acc.id),
         identifier: acc.instagram?.username || '',
       }));
-      setChannels([...waChannels, ...igChannels]);
+      setChannels([...waChannels, ...officialChannels, ...igChannels]);
     }
     catch {
       setChannels([]);
