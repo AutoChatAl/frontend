@@ -1,5 +1,6 @@
 import { getErrorMessage } from '@/types/ErrorCode';
 import type {
+  WaMetaBilledPoint,
   WaOfficialOverview,
   WaSignupConfig,
   WaUsageRecord,
@@ -60,6 +61,12 @@ class WhatsAppOfficialService {
     const query = params.toString();
     const response = await apiClient.get(`/channels/whatsapp-official/usage${query ? `?${query}` : ''}`);
     return unwrap<WaUsageRecord[]>(response, 'Falha ao carregar o historico de consumo.');
+  }
+
+  /** Faturamento REAL cobrado pela Meta (pricing_analytics do WABA) — não é estimativa. */
+  public async getMetaBilling(channelId: string, days = 30): Promise<WaMetaBilledPoint[]> {
+    const response = await apiClient.get(`/channels/whatsapp-official/${channelId}/meta-billing?days=${days}`);
+    return unwrap<WaMetaBilledPoint[]>(response, 'Falha ao consultar o faturamento na Meta.');
   }
 }
 

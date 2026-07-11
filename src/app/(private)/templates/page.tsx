@@ -66,15 +66,17 @@ export default function TemplatesPage() {
   };
 
   const handleSync = async () => {
-    const channelId = selectedChannelId || channels[0]?.id;
-    if (!channelId) {
+    // Com um canal selecionado sincroniza só ele; em "Todos os canais", sincroniza todos os números.
+    const targets = selectedChannelId ? channels.filter((c) => c.id === selectedChannelId) : channels;
+    if (targets.length === 0) {
       addToast('error', 'Conecte um canal oficial antes de sincronizar.');
       return;
     }
     setSyncing(true);
     try {
-      const result = await templateService.sync(channelId);
-      addToast('success', `${result.synced} templates sincronizados com a Meta.`);
+      const results = await Promise.all(targets.map((c) => templateService.sync(c.id)));
+      const total = results.reduce((acc, r) => acc + r.synced, 0);
+      addToast('success', `${total} templates sincronizados com a Meta${targets.length > 1 ? ` (${targets.length} números)` : ''}.`);
       await loadData(selectedChannelId || undefined);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erro ao sincronizar.');
@@ -105,6 +107,15 @@ export default function TemplatesPage() {
       label: c.whatsappOfficial.verifiedName || c.whatsappOfficial.displayPhoneNumber || c.name,
     })),
   ]), [channels]);
+
+  // Nome do número dono do template — exibido no card quando há mais de um canal.
+  const channelLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of channels) {
+      map.set(c.id, c.whatsappOfficial.verifiedName || c.whatsappOfficial.displayPhoneNumber || c.name);
+    }
+    return map;
+  }, [channels]);
 
   const bodyPreview = (template: WhatsAppTemplate): string => {
     const body = template.components.find((c) => c.type === 'BODY');
@@ -166,7 +177,12 @@ export default function TemplatesPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-slate-800 dark:text-white truncate">{template.name}</h3>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">{template.language}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                          {template.language}
+                          {channels.length > 1 && channelLabelById.get(template.channelId) && (
+                            <> · {channelLabelById.get(template.channelId)}</>
+                          )}
+                        </p>
                       </div>
                       <TemplateStatusBadge status={template.status} />
                     </div>

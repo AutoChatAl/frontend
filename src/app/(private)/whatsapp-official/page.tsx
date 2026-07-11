@@ -23,7 +23,7 @@ import EmptyState from '@/components/EmptyState';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
-import { formatBrlFromMicros, type WaOfficialOverview, type WaUsageRecord } from '@/types/WhatsAppOfficial';
+import { formatBrlFromMicros, type WaMetaBilledPoint, type WaOfficialOverview, type WaUsageRecord } from '@/types/WhatsAppOfficial';
 
 const CATEGORY_LABELS: Record<string, string> = {
   marketing: 'Marketing',
@@ -58,6 +58,7 @@ export default function WhatsAppOfficialDashboardPage() {
   const router = useRouter();
   const [overview, setOverview] = useState<WaOfficialOverview | null>(null);
   const [usageHistory, setUsageHistory] = useState<WaUsageRecord[]>([]);
+  const [metaBilled, setMetaBilled] = useState<WaMetaBilledPoint[] | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [days, setDays] = useState('30');
   const [loading, setLoading] = useState(true);
@@ -72,6 +73,15 @@ export default function WhatsAppOfficialDashboardPage() {
       ]);
       setOverview(overviewData);
       setUsageHistory(history);
+
+      // Faturamento REAL da Meta (pricing_analytics): busca por canal e agrega.
+      const billedTargets = channelId
+        ? overviewData.channels.filter((c) => c.id === channelId)
+        : overviewData.channels;
+      const billedResults = await Promise.all(
+        billedTargets.map((c) => whatsappOfficialService.getMetaBilling(c.id, Number(periodDays)).catch(() => [] as WaMetaBilledPoint[])),
+      );
+      setMetaBilled(billedResults.flat());
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Erro ao carregar o painel.');
     } finally {
@@ -113,6 +123,27 @@ export default function WhatsAppOfficialDashboardPage() {
     const total = Object.values(templates).reduce((acc, v) => acc + v, 0);
     return { approved, pending, rejected, total };
   }, [overview?.templates]);
+
+  // Agrega o pricing_analytics da Meta por categoria (volume + custo REAL cobrado).
+  const metaBilledSummary = useMemo(() => {
+    if (!metaBilled) return null;
+    const byCategory = new Map<string, { volume: number; cost: number }>();
+    let totalCost = 0;
+    let totalVolume = 0;
+    for (const point of metaBilled) {
+      const category = (point.pricing_category ?? 'unknown').toLowerCase();
+      const entry = byCategory.get(category) ?? { volume: 0, cost: 0 };
+      entry.volume += point.volume ?? 0;
+      entry.cost += point.cost ?? 0;
+      byCategory.set(category, entry);
+      totalCost += point.cost ?? 0;
+      totalVolume += point.volume ?? 0;
+    }
+    const rows = [...byCategory.entries()]
+      .map(([category, v]) => ({ category, ...v }))
+      .sort((a, b) => b.cost - a.cost);
+    return { rows, totalCost, totalVolume };
+  }, [metaBilled]);
 
   if (loading && !overview) {
     return <PageLoader message="Carregando painel da API Oficial..." />;
@@ -242,6 +273,47 @@ export default function WhatsAppOfficialDashboardPage() {
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum consumo no período.</p>
+              )}
+            </Card>
+
+            {/* Faturado pela Meta — valores REAIS (pricing_analytics), não estimativa */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-slate-800 dark:text-white">Faturado pela Meta</h3>
+                <Badge type="success" text="Dado oficial da Meta" pill />
+              </div>
+              {metaBilledSummary && metaBilledSummary.rows.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-slate-800 dark:text-white">
+                        {metaBilledSummary.totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {metaBilledSummary.totalVolume} mensagens cobradas · últimos {overview?.periodDays} dias
+                      </p>
+                    </div>
+                  </div>
+                  {metaBilledSummary.rows.map((row) => (
+                    <div key={row.category} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-300">{CATEGORY_LABELS[row.category] ?? row.category}</span>
+                      <span className="flex items-center gap-3">
+                        <span className="text-slate-400 dark:text-slate-500 text-xs">{row.volume} msgs</span>
+                        <span className="font-semibold text-slate-800 dark:text-white">
+                          {row.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                  <p className="text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    Valores retornados pela própria Meta (pricing_analytics do WABA), na moeda de cobrança da conta.
+                    A cobrança é feita pela Meta no método de pagamento do Gerenciador de Negócios — pode levar algumas horas para refletir aqui.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 dark:text-slate-500">
+                  Nenhuma cobrança da Meta no período — mensagens na janela de atendimento de 24h são gratuitas.
+                </p>
               )}
             </Card>
 

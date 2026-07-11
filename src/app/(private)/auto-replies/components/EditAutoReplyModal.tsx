@@ -11,6 +11,7 @@ import Textarea from '@/components/Textarea';
 import WhatsAppEditor from '@/components/WhatsAppEditor';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { channelsService } from '@/services/channels.service';
+import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AutoReply, UpdateAutoReplyInput } from '@/types/AutoReply';
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 import { AUDIO_UPLOAD, validateAudioFile } from '@/utils/audio';
@@ -19,7 +20,7 @@ import { getChannelStatusBadgeClasses, getChannelStatusLabel } from '@/utils/cha
 interface Channel {
     id: string;
     name: string;
-    type: 'WHATSAPP' | 'INSTAGRAM';
+    type: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     status: string;
 }
 interface EditAutoReplyModalProps {
@@ -98,8 +99,9 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
   const loadChannels = useCallback(async () => {
     try {
       setLoadingData(true);
-      const [waChannels, igChannels] = await Promise.all([
+      const [waChannels, waOfficialChannels, igChannels] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
+        whatsappOfficialService.getInstances().catch(() => []),
         channelsService.getInstagramAccounts().catch(() => []),
       ]);
       const allChannels: Channel[] = [
@@ -107,6 +109,12 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
           id: ch.id,
           name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
           type: 'WHATSAPP' as const,
+          status: ch.status,
+        })),
+        ...waOfficialChannels.map((ch) => ({
+          id: ch.id,
+          name: ch.whatsappOfficial.verifiedName || ch.whatsappOfficial.displayPhoneNumber || ch.name || 'API Oficial',
+          type: 'WHATSAPP_OFFICIAL' as const,
           status: ch.status,
         })),
         ...igChannels.map((ch: InstagramAccount) => ({
@@ -302,18 +310,19 @@ export default function EditAutoReplyModal({ isOpen, onClose, onSuccess, autoRep
           {channels.map((channel) => {
             const isSelected = formData.channelId === channel.id;
             const isWA = channel.type === 'WHATSAPP';
+            const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
             return (<label key={channel.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
               ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}>
               <input type="radio" name="channel" value={channel.id} checked={isSelected} onChange={() => handleChannelSelect(channel.id)} className="sr-only"/>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isWA ? 'bg-green-100 dark:bg-green-900/30' : 'bg-pink-100 dark:bg-pink-900/30'}`}>
-                <MessageCircle size={16} className={isWA ? 'text-green-600 dark:text-green-400' : 'text-pink-600 dark:text-pink-400'}/>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isWA ? 'bg-green-100 dark:bg-green-900/30' : isOfficial ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-pink-100 dark:bg-pink-900/30'}`}>
+                <MessageCircle size={16} className={isWA ? 'text-green-600 dark:text-green-400' : isOfficial ? 'text-emerald-600 dark:text-emerald-400' : 'text-pink-600 dark:text-pink-400'}/>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                   {channel.name}
                 </p>
-                <p className="text-xs text-slate-400">{channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'}</p>
+                <p className="text-xs text-slate-400">{channel.type === 'WHATSAPP' ? 'WhatsApp' : isOfficial ? 'WhatsApp API Oficial' : 'Instagram'}</p>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getChannelStatusBadgeClasses(channel.status)}`}>
                 {getChannelStatusLabel(channel.status)}

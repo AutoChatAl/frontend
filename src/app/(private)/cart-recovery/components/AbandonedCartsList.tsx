@@ -411,7 +411,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
               <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Tentativas de recuperação</p>
               <div className="space-y-1">
                 {(detailTarget.recoveryAttempts ?? []).map((a, i) => {
-                  const channelLabel = a.channelType === 'INSTAGRAM' ? 'Instagram' : a.channelType === 'WHATSAPP' ? 'WhatsApp' : '—';
+                  const channelLabel = a.channelType === 'INSTAGRAM' ? 'Instagram' : a.channelType === 'WHATSAPP_OFFICIAL' ? 'API Oficial' : a.channelType === 'WHATSAPP' ? 'WhatsApp' : '—';
                   const statusLabel = ATTEMPT_STATUS_LABELS[a.status];
                   const whenLabel = a.sentAt
                     ? `em ${formatDate(a.sentAt)}`

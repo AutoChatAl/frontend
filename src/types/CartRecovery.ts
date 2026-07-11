@@ -1,6 +1,6 @@
 export type SalesPlatform = 'HOTMART' | 'KIWIFY' | 'EDUZZ' | 'MONETIZZE' | 'PERFECTPAY';
 
-export type IntegrationChannelType = 'WHATSAPP' | 'INSTAGRAM';
+export type IntegrationChannelType = 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
 
 export type AbandonedCartStatus = 'ABANDONED' | 'RECOVERED' | 'EXPIRED' | 'CANCELED';
 

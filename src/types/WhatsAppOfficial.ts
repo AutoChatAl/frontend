@@ -162,6 +162,19 @@ export type WaCampaignEstimate = {
   note: string;
 };
 
+/**
+ * Ponto do pricing_analytics da Meta — valores REAIS cobrados (na moeda de
+ * cobrança da conta do WhatsApp Business), não estimativas do sistema.
+ */
+export type WaMetaBilledPoint = {
+  start?: number;
+  end?: number;
+  volume?: number;
+  cost?: number;
+  pricing_category?: string;
+  pricing_type?: string;
+};
+
 export function formatBrlFromMicros(micros: number): string {
   return (micros / 1_000_000).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }

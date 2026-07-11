@@ -488,7 +488,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     });
     clearFieldError('group');
   };
-  const maxContacts = limits?.maxContactsPerCampaign ?? 250;
+  // -1 no plano significa ilimitado — sem normalizar, `0 >= -1` bloquearia qualquer seleção.
+  const rawMaxContacts = limits?.maxContactsPerCampaign ?? 250;
+  const maxContacts = rawMaxContacts === -1 ? Number.POSITIVE_INFINITY : rawMaxContacts;
   const toggleContact = (contactId: string) => {
     setFormData((prev) => {
       const isRemoving = prev.contactIds.includes(contactId);
@@ -518,7 +520,9 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     return Array.from(uniqueById.values());
   }, [contacts, formData.channelIds]);
   const selectAllContacts = () => {
-    const ids = channelContacts.map((c) => c.id).slice(0, maxContacts);
+    const ids = Number.isFinite(maxContacts)
+      ? channelContacts.map((c) => c.id).slice(0, maxContacts)
+      : channelContacts.map((c) => c.id);
     if (channelContacts.length > maxContacts) {
       addToast('error', `Limite de ${maxContacts} contatos. Apenas os ${maxContacts} primeiros foram selecionados.`);
     }
