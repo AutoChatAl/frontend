@@ -47,7 +47,7 @@ const CATEGORY_ICON: Record<WaTemplateCategory, React.ReactNode> = {
   AUTHENTICATION: <KeyRound size={14} />,
 };
 
-type ButtonDraft = { type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER'; text: string; url: string; phoneNumber: string };
+type ButtonDraft = { type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER'; text: string; url: string; phoneNumber: string; trackUrl: boolean };
 
 function extractVariables(text: string): string[] {
   const names: string[] = [];
@@ -97,13 +97,15 @@ export default function TemplateBuilderModal({
       setHeaderText(header?.format === 'TEXT' ? (header.text ?? '') : '');
       setBodyText(body?.text ?? '');
       setFooterText(footer?.text ?? '');
+      const hasUrlVar = (url: string) => /\{\{\s*[\w]+\s*\}\}\s*$/.test(url);
       setButtons((buttonsComponent?.buttons ?? [])
         .filter((b): b is WaTemplateButton => b.type !== 'COPY_CODE')
         .map((b) => ({
           type: b.type as ButtonDraft['type'],
           text: b.text ?? '',
-          url: b.url ?? '',
+          url: (b.url ?? '').replace(/\{\{\s*[\w]+\s*\}\}\s*$/, ''),
           phoneNumber: b.phone_number ?? '',
+          trackUrl: hasUrlVar(b.url ?? ''),
         })));
       setVariableExamples({});
     } else {
@@ -141,7 +143,7 @@ export default function TemplateBuilderModal({
 
   const addButton = () => {
     if (buttons.length >= 10) return;
-    setButtons((prev) => [...prev, { type: 'QUICK_REPLY', text: '', url: '', phoneNumber: '' }]);
+    setButtons((prev) => [...prev, { type: 'QUICK_REPLY', text: '', url: '', phoneNumber: '', trackUrl: false }]);
   };
 
   const updateButton = (index: number, patch: Partial<ButtonDraft>) => {
@@ -166,7 +168,12 @@ export default function TemplateBuilderModal({
       components.push({
         type: 'BUTTONS',
         buttons: validButtons.map((b) => {
-          if (b.type === 'URL') return { type: 'URL' as const, text: b.text.trim(), url: b.url.trim() };
+          if (b.type === 'URL') {
+            let url = b.url.trim();
+            // Rastreio de vendas: variável dinâmica no fim da URL, preenchida por contato no envio.
+            if (b.trackUrl && !/\{\{\s*[\w]+\s*\}\}/.test(url)) url = `${url}{{1}}`;
+            return { type: 'URL' as const, text: b.text.trim(), url };
+          }
           if (b.type === 'PHONE_NUMBER') return { type: 'PHONE_NUMBER' as const, text: b.text.trim(), phone_number: b.phoneNumber.trim() };
           return { type: 'QUICK_REPLY' as const, text: b.text.trim() };
         }),
@@ -353,7 +360,20 @@ export default function TemplateBuilderModal({
                 <div className="flex-1 w-full space-y-2">
                   <Input placeholder="Texto do botão (máx. 25)" value={button.text} onChange={(e) => updateButton(index, { text: e.target.value.slice(0, 25) })} />
                   {button.type === 'URL' && (
-                    <Input placeholder="https://exemplo.com/oferta" value={button.url} onChange={(e) => updateButton(index, { url: e.target.value })} />
+                    <>
+                      <Input placeholder="https://exemplo.com/oferta" value={button.url} onChange={(e) => updateButton(index, { url: e.target.value })} />
+                      <label className="flex items-start gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={button.trackUrl}
+                          onChange={(e) => updateButton(index, { trackUrl: e.target.checked })}
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — no envio, cada contato recebe o link com rastreio próprio (sck/UTM), permitindo atribuir compras e recuperação de carrinho, como no canal não oficial.
+                        </span>
+                      </label>
+                    </>
                   )}
                   {button.type === 'PHONE_NUMBER' && (
                     <Input placeholder="+5511999999999" value={button.phoneNumber} onChange={(e) => updateButton(index, { phoneNumber: e.target.value })} />
