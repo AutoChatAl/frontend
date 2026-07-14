@@ -13,11 +13,6 @@ import type { WhatsAppOfficialInstance } from '@/types/WhatsAppOfficial';
 import AddChannelCard from './AddChannelCard';
 import ChannelInstanceCard from './ChannelInstanceCard';
 
-/** Modo de conexão do Embedded Signup:
- * - 'new': número novo/virgem cadastrado direto na Cloud API;
- * - 'coexistence': número que já está em uso no app WhatsApp Business
- *   (continua funcionando no app; requer app >= 2.24.17 e leitura de QR code).
- */
 type ConnectMode = 'new' | 'coexistence';
 
 const QUALITY_LABELS: Record<string, string> = {
@@ -27,11 +22,6 @@ const QUALITY_LABELS: Record<string, string> = {
   UNKNOWN: 'Qualidade pendente',
 };
 
-/**
- * Conexão da API Oficial via Embedded Signup da Meta: carrega o SDK do
- * Facebook sob demanda, abre o fluxo de login for business com o config_id
- * e envia o `code` ao backend — o usuário não sai da plataforma.
- */
 export default function WhatsAppOfficialInstances() {
   const [instances, setInstances] = useState<WhatsAppOfficialInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +53,6 @@ export default function WhatsAppOfficialInstances() {
     fetchInstances();
   }, [fetchInstances]);
 
-  // Captura o evento do Embedded Signup (waba_id / phone_number_id) enviado pela Meta.
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (!event.origin.endsWith('facebook.com')) return;
@@ -76,7 +65,6 @@ export default function WhatsAppOfficialInstances() {
           signupDataRef.current = next;
         }
       } catch {
-        // payloads não-JSON de outros widgets do Facebook — ignora
       }
     };
     window.addEventListener('message', onMessage);
@@ -116,8 +104,6 @@ export default function WhatsAppOfficialInstances() {
     try {
       const config = await whatsappOfficialService.getSignupConfig();
       const fb = await loadFacebookSdk(config.appId, config.graphVersion);
-      // Coexistência: conecta um número que já está ativo no app WhatsApp Business
-      // (o fluxo da Meta pede leitura de QR code no app; o número segue funcionando nele).
       const extras: Record<string, unknown> = mode === 'coexistence'
         ? { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' }
         : { setup: {}, sessionInfoVersion: '3' };
@@ -129,7 +115,6 @@ export default function WhatsAppOfficialInstances() {
             addToast('error', 'Conexão cancelada antes de concluir o cadastro na Meta.');
             return;
           }
-          // O code expira em ~30s — envia imediatamente ao backend.
           (async () => {
             try {
               const payload: { code: string; wabaId?: string; phoneNumberId?: string } = { code };

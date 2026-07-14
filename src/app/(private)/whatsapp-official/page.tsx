@@ -1,5 +1,5 @@
 'use client';
-import {
+import { ChevronLeft, ChevronRight,
   BadgeCheck,
   CheckCheck,
   CircleDollarSign,
@@ -24,6 +24,8 @@ import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import { formatBrlFromMicros, type WaMetaBilledPoint, type WaOfficialOverview, type WaUsageRecord } from '@/types/WhatsAppOfficial';
+
+const USAGE_PAGE_SIZE = 10;
 
 const CATEGORY_LABELS: Record<string, string> = {
   marketing: 'Marketing',
@@ -58,6 +60,8 @@ export default function WhatsAppOfficialDashboardPage() {
   const router = useRouter();
   const [overview, setOverview] = useState<WaOfficialOverview | null>(null);
   const [usageHistory, setUsageHistory] = useState<WaUsageRecord[]>([]);
+  const [usageTotal, setUsageTotal] = useState(0);
+  const [usagePage, setUsagePage] = useState(0);
   const [metaBilled, setMetaBilled] = useState<WaMetaBilledPoint[] | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [days, setDays] = useState('30');
@@ -65,16 +69,16 @@ export default function WhatsAppOfficialDashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
-  const loadData = useCallback(async (channelId: string, periodDays: string) => {
+  const loadData = useCallback(async (channelId: string, periodDays: string, page = 0) => {
     try {
       const [overviewData, history] = await Promise.all([
         whatsappOfficialService.getOverview(Number(periodDays), channelId || undefined),
-        whatsappOfficialService.getUsageHistory({ ...(channelId ? { channelId } : {}), limit: 25 }),
+        whatsappOfficialService.getUsageHistory({ ...(channelId ? { channelId } : {}), limit: USAGE_PAGE_SIZE, skip: page * USAGE_PAGE_SIZE }),
       ]);
       setOverview(overviewData);
-      setUsageHistory(history);
+      setUsageHistory(history.data);
+      setUsageTotal(history.total);
 
-      // Faturamento REAL da Meta (pricing_analytics): busca por canal e agrega.
       const billedTargets = channelId
         ? overviewData.channels.filter((c) => c.id === channelId)
         : overviewData.channels;
@@ -92,15 +96,21 @@ export default function WhatsAppOfficialDashboardPage() {
   }, []);
 
   useEffect(() => {
-    loadData(selectedChannelId, days);
+    setUsagePage(0);
+    loadData(selectedChannelId, days, 0);
   }, [loadData, selectedChannelId, days]);
+
+  const changeUsagePage = (page: number) => {
+    setUsagePage(page);
+    loadData(selectedChannelId, days, page);
+  };
 
   const handleRefreshChannel = async (channelId: string) => {
     setRefreshing(true);
     try {
       await whatsappOfficialService.refreshHealth(channelId);
       addToast('success', 'Dados da conta atualizados com a Meta.');
-      await loadData(selectedChannelId, days);
+      await loadData(selectedChannelId, days, usagePage);
     } catch (error) {
       setRefreshing(false);
       addToast('error', error instanceof Error ? error.message : 'Erro ao atualizar a conta.');
@@ -124,7 +134,6 @@ export default function WhatsAppOfficialDashboardPage() {
     return { approved, pending, rejected, total };
   }, [overview?.templates]);
 
-  // Agrega o pricing_analytics da Meta por categoria (volume + custo REAL cobrado).
   const metaBilledSummary = useMemo(() => {
     if (!metaBilled) return null;
     const byCategory = new Map<string, { volume: number; cost: number }>();
@@ -182,7 +191,6 @@ export default function WhatsAppOfficialDashboardPage() {
         />
       ) : (
         <>
-          {/* Contas conectadas */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {channels.map((channel) => {
               const config = channel.whatsappOfficial;
@@ -241,7 +249,6 @@ export default function WhatsAppOfficialDashboardPage() {
             })}
           </div>
 
-          {/* Métricas do período */}
           {usage && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
               <MetricCard title="Mensagens enviadas" value={String(usage.totalMessages)} icon={<MessageSquareText size={18} className="text-indigo-500" />} hint={`Últimos ${overview?.periodDays} dias`} />
@@ -253,7 +260,6 @@ export default function WhatsAppOfficialDashboardPage() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Consumo por categoria */}
             <Card className="p-5">
               <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-4">Consumo por categoria</h3>
               {usage && usage.byCategory.length > 0 ? (
@@ -276,7 +282,6 @@ export default function WhatsAppOfficialDashboardPage() {
               )}
             </Card>
 
-            {/* Faturado pela Meta — valores REAIS (pricing_analytics), não estimativa */}
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-semibold text-slate-800 dark:text-white">Faturado pela Meta</h3>
@@ -317,7 +322,6 @@ export default function WhatsAppOfficialDashboardPage() {
               )}
             </Card>
 
-            {/* Templates */}
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-semibold text-slate-800 dark:text-white">Templates</h3>
@@ -346,14 +350,13 @@ export default function WhatsAppOfficialDashboardPage() {
             </Card>
           </div>
 
-          {/* Histórico de consumo */}
           <Card className="p-5">
             <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-4">Histórico de utilização</h3>
             {usageHistory.length === 0 ? (
               <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma mensagem enviada pela API Oficial ainda.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead>
                     <tr className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
                       <th className="py-2 pr-4 font-semibold">Data</th>
@@ -385,6 +388,21 @@ export default function WhatsAppOfficialDashboardPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {usageTotal > USAGE_PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {usagePage * USAGE_PAGE_SIZE + 1}–{Math.min((usagePage + 1) * USAGE_PAGE_SIZE, usageTotal)} de {usageTotal}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" icon={<ChevronLeft size={14} />} disabled={usagePage === 0} onClick={() => changeUsagePage(usagePage - 1)}>
+                    Anterior
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={<ChevronRight size={14} />} disabled={(usagePage + 1) * USAGE_PAGE_SIZE >= usageTotal} onClick={() => changeUsagePage(usagePage + 1)}>
+                    Próxima
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

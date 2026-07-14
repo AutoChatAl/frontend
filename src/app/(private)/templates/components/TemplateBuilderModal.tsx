@@ -23,7 +23,6 @@ interface TemplateBuilderModalProps {
   onSaved: () => void;
   channels: WhatsAppOfficialInstance[];
   defaultChannelId?: string;
-  /** Template em edição (aprovado/reprovado/pausado) — null para criação. */
   editing?: WhatsAppTemplate | null;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
@@ -81,7 +80,7 @@ export default function TemplateBuilderModal({
   const [formError, setFormError] = useState('');
 
   const isEditing = !!editing;
-  const lockIdentity = isEditing; // nome/idioma nunca mudam; categoria só se não aprovado
+  const lockIdentity = isEditing;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -170,7 +169,6 @@ export default function TemplateBuilderModal({
         buttons: validButtons.map((b) => {
           if (b.type === 'URL') {
             let url = b.url.trim();
-            // Rastreio de vendas: variável dinâmica no fim da URL, preenchida por contato no envio.
             if (b.trackUrl && !/\{\{\s*[\w]+\s*\}\}/.test(url)) url = `${url}{{1}}`;
             return { type: 'URL' as const, text: b.text.trim(), url };
           }
@@ -370,7 +368,7 @@ export default function TemplateBuilderModal({
                           className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-400">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — no envio, cada contato recebe o link com rastreio próprio (sck/UTM), permitindo atribuir compras e recuperação de carrinho, como no canal não oficial.
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — no envio, cada contato recebe o link com rastreio próprio (sck/UTM), permitindo atribuir compras e recuperação de carrinho.
                         </span>
                       </label>
                     </>

@@ -10,8 +10,6 @@ class ApiClient {
   }
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    // Navegadores tratam http://localhost como origem confiável mesmo em páginas
-    // https (dev com `next dev --experimental-https`) — só bloqueia http externo.
     const isLocalTarget = url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://') && !isLocalTarget) {
       return {

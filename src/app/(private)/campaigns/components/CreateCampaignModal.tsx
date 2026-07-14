@@ -217,7 +217,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     if (!formData.name.trim() || formData.name.length < 2)
       newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
     if (isOfficialCampaign) {
-      // API Oficial: mensagem business-initiated exige template aprovado pela Meta.
       if (!formData.messageMeta?.templateId) {
         newErrors.template = 'Selecione um template aprovado para a campanha oficial';
       } else {
@@ -251,7 +250,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     return Object.keys(newErrors).length === 0;
   };
   const clearFieldError = (field: string) => setErrors((prev) => ({ ...prev, [field]: '' }));
-  /** Normaliza o payload conforme o tipo de campanha (oficial usa template; não oficial usa texto/mídia). */
   const buildPayload = (): CreateCampaignInput => {
     if (!isOfficialCampaign) {
       const payload = { ...formData };
@@ -451,7 +449,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   const toggleChannel = (channelId: string) => {
     const isRemoving = formData.channelIds.includes(channelId);
     if (!isRemoving && formData.channelIds.length > 0) {
-      // A Meta exige template em canais oficiais — não misturamos tipos na mesma campanha.
       const addingOfficial = officialChannelIds.has(channelId);
       const hasOfficial = formData.channelIds.some((id) => officialChannelIds.has(id));
       const hasUnofficial = formData.channelIds.some((id) => !officialChannelIds.has(id));
@@ -488,7 +485,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     });
     clearFieldError('group');
   };
-  // -1 no plano significa ilimitado — sem normalizar, `0 >= -1` bloquearia qualquer seleção.
   const rawMaxContacts = limits?.maxContactsPerCampaign ?? 250;
   const maxContacts = rawMaxContacts === -1 ? Number.POSITIVE_INFINITY : rawMaxContacts;
   const toggleContact = (contactId: string) => {
@@ -542,7 +538,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     });
   }, [channelContacts, contactFilter, formData.contactIds]);
   const selectedGroup = useMemo(() => groups.find((g) => g.id === formData.groupId), [groups, formData.groupId]);
-  // Templates disponíveis para os canais oficiais selecionados.
   const availableTemplates = useMemo(() => {
     if (!isOfficialCampaign) return [];
     const selectedSet = new Set(formData.channelIds);
@@ -577,7 +572,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     }
     return parts.join('\n\n');
   }, [selectedTemplate, formData.messageMeta?.templateVariables]);
-  // Estimativa de custo (modelo PMP da Meta) sempre que template/destinatários mudam.
   useEffect(() => {
     if (!isOfficialCampaign || !selectedTemplate) {
       setCostEstimate(null);

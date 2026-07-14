@@ -53,17 +53,18 @@ class WhatsAppOfficialService {
     return unwrap<WaOfficialOverview>(response, 'Falha ao carregar o painel da API Oficial.');
   }
 
-  public async getUsageHistory(opts?: { channelId?: string; limit?: number; skip?: number }): Promise<WaUsageRecord[]> {
+  public async getUsageHistory(opts?: { channelId?: string; limit?: number; skip?: number }): Promise<{ data: WaUsageRecord[]; total: number }> {
     const params = new URLSearchParams();
     if (opts?.channelId) params.set('channelId', opts.channelId);
     if (opts?.limit) params.set('limit', String(opts.limit));
     if (opts?.skip) params.set('skip', String(opts.skip));
     const query = params.toString();
     const response = await apiClient.get(`/channels/whatsapp-official/usage${query ? `?${query}` : ''}`);
-    return unwrap<WaUsageRecord[]>(response, 'Falha ao carregar o historico de consumo.');
+    if (!response.success || !response.data) throwApiError(response, 'Falha ao carregar o historico de consumo.');
+    const body = response.data as { data?: WaUsageRecord[]; total?: number };
+    return { data: body.data ?? [], total: body.total ?? body.data?.length ?? 0 };
   }
 
-  /** Faturamento REAL cobrado pela Meta (pricing_analytics do WABA) — não é estimativa. */
   public async getMetaBilling(channelId: string, days = 30): Promise<WaMetaBilledPoint[]> {
     const response = await apiClient.get(`/channels/whatsapp-official/${channelId}/meta-billing?days=${days}`);
     return unwrap<WaMetaBilledPoint[]>(response, 'Falha ao consultar o faturamento na Meta.');

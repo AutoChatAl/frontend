@@ -66,7 +66,6 @@ export default function TemplatesPage() {
   };
 
   const handleSync = async () => {
-    // Com um canal selecionado sincroniza só ele; em "Todos os canais", sincroniza todos os números.
     const targets = selectedChannelId ? channels.filter((c) => c.id === selectedChannelId) : channels;
     if (targets.length === 0) {
       addToast('error', 'Conecte um canal oficial antes de sincronizar.');
@@ -108,7 +107,6 @@ export default function TemplatesPage() {
     })),
   ]), [channels]);
 
-  // Nome do número dono do template — exibido no card quando há mais de um canal.
   const channelLabelById = useMemo(() => {
     const map = new Map<string, string>();
     for (const c of channels) {

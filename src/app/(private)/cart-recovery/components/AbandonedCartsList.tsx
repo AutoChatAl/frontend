@@ -423,9 +423,14 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                       <span className="text-slate-600 dark:text-slate-300">
                         Passo {a.stepIndex + 1} · {channelLabel}
                       </span>
-                      <span className={`flex items-center gap-1 font-medium ${ATTEMPT_STATUS_TONE[a.status]}`}>
-                        <span>{statusLabel}</span>
-                        {whenLabel && <span className="font-normal text-slate-500 dark:text-slate-400">· {whenLabel}</span>}
+                      <span className={`flex flex-col items-end gap-0.5 text-right font-medium ${ATTEMPT_STATUS_TONE[a.status]}`}>
+                        <span className="flex items-center gap-1">
+                          <span>{statusLabel}</span>
+                          {whenLabel && <span className="font-normal text-slate-500 dark:text-slate-400">· {whenLabel}</span>}
+                        </span>
+                        {a.error && (a.status === 'SKIPPED' || a.status === 'FAILED') && (
+                          <span className="font-normal text-slate-400 dark:text-slate-500">{a.error}</span>
+                        )}
                       </span>
                     </div>
                   );

@@ -254,7 +254,6 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     if (!formData.name.trim() || formData.name.length < 2)
       newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
     if (isOfficialCampaign) {
-      // API Oficial: mensagem business-initiated exige template aprovado pela Meta.
       if (!formData.messageMeta?.templateId) {
         newErrors.template = 'Selecione um template aprovado para a campanha oficial';
       } else {
@@ -483,7 +482,6 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
   const toggleChannel = (channelId: string) => {
     const isRemoving = formData.channelIds.includes(channelId);
     if (!isRemoving && formData.channelIds.length > 0) {
-      // A Meta exige template em canais oficiais — não misturamos tipos na mesma campanha.
       const addingOfficial = officialChannelIds.has(channelId);
       const hasOfficial = formData.channelIds.some((id) => officialChannelIds.has(id));
       const hasUnofficial = formData.channelIds.some((id) => !officialChannelIds.has(id));
@@ -564,7 +562,6 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     () => formData.channelIds.some((id) => officialChannelIds.has(id)),
     [formData.channelIds, officialChannelIds],
   );
-  // Templates disponíveis para os canais oficiais selecionados.
   const availableTemplates = useMemo(() => {
     if (!isOfficialCampaign) return [];
     const selectedSet = new Set(formData.channelIds);
@@ -599,7 +596,6 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     }
     return parts.join('\n\n');
   }, [selectedTemplate, formData.messageMeta?.templateVariables]);
-  // Estimativa de custo (modelo PMP da Meta) sempre que template/destinatários mudam.
   useEffect(() => {
     if (!isOfficialCampaign || !selectedTemplate) {
       setCostEstimate(null);
