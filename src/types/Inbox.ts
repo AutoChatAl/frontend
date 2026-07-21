@@ -36,8 +36,13 @@ export interface InboxMessage {
   sentByAi?: boolean;
   sentByAutomation?: boolean;
   deliveryStatus?: MessageDeliveryStatus;
+  replyToMessageId?: string | null;
+  replyToPreview?: string | null;
+  replyToDirection?: InboxDirection | null;
   readAt?: string | null;
   createdAt: string;
+  /** Somente no cliente: mensagem otimista aguardando confirmação do envio. */
+  pending?: boolean;
 }
 
 export interface InboxOutgoingMedia {

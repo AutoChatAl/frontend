@@ -25,18 +25,28 @@ class InboxService {
     return response.data.messages;
   }
 
-  public async sendMessage(conversationId: string, body: string, media?: InboxOutgoingMedia): Promise<InboxConversation> {
-    const payload: { body?: string; media?: InboxOutgoingMedia } = {};
+  public async sendMessage(
+    conversationId: string,
+    body: string,
+    media?: InboxOutgoingMedia,
+    replyToMessageId?: string,
+  ): Promise<{ conversation: InboxConversation; message: InboxMessage | null }> {
+    const payload: { body?: string; media?: InboxOutgoingMedia; replyToMessageId?: string } = {};
     if (body.trim()) payload.body = body.trim();
     if (media) payload.media = media;
-    const response = await apiClient.post<{ conversation: InboxConversation }>(
+    if (replyToMessageId) payload.replyToMessageId = replyToMessageId;
+    const response = await apiClient.post<{ conversation: InboxConversation; message?: InboxMessage | null }>(
       `/inbox/conversations/${conversationId}/messages`,
       payload,
     );
     if (!response.success || !response.data) {
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      if (reason === 'MESSAGE_LIMIT_REACHED') {
+        throw new Error('Limite de mensagens do plano atingido.');
+      }
       throw new Error('Não foi possível enviar a mensagem.');
     }
-    return response.data.conversation;
+    return { conversation: response.data.conversation, message: response.data.message ?? null };
   }
 
   public async markRead(conversationId: string): Promise<void> {

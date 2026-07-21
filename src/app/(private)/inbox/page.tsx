@@ -1,16 +1,17 @@
 'use client';
-import { Check, CheckCheck, FileText, Instagram, Mic, Paperclip, Search, Send, MessageCircle, Square } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
 import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
 
-import { useInbox } from './useInbox';
+import { messagePreview, useInbox } from './useInbox';
 
 function StatusTicks({ message }: { message: InboxMessage }) {
   if (message.direction !== 'OUT') return null;
+  if (message.pending) return <Clock size={13} className="text-indigo-200" />;
   const status = message.deliveryStatus ?? 'SENT';
   if (status === 'SENT') return <Check size={13} className="text-indigo-200" />;
   if (status === 'DELIVERED') return <CheckCheck size={13} className="text-indigo-200" />;
@@ -195,17 +196,39 @@ export default function InboxPage() {
 
   const [draft, setDraft] = useState('');
   const [recording, setRecording] = useState(false);
+  const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const messagesBoxRef = useRef<HTMLDivElement>(null);
+  // Gruda a rolagem na última mensagem; solta quando o usuário sobe para ler o histórico.
+  const stickToBottomRef = useRef(true);
+  // Espelho para o callback de gravação de áudio, que captura o estado no início da gravação.
+  const replyToRef = useRef<InboxMessage | null>(null);
+  replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+
+  useEffect(() => {
+    stickToBottomRef.current = true;
+    setReplyTo(null);
+  }, [selectedId]);
+
+  useEffect(() => {
+    const el = messagesBoxRef.current;
+    if (el && stickToBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, loadingMessages, selectedId]);
 
   const handleSend = async () => {
     const body = draft.trim();
     if (!body) return;
     try {
-      await sendMessage(body);
+      stickToBottomRef.current = true;
+      await sendMessage(body, undefined, replyTo);
       setDraft('');
+      setReplyTo(null);
     } catch {
       // erro tratado no hook
     }
@@ -216,6 +239,7 @@ export default function InboxPage() {
     e.target.value = '';
     if (!file) return;
     try {
+      stickToBottomRef.current = true;
       const base64 = await fileToBase64(file);
       const media: InboxOutgoingMedia = {
         mediaType: mediaTypeFromMime(file.type),
@@ -223,8 +247,9 @@ export default function InboxPage() {
         mimeType: file.type || 'application/octet-stream',
         fileName: file.name,
       };
-      await sendMessage(draft, media);
+      await sendMessage(draft, media, replyTo);
       setDraft('');
+      setReplyTo(null);
     } catch {
       // erro tratado no hook
     }
@@ -253,7 +278,10 @@ export default function InboxPage() {
           reader.readAsDataURL(blob);
         });
         const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-        await sendMessage('', { mediaType: 'audio', base64, mimeType, fileName: 'audio' }).catch(() => {});
+        stickToBottomRef.current = true;
+        await sendMessage('', { mediaType: 'audio', base64, mimeType, fileName: 'audio' }, replyToRef.current)
+          .then(() => setReplyTo(null))
+          .catch(() => {});
       };
       recorderRef.current = recorder;
       recorder.start();
@@ -270,7 +298,9 @@ export default function InboxPage() {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    // Altura = viewport − header (4rem) − padding vertical do main (p-4/sm:p-6),
+    // com teto para o chat não se esticar de ponta a ponta em telas altas.
+    <div className="flex h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] max-h-176 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
       {/* Lista de conversas */}
       <aside className="flex w-full max-w-sm shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="p-4 space-y-3 border-b border-slate-100 dark:border-slate-700">
@@ -351,37 +381,95 @@ export default function InboxPage() {
               {channelBadge(selectedConversation.channelType)}
             </header>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+            <div
+              ref={messagesBoxRef}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+              }}
+              className="flex-1 overflow-y-auto px-5 py-4 space-y-2"
+            >
               {loadingMessages ? (
                 <p className="text-sm text-slate-400">Carregando mensagens...</p>
               ) : (
-                messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'}`}
+                messages.map((m) => {
+                  const replyButton = !m.pending && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(m);
+                        textareaRef.current?.focus();
+                      }}
+                      className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                      title="Responder"
                     >
-                      {m.mediaType && (
-                        <div className="mb-1">
-                          <MediaContent message={m} />
-                        </div>
-                      )}
-                      {m.body && <p>{m.body}</p>}
-                      <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                        {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
-                        {formatTime(m.createdAt)}
-                        <StatusTicks message={m} />
-                      </span>
+                      <Reply size={14} />
+                    </button>
+                  );
+                  return (
+                    <div
+                      key={m.id}
+                      id={`msg-${m.id}`}
+                      className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {m.direction === 'OUT' && replyButton}
+                      <div
+                        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                      >
+                        {m.replyToPreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!m.replyToMessageId) return;
+                              document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }}
+                            className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+                          >
+                            <span className="block font-semibold">
+                              {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
+                            </span>
+                            <span className="block truncate">{m.replyToPreview}</span>
+                          </button>
+                        )}
+                        {m.mediaType && (
+                          <div className="mb-1">
+                            <MediaContent message={m} />
+                          </div>
+                        )}
+                        {m.body && <p>{m.body}</p>}
+                        <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                          {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                          {formatTime(m.createdAt)}
+                          <StatusTicks message={m} />
+                        </span>
+                      </div>
+                      {m.direction === 'IN' && replyButton}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
             <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
               {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
+              {replyTo && (
+                <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-indigo-500 bg-slate-50 dark:bg-slate-900 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                      Respondendo a {replyTo.direction === 'OUT' ? 'você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'contato')}
+                    </p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{messagePreview(replyTo)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTo(null)}
+                    className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    title="Cancelar resposta"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -409,6 +497,7 @@ export default function InboxPage() {
                   {recording ? <Square size={18} /> : <Mic size={18} />}
                 </button>
                 <textarea
+                  ref={textareaRef}
                   value={draft}
                   onChange={(e) => {
                     setDraft(e.target.value);
@@ -418,6 +507,9 @@ export default function InboxPage() {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       handleSend();
+                    }
+                    if (e.key === 'Escape' && replyTo) {
+                      setReplyTo(null);
                     }
                   }}
                   rows={1}
