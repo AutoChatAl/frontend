@@ -177,7 +177,7 @@ class SubscriptionService {
         name?: string;
         cpf?: string;
         phone?: string;
-    }): Promise<{
+    }, couponCode?: string): Promise<{
         success: boolean;
         requiresAction?: boolean;
         clientSecret?: string;
@@ -188,7 +188,7 @@ class SubscriptionService {
                 success: boolean;
                 requiresAction?: boolean;
                 clientSecret?: string;
-            }>('/subscription/subscribe', { planSlug, paymentMethodId, ...personal });
+            }>('/subscription/subscribe', { planSlug, paymentMethodId, ...personal, ...(couponCode ? { couponCode } : {}) });
       if (res.success && res.data)
         return res.data as {
                     success: boolean;

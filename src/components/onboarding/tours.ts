@@ -80,15 +80,6 @@ export const TOURS: TourConfig[] = [
         placement: 'right',
       },
       {
-        id: 'dashboard:campaigns-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-campaigns"]',
-        title: 'Dispare mensagens em massa',
-        description:
-          'Em Campanhas você cria envios em lote para listas de contatos ou grupos, com texto, mídia, áudio e variáveis personalizadas.',
-        placement: 'right',
-      },
-      {
         id: 'dashboard:contacts-nav',
         tourId: 'dashboard',
         selector: '[data-tour="sidebar-contacts"]',
@@ -186,34 +177,6 @@ export const TOURS: TourConfig[] = [
         title: 'Adicione uma nova instância',
         description:
           'Clique para conectar uma nova conta. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
-        placement: 'left',
-      },
-    ],
-  },
-
-  {
-    id: 'campaigns',
-    pathname: '/campaigns',
-    label: 'Campanhas',
-    permission: 'campaigns',
-    steps: [
-      {
-        id: 'campaigns:intro',
-        tourId: 'campaigns',
-        selector: null,
-        title: 'Disparos em massa',
-        description:
-          'Campanhas é o coração do disparo. Crie uma vez, agende, e a plataforma envia para todos os contatos do grupo ou da lista escolhida.',
-        placement: 'center',
-        allowMissingTarget: true,
-      },
-      {
-        id: 'campaigns:new',
-        tourId: 'campaigns',
-        selector: '[data-tour="campaigns-new"]',
-        title: 'Crie sua primeira campanha',
-        description:
-          'Aqui você escolhe o canal, o público (grupo ou lista), monta a mensagem com texto/mídia/áudio e define se dispara agora ou agenda para depois.',
         placement: 'left',
       },
     ],

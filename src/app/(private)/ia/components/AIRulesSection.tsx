@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 
 import Card from '@/components/Card';
 import type { AiTriggerSettings } from '@/types/AI';
+import { LOCKED_FEATURES } from '@lib/featureFlags';
 
 import AIRuleToggle from './AIRuleToggle';
 
@@ -49,7 +50,7 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
     </p>
 
     <div className="mb-3">
-      {triggerOptions.map((trigger) => (<AIRuleToggle key={trigger.key} title={trigger.title} description={trigger.description} enabled={triggerSettings[trigger.key]} onToggle={() => onToggleTrigger(trigger.key)}/>))}
+      {triggerOptions.map((trigger) => (<AIRuleToggle key={trigger.key} title={trigger.title} description={trigger.description} enabled={triggerSettings[trigger.key]} onToggle={() => onToggleTrigger(trigger.key)} disabled={LOCKED_FEATURES.iaTriggers}/>))}
     </div>
 
     <div className="mb-4 border-t border-slate-200 dark:border-slate-700 pt-4">
