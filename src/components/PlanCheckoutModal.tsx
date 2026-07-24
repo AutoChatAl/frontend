@@ -1,10 +1,12 @@
 'use client';
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { ArrowLeft, CheckCircle2, CreditCard, Lock, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CreditCard, Lock, TicketPercent, User, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { couponService } from '@/services/coupon.service';
 import { subscriptionService } from '@/services/subscription.service';
+import type { CouponPreview } from '@/types/Coupon';
 import type { Plan } from '@/types/Subscription';
 
 import Button from './Button';
@@ -147,7 +149,41 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(null);
   const { toasts, addToast, removeToast } = useToast();
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code)
+      return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const preview = await couponService.validate(code, plan.slug);
+      setAppliedCoupon(preview);
+      setCouponInput('');
+    }
+    catch (err) {
+      setAppliedCoupon(null);
+      setCouponError(err instanceof Error ? err.message : 'Cupom inválido.');
+    }
+    finally {
+      setCouponLoading(false);
+    }
+  };
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+  };
+  const payLabel = appliedCoupon
+    ? appliedCoupon.type === 'recurring'
+      ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}/mês`
+      : appliedCoupon.type === 'repeating' && (appliedCoupon.durationInMonths ?? 0) > 1
+        ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}/mês nos primeiros ${appliedCoupon.durationInMonths} meses`
+        : `Pagar ${formatBRL(appliedCoupon.discountedCents)} no 1º mês`
+    : `Pagar ${formatBRL(plan.priceCents)}/mês`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements)
@@ -175,7 +211,7 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
             error?: string;
         } | null = null;
     try {
-      result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal);
+      result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal, appliedCoupon?.code);
     }
     catch (err: unknown) {
       addToast('error', err instanceof Error ? err.message : 'Pagamento recusado.');
@@ -248,9 +284,44 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
       </div>
     </div>
 
+    <div>
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          Cupom de desconto <span className="text-slate-400 font-normal">(opcional)</span>
+      </label>
+      {appliedCoupon ? (<div className="flex items-start justify-between gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+        <div className="flex items-start gap-2 min-w-0">
+          <TicketPercent size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0"/>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{appliedCoupon.code}</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">{appliedCoupon.label}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <span className="line-through">{formatBRL(appliedCoupon.originalCents)}</span>{' '}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">{formatBRL(appliedCoupon.discountedCents)}</span>
+              {appliedCoupon.type === 'recurring'
+                ? '/mês'
+                : appliedCoupon.type === 'repeating' && (appliedCoupon.durationInMonths ?? 0) > 1
+                  ? `/mês nos primeiros ${appliedCoupon.durationInMonths} meses`
+                  : ' no 1º mês'}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={handleRemoveCoupon} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors shrink-0" title="Remover cupom">
+          <X size={16}/>
+        </button>
+      </div>) : (<>
+        <div className="flex gap-2">
+          <input type="text" value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }} placeholder="Ex: SYNQ20" className="flex-1 min-w-0 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 uppercase focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"/>
+          <Button type="button" variant="secondary" onClick={handleApplyCoupon} disabled={couponLoading || !couponInput.trim()}>
+            {couponLoading ? 'Validando...' : 'Aplicar'}
+          </Button>
+        </div>
+        {couponError && <p className="text-xs text-red-500 mt-1">{couponError}</p>}
+      </>)}
+    </div>
+
     <Button type="submit" className="w-full justify-center" disabled={loading || !stripe}>
       <CreditCard size={16} className="mr-1"/>
-      {loading ? 'Processando...' : `Pagar ${formatBRL(plan.priceCents)}/mês`}
+      {loading ? 'Processando...' : payLabel}
     </Button>
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </form>);
