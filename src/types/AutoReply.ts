@@ -2,7 +2,7 @@ export interface AutoReply {
     id: string;
     workspaceId: string;
     channelId: string;
-    channelType: 'WHATSAPP' | 'INSTAGRAM';
+    channelType: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     keyword: string;
     matchMode: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive: boolean;
@@ -25,7 +25,7 @@ export interface AutoReply {
 export type ReplyType = 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'DOCUMENT' | 'TEXT_AND_DOCUMENT' | 'DOCUMENT_AND_AUDIO';
 export interface CreateAutoReplyInput {
     channelId: string;
-    channelType: 'WHATSAPP' | 'INSTAGRAM';
+    channelType: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     keyword: string;
     matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive?: boolean;
@@ -45,7 +45,7 @@ export interface CreateAutoReplyInput {
 }
 export interface UpdateAutoReplyInput {
     channelId?: string;
-    channelType?: 'WHATSAPP' | 'INSTAGRAM';
+    channelType?: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     keyword?: string;
     matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive?: boolean;

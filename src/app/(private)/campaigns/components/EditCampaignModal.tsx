@@ -1,8 +1,9 @@
 'use client';
-import { AlertCircle, Calendar, CheckCircle2, Clock, ExternalLink, FileText, Image as ImageIcon, Loader2, MessageCircle, Repeat, Save, Search, Smartphone, Trash2, Upload, Users, X } from 'lucide-react';
+import { AlertCircle, BadgeCheck, Calendar, CheckCircle2, CircleDollarSign, Clock, ExternalLink, FileText, Image as ImageIcon, Loader2, MessageCircle, Repeat, Save, Search, Smartphone, Trash2, Upload, Users, X } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 import DatePicker from '@/components/DatePicker';
+import Dropdown from '@/components/Dropdown';
 import Modal from '@/components/Modal';
 import WhatsAppEditor from '@/components/WhatsAppEditor';
 import WhatsAppPreview from '@/components/WhatsAppPreview';
@@ -10,15 +11,18 @@ import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
+import { templateService } from '@/services/template.service';
+import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { Campaign, UpdateCampaignInput } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
+import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 
 interface Channel {
     id: string;
     name: string;
-    type: 'WHATSAPP' | 'INSTAGRAM';
+    type: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     status: string;
 }
 interface EditCampaignModalProps {
@@ -124,12 +128,16 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     messageType: 'TEXT',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [costEstimate, setCostEstimate] = useState<WaCampaignEstimate | null>(null);
   const loadInitialData = useCallback(async () => {
     try {
       setLoadingData(true);
       setError(null);
-      const [whatsappChannels, groupsList] = await Promise.all([
+      const [whatsappChannels, officialChannels, approvedTemplates, groupsList] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
+        whatsappOfficialService.getInstances().catch(() => []),
+        templateService.list().catch(() => []),
         groupService.listGroups().catch(() => []),
       ]);
       const allContacts: Contact[] = [];
@@ -148,12 +156,21 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
           break;
         skip += PAGE_SIZE;
       }
-      const allChannels: Channel[] = whatsappChannels.map((ch: WhatsAppInstance) => ({
-        id: ch.id,
-        name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
-        type: 'WHATSAPP' as const,
-        status: ch.status,
-      }));
+      const allChannels: Channel[] = [
+        ...whatsappChannels.map((ch: WhatsAppInstance) => ({
+          id: ch.id,
+          name: ch.name || ch.whatsapp?.phoneNumber || 'WhatsApp',
+          type: 'WHATSAPP' as const,
+          status: ch.status,
+        })),
+        ...officialChannels.map((ch) => ({
+          id: ch.id,
+          name: ch.whatsappOfficial.verifiedName || ch.whatsappOfficial.displayPhoneNumber || ch.name,
+          type: 'WHATSAPP_OFFICIAL' as const,
+          status: ch.status,
+        })),
+      ];
+      setTemplates(approvedTemplates.filter((t) => t.status === 'APPROVED'));
       setChannels(allChannels);
       setContacts(allContacts);
       const waChannelIds = new Set(allChannels.map((ch) => ch.id));
@@ -236,12 +253,24 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim() || formData.name.length < 2)
       newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
-    if (!formData.message.trim() && !(formData.messageMeta as {
-            imageBase64?: string;
-        } | undefined)?.imageBase64)
-      newErrors.message = 'Mensagem ou imagem é obrigatória';
-    if (formData.message.length > 2000)
-      newErrors.message = 'Mensagem não pode ter mais de 2000 caracteres';
+    if (isOfficialCampaign) {
+      if (!formData.messageMeta?.templateId) {
+        newErrors.template = 'Selecione um template aprovado para a campanha oficial';
+      } else {
+        const vars = formData.messageMeta?.templateVariables ?? {};
+        const missing = templateVariableNames.filter((name) => !vars[name]?.trim());
+        if (missing.length > 0) {
+          newErrors.template = `Preencha as variáveis do template: ${missing.map((v) => `{{${v}}}`).join(', ')}`;
+        }
+      }
+    } else {
+      if (!formData.message.trim() && !(formData.messageMeta as {
+              imageBase64?: string;
+          } | undefined)?.imageBase64)
+        newErrors.message = 'Mensagem ou imagem é obrigatória';
+      if (formData.message.length > 2000)
+        newErrors.message = 'Mensagem não pode ter mais de 2000 caracteres';
+    }
     if (formData.sourceType === 'CHANNEL') {
       if (formData.channelIds.length === 0)
         newErrors.channels = 'Selecione pelo menos um canal';
@@ -268,12 +297,12 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       setError(null);
       const payload: UpdateCampaignInput = {
         name: formData.name,
-        message: formData.message,
+        message: isOfficialCampaign ? '' : formData.message,
         sourceType: formData.sourceType,
         channelIds: formData.channelIds,
         contactIds: formData.contactIds,
         status: formData.status ?? 'ACTIVE',
-        messageType: formData.messageType ?? 'TEXT',
+        messageType: isOfficialCampaign ? 'WHATSAPP_TEMPLATE' : (formData.messageType === 'WHATSAPP_TEMPLATE' ? 'TEXT' : formData.messageType ?? 'TEXT'),
       };
       if (formData.description?.trim())
         payload.description = formData.description;
@@ -291,9 +320,23 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         payload.executionHour = formData.executionHour;
       if (formData.scheduledDate)
         payload.scheduledDate = formData.scheduledDate;
-      const meta = formData.messageMeta as Record<string, unknown> | undefined;
-      if (meta && Object.keys(meta).length > 0) {
-        payload.messageMeta = meta as NonNullable<UpdateCampaignInput['messageMeta']>;
+      if (isOfficialCampaign) {
+        payload.messageMeta = {
+          templateId: formData.messageMeta?.templateId ?? '',
+          templateVariables: formData.messageMeta?.templateVariables ?? {},
+        };
+        delete payload.linkUrl;
+        delete payload.linkLabel;
+      } else {
+        const meta = { ...(formData.messageMeta ?? {}) } as Record<string, unknown>;
+        delete meta.templateId;
+        delete meta.templateName;
+        delete meta.templateLanguage;
+        delete meta.templateVariables;
+        delete meta.headerMediaUrl;
+        if (Object.keys(meta).length > 0) {
+          payload.messageMeta = meta as NonNullable<UpdateCampaignInput['messageMeta']>;
+        }
       }
       await campaignService.updateCampaign(campaign.id, payload);
       onSuccess();
@@ -438,6 +481,15 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
   };
   const toggleChannel = (channelId: string) => {
     const isRemoving = formData.channelIds.includes(channelId);
+    if (!isRemoving && formData.channelIds.length > 0) {
+      const addingOfficial = officialChannelIds.has(channelId);
+      const hasOfficial = formData.channelIds.some((id) => officialChannelIds.has(id));
+      const hasUnofficial = formData.channelIds.some((id) => !officialChannelIds.has(id));
+      if ((addingOfficial && hasUnofficial) || (!addingOfficial && hasOfficial)) {
+        setError('Não é possível misturar canais oficiais e não oficiais na mesma campanha.');
+        return;
+      }
+    }
     setFormData((prev) => {
       const newChannelIds = isRemoving
         ? prev.channelIds.filter((id) => id !== channelId)
@@ -502,6 +554,81 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     });
   }, [channelContacts, contactFilter, formData.contactIds]);
   const selectedGroup = useMemo(() => groups.find((g) => g.id === formData.groupId), [groups, formData.groupId]);
+  const officialChannelIds = useMemo(
+    () => new Set(channels.filter((c) => c.type === 'WHATSAPP_OFFICIAL').map((c) => c.id)),
+    [channels],
+  );
+  const isOfficialCampaign = useMemo(
+    () => formData.channelIds.some((id) => officialChannelIds.has(id)),
+    [formData.channelIds, officialChannelIds],
+  );
+  const availableTemplates = useMemo(() => {
+    if (!isOfficialCampaign) return [];
+    const selectedSet = new Set(formData.channelIds);
+    return templates.filter((t) => selectedSet.has(t.channelId));
+  }, [templates, formData.channelIds, isOfficialCampaign]);
+  const selectedTemplate = useMemo(
+    () => availableTemplates.find((t) => t.id === formData.messageMeta?.templateId) ?? null,
+    [availableTemplates, formData.messageMeta?.templateId],
+  );
+  const templateVariableNames = useMemo(() => {
+    if (!selectedTemplate) return [];
+    const names: string[] = [];
+    for (const component of selectedTemplate.components) {
+      if ((component.type === 'HEADER' && component.format === 'TEXT') || component.type === 'BODY') {
+        for (const match of (component.text ?? '').matchAll(/\{\{\s*([\w]+)\s*\}\}/g)) {
+          const [, name] = match;
+          if (name && !names.includes(name)) names.push(name);
+        }
+      }
+    }
+    return names;
+  }, [selectedTemplate]);
+  const templatePreviewMessage = useMemo(() => {
+    if (!selectedTemplate) return '';
+    const vars = formData.messageMeta?.templateVariables ?? {};
+    const applyVars = (text: string) => text.replace(/\{\{\s*([\w]+)\s*\}\}/g, (_m, key: string) => vars[key] || `[${key}]`);
+    const parts: string[] = [];
+    for (const component of selectedTemplate.components) {
+      if (component.type === 'HEADER' && component.format === 'TEXT' && component.text) parts.push(`*${applyVars(component.text)}*`);
+      if (component.type === 'BODY' && component.text) parts.push(applyVars(component.text));
+      if (component.type === 'FOOTER' && component.text) parts.push(`_${component.text}_`);
+    }
+    return parts.join('\n\n');
+  }, [selectedTemplate, formData.messageMeta?.templateVariables]);
+  useEffect(() => {
+    if (!isOfficialCampaign || !selectedTemplate) {
+      setCostEstimate(null);
+      return;
+    }
+    const contactCount = formData.sourceType === 'CHANNEL' ? formData.contactIds.length : (selectedGroup?.memberCount ?? 0);
+    let cancelled = false;
+    campaignService.estimateOfficialCost({ templateId: selectedTemplate.id, contactCount })
+      .then((estimate) => { if (!cancelled) setCostEstimate(estimate); })
+      .catch(() => { if (!cancelled) setCostEstimate(null); });
+    return () => { cancelled = true; };
+  }, [isOfficialCampaign, selectedTemplate, formData.contactIds.length, formData.sourceType, selectedGroup]);
+  const selectTemplate = (templateId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      messageType: 'WHATSAPP_TEMPLATE',
+      messageMeta: {
+        ...(prev.messageMeta ?? {}),
+        templateId,
+        templateVariables: {},
+      },
+    }));
+    clearFieldError('template');
+  };
+  const setTemplateVariable = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      messageMeta: {
+        ...(prev.messageMeta ?? {}),
+        templateVariables: { ...(prev.messageMeta?.templateVariables ?? {}), [name]: value },
+      },
+    }));
+  };
   return (<Modal isOpen={isOpen} onClose={handleClose} title="Editar Campanha" size="lg">
     {loadingData ? (<div className="flex flex-col items-center justify-center py-16 gap-3">
       <Loader2 className="animate-spin text-indigo-500" size={28}/>
@@ -541,7 +668,69 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
 
       <section>
         <SectionHeader step={2} label="Mensagem"/>
-        <div className="space-y-4">
+        {isOfficialCampaign ? (<div className="space-y-4">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+            <BadgeCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"/>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              Campanha pela <strong>API Oficial</strong>: a Meta exige um template aprovado para iniciar conversas.
+              A cobrança é por mensagem entregue, conforme a categoria do template.
+            </p>
+          </div>
+
+          <Dropdown
+            label="Template aprovado"
+            options={availableTemplates.map((t) => ({
+              value: t.id,
+              label: `${t.name} · ${t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utilidade' : 'Autenticação'} (${t.language})`,
+            }))}
+            value={formData.messageMeta?.templateId ?? ''}
+            onChange={selectTemplate}
+            placeholder={availableTemplates.length === 0 ? 'Nenhum template aprovado para este canal' : 'Selecione um template...'}
+          />
+          {availableTemplates.length === 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Nenhum template aprovado para o canal selecionado. Crie um na área <strong>Templates</strong> e aguarde a aprovação da Meta.
+            </p>
+          )}
+          <FieldError msg={errors.template}/>
+
+          {selectedTemplate && templateVariableNames.length > 0 && (<div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Variáveis do template</p>
+            {templateVariableNames.map((name) => (<div key={name}>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                {`Valor para {{${name}}}`}
+              </label>
+              <input
+                type="text"
+                value={formData.messageMeta?.templateVariables?.[name] ?? ''}
+                onChange={(e) => setTemplateVariable(name, e.target.value)}
+                className={inputCls(false)}
+                placeholder={'Ex.: {{nome}} para usar o nome do contato'}
+              />
+            </div>))}
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {'Dica: use {{nome}} como valor para substituir automaticamente pelo nome de cada contato.'}
+            </p>
+          </div>)}
+
+          {selectedTemplate && templatePreviewMessage && (<div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Preview no WhatsApp
+            </label>
+            <WhatsAppPreview message={templatePreviewMessage}/>
+          </div>)}
+
+          {costEstimate && (<div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+            <CircleDollarSign size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
+            <div className="text-sm">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">
+                Custo estimado: {costEstimate.totalCostFormatted}
+                <span className="font-normal text-amber-700 dark:text-amber-400"> ({costEstimate.contactCount} destinatário{costEstimate.contactCount !== 1 ? 's' : ''} × {costEstimate.unitCostFormatted})</span>
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{costEstimate.note}</p>
+            </div>
+          </div>)}
+        </div>) : (<div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Conteúdo <span className="text-red-500">*</span>
@@ -630,7 +819,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                       Documento será enviado junto com a campanha.
             </div>)}
           </div>)}
-        </div>
+        </div>)}
       </section>
 
       <section>
@@ -670,14 +859,15 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
             {channels.map((channel) => {
               const isSelected = formData.channelIds.includes(channel.id);
               const isWhatsApp = channel.type === 'WHATSAPP';
+              const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
               const chContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id));
               return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
                   ? 'bg-green-100 dark:bg-green-900/30'
                   : 'bg-pink-100 dark:bg-pink-900/30'}`}>
-                  {isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
+                  {isOfficial ? (<BadgeCheck size={18} className="text-emerald-600 dark:text-emerald-400"/>) : isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -685,10 +875,10 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
                     {channel.name}
                   </p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp || isOfficial
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
                       : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'}`}>
-                      {isWhatsApp ? 'WhatsApp' : 'Instagram'}
+                      {isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
                     </span>
                     <span className="text-xs text-slate-400 dark:text-slate-500">
                       {chContacts.length} contato{chContacts.length !== 1 ? 's' : ''}

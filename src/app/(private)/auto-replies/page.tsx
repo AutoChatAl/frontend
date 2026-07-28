@@ -120,6 +120,7 @@ export default function AutoRepliesPage() {
     }}/>) : (<div className="grid gap-4">
       {rules.map((rule) => {
         const isWA = rule.channelType === 'WHATSAPP';
+        const isOfficial = rule.channelType === 'WHATSAPP_OFFICIAL';
         return (<div key={rule.id} className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-5 transition-all ${!rule.enabled ? 'opacity-60' : ''}`}>
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
             <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
@@ -129,7 +130,7 @@ export default function AutoRepliesPage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
-                  <Badge type={isWA ? 'whatsapp' : 'instagram'} text={isWA ? 'WhatsApp' : 'Instagram'} pill/>
+                  <Badge type={isWA || isOfficial ? 'whatsapp' : 'instagram'} text={isWA ? 'WhatsApp' : isOfficial ? 'API Oficial' : 'Instagram'} pill/>
                   <Badge type="neutral" text={MATCH_MODE_LABELS[rule.matchMode] || rule.matchMode} pill/>
                   {rule.caseSensitive && (<Badge type="warning" text="Aa" pill/>)}
                 </div>
