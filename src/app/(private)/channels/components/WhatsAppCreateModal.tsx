@@ -1,14 +1,15 @@
 'use client';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, KeyRound, Loader2, QrCode } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
-import type { WhatsappConnectResponse } from '@/types/Channel';
+import type { WhatsappConnectResponse, WhatsAppStatusResponse } from '@/types/Channel';
+import { extractPhoneDigits, formatPhoneNumber } from '@/utils/phone';
 
 interface WhatsAppCreateModalProps {
     isOpen: boolean;
@@ -22,10 +23,35 @@ interface WhatsAppCreateModalProps {
         };
     }>;
     onConnect: (channelId: string, phone?: string) => Promise<WhatsappConnectResponse>;
+    onDelete: (channelId: string) => Promise<void>;
+    onCheckStatus: (channelId: string) => Promise<WhatsAppStatusResponse>;
 }
-type ModalState = 'form' | 'creating' | 'connecting' | 'connected';
-export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConnect }: WhatsAppCreateModalProps) {
+type ModalState = 'form' | 'phone' | 'creating' | 'connecting' | 'connected';
+type ConnectionMethod = 'qr' | 'code';
+
+const METHOD_OPTIONS: Array<{
+    value: ConnectionMethod;
+    icon: ReactNode;
+    title: string;
+    description: string;
+}> = [
+  {
+    value: 'qr',
+    icon: <QrCode size={20}/>,
+    title: 'Conectar via QR Code',
+    description: 'Escaneie um código com a câmera do WhatsApp.',
+  },
+  {
+    value: 'code',
+    icon: <KeyRound size={20}/>,
+    title: 'Conectar via código',
+    description: 'Receba um código para digitar no seu WhatsApp.',
+  },
+];
+
+export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConnect, onDelete, onCheckStatus }: WhatsAppCreateModalProps) {
   const [state, setState] = useState<ModalState>('form');
+  const [method, setMethod] = useState<ConnectionMethod>('qr');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -33,44 +59,98 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
   const { toasts, addToast, removeToast } = useToast();
   const createdChannelId = useRef<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const connectedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
+  const onDeleteRef = useRef(onDelete);
+  const onCheckStatusRef = useRef(onCheckStatus);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onDeleteRef.current = onDelete;
+    onCheckStatusRef.current = onCheckStatus;
+  });
+  const rollbackInstance = (channelId: string) => {
+    onDeleteRef.current(channelId).catch(() => {
+    });
+  };
+  const markConnected = useCallback(() => {
+    if (connectedRef.current)
+      return;
+    connectedRef.current = true;
+    setState('connected');
+    closeTimerRef.current = setTimeout(() => onCloseRef.current(), 5000);
+  }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (closeTimerRef.current)
+        clearTimeout(closeTimerRef.current);
+      if (createdChannelId.current && !connectedRef.current) {
+        onDeleteRef.current(createdChannelId.current).catch(() => {
+        });
+        createdChannelId.current = null;
+      }
+    };
+  }, []);
   useEffect(() => {
     if (!isOpen) {
       esRef.current?.close();
       esRef.current = null;
       setTimeout(() => {
         setState('form');
+        setMethod('qr');
         setName('');
         setPhone('');
         setQrCode(null);
         setPairingCode(null);
         createdChannelId.current = null;
+        connectedRef.current = false;
       }, 300);
     }
   }, [isOpen]);
   useEffect(() => {
     if (state !== 'connecting' || !createdChannelId.current)
       return;
+    const channelId = createdChannelId.current;
+    let active = true;
+    let polling = false;
     const token = authService.getToken();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const url = `${apiUrl}/channels/whatsapp/${createdChannelId.current}/events?token=${encodeURIComponent(token || '')}`;
+    const url = `${apiUrl}/channels/whatsapp/${channelId}/events?token=${encodeURIComponent(token || '')}`;
     const es = new EventSource(url);
     esRef.current = es;
     es.addEventListener('connected', () => {
-      setState('connected');
       es.close();
-      setTimeout(() => onClose(), 2000);
+      markConnected();
     });
+    const poll = setInterval(async () => {
+      if (!active || polling || connectedRef.current)
+        return;
+      polling = true;
+      try {
+        const res = await onCheckStatusRef.current(channelId);
+        const isConnected = res.ok && (res.connected === true || res.status?.state === 'open' || !!res.status?.jid);
+        if (isConnected)
+          markConnected();
+      }
+      catch {
+        // Ignora — tenta novamente no próximo ciclo.
+      }
+      finally {
+        polling = false;
+      }
+    }, 3000);
     return () => {
+      active = false;
       es.close();
       esRef.current = null;
+      clearInterval(poll);
     };
-  }, [state, onClose]);
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      addToast('error', 'Por favor, insira um nome para a instância');
-      return;
-    }
+  }, [state, markConnected]);
+  const startConnection = async (phoneNumber?: string) => {
+    const fallbackState: ModalState = phoneNumber ? 'phone' : 'form';
     try {
       setState('creating');
       const response = await onCreate({
@@ -78,8 +158,12 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
         autoConnect: false,
       });
       createdChannelId.current = response.channel.id;
+      if (!mountedRef.current) {
+        createdChannelId.current = null;
+        rollbackInstance(response.channel.id);
+        return;
+      }
       setState('connecting');
-      const phoneNumber = phone.trim() || undefined;
       const connectResponse = await onConnect(response.channel.id, phoneNumber);
       if (connectResponse.ok && connectResponse.result?.raw?.instance) {
         const { instance } = connectResponse.result.raw;
@@ -89,33 +173,69 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
         setPairingCode(pair);
         const isConnected = instance.status === 'open' || connectResponse.result.raw.connected === true;
         if (isConnected) {
-          setState('connected');
+          markConnected();
         }
       }
       else {
         addToast('error', 'Erro ao obter código de conexão');
-        setState('form');
+        setState(fallbackState);
       }
     }
     catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Ocorreu um erro inesperado, tente novamente mais tarde.');
-      setState('form');
+      setState(fallbackState);
     }
+  };
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      addToast('error', 'Por favor, insira um nome para a instância');
+      return;
+    }
+    if (method === 'qr') {
+      void startConnection();
+    }
+    else {
+      setState('phone');
+    }
+  };
+  const handlePhoneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone) {
+      addToast('error', 'Por favor, insira o número do WhatsApp');
+      return;
+    }
+    if (phone.length < 12) {
+      addToast('error', 'Informe o número completo com código do país e DDD.');
+      return;
+    }
+    void startConnection(phone);
   };
   const renderContent = () => {
     switch (state) {
     case 'form':
-      return (<form onSubmit={handleSubmit} className="space-y-5">
+      return (<form onSubmit={handleFormSubmit} className="space-y-5">
         <Input id="name" label="Nome da Instância *" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Atendimento Principal" required/>
 
-        <div>
-          <Input id="phone" label="Número do WhatsApp (opcional)" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: 5511999999999"/>
-          <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              {phone ? '📱 Será gerado um código de pareamento numérico' : '📸 Será gerado um QR Code para escanear'}
-            </p>
-          </div>
-        </div>
+        <fieldset className="space-y-3">
+          <legend className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Como deseja conectar?</legend>
+          {METHOD_OPTIONS.map((opt) => {
+            const selected = method === opt.value;
+            return (<label key={opt.value} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${selected
+              ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20'
+              : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}>
+              <input type="radio" name="connection-method" value={opt.value} checked={selected} onChange={() => setMethod(opt.value)} className="sr-only"/>
+              <span className={`shrink-0 mt-0.5 ${selected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>{opt.icon}</span>
+              <span className="flex-1">
+                <span className="block text-sm font-semibold text-slate-900 dark:text-white">{opt.title}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.description}</span>
+              </span>
+              <span className={`shrink-0 mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${selected ? 'border-indigo-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                {selected && <span className="w-2 h-2 rounded-full bg-indigo-500"/>}
+              </span>
+            </label>);
+          })}
+        </fieldset>
 
         <ToastContainer toasts={toasts} onRemove={removeToast}/>
         <div className="flex gap-3 pt-6">
@@ -123,7 +243,27 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
                 Cancelar
           </Button>
           <Button type="submit" variant="primary" className="flex-1 justify-center">
-                Criar Instância
+            {method === 'qr' ? 'Gerar QR Code' : 'Continuar'}
+          </Button>
+        </div>
+      </form>);
+    case 'phone':
+      return (<form onSubmit={handlePhoneSubmit} className="space-y-5">
+        <Input id="phone" label="Número do WhatsApp *" type="tel" inputMode="numeric" value={formatPhoneNumber(phone)} onChange={(e) => setPhone(extractPhoneDigits(e.target.value))} placeholder="Ex: +55 (11) 99999-9999" hint="Inclua o código do país (DDI) e o DDD." required/>
+
+        <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20">
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            🔑 Vamos gerar um código de pareamento para você digitar no app do WhatsApp.
+          </p>
+        </div>
+
+        <ToastContainer toasts={toasts} onRemove={removeToast}/>
+        <div className="flex gap-3 pt-6">
+          <Button type="button" onClick={() => setState('form')} variant="secondary" icon={<ArrowLeft size={16}/>} className="justify-center">
+                Voltar
+          </Button>
+          <Button type="submit" variant="primary" className="flex-1 justify-center">
+                Gerar código
           </Button>
         </div>
       </form>);
@@ -231,6 +371,8 @@ export default function WhatsAppCreateModal({ isOpen, onClose, onCreate, onConne
     switch (state) {
     case 'form':
       return 'Nova Instância WhatsApp';
+    case 'phone':
+      return 'Conectar via código';
     case 'creating':
       return 'Criando Instância';
     case 'connecting':

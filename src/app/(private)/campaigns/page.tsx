@@ -1,5 +1,6 @@
 'use client';
 import { AlertCircle, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -15,6 +16,7 @@ import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { campaignService } from '@/services/campaign.service';
 import { type Campaign } from '@/types/Campaign';
+import { LOCKED_FEATURES } from '@lib/featureFlags';
 
 import { columns } from './components/CampaignsColumns';
 import CreateCampaignModal from './components/CreateCampaignModal';
@@ -120,6 +122,24 @@ function DeleteConfirmModal({ isOpen, campaignName, loading, onConfirm, onCancel
   </div>);
 }
 export default function CampaignsPage() {
+  const router = useRouter();
+  // Campanhas ainda não é a versão oficial — bloqueado temporariamente.
+  // Enquanto LOCKED_FEATURES.campaigns for true, redirecionamos para o dashboard.
+  // Para reativar, mude a flag em @lib/featureFlags para false.
+  useEffect(() => {
+    if (LOCKED_FEATURES.campaigns) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
+
+  if (LOCKED_FEATURES.campaigns) {
+    return <PageLoader message="Redirecionando..."/>;
+  }
+
+  return <CampaignsPageContent/>;
+}
+
+function CampaignsPageContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,9 +1,9 @@
 'use client';
-import { Bot, Menu, Sparkles, LogOut, X } from 'lucide-react';
+import { Bot, Menu, Sparkles, LogOut, X, ChevronDown, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useSidebar, type MenuItem } from '@/contexts/SidebarContext';
+import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
@@ -20,6 +20,7 @@ interface SidebarItemProps {
     collapsed: boolean;
     badgeCount?: number | undefined;
     tourId?: string;
+    locked?: boolean | undefined;
 }
 interface SidebarProps {
     brandName?: string;
@@ -27,25 +28,60 @@ interface SidebarProps {
     userRole?: string;
     userInitials?: string;
 }
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId }: SidebarItemProps) => {
-  return (<button onClick={onClick} {...(tourId ? { 'data-tour': tourId } : {})} className={`
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked }: SidebarItemProps) => {
+  return (<button onClick={locked ? undefined : onClick} aria-disabled={locked || undefined} title={locked ? 'Em breve — indisponível' : undefined} {...(tourId ? { 'data-tour': tourId } : {})} className={`
         flex items-center gap-3 w-full px-3 py-3 rounded-lg transition-all duration-200 relative
-        ${active
-      ? 'bg-indigo-100/65 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 shadow-sm'
-      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 '}
+        ${locked
+      ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed'
+      : active
+        ? 'bg-indigo-100/65 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 shadow-sm'
+        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 '}
         ${collapsed ? 'justify-center' : ''}
       `}>
     <div className="flex items-center gap-3 w-full">
       <Icon size={20} className="shrink-0"/>
       {!collapsed && (<>
-        <span className={`text-sm truncate ${active ? 'font-semibold' : 'font-medium'}`}>{text}</span>
-        {!!badgeCount && badgeCount > 0 && (<span className="ml-auto mr-2 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
-          {badgeCount > 99 ? '99+' : badgeCount}
-        </span>)}
-        {active && (<div className={`${badgeCount && badgeCount > 0 ? '' : 'ml-auto'} w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0`}/>)}
+        <span className={`text-sm truncate ${active && !locked ? 'font-semibold' : 'font-medium'}`}>{text}</span>
+        {locked
+          ? (<Lock size={14} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500"/>)
+          : (<>
+            {!!badgeCount && badgeCount > 0 && (<span className="ml-auto mr-2 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </span>)}
+            {active && (<div className={`${badgeCount && badgeCount > 0 ? '' : 'ml-auto'} w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0`}/>)}
+          </>)}
       </>)}
     </div>
   </button>);
+};
+interface SidebarSectionsProps {
+    items: MenuItem[];
+    activeTab: string;
+    collapsed: boolean;
+    collapsedGroups: Set<MenuGroupId>;
+    onItemClick: (item: MenuItem) => void;
+    onToggleGroup: (id: MenuGroupId) => void;
+}
+const SidebarSections = ({ items, activeTab, collapsed, collapsedGroups, onItemClick, onToggleGroup }: SidebarSectionsProps) => {
+  return (<>
+    {MENU_GROUPS.map((group) => {
+      const groupItems = items.filter((item) => item.group === group.id);
+      if (groupItems.length === 0)
+        return null;
+      // Só seções com rótulo e fora do modo ícone podem recolher.
+      const hasHeader = !!group.label && !collapsed;
+      const groupCollapsed = hasHeader && collapsedGroups.has(group.id);
+      return (<div key={group.id} className="space-y-1 mt-4 first:mt-0">
+        {group.label && (collapsed
+          ? (<div className="mx-2 mb-2 border-t border-slate-100 dark:border-slate-700/60" aria-hidden/>)
+          : (<button type="button" onClick={() => onToggleGroup(group.id)} aria-expanded={!groupCollapsed} className="flex items-center justify-between w-full px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors select-none">
+            <span>{group.label}</span>
+            <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${groupCollapsed ? '-rotate-90' : ''}`}/>
+          </button>))}
+        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked}/>))}
+      </div>);
+    })}
+  </>);
 };
 function getReadableRole(role?: string): string {
   const normalized = (role || '').toLowerCase();
@@ -70,6 +106,20 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
   const { activeTab, sidebarCollapsed, mobileMenuOpen, menuItems, setActiveTab, toggleSidebar, setMobileMenuOpen } = useSidebar();
   const [humanQueueCount, setHumanQueueCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  // Grupos recolhidos pelo usuário — começa vazio, todas as seções abertas.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<MenuGroupId>>(new Set());
+  const toggleGroup = (groupId: MenuGroupId) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      }
+      else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
   const hasSupportTab = useMemo(() => menuItems.some((item) => item.id === 'suporte'), [menuItems]);
   useEffect(() => {
     let mounted = true;
@@ -158,6 +208,10 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         : item);
   }, [menuItems, humanQueueCount, supportUnreadCount]);
   const handleMenuClick = (item: MenuItem) => {
+    // Itens bloqueados (feature ainda não oficial) não navegam.
+    if (item.locked) {
+      return;
+    }
     setActiveTab(item.id);
     if (item.href) {
       router.push(item.href);
@@ -183,8 +237,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-2 overflow-y-auto mt-2">
-        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => handleMenuClick(item)} collapsed={sidebarCollapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+      <nav className="flex-1 p-3 overflow-y-auto mt-2">
+        <SidebarSections items={menuItemsWithBadges} activeTab={activeTab} collapsed={sidebarCollapsed} collapsedGroups={collapsedGroups} onItemClick={handleMenuClick} onToggleGroup={toggleGroup}/>
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-700">
@@ -232,11 +286,11 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <X size={24}/>
         </button>
       </div>
-      <nav className="p-4 space-y-4">
-        {menuItemsWithBadges.map((item: MenuItem) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => {
+      <nav className="p-4">
+        <SidebarSections items={menuItemsWithBadges} activeTab={activeTab} collapsed={false} collapsedGroups={collapsedGroups} onItemClick={(item) => {
           handleMenuClick(item);
           setMobileMenuOpen(false);
-        }} collapsed={false} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+        }} onToggleGroup={toggleGroup}/>
       </nav>
     </aside>
   </>);

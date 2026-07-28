@@ -1,6 +1,7 @@
 'use client';
 import { ImagePlus, Loader2, MessageCircle, Search, Send, ShieldCheck, Trash2, XCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
@@ -47,7 +48,6 @@ const filters: Array<{
   { label: 'Encerradas', value: 'CLOSED' },
 ];
 export default function SupportPage() {
-  const router = useRouter();
   const [conversations, setConversations] = useState<SupportChatConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState('');
   const [messages, setMessages] = useState<SupportChatMessage[]>([]);
@@ -82,23 +82,18 @@ export default function SupportPage() {
   useEffect(() => {
     let mounted = true;
     const cachedUser = authService.getUser();
-    const cachedIsAdmin = cachedUser?.role === 'admin' || cachedUser?.role === 'owner';
+    const cachedIsAdmin = cachedUser?.role === 'admin';
     setIsAdmin(cachedIsAdmin);
     authService.fetchMe()
       .then((user) => {
         if (!mounted)
           return;
-        const admin = user.role === 'admin' || user.role === 'owner';
-        setIsAdmin(admin);
-        if (!admin) {
-          router.replace('/dashboard');
-        }
+        setIsAdmin(user.role === 'admin');
       })
       .catch(() => {
         if (!mounted)
           return;
         setIsAdmin(false);
-        router.replace('/dashboard');
       })
       .finally(() => {
         if (mounted) {
@@ -108,7 +103,7 @@ export default function SupportPage() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, []);
   const selectedConversation = useMemo(() => conversations.find((conversation) => conversation.id === selectedConversationId) || null, [conversations, selectedConversationId]);
   const selectedConversationIdRef = useRef(selectedConversationId);
   selectedConversationIdRef.current = selectedConversationId;
@@ -324,7 +319,7 @@ export default function SupportPage() {
     </div>);
   }
   if (!isAdmin) {
-    return null;
+    notFound();
   }
   return (<div className="space-y-6">
     <ConfirmDeleteModal isOpen={isDeleteModalOpen} onClose={() => {
@@ -411,7 +406,9 @@ export default function SupportPage() {
                 return (<div key={message.id} className={`flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm shadow-sm ${isAdminMessage ? 'bg-indigo-600 text-white' : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100'}`}>
                     {message.body && <p className="whitespace-pre-wrap wrap-break-word">{message.body}</p>}
-                    {message.imageBase64 && (<img src={`data:${message.imageMimeType || 'image/png'};base64,${message.imageBase64}`} alt="Imagem da conversa" className="mt-2 max-h-72 w-full rounded-xl object-cover"/>)}
+                    {message.imageBase64 && (<div className="relative mt-2 h-72 w-full overflow-hidden rounded-xl">
+                      <Image src={`data:${message.imageMimeType || 'image/png'};base64,${message.imageBase64}`} alt="Imagem da conversa" fill unoptimized className="object-cover"/>
+                    </div>)}
                     <div className={`mt-2 text-[11px] ${isAdminMessage ? 'text-indigo-100' : 'text-slate-400'}`}>
                       {formatDateTime(message.createdAt)}
                     </div>

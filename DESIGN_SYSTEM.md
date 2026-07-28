@@ -800,4 +800,19 @@ Todo novo componente deve:
 
 ---
 
-*Última atualização: 2026-05-24 — baseado na análise do código-fonte do repositório Synq frontend.*
+## 13. Temperatura de Lead (Funil / CRM)
+
+O quadro Kanban do Funil classifica cada lead em quatro temperaturas, numa escala térmica (frio → quente). Use exatamente estes tokens:
+
+| Temperatura | Token | Chip (light) | Indicador |
+|---|---|---|---|
+| Frio | `blue` | `bg-blue-50 text-blue-700 border-blue-200` | `bg-blue-500` |
+| Morno | `amber` | `bg-amber-50 text-amber-700 border-amber-200` | `bg-amber-500` |
+| Aquecido | `orange` | `bg-orange-50 text-orange-700 border-orange-200` | `bg-orange-500` |
+| Quente | `red` | `bg-red-50 text-red-700 border-red-200` | `bg-red-500` |
+
+No dark mode use a notação `color/opacity` (ex: `dark:bg-blue-500/10 dark:text-blue-300`). O token `orange` é **exclusivo** da escala de temperatura de lead — não use em outros contextos. O anel de score (0–100) herda a cor da temperatura correspondente.
+
+---
+
+*Última atualização: 2026-06-13 — adicionada a escala de Temperatura de Lead (Funil/CRM).*
