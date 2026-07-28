@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, RefreshCw } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
 import type { Product } from '@/services/ai.service';
@@ -235,7 +235,10 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
               </div>
               <div className="flex-1 p-1 relative overflow-visible">
                 {dayAppts.map((apt) => (<div key={apt.id} onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }} style={getCardLayoutStyle(apt, MOBILE_SLOT_HEIGHT)} className={`absolute left-1 right-1 text-xs p-1.5 rounded-md cursor-pointer border-l-2 shadow-sm z-20 ${aptCardClass(apt)}`}>
-                  <div className="font-semibold">{apt.title}</div>
+                  <div className="font-semibold flex items-center gap-1">
+                    {apt.createdBy === 'GOOGLE' && (<span title="Sincronizado do Google Agenda"><RefreshCw size={10} className="shrink-0"/></span>)}
+                    <span className="truncate min-w-0">{apt.title}</span>
+                  </div>
                 </div>))}
               </div>
             </div>);
@@ -270,7 +273,10 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
                   ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
                   : 'bg-slate-50 dark:bg-slate-800/50'} ${isToday(day) ? 'bg-indigo-50/30 dark:bg-indigo-900/5' : ''}`}>
                   {dayAppts.map((apt) => (<div key={apt.id} onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }} style={getCardLayoutStyle(apt, DESKTOP_SLOT_HEIGHT)} className={`absolute left-1 right-1 text-xs p-1.5 rounded-md cursor-pointer border-l-2 shadow-sm z-20 ${aptCardClass(apt)}`}>
-                    <div className="font-semibold truncate">{apt.title}</div>
+                    <div className="font-semibold flex items-center gap-1">
+                      {apt.createdBy === 'GOOGLE' && (<span title="Sincronizado do Google Agenda"><RefreshCw size={10} className="shrink-0"/></span>)}
+                      <span className="truncate min-w-0">{apt.title}</span>
+                    </div>
                   </div>))}
                 </div>);
               })}

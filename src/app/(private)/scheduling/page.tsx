@@ -15,6 +15,7 @@ import { apiClient } from '@/utils/ApiClient';
 import AppointmentModal from './components/AppointmentModal';
 import BusinessHoursConfig from './components/BusinessHoursConfig';
 import CalendarView from './components/CalendarView';
+import GoogleCalendarIntegration from './components/GoogleCalendarIntegration';
 import SchedulingTabs from './components/SchedulingTabs';
 
 interface ToastItem {
@@ -200,6 +201,8 @@ export default function SchedulingPage() {
     {activeTab === 'calendar' && (<CalendarView appointments={appointments} businessHours={businessHours} contacts={contacts} products={products} currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart} onCreateAppointment={handleCreateAppointment} onEditAppointment={handleEditAppointment} onUpdateStatus={handleUpdateStatus}/>)}
 
     {activeTab === 'business-hours' && businessHours && (<BusinessHoursConfig businessHours={businessHours} onSave={handleSaveBusinessHours} schedulingReminderEnabled={schedulingReminderEnabled} onSchedulingReminderChange={handleSchedulingReminderChange}/>)}
+
+    {activeTab === 'integrations' && (<GoogleCalendarIntegration onToast={addToast}/>)}
 
     {modalOpen && (<AppointmentModal appointment={editingAppointment} contacts={contacts} products={products} initialDate={selectedDate} initialTime={selectedTime} slotDuration={businessHours?.slotDurationMinutes || 30} onSave={handleSaveAppointment} {...(editingAppointment && { onDelete: () => { void handleDeleteAppointment(editingAppointment.id); } })} onClose={() => setModalOpen(false)} onProductCreated={(product) => setProducts((prev) => [...prev, product])}/>)}
 

@@ -36,8 +36,9 @@ export interface Appointment {
     startAt: string;
     endAt: string;
     status: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-    createdBy: 'USER' | 'AI';
+    createdBy: 'USER' | 'AI' | 'GOOGLE';
     notes?: string;
+    googleEventId?: string;
     createdAt: string;
     updatedAt: string;
 }
