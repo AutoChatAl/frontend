@@ -1,5 +1,5 @@
 'use client';
-import { Bot, Menu, Sparkles, LogOut, X, ChevronDown } from 'lucide-react';
+import { Bot, Menu, Sparkles, LogOut, X, ChevronDown, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -20,6 +20,7 @@ interface SidebarItemProps {
     collapsed: boolean;
     badgeCount?: number | undefined;
     tourId?: string;
+    locked?: boolean | undefined;
 }
 interface SidebarProps {
     brandName?: string;
@@ -27,22 +28,28 @@ interface SidebarProps {
     userRole?: string;
     userInitials?: string;
 }
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId }: SidebarItemProps) => {
-  return (<button onClick={onClick} {...(tourId ? { 'data-tour': tourId } : {})} className={`
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked }: SidebarItemProps) => {
+  return (<button onClick={locked ? undefined : onClick} aria-disabled={locked || undefined} title={locked ? 'Em breve — indisponível' : undefined} {...(tourId ? { 'data-tour': tourId } : {})} className={`
         flex items-center gap-3 w-full px-3 py-3 rounded-lg transition-all duration-200 relative
-        ${active
-      ? 'bg-indigo-100/65 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 shadow-sm'
-      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 '}
+        ${locked
+      ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed'
+      : active
+        ? 'bg-indigo-100/65 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 shadow-sm'
+        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 '}
         ${collapsed ? 'justify-center' : ''}
       `}>
     <div className="flex items-center gap-3 w-full">
       <Icon size={20} className="shrink-0"/>
       {!collapsed && (<>
-        <span className={`text-sm truncate ${active ? 'font-semibold' : 'font-medium'}`}>{text}</span>
-        {!!badgeCount && badgeCount > 0 && (<span className="ml-auto mr-2 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
-          {badgeCount > 99 ? '99+' : badgeCount}
-        </span>)}
-        {active && (<div className={`${badgeCount && badgeCount > 0 ? '' : 'ml-auto'} w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0`}/>)}
+        <span className={`text-sm truncate ${active && !locked ? 'font-semibold' : 'font-medium'}`}>{text}</span>
+        {locked
+          ? (<Lock size={14} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500"/>)
+          : (<>
+            {!!badgeCount && badgeCount > 0 && (<span className="ml-auto mr-2 min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </span>)}
+            {active && (<div className={`${badgeCount && badgeCount > 0 ? '' : 'ml-auto'} w-1.5 h-1.5 rounded-full bg-indigo-700 dark:bg-indigo-400 shrink-0`}/>)}
+          </>)}
       </>)}
     </div>
   </button>);
@@ -71,7 +78,7 @@ const SidebarSections = ({ items, activeTab, collapsed, collapsedGroups, onItemC
             <span>{group.label}</span>
             <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${groupCollapsed ? '-rotate-90' : ''}`}/>
           </button>))}
-        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`}/>))}
+        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked}/>))}
       </div>);
     })}
   </>);
@@ -201,6 +208,10 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         : item);
   }, [menuItems, humanQueueCount, supportUnreadCount]);
   const handleMenuClick = (item: MenuItem) => {
+    // Itens bloqueados (feature ainda não oficial) não navegam.
+    if (item.locked) {
+      return;
+    }
     setActiveTab(item.id);
     if (item.href) {
       router.push(item.href);
