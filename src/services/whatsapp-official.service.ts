@@ -32,7 +32,7 @@ class WhatsAppOfficialService {
   }
 
   public async connect(payload: { code: string; wabaId?: string; phoneNumberId?: string }): Promise<WhatsAppOfficialInstance> {
-    const response = await apiClient.post('/channels/whatsapp-official/connect', payload);
+    const response = await apiClient.post('/channels/whatsapp-official/connect', payload, { timeoutMs: 90000 });
     return unwrap<WhatsAppOfficialInstance>(response, 'Falha ao conectar a conta oficial do WhatsApp.');
   }
 

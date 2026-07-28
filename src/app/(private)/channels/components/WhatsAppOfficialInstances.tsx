@@ -34,6 +34,10 @@ export default function WhatsAppOfficialInstances() {
   const { toasts, addToast, removeToast } = useToast();
   const sdkLoadedRef = useRef(false);
   const signupDataRef = useRef<{ wabaId?: string; phoneNumberId?: string }>({});
+  const signupFinishedRef = useRef(false);
+  const codeReceivedRef = useRef(false);
+  const preConnectCountRef = useRef(0);
+  const pollRef = useRef<((previousCount: number) => Promise<boolean>) | null>(null);
 
   const fetchInstances = useCallback(async () => {
     try {
@@ -58,11 +62,21 @@ export default function WhatsAppOfficialInstances() {
       if (!event.origin.endsWith('facebook.com')) return;
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data?.type === 'WA_EMBEDDED_SIGNUP' && data?.data) {
-          const next: { wabaId?: string; phoneNumberId?: string } = {};
-          if (data.data.waba_id) next.wabaId = String(data.data.waba_id);
-          if (data.data.phone_number_id) next.phoneNumberId = String(data.data.phone_number_id);
-          signupDataRef.current = next;
+        if (data?.type === 'WA_EMBEDDED_SIGNUP') {
+          if (data.data) {
+            const next: { wabaId?: string; phoneNumberId?: string } = {};
+            if (data.data.waba_id) next.wabaId = String(data.data.waba_id);
+            if (data.data.phone_number_id) next.phoneNumberId = String(data.data.phone_number_id);
+            signupDataRef.current = next;
+          }
+          if (typeof data.event === 'string' && data.event.startsWith('FINISH')) {
+            signupFinishedRef.current = true;
+            setTimeout(() => {
+              if (!codeReceivedRef.current) {
+                pollRef.current?.(preConnectCountRef.current);
+              }
+            }, 4000);
+          }
         }
       } catch {
       }
@@ -93,6 +107,26 @@ export default function WhatsAppOfficialInstances() {
     return window.FB;
   }, []);
 
+  const pollForNewInstance = useCallback(async (previousCount: number) => {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      try {
+        const data = await whatsappOfficialService.getInstances();
+        if (data.length > previousCount) {
+          setInstances(data);
+          addToast('success', 'Conta oficial conectada com sucesso!');
+          return true;
+        }
+      } catch {
+      }
+    }
+    return false;
+  }, [addToast]);
+
+  useEffect(() => {
+    pollRef.current = pollForNewInstance;
+  }, [pollForNewInstance]);
+
   const handleConnect = useCallback(async (mode: ConnectMode) => {
     if (isInactive) {
       addToast('error', 'Sua assinatura está inativa. Reative seu plano para conectar canais.');
@@ -101,6 +135,10 @@ export default function WhatsAppOfficialInstances() {
     setModeChooserOpen(false);
     setConnecting(true);
     signupDataRef.current = {};
+    signupFinishedRef.current = false;
+    codeReceivedRef.current = false;
+    preConnectCountRef.current = instances.length;
+    const previousCount = instances.length;
     try {
       const config = await whatsappOfficialService.getSignupConfig();
       const fb = await loadFacebookSdk(config.appId, config.graphVersion);
@@ -110,7 +148,20 @@ export default function WhatsAppOfficialInstances() {
       fb.login(
         (response) => {
           const code = response.authResponse?.code;
+          if (code) codeReceivedRef.current = true;
           if (!code) {
+            if (signupFinishedRef.current) {
+              addToast('success', 'Cadastro concluído na Meta — sincronizando o canal...');
+              (async () => {
+                const found = await pollForNewInstance(previousCount);
+                if (!found) {
+                  addToast('error', 'O canal não apareceu ainda. Recarregue a página em instantes.');
+                  await fetchInstances();
+                }
+                setConnecting(false);
+              })();
+              return;
+            }
             setConnecting(false);
             addToast('error', 'Conexão cancelada antes de concluir o cadastro na Meta.');
             return;
@@ -125,6 +176,7 @@ export default function WhatsAppOfficialInstances() {
               await fetchInstances();
             } catch (error) {
               addToast('error', error instanceof Error ? error.message : 'Erro ao concluir a conexão.');
+              await pollForNewInstance(previousCount);
             } finally {
               setConnecting(false);
             }
@@ -141,7 +193,7 @@ export default function WhatsAppOfficialInstances() {
       addToast('error', error instanceof Error ? error.message : 'Erro ao iniciar a conexão com a Meta.');
       setConnecting(false);
     }
-  }, [isInactive, addToast, loadFacebookSdk, fetchInstances]);
+  }, [isInactive, addToast, loadFacebookSdk, fetchInstances, instances.length, pollForNewInstance]);
 
   const handleRefresh = useCallback(async (id: string | number) => {
     try {

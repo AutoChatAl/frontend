@@ -8,7 +8,7 @@ class ApiClient {
   constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') {
     this.baseUrl = baseUrl;
   }
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs = 12000): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     const isLocalTarget = url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://') && !isLocalTarget) {
@@ -19,7 +19,7 @@ class ApiClient {
       };
     }
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? setTimeout(() => controller.abort(), 12000) : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     const config: RequestInit = {
       ...options,
       ...(controller ? { signal: controller.signal } : {}),
@@ -66,11 +66,11 @@ class ApiClient {
   public async get<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
-  public async post<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
+  public async post<T>(endpoint: string, data?: unknown, opts?: { timeoutMs?: number }): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
       ...(data ? { body: JSON.stringify(data) } : {}),
-    });
+    }, opts?.timeoutMs ?? 12000);
   }
   public async put<T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
