@@ -44,9 +44,32 @@ class InboxService {
       if (reason === 'MESSAGE_LIMIT_REACHED') {
         throw new Error('Limite de mensagens do plano atingido.');
       }
+      if (reason === 'IG_MESSAGE_WINDOW_EXPIRED') {
+        throw new Error('O Instagram só permite responder em até 24h após a última mensagem do contato.');
+      }
+      if (reason === 'IG_HUMAN_AGENT_NOT_APPROVED') {
+        throw new Error('Envio bloqueado pelo Instagram: recurso não aprovado para este app.');
+      }
       throw new Error('Não foi possível enviar a mensagem.');
     }
     return { conversation: response.data.conversation, message: response.data.message ?? null };
+  }
+
+  public async transcribe(conversationId: string, messageId: string): Promise<InboxMessage> {
+    const response = await apiClient.post<{ message: InboxMessage }>(
+      `/inbox/conversations/${conversationId}/messages/${messageId}/transcribe`,
+    );
+    if (!response.success || !response.data) {
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      if (reason === 'TRANSCRIPTION_FAILED') {
+        throw new Error('Não foi possível entender o áudio.');
+      }
+      if (reason === 'AUDIO_UNAVAILABLE') {
+        throw new Error('Áudio não está mais disponível para transcrição.');
+      }
+      throw new Error('Não foi possível transcrever o áudio.');
+    }
+    return response.data.message;
   }
 
   public async markRead(conversationId: string): Promise<void> {

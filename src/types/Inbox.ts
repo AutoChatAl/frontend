@@ -35,6 +35,8 @@ export interface InboxMessage {
   mediaFileName?: string | null;
   sentByAi?: boolean;
   sentByAutomation?: boolean;
+  /** Transcrição do áudio, exibida sob demanda — o balão continua mostrando o áudio. */
+  transcription?: string | null;
   deliveryStatus?: MessageDeliveryStatus;
   replyToMessageId?: string | null;
   replyToPreview?: string | null;

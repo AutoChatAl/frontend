@@ -1,11 +1,18 @@
 'use client';
 import { Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
+import AudioPlayer from '@/components/AudioPlayer';
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
 import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
+import {
+  AUDIO_RECORDER_FALLBACK_MIME,
+  AUDIO_WAV_MIME,
+  blobToWavBase64,
+  pickAudioRecorderMimeType,
+} from '@/utils/AudioWav';
 
 import { messagePreview, useInbox } from './useInbox';
 
@@ -55,7 +62,14 @@ function MediaContent({ message }: { message: InboxMessage }) {
     return <img src={src} alt={message.mediaFileName || 'Imagem'} className="max-h-64 max-w-full rounded-lg object-cover" />;
   }
   if (message.mediaType === 'audio') {
-    return <audio controls src={src} className="max-w-full" />;
+    return (
+      <AudioPlayer
+        src={src}
+        variant={message.direction === 'OUT' ? 'accent' : 'default'}
+        bars={28}
+        className="w-72 max-w-full"
+      />
+    );
   }
   if (message.mediaType === 'video') {
     return <video controls src={src} className="max-h-64 max-w-full rounded-lg" />;
@@ -68,14 +82,39 @@ function MediaContent({ message }: { message: InboxMessage }) {
   );
 }
 
-function formatTime(iso: string): string {
+/** No balão sempre a hora: a data de cada bloco vive na badge de dia. */
+function formatMessageTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+/** Na listagem: hora no dia corrente, "Ontem" no anterior, data nos mais antigos. */
+function formatConversationTime(iso: string): string {
   const date = new Date(iso);
-  const now = new Date();
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) {
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  }
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(date, today)) return formatMessageTime(iso);
+  if (isSameDay(date, yesterday)) return 'Ontem';
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+function dayLabel(iso: string): string {
+  const date = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(date, today)) return 'Hoje';
+  if (isSameDay(date, yesterday)) return 'Ontem';
+  const sameYear = date.getFullYear() === today.getFullYear();
+  return date.toLocaleDateString('pt-BR', sameYear
+    ? { day: '2-digit', month: 'long' }
+    : { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 function channelBadge(type: InboxChannelType) {
@@ -155,7 +194,7 @@ function ConversationRow({
             {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
           </span>
           <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
-            {formatTime(conversation.lastMessageAt)}
+            {formatConversationTime(conversation.lastMessageAt)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
@@ -187,16 +226,20 @@ export default function InboxPage() {
     error,
     channelFilter,
     search,
+    transcribingId,
     setChannelFilter,
     setSearch,
     selectConversation,
     sendMessage,
     notifyTyping,
+    transcribeMessage,
   } = useInbox();
 
   const [draft, setDraft] = useState('');
   const [recording, setRecording] = useState(false);
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
+  // Transcrição fica guardada na mensagem, mas só aparece depois que o operador pede.
+  const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -255,6 +298,13 @@ export default function InboxPage() {
     }
   };
 
+  const handleTranscribe = async (message: InboxMessage) => {
+    // Já transcrito na chegada: revelar não custa chamada. Sem transcrição
+    // (mensagem antiga ou falha anterior), busca sob demanda.
+    if (!message.transcription) await transcribeMessage(message);
+    setRevealedTranscriptions((prev) => new Set(prev).add(message.id));
+  };
+
   const toggleRecording = async () => {
     if (recording) {
       recorderRef.current?.stop();
@@ -262,24 +312,24 @@ export default function InboxPage() {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
+      const mimeType = pickAudioRecorderMimeType() ?? AUDIO_RECORDER_FALLBACK_MIME;
       const recorder = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
       recorder.ondataavailable = (ev) => { if (ev.data.size > 0) chunksRef.current.push(ev.data); };
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         setRecording(false);
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType });
         if (blob.size === 0) return;
-        const dataUrl: string = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(new Error('Falha ao ler o áudio.'));
-          reader.readAsDataURL(blob);
-        });
-        const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+        // O Instagram aceita apenas aac, m4a, wav e mp4 em DM — webm/opus sobe mas toca mudo.
+        const base64 = await blobToWavBase64(blob).catch(() => '');
+        if (!base64) return;
         stickToBottomRef.current = true;
-        await sendMessage('', { mediaType: 'audio', base64, mimeType, fileName: 'audio' }, replyToRef.current)
+        await sendMessage(
+          '',
+          { mediaType: 'audio', base64, mimeType: AUDIO_WAV_MIME, fileName: `audio-${Date.now()}.wav` },
+          replyToRef.current,
+        )
           .then(() => setReplyTo(null))
           .catch(() => {});
       };
@@ -392,7 +442,18 @@ export default function InboxPage() {
               {loadingMessages ? (
                 <p className="text-sm text-slate-400">Carregando mensagens...</p>
               ) : (
-                messages.map((m) => {
+                messages.map((m, index) => {
+                  const previous = index > 0 ? messages[index - 1] : undefined;
+                  // Sticky no container rolável: cada badge fica presa no topo até a do
+                  // dia seguinte empurrá-la para fora, marcando a virada de dia.
+                  const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
+                  const daySeparator = startsDay && (
+                    <div className="sticky top-0 z-10 flex justify-center py-1">
+                      <span className="rounded-full bg-slate-200/90 px-3 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm dark:bg-slate-700/90 dark:text-slate-300">
+                        {dayLabel(m.createdAt)}
+                      </span>
+                    </div>
+                  );
                   const replyButton = !m.pending && (
                     <button
                       type="button"
@@ -407,44 +468,63 @@ export default function InboxPage() {
                     </button>
                   );
                   return (
-                    <div
-                      key={m.id}
-                      id={`msg-${m.id}`}
-                      className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {m.direction === 'OUT' && replyButton}
+                    <Fragment key={m.id}>
+                      {daySeparator}
                       <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                        id={`msg-${m.id}`}
+                        className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
                       >
-                        {m.replyToPreview && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!m.replyToMessageId) return;
-                              document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }}
-                            className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
-                          >
-                            <span className="block font-semibold">
-                              {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
-                            </span>
-                            <span className="block truncate">{m.replyToPreview}</span>
-                          </button>
-                        )}
-                        {m.mediaType && (
-                          <div className="mb-1">
-                            <MediaContent message={m} />
-                          </div>
-                        )}
-                        {m.body && <p>{m.body}</p>}
-                        <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                          {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
-                          {formatTime(m.createdAt)}
-                          <StatusTicks message={m} />
-                        </span>
+                        {m.direction === 'OUT' && replyButton}
+                        <div
+                          className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                        >
+                          {m.replyToPreview && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!m.replyToMessageId) return;
+                                document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }}
+                              className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+                            >
+                              <span className="block font-semibold">
+                                {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
+                              </span>
+                              <span className="block truncate">{m.replyToPreview}</span>
+                            </button>
+                          )}
+                          {m.mediaType && (
+                            <div className="mb-1">
+                              <MediaContent message={m} />
+                            </div>
+                          )}
+                          {m.body && <p>{m.body}</p>}
+                          {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
+                          {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
+                            revealedTranscriptions.has(m.id) && m.transcription ? (
+                              <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                                {m.transcription}
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleTranscribe(m)}
+                                disabled={transcribingId === m.id}
+                                className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                              >
+                                {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                              </button>
+                            )
+                          )}
+                          <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                            {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                            {formatMessageTime(m.createdAt)}
+                            <StatusTicks message={m} />
+                          </span>
+                        </div>
+                        {m.direction === 'IN' && replyButton}
                       </div>
-                      {m.direction === 'IN' && replyButton}
-                    </div>
+                    </Fragment>
                   );
                 })
               )}

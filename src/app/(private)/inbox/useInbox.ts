@@ -32,11 +32,13 @@ interface UseInboxReturn {
   error: string | null;
   channelFilter: InboxChannelType | 'ALL';
   search: string;
+  transcribingId: string | null;
   setChannelFilter: (value: InboxChannelType | 'ALL') => void;
   setSearch: (value: string) => void;
   selectConversation: (conversationId: string) => void;
   sendMessage: (body: string, media?: InboxOutgoingMedia, replyTo?: InboxMessage | null) => Promise<void>;
   notifyTyping: () => void;
+  transcribeMessage: (message: InboxMessage) => Promise<void>;
 }
 
 export function useInbox(): UseInboxReturn {
@@ -46,6 +48,7 @@ export function useInbox(): UseInboxReturn {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [transcribingId, setTranscribingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState<InboxChannelType | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
@@ -309,6 +312,21 @@ export function useInbox(): UseInboxReturn {
     }
   }, [loadMessages]);
 
+  const transcribeMessage = useCallback(async (message: InboxMessage) => {
+    const { conversationId } = message;
+    setTranscribingId(message.id);
+    try {
+      const updated = await inboxService.transcribe(conversationId, message.id);
+      setMessages((prev) => prev.map((m) => (
+        m.id === updated.id ? { ...m, transcription: updated.transcription ?? null } : m
+      )));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao transcrever o áudio.');
+    } finally {
+      setTranscribingId(null);
+    }
+  }, []);
+
   return {
     conversations,
     messages,
@@ -320,10 +338,12 @@ export function useInbox(): UseInboxReturn {
     error,
     channelFilter,
     search,
+    transcribingId,
     setChannelFilter,
     setSearch,
     selectConversation,
     sendMessage,
     notifyTyping,
+    transcribeMessage,
   };
 }
