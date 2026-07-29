@@ -61,7 +61,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Base do workspace — sem rótulo de seção.
   { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard', group: 'main' },
   // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
-  { id: 'chat', icon: MessagesSquare, text: 'Chat', href: '/chat', group: 'main' },
+  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'main' },
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
