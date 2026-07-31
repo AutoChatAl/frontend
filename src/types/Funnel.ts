@@ -17,6 +17,8 @@ export interface FunnelLeadTag {
   name: string;
 }
 
+export type StageMovedBy = 'AI' | 'USER';
+
 export interface FunnelLead {
   id: string;
   displayName: string | null;
@@ -31,6 +33,9 @@ export interface FunnelLead {
   awaitingHuman: boolean;
   awaitingHumanSince: string | null;
   createdAt: string | null;
+  stageEnteredAt: string | null;
+  stageMovedBy: StageMovedBy | null;
+  stageMoveReason: string | null;
   boardOrder: number;
   score: number;
   temperature: LeadTemperature;
@@ -48,6 +53,7 @@ export interface FunnelStage {
   order: number;
   isWon: boolean;
   isLost: boolean;
+  aiCriteria: string;
   total: number;
 }
 
@@ -83,4 +89,11 @@ export interface FunnelStageDefinition {
   order: number;
   isWon: boolean;
   isLost: boolean;
+  aiCriteria: string;
+}
+
+export interface StagePayload {
+  name?: string;
+  color?: StageColor;
+  aiCriteria?: string;
 }

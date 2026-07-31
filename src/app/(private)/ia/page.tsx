@@ -8,6 +8,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
 
 import AIChannelsList from './components/AIChannelsList';
+import AIFunnelSection from './components/AIFunnelSection';
 import AIIdentitySection from './components/AIIdentitySection';
 import AiPlanGate from './components/AiPlanGate';
 import AIPromptPreview from './components/AIPromptPreview';
@@ -20,7 +21,7 @@ export default function IAPage() {
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, products, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
+  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, funnelStages, products, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
   if (subLoading || loading) {
     return <PageLoader message="Carregando configurações de IA"/>;
   }
@@ -49,6 +50,8 @@ export default function IAPage() {
     {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} triggerSettings={triggerSettings} onCustomRulesChange={setCustomRules} onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))}/>)}
 
     {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
+
+    {activeTab === 'funnel' && (<AIFunnelSection funnelAutoMoveEnabled={funnelAutoMoveEnabled} stages={funnelStages} onToggle={toggleFunnelAutoMove}/>)}
 
     {(activeTab === 'general' || activeTab === 'triggers') && (<div className="flex justify-end pt-4">
       <button onClick={saveConfig} disabled={saving} className="w-full sm:w-auto px-6 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors">

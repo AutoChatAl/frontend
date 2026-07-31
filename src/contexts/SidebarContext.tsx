@@ -1,5 +1,5 @@
 'use client';
-import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -108,6 +108,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
+      items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
     return items;
   }, [customMenuItems, showSupportTab]);

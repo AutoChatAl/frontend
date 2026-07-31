@@ -5,11 +5,13 @@ import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
 import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
+import { funnelService } from '@/services/funnel.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AIChannel } from '@/types/AI';
 import type { Product } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
+import type { FunnelStageDefinition } from '@/types/Funnel';
 
 export function useAIConfig() {
   const [segment, setSegment] = useState('');
@@ -20,6 +22,8 @@ export function useAIConfig() {
   const [triggerSettings, setTriggerSettings] = useState<AiTriggerSettings>(defaultAiTriggerSettings);
   const [schedulingQueryEnabled, setSchedulingQueryEnabled] = useState(false);
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
+  const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
+  const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [channels, setChannels] = useState<AIChannel[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
@@ -100,6 +104,7 @@ export function useAIConfig() {
       setTriggerSettings({ ...defaultAiTriggerSettings, ...(aiConfig.triggerSettings || {}) });
       setSchedulingQueryEnabled(aiConfig.schedulingQueryEnabled);
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
+      setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
@@ -107,6 +112,9 @@ export function useAIConfig() {
         ? aiConfig.activeChannelIds
         : (aiConfig.activeChannelId ? [aiConfig.activeChannelId] : []);
       await loadChannels(activeIds);
+      // Colaborador sem permissão de contatos recebe 403 no funil — a aba apenas
+      // deixa de listar as etapas, sem quebrar o carregamento da página de IA.
+      setFunnelStages(await funnelService.listStages().catch(() => []));
     }
     catch {
     }
@@ -127,6 +135,7 @@ export function useAIConfig() {
         triggerSettings,
         schedulingQueryEnabled,
         schedulingBookingEnabled,
+        funnelAutoMoveEnabled,
       });
       addToast('success', 'Configurações da IA salvas com sucesso!');
     }
@@ -136,7 +145,7 @@ export function useAIConfig() {
     finally {
       setSaving(false);
     }
-  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, addToast]);
+  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, addToast]);
   const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
@@ -167,6 +176,21 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [schedulingQueryEnabled, addToast]);
+  const toggleFunnelAutoMove = useCallback(async (enabled: boolean) => {
+    setFunnelAutoMoveEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ funnelAutoMoveEnabled: enabled });
+      addToast('success', enabled ? 'Movimentação automática do funil ativada.' : 'Movimentação automática do funil desativada.');
+    }
+    catch (err) {
+      setFunnelAutoMoveEnabled(!enabled);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração do funil.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
   const toggleChannel = useCallback(async (channelId: string) => {
     setSaving(true);
     try {
@@ -254,6 +278,8 @@ export function useAIConfig() {
     setSchedulingQueryEnabled,
     schedulingBookingEnabled,
     setSchedulingBookingEnabled,
+    funnelAutoMoveEnabled,
+    funnelStages,
     products,
     channels,
     activeChannelId,
@@ -270,5 +296,6 @@ export function useAIConfig() {
     deleteProduct,
     toggleSchedulingQuery,
     toggleSchedulingBooking,
+    toggleFunnelAutoMove,
   };
 }

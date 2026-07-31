@@ -16,6 +16,7 @@ export interface AiConfig {
     triggerSettings: AiTriggerSettings;
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
+    funnelAutoMoveEnabled: boolean;
 }
 export interface Product {
     id: string;
@@ -48,11 +49,12 @@ class AiService {
         triggerSettings: defaultAiTriggerSettings,
         schedulingQueryEnabled: false,
         schedulingBookingEnabled: false,
+        funnelAutoMoveEnabled: false,
       },
       products: [],
     };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled'>>): Promise<void> {
     const response = await apiClient.put('/ai/config', data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;

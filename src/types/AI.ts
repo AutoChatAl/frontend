@@ -52,6 +52,7 @@ export interface AiConfig {
     triggerSettings: AiTriggerSettings;
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
+    funnelAutoMoveEnabled: boolean;
 }
 export interface Product {
     id: string;

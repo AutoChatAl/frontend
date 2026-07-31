@@ -560,11 +560,13 @@ Aceita `className` para extensão. Usado como container padrão de seções.
 | `tag` | Slate (light) | Rótulo genérico |
 | `admin` | Amber | Administrador |
 | `collaborator` | Blue | Colaborador |
+| `beta` | Violet | Recurso em fase beta |
 
 ```tsx
 <Badge type="success" text="Ativo" icon={CheckCircle} />
 <Badge type="warning" text="Trial" pill />
 <Badge type="whatsapp" text="WhatsApp" icon={MessageCircle} />
+<Badge type="beta" text="BETA" pill />
 ```
 
 ---
