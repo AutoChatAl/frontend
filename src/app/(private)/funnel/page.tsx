@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Trello } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -228,9 +228,6 @@ export default function FunnelPage() {
     <div className="flex flex-col gap-4 animate-in fade-in duration-500">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <Trello size={20} />
-          </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Funil de vendas</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">

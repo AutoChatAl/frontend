@@ -184,7 +184,7 @@ export default function WhatsAppOfficialDashboardPage() {
 
       {channels.length === 0 ? (
         <EmptyState
-          icon={<ShieldCheck size={56} />}
+          icon={<ShieldCheck size={28} />}
           title="Nenhuma conta oficial conectada"
           description="Conecte sua conta do WhatsApp Business Platform para acompanhar qualidade, consumo e custos por aqui."
           action={{ label: 'Conectar API Oficial', onClick: () => router.push('/channels') }}

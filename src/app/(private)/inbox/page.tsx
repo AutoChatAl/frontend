@@ -6,6 +6,7 @@ import AudioPlayer from '@/components/AudioPlayer';
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
@@ -177,16 +178,19 @@ function Avatar({
 function ConversationRow({
   conversation,
   active,
+  disabled = false,
   onClick,
 }: {
   conversation: InboxConversation;
   active: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 dark:border-slate-700/60 ${active ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}
+      disabled={disabled}
+      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 dark:border-slate-700/60 ${disabled ? 'cursor-not-allowed' : active ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}
     >
       <Avatar
         name={conversation.contactName}
@@ -241,9 +245,9 @@ export default function InboxPage() {
   } = useInbox();
 
   const [draft, setDraft] = useState('');
+  const [chatEnabled, setChatEnabled] = useState(false);
   const [recording, setRecording] = useState(false);
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
-  // Transcrição fica guardada na mensagem, mas só aparece depois que o operador pede.
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -360,7 +364,15 @@ export default function InboxPage() {
       {/* Lista de conversas */}
       <aside className="flex w-full max-w-sm shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="p-4 space-y-3 border-b border-slate-100 dark:border-slate-700">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Caixa de entrada</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Caixa de entrada</h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className={`text-xs font-medium ${chatEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                {chatEnabled ? 'Ativado' : 'Desativado'}
+              </span>
+              <ToggleSwitch checked={chatEnabled} onChange={setChatEnabled} />
+            </div>
+          </div>
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -394,6 +406,9 @@ export default function InboxPage() {
                 key={c.id}
                 conversation={c}
                 active={c.id === selectedId}
+                // Abrir a conversa marca como lida e dispara o recibo de leitura para o
+                // contato. Com o chat desligado o operador não viu nada, então não seleciona.
+                disabled={!chatEnabled}
                 onClick={() => selectConversation(c.id)}
               />
             ))
@@ -403,10 +418,18 @@ export default function InboxPage() {
 
       {/* Thread */}
       <section className="flex flex-1 flex-col bg-slate-50 dark:bg-slate-900">
-        {!selectedConversation ? (
+        {!chatEnabled ? (
           <div className="flex h-full items-center justify-center">
             <EmptyState
-              icon={<MessageCircle size={48} />}
+              icon={<MessageCircle size={28} />}
+              title="Chat desativado"
+              description="Ative o chat no topo da lista para ver as mensagens e responder aos contatos."
+            />
+          </div>
+        ) : !selectedConversation ? (
+          <div className="flex h-full items-center justify-center">
+            <EmptyState
+              icon={<MessageCircle size={28} />}
               title="Selecione uma conversa"
               description="Escolha uma conversa à esquerda para ver as mensagens do WhatsApp e Instagram em tempo real."
             />

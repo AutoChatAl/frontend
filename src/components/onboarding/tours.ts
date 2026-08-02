@@ -213,7 +213,7 @@ export const TOURS: TourConfig[] = [
   {
     id: 'comment-automations',
     pathname: '/comment-automations',
-    label: 'Comentários IG',
+    label: 'Comentários',
     permission: 'auto-replies',
     steps: [
       {
