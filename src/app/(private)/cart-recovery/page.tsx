@@ -8,6 +8,7 @@ import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import { channelsService } from '@/services/channels.service';
+import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type {
   AbandonedCart,
   AbandonedCartsSummary,
@@ -51,7 +52,7 @@ export default function CartRecoveryPage() {
         setRefreshing(true);
       }
       setError(null);
-      const [cartsRes, integrationsRes, waChannels, igChannels, summaryRes] = await Promise.all([
+      const [cartsRes, integrationsRes, waChannels, igChannels, summaryRes, waOfficialChannels] = await Promise.all([
         cartRecoveryService.listCarts({
           limit: 50,
           skip: 0,
@@ -62,6 +63,7 @@ export default function CartRecoveryPage() {
         channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
         channelsService.getInstagramAccounts().catch(() => [] as InstagramAccount[]),
         cartRecoveryService.getSummary(30),
+        whatsappOfficialService.getInstances().catch(() => []),
       ]);
 
       setCarts(cartsRes.data);
@@ -71,6 +73,12 @@ export default function CartRecoveryPage() {
 
       const opts: IntegrationChannelOption[] = [
         ...waChannels.map((c) => ({ id: c.id, name: c.name, number: c.number, type: 'WHATSAPP' as const })),
+        ...waOfficialChannels.map((c) => ({
+          id: c.id,
+          name: c.whatsappOfficial.verifiedName || c.name,
+          number: c.whatsappOfficial.displayPhoneNumber ?? undefined,
+          type: 'WHATSAPP_OFFICIAL' as const,
+        })),
         ...igChannels.map((c) => ({
           id: c.id,
           name: c.name,

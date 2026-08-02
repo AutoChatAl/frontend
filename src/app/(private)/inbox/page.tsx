@@ -1,5 +1,5 @@
 'use client';
-import { Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
+import { BadgeCheck, Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
@@ -120,6 +120,11 @@ function dayLabel(iso: string): string {
 function channelBadge(type: InboxChannelType) {
   if (type === 'INSTAGRAM') {
     return <Badge type="instagram" text="Instagram" icon={Instagram} pill />;
+  }
+  // Mesma cor do WhatsApp (é o mesmo app para o contato), com selo e rótulo
+  // distinguindo a API Oficial da conexão via QR Code.
+  if (type === 'WHATSAPP_OFFICIAL') {
+    return <Badge type="whatsapp" text="API Oficial" icon={BadgeCheck} pill />;
   }
   return <Badge type="whatsapp" text="WhatsApp" icon={MessageCircle} pill />;
 }
@@ -344,6 +349,7 @@ export default function InboxPage() {
   const filters: Array<{ id: InboxChannelType | 'ALL'; label: string }> = [
     { id: 'ALL', label: 'Todos' },
     { id: 'WHATSAPP', label: 'WhatsApp' },
+    { id: 'WHATSAPP_OFFICIAL', label: 'API Oficial' },
     { id: 'INSTAGRAM', label: 'Instagram' },
   ];
 

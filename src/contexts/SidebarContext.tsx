@@ -1,5 +1,5 @@
 'use client';
-import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, MessagesSquare, ShoppingCart, TicketPercent } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, MessagesSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -63,11 +63,13 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
   { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'main' },
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
+  { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
   { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns', group: 'engagement', locked: LOCKED_FEATURES.campaigns },
+  { id: 'templates', icon: LayoutTemplate, text: 'Templates', href: '/templates', permission: 'campaigns', group: 'engagement' },
   { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'contacts', group: 'engagement' },
   { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'campaigns', group: 'engagement' },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
@@ -108,6 +110,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
+      items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
     return items;
   }, [customMenuItems, showSupportTab]);

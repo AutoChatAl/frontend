@@ -1,5 +1,5 @@
 'use client';
-import { Settings, Share2, Zap, CalendarDays } from 'lucide-react';
+import { Settings, Share2, Zap, CalendarDays, Trello } from 'lucide-react';
 
 import type { AITab } from '@/types/AI';
 
@@ -8,6 +8,7 @@ const allTabs: AITab[] = [
   { id: 'channels', label: 'Canais', icon: Share2 },
   { id: 'triggers', label: 'Gatilhos', icon: Zap },
   { id: 'scheduling', label: 'Agendamento', icon: CalendarDays },
+  { id: 'funnel', label: 'Funil', icon: Trello },
 ];
 interface AITabsProps {
     activeTab: string;

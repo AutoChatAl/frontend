@@ -1,4 +1,4 @@
-export type InboxChannelType = 'WHATSAPP' | 'INSTAGRAM';
+export type InboxChannelType = 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
 export type InboxDirection = 'IN' | 'OUT';
 export type MessageDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
 export type MessageMediaType = 'image' | 'audio' | 'video' | 'document';

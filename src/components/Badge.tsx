@@ -19,6 +19,7 @@ export default function Badge({ type, text, icon: Icon, pill = false }: {
     admin: 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
     collaborator: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
     error: 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20',
+    beta: 'bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20',
   };
   return (<span className={`text-xs font-semibold flex items-center gap-1 w-fit transition-colors duration-200 ${pill ? 'px-2 py-0.5 rounded-full' : 'px-2.5 py-1 rounded-md border'} ${styles[type as keyof typeof styles] || styles.neutral}`}>
     {Icon && <Icon size={12}/>}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2, Info, MessageCircle, Instagram } from 'lucide-react';
+import { BadgeCheck, Plus, Trash2, Info, MessageCircle, Instagram } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -254,6 +254,18 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, channel
             </button>
             <button
               type="button"
+              onClick={() => handleChannelTypeChange('WHATSAPP_OFFICIAL')}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                channelType === 'WHATSAPP_OFFICIAL'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+              }`}
+            >
+              <BadgeCheck size={14} />
+              API Oficial
+            </button>
+            <button
+              type="button"
               onClick={() => handleChannelTypeChange('INSTAGRAM')}
               className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
                 channelType === 'INSTAGRAM'
@@ -275,10 +287,15 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, channel
               value: c.id,
               label: c.name,
               description: c.number ?? undefined,
-              icon: channelType === 'INSTAGRAM' ? <Instagram size={14} /> : <MessageCircle size={14} />,
+              icon: channelType === 'INSTAGRAM' ? <Instagram size={14} /> : channelType === 'WHATSAPP_OFFICIAL' ? <BadgeCheck size={14} /> : <MessageCircle size={14} />,
             }))}
           />
 
+          {channelType === 'WHATSAPP_OFFICIAL' && (
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              Pela API Oficial, mensagens livres só são entregues se o cliente conversou com o número nas últimas 24h (janela de atendimento da Meta). Fora da janela a tentativa falha com o motivo registrado.
+            </p>
+          )}
           {channelType === 'INSTAGRAM' && (
             <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
               Para Instagram, o cliente precisa ter conversado com sua conta nas últimas 24h ou ter dado opt-in para notificações recorrentes.

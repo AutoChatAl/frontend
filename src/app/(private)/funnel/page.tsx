@@ -159,17 +159,21 @@ export default function FunnelPage() {
   );
 
   const handleStageSubmit = useCallback(
-    async (name: string, color: StageColor) => {
+    async (name: string, color: StageColor, aiCriteria: string) => {
       setStageSaving(true);
       try {
         if (stageModal.mode === 'create') {
-          await funnelService.createStage(name, color);
+          await funnelService.createStage(name, color, aiCriteria);
           await loadBoard();
           addToast('success', 'Etapa criada com sucesso.');
         } else if (stageModal.stage) {
-          const updated = await funnelService.updateStage(stageModal.stage.id, { name, color });
+          const updated = await funnelService.updateStage(stageModal.stage.id, { name, color, aiCriteria });
           setStages((prev) =>
-            prev.map((stage) => (stage.id === updated.id ? { ...stage, name: updated.name, color: updated.color } : stage)),
+            prev.map((stage) =>
+              stage.id === updated.id
+                ? { ...stage, name: updated.name, color: updated.color, aiCriteria: updated.aiCriteria }
+                : stage,
+            ),
           );
           addToast('success', 'Etapa atualizada.');
         }
@@ -278,7 +282,13 @@ export default function FunnelPage() {
         isOpen={stageModal.open}
         mode={stageModal.mode}
         loading={stageSaving}
-        {...(stageModal.stage ? { initialName: stageModal.stage.name, initialColor: stageModal.stage.color } : {})}
+        {...(stageModal.stage
+          ? {
+            initialName: stageModal.stage.name,
+            initialColor: stageModal.stage.color,
+            initialAiCriteria: stageModal.stage.aiCriteria,
+          }
+          : {})}
         onClose={() => setStageModal({ open: false, mode: 'create', stage: null })}
         onSubmit={handleStageSubmit}
       />

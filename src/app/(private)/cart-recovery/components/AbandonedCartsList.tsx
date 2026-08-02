@@ -411,7 +411,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
               <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Tentativas de recuperação</p>
               <div className="space-y-1">
                 {(detailTarget.recoveryAttempts ?? []).map((a, i) => {
-                  const channelLabel = a.channelType === 'INSTAGRAM' ? 'Instagram' : a.channelType === 'WHATSAPP' ? 'WhatsApp' : '—';
+                  const channelLabel = a.channelType === 'INSTAGRAM' ? 'Instagram' : a.channelType === 'WHATSAPP_OFFICIAL' ? 'API Oficial' : a.channelType === 'WHATSAPP' ? 'WhatsApp' : '—';
                   const statusLabel = ATTEMPT_STATUS_LABELS[a.status];
                   const whenLabel = a.sentAt
                     ? `em ${formatDate(a.sentAt)}`
@@ -423,9 +423,14 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                       <span className="text-slate-600 dark:text-slate-300">
                         Passo {a.stepIndex + 1} · {channelLabel}
                       </span>
-                      <span className={`flex items-center gap-1 font-medium ${ATTEMPT_STATUS_TONE[a.status]}`}>
-                        <span>{statusLabel}</span>
-                        {whenLabel && <span className="font-normal text-slate-500 dark:text-slate-400">· {whenLabel}</span>}
+                      <span className={`flex flex-col items-end gap-0.5 text-right font-medium ${ATTEMPT_STATUS_TONE[a.status]}`}>
+                        <span className="flex items-center gap-1">
+                          <span>{statusLabel}</span>
+                          {whenLabel && <span className="font-normal text-slate-500 dark:text-slate-400">· {whenLabel}</span>}
+                        </span>
+                        {a.error && (a.status === 'SKIPPED' || a.status === 'FAILED') && (
+                          <span className="font-normal text-slate-400 dark:text-slate-500">{a.error}</span>
+                        )}
                       </span>
                     </div>
                   );

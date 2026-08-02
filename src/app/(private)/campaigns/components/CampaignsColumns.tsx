@@ -1,5 +1,5 @@
 'use client';
-import { Clock, MessageCircle, Smartphone, Users } from 'lucide-react';
+import { BadgeCheck, Clock, MessageCircle, Smartphone, Users } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
@@ -34,7 +34,14 @@ export const columns = [
       {row.channels && row.channels.length > 0 ? (row.channels.map((ch) => {
         if (!ch.channel)
           return null;
-        return (<Badge key={ch.channelId} type={ch.channel.type.toLowerCase() || 'whatsapp'} text={ch.channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'} icon={ch.channel.type === 'WHATSAPP' ? MessageCircle : Smartphone}/>);
+        const isOfficial = ch.channel.type === 'WHATSAPP_OFFICIAL';
+        const isWhatsApp = ch.channel.type === 'WHATSAPP';
+        return (<Badge
+          key={ch.channelId}
+          type={isOfficial || isWhatsApp ? 'whatsapp' : 'instagram'}
+          text={isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
+          icon={isOfficial ? BadgeCheck : isWhatsApp ? MessageCircle : Smartphone}
+        />);
       })) : (<span className="text-xs text-slate-400">—</span>)}
     </div>),
   },

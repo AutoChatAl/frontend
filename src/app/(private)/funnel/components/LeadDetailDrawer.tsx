@@ -1,5 +1,5 @@
 'use client';
-import { Check, Loader2, Plus, ShoppingCart, Sparkles, X } from 'lucide-react';
+import { Bot, Check, Loader2, Plus, ShoppingCart, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -182,12 +182,23 @@ export default function LeadDetailDrawer({ lead, stages, onClose, onSaved }: Lea
             )}
           </div>
 
-          <Select
-            label="Etapa do funil"
-            value={stageId}
-            onChange={(value) => setStageId(value)}
-            options={stages.map((stage) => ({ value: stage.id, label: stage.name }))}
-          />
+          <div className="space-y-1.5">
+            <Select
+              label="Etapa do funil"
+              value={stageId}
+              onChange={(value) => setStageId(value)}
+              options={stages.map((stage) => ({ value: stage.id, label: stage.name }))}
+            />
+            {lead.stageMovedBy === 'AI' && (
+              <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 dark:border-indigo-900/20 dark:bg-indigo-900/10">
+                <Bot size={13} className="mt-0.5 shrink-0 text-indigo-500 dark:text-indigo-400" />
+                <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                  Movido pela IA {formatRelative(lead.stageEnteredAt)}
+                  {lead.stageMoveReason ? `: ${lead.stageMoveReason}` : '.'}
+                </p>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Select<AttendanceStatus>

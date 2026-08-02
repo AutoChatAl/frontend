@@ -1,4 +1,5 @@
 import type { Campaign, CampaignRun, CreateCampaignInput, UpdateCampaignInput } from '@/types/Campaign';
+import type { WaCampaignEstimate } from '@/types/WhatsAppOfficial';
 import { apiClient } from '@/utils/ApiClient';
 import { getErrorFromResponse } from '@/utils/ErrorHandling';
 
@@ -87,6 +88,13 @@ export class CampaignService {
             failed: number;
             skipped: number;
         }>(response, 'Falha ao processar jobs. Tente novamente.');
+  }
+  public async estimateOfficialCost(input: {
+        templateId: string;
+        contactCount: number;
+    }): Promise<WaCampaignEstimate> {
+    const response = await apiClient.post<BackendResponse<WaCampaignEstimate>>('/campaigns/estimate', input);
+    return extractData<WaCampaignEstimate>(response, 'Falha ao estimar o custo da campanha.');
   }
 }
 export const campaignService = new CampaignService();
