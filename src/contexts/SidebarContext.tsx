@@ -60,11 +60,11 @@ interface SidebarProviderProps {
 const ALL_MENU_ITEMS: MenuItem[] = [
   // Base do workspace — sem rótulo de seção.
   { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard', group: 'main' },
-  // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
-  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'main' },
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
   { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
+  // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
+  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'audience' },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
