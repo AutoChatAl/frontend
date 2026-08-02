@@ -3,6 +3,7 @@ import { Bot, Menu, Sparkles, LogOut, X, ChevronDown, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import Badge from '@/components/Badge';
 import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
@@ -43,8 +44,8 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount,
       <Icon size={20} className="shrink-0"/>
       {!collapsed && (<>
         <span className={`text-sm truncate ${active && !locked ? 'font-semibold' : 'font-medium'}`}>{text}</span>
-        {beta && (<span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                    Beta
+        {beta && (<span className="shrink-0">
+          <Badge type="beta" text="BETA" pill/>
         </span>)}
         {locked
           ? (<Lock size={14} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500"/>)
