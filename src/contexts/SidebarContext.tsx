@@ -13,10 +13,6 @@ export interface MenuGroup {
     label: string | null;
 }
 
-/**
- * Ordem e rótulos das seções da sidebar. A seção `main` não tem rótulo —
- * agrupa a visão geral e a conexão de canais (base do workspace).
- */
 export const MENU_GROUPS: MenuGroup[] = [
   { id: 'main', label: null },
   { id: 'audience', label: 'Público' },
@@ -36,8 +32,8 @@ export interface MenuItem {
     href?: string;
     badgeCount?: number;
     permission?: Permission;
-    /** Quando true, o item aparece com cadeado e não navega (feature ainda não oficial). */
     locked?: boolean;
+    beta?: boolean;
 }
 interface SidebarContextType {
     activeTab: string;
@@ -64,7 +60,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
   // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
-  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'audience' },
+  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'audience', beta: true },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
@@ -106,7 +102,6 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
         return permissions.includes(item.permission);
       });
     }
-    // Abas exclusivas do admin do sistema (showSupportTab = isAdmin no layout privado).
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
