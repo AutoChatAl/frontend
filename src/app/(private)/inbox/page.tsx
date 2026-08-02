@@ -1,6 +1,6 @@
 'use client';
 import { BadgeCheck, Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Badge from '@/components/Badge';
@@ -18,6 +18,22 @@ import {
 } from '@/utils/AudioWav';
 
 import { messagePreview, useInbox } from './useInbox';
+
+/**
+ * Cache do último valor conhecido da configuração, só para o switch já nascer na posição
+ * certa. A verdade continua sendo a API — a resposta sobrescreve o que estiver aqui.
+ * Chaveado por workspace para não vazar o estado de uma conta para outra no mesmo navegador.
+ */
+function chatEnabledCacheKey(workspaceId: string): string {
+  return `inbox_chat_enabled:${workspaceId}`;
+}
+
+/**
+ * Antes da pintura: lido em layout effect, o switch nunca chega a ser desenhado na
+ * posição errada. Em useEffect comum sobraria um frame com o valor padrão.
+ * No servidor não há layout effect — cai em useEffect só para não emitir warning.
+ */
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 function StatusTicks({ message }: { message: InboxMessage }) {
   if (message.direction !== 'OUT') return null;
@@ -269,14 +285,25 @@ export default function InboxPage() {
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
 
+  const workspaceId = authService.getUser()?.workspace?.id ?? null;
+
+  useIsomorphicLayoutEffect(() => {
+    if (!workspaceId) return;
+    const cached = localStorage.getItem(chatEnabledCacheKey(workspaceId));
+    if (cached !== null) setChatEnabled(cached === 'true');
+  }, [workspaceId]);
+
   useEffect(() => {
     const role = authService.getUser()?.role;
     setCanToggleChat(role === 'owner' || role === 'admin');
     inboxService.getSettings()
-      .then((settings) => setChatEnabled(settings.enabled))
+      .then((settings) => {
+        setChatEnabled(settings.enabled);
+        if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
+      })
       .catch(() => setSettingsError('Não foi possível carregar a configuração do chat.'))
       .finally(() => setSettingsLoaded(true));
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
     stickToBottomRef.current = true;
@@ -299,6 +326,9 @@ export default function InboxPage() {
     try {
       const settings = await inboxService.updateSettings(next);
       setChatEnabled(settings.enabled);
+      // Só grava o cache com a confirmação do servidor: um valor otimista que falhou
+      // faria a próxima visita abrir na posição errada até a API responder.
+      if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
     } catch (e) {
       setChatEnabled(previous);
       setSettingsError(e instanceof Error ? e.message : 'Não foi possível salvar a configuração do chat.');
