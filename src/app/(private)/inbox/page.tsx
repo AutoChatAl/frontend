@@ -7,6 +7,8 @@ import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import EmptyState from '@/components/EmptyState';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import { authService } from '@/services/auth.service';
+import { inboxService } from '@/services/inbox.service';
 import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
@@ -245,7 +247,13 @@ export default function InboxPage() {
   } = useInbox();
 
   const [draft, setDraft] = useState('');
+  // Configuração do workspace, carregada da API. Assume desligado enquanto não responde,
+  // que é o estado mais conservador: não mostra conversa antes de saber se pode.
   const [chatEnabled, setChatEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [savingChatSetting, setSavingChatSetting] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [canToggleChat, setCanToggleChat] = useState(false);
   const [recording, setRecording] = useState(false);
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
@@ -262,6 +270,15 @@ export default function InboxPage() {
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
 
   useEffect(() => {
+    const role = authService.getUser()?.role;
+    setCanToggleChat(role === 'owner' || role === 'admin');
+    inboxService.getSettings()
+      .then((settings) => setChatEnabled(settings.enabled))
+      .catch(() => setSettingsError('Não foi possível carregar a configuração do chat.'))
+      .finally(() => setSettingsLoaded(true));
+  }, []);
+
+  useEffect(() => {
     stickToBottomRef.current = true;
     setReplyTo(null);
   }, [selectedId]);
@@ -272,6 +289,23 @@ export default function InboxPage() {
       el.scrollTop = el.scrollHeight;
     }
   }, [messages, loadingMessages, selectedId]);
+
+  // Atualização otimista: o gate da thread responde na hora e volta atrás se a API recusar.
+  const handleToggleChat = async (next: boolean) => {
+    const previous = chatEnabled;
+    setChatEnabled(next);
+    setSavingChatSetting(true);
+    setSettingsError(null);
+    try {
+      const settings = await inboxService.updateSettings(next);
+      setChatEnabled(settings.enabled);
+    } catch (e) {
+      setChatEnabled(previous);
+      setSettingsError(e instanceof Error ? e.message : 'Não foi possível salvar a configuração do chat.');
+    } finally {
+      setSavingChatSetting(false);
+    }
+  };
 
   const handleSend = async () => {
     const body = draft.trim();
@@ -366,13 +400,21 @@ export default function InboxPage() {
         <div className="p-4 space-y-3 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-lg font-bold text-slate-900 dark:text-white">Caixa de entrada</h1>
-            <div className="flex shrink-0 items-center gap-2">
+            <div
+              className="flex shrink-0 items-center gap-2"
+              title={canToggleChat ? undefined : 'Somente o dono do workspace pode ativar o chat'}
+            >
               <span className={`text-xs font-medium ${chatEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
                 {chatEnabled ? 'Ativado' : 'Desativado'}
               </span>
-              <ToggleSwitch checked={chatEnabled} onChange={setChatEnabled} />
+              <ToggleSwitch
+                checked={chatEnabled}
+                onChange={handleToggleChat}
+                disabled={!settingsLoaded || savingChatSetting || !canToggleChat}
+              />
             </div>
           </div>
+          {settingsError && <p className="text-xs text-rose-500">{settingsError}</p>}
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input

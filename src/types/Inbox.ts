@@ -58,3 +58,8 @@ export interface InboxListFilters {
   channelType?: InboxChannelType;
   search?: string;
 }
+
+/** Interruptor do multichat no workspace: desligado, nada é gravado na inbox. */
+export interface InboxSettings {
+  enabled: boolean;
+}

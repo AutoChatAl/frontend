@@ -1,10 +1,26 @@
 import { authService } from '@/services/auth.service';
-import type { InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia } from '@/types/Inbox';
+import type { InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings } from '@/types/Inbox';
 import { apiClient } from '@/utils/ApiClient';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class InboxService {
+  public async getSettings(): Promise<InboxSettings> {
+    const response = await apiClient.get<InboxSettings>('/inbox/settings');
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível carregar a configuração do chat.');
+    }
+    return response.data;
+  }
+
+  public async updateSettings(enabled: boolean): Promise<InboxSettings> {
+    const response = await apiClient.patch<InboxSettings>('/inbox/settings', { enabled });
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível salvar a configuração do chat.');
+    }
+    return response.data;
+  }
+
   public async listConversations(filters: InboxListFilters = {}): Promise<InboxConversation[]> {
     const query = new URLSearchParams();
     if (filters.channelType) query.set('channelType', filters.channelType);
