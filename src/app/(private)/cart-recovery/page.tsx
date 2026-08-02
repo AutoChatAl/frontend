@@ -135,7 +135,7 @@ export default function CartRecoveryPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-white sm:text-2xl">Recuperação de Carrinhos</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Recuperação de Carrinhos</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
             Capture vendas perdidas com mensagens automáticas via WhatsApp ou Instagram para clientes que abandonaram o checkout.
           </p>

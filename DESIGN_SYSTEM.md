@@ -630,6 +630,31 @@ text-slate-500 dark:text-slate-400
 
 ---
 
+### 8.8 AudioPlayer
+
+**Arquivo:** `src/components/AudioPlayer.tsx`
+
+Player de áudio com forma de onda, usado no `AudioPicker` (auto-respostas) e nos balões de áudio da inbox. Substitui o `<audio controls>` nativo, que não acompanha o tema.
+
+- Botão circular de play/pause `h-8 w-8`, tempo `atual / total` em `tabular-nums`
+- A onda vem dos picos reais do áudio; quando o CDN barra o fetch por CORS, cai numa onda genérica
+- O seek é um `input[type=range]` invisível sobreposto à onda — mantém teclado e leitor de tela funcionando
+- **Barras:** `bars` controla a densidade (padrão 44). Barras têm `min-w-0.5` e `gap-0.5`, então em
+  espaços estreitos elas encostam e a onda vira um bloco sólido. Regra prática: ~44 barras a partir de
+  `w-96`, ~28 barras em torno de `w-72` (usado nos balões da inbox)
+
+| Variante | Quando usar | Botão | Onda preenchida | Onda vazia | Tempo |
+|---|---|---|---|---|---|
+| `default` | Fundo claro ou card | `bg-indigo-600 text-white` | `bg-indigo-500 dark:bg-indigo-400` | `bg-slate-300 dark:bg-slate-600` | `text-slate-500 dark:text-slate-400` |
+| `accent` | Fundo sólido escuro (balão enviado, `bg-indigo-600`) | `bg-white/20 text-white` | `bg-white` | `bg-indigo-300/50` | `text-indigo-200` |
+
+```tsx
+<AudioPlayer src={src} />
+<AudioPlayer src={src} variant="accent" className="w-64 max-w-full" />
+```
+
+---
+
 ## 9. Padrões de Layout
 
 ### 9.1 Estrutura de Página

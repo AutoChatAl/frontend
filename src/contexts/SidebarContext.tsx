@@ -1,5 +1,5 @@
 'use client';
-import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, MessagesSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -63,6 +63,8 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
   { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
+  // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
+  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'audience' },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
@@ -73,7 +75,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
-  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
+  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
