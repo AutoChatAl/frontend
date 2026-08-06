@@ -8,7 +8,7 @@ export interface Campaign {
     message: string;
     linkUrl?: string;
     linkLabel?: string;
-    messageType: 'TEXT' | 'GENERIC_TEMPLATE';
+    messageType: 'TEXT' | 'GENERIC_TEMPLATE' | 'WHATSAPP_TEMPLATE';
     messageMeta?: Record<string, unknown>;
     messageTag?: 'HUMAN_AGENT' | null;
     channelConfigs?: Array<{
@@ -33,7 +33,7 @@ export interface CampaignChannel {
     channel: {
         id: string;
         name: string;
-        type: 'WHATSAPP' | 'INSTAGRAM';
+        type: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
         status: string;
     };
 }
@@ -77,7 +77,7 @@ export interface CreateCampaignInput {
     channelIds: string[];
     groupId?: string;
     contactIds: string[];
-    messageType?: 'TEXT' | 'GENERIC_TEMPLATE';
+    messageType?: 'TEXT' | 'GENERIC_TEMPLATE' | 'WHATSAPP_TEMPLATE';
     messageMeta?: {
         buttons?: Array<{
             title: string;
@@ -92,6 +92,11 @@ export interface CreateCampaignInput {
         documentBase64?: string;
         documentMimeType?: string;
         documentName?: string;
+        templateId?: string;
+        templateName?: string;
+        templateLanguage?: string;
+        templateVariables?: Record<string, string>;
+        headerMediaUrl?: string;
     };
     messageTag?: 'HUMAN_AGENT';
     frequency?: 'DAILY' | 'ONCE';

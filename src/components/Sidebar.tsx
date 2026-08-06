@@ -3,6 +3,7 @@ import { Bot, Menu, Sparkles, LogOut, X, ChevronDown, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import Badge from '@/components/Badge';
 import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
@@ -21,6 +22,7 @@ interface SidebarItemProps {
     badgeCount?: number | undefined;
     tourId?: string;
     locked?: boolean | undefined;
+    beta?: boolean | undefined;
 }
 interface SidebarProps {
     brandName?: string;
@@ -28,7 +30,7 @@ interface SidebarProps {
     userRole?: string;
     userInitials?: string;
 }
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked }: SidebarItemProps) => {
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked, beta }: SidebarItemProps) => {
   return (<button onClick={locked ? undefined : onClick} aria-disabled={locked || undefined} title={locked ? 'Em breve — indisponível' : undefined} {...(tourId ? { 'data-tour': tourId } : {})} className={`
         flex items-center gap-3 w-full px-3 py-3 rounded-lg transition-all duration-200 relative
         ${locked
@@ -42,6 +44,9 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount,
       <Icon size={20} className="shrink-0"/>
       {!collapsed && (<>
         <span className={`text-sm truncate ${active && !locked ? 'font-semibold' : 'font-medium'}`}>{text}</span>
+        {beta && (<span className="shrink-0">
+          <Badge type="beta" text="BETA" pill/>
+        </span>)}
         {locked
           ? (<Lock size={14} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500"/>)
           : (<>
@@ -78,7 +83,7 @@ const SidebarSections = ({ items, activeTab, collapsed, collapsedGroups, onItemC
             <span>{group.label}</span>
             <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${groupCollapsed ? '-rotate-90' : ''}`}/>
           </button>))}
-        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked}/>))}
+        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked} beta={item.beta}/>))}
       </div>);
     })}
   </>);

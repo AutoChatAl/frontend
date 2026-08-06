@@ -10,7 +10,8 @@ import CombinedLineChart from './components/CombinedLineChart';
 
 interface MetricCardProps {
     title: string;
-    value: number;
+    /** Número é formatado em pt-BR; string entra pronta (ex.: valor em moeda). */
+    value: number | string;
     icon: React.ComponentType<{
         size?: number;
         className?: string;
@@ -25,8 +26,8 @@ function MetricCard({ title, value, icon: Icon, color, bgColor }: MetricCardProp
     </div>
     <div className="min-w-0">
       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">{title}</p>
-      <p className="text-xl font-bold text-slate-800 dark:text-white">
-        {value.toLocaleString('pt-BR')}
+      <p className="text-xl font-bold text-slate-800 dark:text-white truncate">
+        {typeof value === 'number' ? value.toLocaleString('pt-BR') : value}
       </p>
     </div>
   </div>);
@@ -179,7 +180,7 @@ export default function DashboardPage() {
 
     {billing && (<>
       <div className="pt-2">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Faturamento</h2>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Faturamento</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               Baseado em agendamentos concluídos nos últimos 30 dias
         </p>
@@ -187,17 +188,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard title="Agendamentos Concluídos" value={billing.totalCompleted} icon={CalendarCheck} color="text-emerald-600 dark:text-emerald-400" bgColor="bg-emerald-50 dark:bg-emerald-900/30"/>
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 bg-green-50 dark:bg-green-900/30">
-            <DollarSign size={20} className="text-green-600 dark:text-green-400"/>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate">Faturamento Total</p>
-            <p className="text-2xl font-bold text-slate-800 dark:text-white mt-0.5">
-              {formatCurrency(billing.totalRevenueCents)}
-            </p>
-          </div>
-        </div>
+        <MetricCard title="Faturamento Total" value={formatCurrency(billing.totalRevenueCents)} icon={DollarSign} color="text-green-600 dark:text-green-400" bgColor="bg-green-50 dark:bg-green-900/30"/>
         <MetricCard title="Produtos com Vendas" value={billing.revenueByProduct.length} icon={Package} color="text-violet-600 dark:text-violet-400" bgColor="bg-violet-50 dark:bg-violet-900/30"/>
       </div>
 

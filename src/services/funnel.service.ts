@@ -4,6 +4,8 @@ import type {
   FunnelColumn,
   FunnelLead,
   FunnelStageDefinition,
+  StageColor,
+  StagePayload,
   UpdateLeadPayload,
 } from '@/types/Funnel';
 import { apiClient } from '@/utils/ApiClient';
@@ -67,10 +69,11 @@ class FunnelService {
     return response.data.stages;
   }
 
-  public async createStage(name: string, color?: string): Promise<FunnelStageDefinition> {
+  public async createStage(name: string, color?: StageColor, aiCriteria?: string): Promise<FunnelStageDefinition> {
     const response = await apiClient.post<{ stage: FunnelStageDefinition }>('/funnel/stages', {
       name,
       ...(color ? { color } : {}),
+      ...(aiCriteria !== undefined ? { aiCriteria } : {}),
     });
     if (!response.success || !response.data) {
       throw new Error('Falha ao criar a etapa.');
@@ -78,7 +81,7 @@ class FunnelService {
     return response.data.stage;
   }
 
-  public async updateStage(stageId: string, data: { name?: string; color?: string }): Promise<FunnelStageDefinition> {
+  public async updateStage(stageId: string, data: StagePayload): Promise<FunnelStageDefinition> {
     const response = await apiClient.patch<{ stage: FunnelStageDefinition }>(`/funnel/stages/${stageId}`, data);
     if (!response.success || !response.data) {
       throw new Error('Falha ao atualizar a etapa.');

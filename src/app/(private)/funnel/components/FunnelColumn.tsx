@@ -79,7 +79,7 @@ export default function FunnelColumn({
                 className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
               >
                 <Pencil size={14} className="text-slate-400" />
-                Renomear
+                Editar etapa
               </button>
               <button
                 type="button"

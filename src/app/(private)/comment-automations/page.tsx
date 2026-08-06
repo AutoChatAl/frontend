@@ -109,9 +109,6 @@ export default function CommentAutomationsPage() {
     <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-sm">
-            <MessageSquare size={18} className="text-white"/>
-          </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Automação de Comentários</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm">

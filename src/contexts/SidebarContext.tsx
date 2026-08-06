@@ -1,5 +1,5 @@
 'use client';
-import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, ShoppingCart, TicketPercent } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, MessagesSquare, ShoppingCart, LayoutTemplate, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -13,10 +13,6 @@ export interface MenuGroup {
     label: string | null;
 }
 
-/**
- * Ordem e rótulos das seções da sidebar. A seção `main` não tem rótulo —
- * agrupa a visão geral e a conexão de canais (base do workspace).
- */
 export const MENU_GROUPS: MenuGroup[] = [
   { id: 'main', label: null },
   { id: 'audience', label: 'Público' },
@@ -36,8 +32,8 @@ export interface MenuItem {
     href?: string;
     badgeCount?: number;
     permission?: Permission;
-    /** Quando true, o item aparece com cadeado e não navega (feature ainda não oficial). */
     locked?: boolean;
+    beta?: boolean;
 }
 interface SidebarContextType {
     activeTab: string;
@@ -61,17 +57,21 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Base do workspace — sem rótulo de seção.
   { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard', group: 'main' },
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: 'channels', group: 'main' },
+  { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'channels', group: 'main' },
   // Público — quem você alcança.
+  // Sem `permission`: as rotas de /inbox no backend exigem apenas autenticação.
+  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', group: 'audience', beta: true },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
   { id: 'campaigns', icon: Send, text: 'Campanhas', href: '/campaigns', permission: 'campaigns', group: 'engagement', locked: LOCKED_FEATURES.campaigns },
+  { id: 'templates', icon: LayoutTemplate, text: 'Templates', href: '/templates', permission: 'campaigns', group: 'engagement' },
   { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'contacts', group: 'engagement' },
   { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'campaigns', group: 'engagement' },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
-  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários IG', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
+  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
@@ -102,10 +102,10 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
         return permissions.includes(item.permission);
       });
     }
-    // Abas exclusivas do admin do sistema (showSupportTab = isAdmin no layout privado).
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
+      items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
     return items;
   }, [customMenuItems, showSupportTab]);
