@@ -1,5 +1,5 @@
 'use client';
-import { Calendar, CheckCircle, Loader2, RefreshCw, Unlink } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle, Loader2, RefreshCw, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
@@ -106,10 +106,17 @@ export default function GoogleCalendarIntegration({ onToast }: GoogleCalendarInt
       <div className="flex items-center gap-2 mb-4">
         <Calendar size={18} className="text-indigo-600 dark:text-indigo-400"/>
         <h3 className="text-base font-bold text-slate-800 dark:text-white">Google Agenda</h3>
+        <Badge type="warning" text="Beta" pill/>
         {status?.connected && (<Badge type="success" text="Conectado" icon={CheckCircle} pill/>)}
       </div>
 
       {!status?.connected && (<div className="space-y-4">
+        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3">
+          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+                Esta integração está em fase beta. Para usar, envie o e-mail da sua conta do Google Agenda para o nosso suporte e aguarde a liberação antes de conectar.
+          </p>
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">
               Conecte sua conta do Google para sincronizar seus agendamentos nos dois sentidos: agendamentos criados no Synq aparecem no seu Google Agenda, e eventos criados no Google Agenda aparecem automaticamente no seu calendário do Synq, bloqueando os horários na disponibilidade.
         </p>
