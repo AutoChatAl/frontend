@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 
 export const dynamic = 'force-dynamic';
 type Status = 'loading' | 'success' | 'error';
+type Provider = 'instagram' | 'google';
 const ERROR_MESSAGES: Record<string, string> = {
-  subscription_inactive: 'Sua assinatura está inativa. Reative seu plano para conectar canais.',
+  subscription_inactive: 'Sua assinatura está inativa. Reative seu plano para usar esta conexão.',
   missing_params: 'Parâmetros inválidos na conexão.',
   instance_limit: 'Limite de canais do seu plano atingido (somando WhatsApp e Instagram). Remova um canal existente ou adicione uma instância extra para conectar outro.',
 };
@@ -14,6 +15,7 @@ function friendlyError(code: string): string {
 }
 export default function OAuthCallbackPage() {
   const [status, setStatus] = useState<Status>('loading');
+  const [provider, setProvider] = useState<Provider>('instagram');
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(3);
   useEffect(() => {
@@ -21,16 +23,23 @@ export default function OAuthCallbackPage() {
       const params = new URLSearchParams(window.location.search);
       const igConnected = params.get('ig_connected');
       const igError = params.get('ig_error');
-      if (igConnected === 'true') {
+      const gcalConnected = params.get('gcal_connected');
+      const gcalError = params.get('gcal_error');
+      if (gcalConnected === 'true' || gcalError) {
+        setProvider('google');
+      }
+      const connected = igConnected === 'true' || gcalConnected === 'true';
+      const errorParam = igError || gcalError;
+      if (connected) {
         setStatus('success');
       }
-      else if (igError) {
+      else if (errorParam) {
         setStatus('error');
         try {
-          setErrorMessage(friendlyError(decodeURIComponent(igError)));
+          setErrorMessage(friendlyError(decodeURIComponent(errorParam)));
         }
         catch {
-          setErrorMessage(friendlyError(igError));
+          setErrorMessage(friendlyError(errorParam));
         }
       }
       else {
@@ -82,7 +91,9 @@ export default function OAuthCallbackPage() {
         </div>
         <h1 className="text-2xl font-bold text-slate-800">Conta conectada!</h1>
         <p className="text-slate-500">
-              Sua conta do Instagram foi conectada com sucesso ao Synq.
+          {provider === 'google'
+            ? 'Seu Google Agenda foi conectado com sucesso ao Synq.'
+            : 'Sua conta do Instagram foi conectada com sucesso ao Synq.'}
         </p>
         <p className="text-sm text-slate-400">
               Esta janela será fechada em {countdown}s...
@@ -103,7 +114,9 @@ export default function OAuthCallbackPage() {
         </div>
         <h1 className="text-2xl font-bold text-slate-800">Erro na conexão</h1>
         <p className="text-slate-500">
-              Não foi possível conectar sua conta do Instagram.
+          {provider === 'google'
+            ? 'Não foi possível conectar seu Google Agenda.'
+            : 'Não foi possível conectar sua conta do Instagram.'}
         </p>
         {errorMessage && (<div className="bg-red-50 border border-red-100 rounded-lg p-3">
           <p className="text-sm text-red-600">{errorMessage}</p>

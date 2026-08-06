@@ -1,9 +1,10 @@
 'use client';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Plug } from 'lucide-react';
 
 const tabs = [
   { id: 'calendar', label: 'Calendário', icon: Calendar },
   { id: 'business-hours', label: 'Horários', icon: Clock },
+  { id: 'integrations', label: 'Integrações', icon: Plug },
 ];
 interface SchedulingTabsProps {
     activeTab: string;
