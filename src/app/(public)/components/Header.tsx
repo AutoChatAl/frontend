@@ -4,11 +4,13 @@ import { ArrowRight, Menu, X, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 const NAV_LINKS = [
   { href: '#funcionalidades', label: 'Funcionalidades' },
   { href: '#instagram', label: 'Instagram' },
   { href: '#whatsapp', label: 'WhatsApp' },
-  { href: '#carrinho', label: 'Recuperação' },
+  ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ href: '#carrinho', label: 'Recuperação' }]),
   { href: '#precos', label: 'Preços' },
   { href: '#faq', label: 'FAQ' },
 ];

@@ -11,6 +11,8 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 const FEATURES = [
   {
     icon: Bot,
@@ -45,7 +47,9 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: 'Dashboard em tempo real',
-    description: 'Mensagens, conversões, recuperações e ROI em uma única visão.',
+    description: HIDDEN_FEATURES.cartRecovery
+      ? 'Mensagens, conversões e ROI em uma única visão.'
+      : 'Mensagens, conversões, recuperações e ROI em uma única visão.',
     color: 'from-cyan-500 to-blue-600',
   },
   {

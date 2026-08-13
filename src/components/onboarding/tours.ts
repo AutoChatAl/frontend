@@ -1,4 +1,5 @@
 import type { Permission } from '@/services/auth.service';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 /**
  * Versão do conteúdo dos tours. Sempre que adicionamos/reordenamos/melhoramos
@@ -46,7 +47,7 @@ export interface TourConfig {
  * steps daquele tour ainda não-concluídos e o tour não foi pulado, os steps aparecem
  * em sequência. O usuário pode pular o tour inteiro ou avançar/voltar entre os passos.
  */
-export const TOURS: TourConfig[] = [
+const ALL_TOURS: TourConfig[] = [
   {
     id: 'dashboard',
     pathname: '/dashboard',
@@ -423,6 +424,24 @@ export const TOURS: TourConfig[] = [
     ],
   },
 ];
+
+/**
+ * Tours ocultos do onboarding (ver HIDDEN_FEATURES em @lib/featureFlags).
+ * Nada e deletado: os steps continuam definidos em ALL_TOURS acima e voltam
+ * a aparecer assim que a flag for desligada.
+ */
+const HIDDEN_TOUR_IDS = new Set<string>([
+  ...(HIDDEN_FEATURES.cartRecovery ? ['cart-recovery'] : []),
+]);
+
+/** Steps individuais ocultos dentro de tours que continuam visiveis. */
+const HIDDEN_STEP_IDS = new Set<string>([
+  ...(HIDDEN_FEATURES.cartRecovery ? ['dashboard:cart-recovery-nav'] : []),
+]);
+
+export const TOURS: TourConfig[] = ALL_TOURS
+  .filter((tour) => !HIDDEN_TOUR_IDS.has(tour.id))
+  .map((tour) => ({ ...tour, steps: tour.steps.filter((step) => !HIDDEN_STEP_IDS.has(step.id)) }));
 
 export function findTourByPathname(pathname: string): TourConfig | undefined {
   return TOURS.find((t) => pathname === t.pathname || pathname.startsWith(`${t.pathname}/`));

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Instagram, MessageCircle, Sparkles, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 const HERO_BUBBLES = [
   {
     id: 1,
@@ -22,15 +24,19 @@ const HERO_BUBBLES = [
     title: 'Synq IA',
     message: 'Oi! Sim, 10% no PIX. Quer que eu te envie o link? 💜',
   },
-  {
-    id: 3,
-    side: 'left' as const,
-    delay: 1.8,
-    icon: ShoppingCart,
-    iconColor: 'text-amber-500',
-    title: 'Carrinho recuperado',
-    message: 'Tá ali esperando, finaliza? Frete grátis hoje! 🚀',
-  },
+  ...(HIDDEN_FEATURES.cartRecovery
+    ? []
+    : [
+      {
+        id: 3,
+        side: 'left' as const,
+        delay: 1.8,
+        icon: ShoppingCart,
+        iconColor: 'text-amber-500',
+        title: 'Carrinho recuperado',
+        message: 'Tá ali esperando, finaliza? Frete grátis hoje! 🚀',
+      },
+    ]),
 ];
 
 export default function HeroSection() {
@@ -77,9 +83,14 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-            A Synq centraliza <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
-            <strong className="text-slate-900">recuperação de carrinho</strong> em uma só plataforma — com
-            IA treinada no seu negócio respondendo 24h por dia.
+            {HIDDEN_FEATURES.cartRecovery ? (<>
+              A Synq centraliza <strong className="text-slate-900">WhatsApp e Instagram</strong> em uma só
+              plataforma — com IA treinada no seu negócio respondendo 24h por dia.
+            </>) : (<>
+              A Synq centraliza <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
+              <strong className="text-slate-900">recuperação de carrinho</strong> em uma só plataforma — com
+              IA treinada no seu negócio respondendo 24h por dia.
+            </>)}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
@@ -203,7 +214,9 @@ export default function HeroSection() {
               className="absolute -bottom-2 right-4 flex items-center gap-2 bg-emerald-500 text-white px-3 py-2 rounded-full shadow-lg shadow-emerald-500/30"
             >
               <MessageCircle size={14} />
-              <span className="text-xs font-semibold">+R$ 1.247 recuperados hoje</span>
+              <span className="text-xs font-semibold">
+                {HIDDEN_FEATURES.cartRecovery ? '+R$ 1.247 em vendas hoje' : '+R$ 1.247 recuperados hoje'}
+              </span>
             </motion.div>
           </div>
         </motion.div>

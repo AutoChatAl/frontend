@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 interface FaqItem {
   question: string;
   answer: string;
@@ -19,11 +21,15 @@ const FAQ_ITEMS: FaqItem[] = [
     answer:
       'O Instagram conecta diretamente via API Meta com login OAuth. O WhatsApp e conectado por leitura de QR Code, com controle automatico de cadencia, intervalos randomizados e limites diarios para preservar a saude do numero. Voce mantem seu numero atual e seu historico de conversas.',
   },
-  {
-    question: 'Como funciona a recuperacao de carrinho abandonado?',
-    answer:
-      'Conectamos sua plataforma de infoproduto (Hotmart, Kiwify, Eduzz, Monetizze, PerfectPay) ou webhook generico. Quando um cliente abandona o checkout, a Synq dispara automaticamente uma sequencia de mensagens no WhatsApp ou Instagram — com link de pagamento, cupom e tudo que precisa para reverter a venda.',
-  },
+  ...(HIDDEN_FEATURES.cartRecovery
+    ? []
+    : [
+      {
+        question: 'Como funciona a recuperacao de carrinho abandonado?',
+        answer:
+            'Conectamos sua plataforma de infoproduto (Hotmart, Kiwify, Eduzz, Monetizze, PerfectPay) ou webhook generico. Quando um cliente abandona o checkout, a Synq dispara automaticamente uma sequencia de mensagens no WhatsApp ou Instagram — com link de pagamento, cupom e tudo que precisa para reverter a venda.',
+      },
+    ]),
   {
     question: 'Em quanto tempo a IA aprende meu negocio?',
     answer:

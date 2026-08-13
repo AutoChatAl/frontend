@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { subscriptionService } from '@/services/subscription.service';
 import type { AiPlan, Plan, PlanSlug } from '@/types/Subscription';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number): string {
   const value = cents / 100;
@@ -43,7 +44,7 @@ function buildFeatures(plan: Plan): string[] {
     `${l.maxCampaigns} campanhas ativas`,
     `${formatNumber(l.maxContacts)} contatos no CRM`,
     `${l.maxAutoReplies} auto-respostas e ${l.maxCommentAutomations} automações de comentários`,
-    `${l.maxCartRecoveryIntegrations} integração${l.maxCartRecoveryIntegrations > 1 ? 'ões' : ''} de recuperação de carrinho`,
+    ...(HIDDEN_FEATURES.cartRecovery ? [] : [`${l.maxCartRecoveryIntegrations} integração${l.maxCartRecoveryIntegrations > 1 ? 'ões' : ''} de recuperação de carrinho`]),
     l.maxCollaborators > 0 ? `${l.maxCollaborators} colaboradores incluídos` : 'Usuário principal',
     l.supportLevel === 'vip' ? 'Suporte VIP prioritário' : 'Suporte padrão',
     plan.aiIncluded ? 'IA Synq inclusa neste plano' : 'IA disponível como add-on',

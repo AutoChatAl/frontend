@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
 import { authService, type Permission } from '@/services/auth.service';
-import { LOCKED_FEATURES } from '@lib/featureFlags';
+import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 
 export type MenuGroupId = 'main' | 'audience' | 'engagement' | 'automation' | 'system';
 
@@ -76,6 +76,12 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
 ];
+// IDs ocultados da navegacao (ver HIDDEN_FEATURES em @lib/featureFlags).
+// Os itens continuam definidos acima e as rotas seguem funcionando por URL
+// direta -- eles apenas nao sao renderizados na sidebar.
+const HIDDEN_MENU_IDS = new Set<string>([
+  ...(HIDDEN_FEATURES.cartRecovery ? ['cart-recovery'] : []),
+]);
 export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menuItems: customMenuItems, showSupportTab = true }: SidebarProviderProps) {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState(defaultActiveTab);
@@ -107,7 +113,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
       items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
-    return items;
+    return items.filter((item) => !HIDDEN_MENU_IDS.has(item.id));
   }, [customMenuItems, showSupportTab]);
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);

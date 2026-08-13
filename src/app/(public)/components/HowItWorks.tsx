@@ -2,6 +2,8 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Bot, Plug, Send } from 'lucide-react';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 const STEPS = [
   {
     id: 1,
@@ -25,8 +27,9 @@ const STEPS = [
     id: 3,
     icon: Send,
     title: 'Venda no automático',
-    description:
-      'A Synq responde, recupera carrinhos abandonados e converte visitantes em clientes 24/7.',
+    description: HIDDEN_FEATURES.cartRecovery
+      ? 'A Synq responde, atende e converte visitantes em clientes 24/7.'
+      : 'A Synq responde, recupera carrinhos abandonados e converte visitantes em clientes 24/7.',
     accent: 'from-fuchsia-500 to-pink-600',
     glow: 'shadow-fuchsia-500/30',
   },

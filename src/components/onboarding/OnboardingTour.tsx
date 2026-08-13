@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 
 import type { TourPlacement, TourStep } from '@/components/onboarding/tours';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 interface Rect {
   top: number;
@@ -166,7 +167,7 @@ function WelcomeModal({
           <p className="text-sm text-slate-400 leading-relaxed">
             Em poucos passos você vai conhecer tudo que dá pra fazer aqui: conectar Instagram e
             WhatsApp, disparar campanhas em massa, criar auto-respostas inteligentes, responder
-            comentários no Instagram, recuperar carrinhos abandonados no automático e configurar
+            comentários no Instagram{HIDDEN_FEATURES.cartRecovery ? '' : ', recuperar carrinhos abandonados no automático'} e configurar
             um chatbot com IA que conversa por você 24/7.
           </p>
 
@@ -176,7 +177,7 @@ function WelcomeModal({
               { icon: '📨', label: 'Disparos em massa' },
               { icon: '⚡', label: 'Auto-respostas' },
               { icon: '💬', label: 'Responder comentários' },
-              { icon: '🛒', label: 'Recuperar carrinhos' },
+              ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ icon: '🛒', label: 'Recuperar carrinhos' }]),
               { icon: '🤖', label: 'IA conversacional' },
             ].map((it) => (
               <div

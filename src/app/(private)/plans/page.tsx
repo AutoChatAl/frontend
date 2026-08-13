@@ -9,6 +9,7 @@ import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
 import type { Plan } from '@/types/Subscription';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -109,10 +110,10 @@ export default function PlansPage() {
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
               {plan.limits.maxAutoReplies} auto respostas
             </li>
-            <li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+            {!HIDDEN_FEATURES.cartRecovery && (<li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
               {plan.limits.maxCartRecoveryIntegrations ?? 0} integraç{(plan.limits.maxCartRecoveryIntegrations ?? 0) === 1 ? 'ão' : 'ões'} de recuperação de carrinho
-            </li>
+            </li>)}
             {plan.limits.maxCollaborators > 0 && (<li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
               {plan.limits.maxCollaborators} colaboradores

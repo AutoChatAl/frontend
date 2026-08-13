@@ -5,6 +5,7 @@ import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
 import type { Contact } from '@/types/Contact';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function getInitials(name: string): string {
   return name
@@ -28,7 +29,7 @@ function formatDate(iso?: string | null): string {
     return `${diffDays} dias atrás`;
   return d.toLocaleDateString('pt-BR');
 }
-export const columns = [
+const ALL_COLUMNS = [
   {
     header: 'Nome',
     accessor: 'displayName' as keyof Contact,
@@ -145,3 +146,14 @@ export const columns = [
     className?: string;
     render?: (value: unknown, row: Contact) => ReactNode;
 }>;
+
+/**
+ * Colunas ligadas a Recuperacao de Carrinhos ("Vendas" e "Carrinhos"), que
+ * linkam para /cart-recovery. Ficam ocultas enquanto HIDDEN_FEATURES.cartRecovery
+ * estiver ligada -- a definicao continua em ALL_COLUMNS acima.
+ */
+const HIDDEN_COLUMN_HEADERS = new Set<string>(
+  HIDDEN_FEATURES.cartRecovery ? ['Vendas', 'Carrinhos'] : [],
+);
+
+export const columns = ALL_COLUMNS.filter((column) => !HIDDEN_COLUMN_HEADERS.has(column.header));

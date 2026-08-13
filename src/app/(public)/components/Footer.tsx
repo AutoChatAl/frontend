@@ -2,12 +2,14 @@
 import { Zap } from 'lucide-react';
 import Link from 'next/link';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 const LINKS = {
   produto: [
     { label: 'Funcionalidades', href: '#funcionalidades' },
     { label: 'Instagram', href: '#instagram' },
     { label: 'WhatsApp', href: '#whatsapp' },
-    { label: 'Recuperação de carrinho', href: '#carrinho' },
+    ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ label: 'Recuperação de carrinho', href: '#carrinho' }]),
     { label: 'Preços', href: '#precos' },
   ],
   empresa: [
@@ -35,7 +37,9 @@ export default function Footer() {
               <span className="font-bold text-lg text-white">Synq</span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs">
-              Atendimento e vendas no automático para WhatsApp, Instagram e recuperação de carrinho.
+              {HIDDEN_FEATURES.cartRecovery
+                ? 'Atendimento e vendas no automático para WhatsApp e Instagram.'
+                : 'Atendimento e vendas no automático para WhatsApp, Instagram e recuperação de carrinho.'}
             </p>
           </div>
 

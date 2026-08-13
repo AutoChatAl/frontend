@@ -1,5 +1,7 @@
 'use client';
 
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
 import CartRecoverySection from './components/CartRecoverySection';
 import FaqSection from './components/FaqSection';
 import FeaturesGrid from './components/FeaturesGrid';
@@ -21,7 +23,7 @@ export default function Home() {
       <HowItWorks />
       <InstagramSection />
       <WhatsAppSection />
-      <CartRecoverySection />
+      {!HIDDEN_FEATURES.cartRecovery && <CartRecoverySection />}
       <FeaturesGrid />
       <PricingSection />
       <FaqSection />
