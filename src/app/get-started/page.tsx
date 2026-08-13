@@ -16,7 +16,9 @@ import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
 import { setupOnboardingService } from '@/services/setup-onboarding.service';
+import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { WhatsAppInstance } from '@/types/Channel';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 import SetupStepCard, { type SetupStepAccent, type SetupStepStatus } from './components/SetupStepCard';
 
@@ -57,6 +59,7 @@ export default function GetStartedPage() {
   const [autoReplyCount, setAutoReplyCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [campaignCount, setCampaignCount] = useState(0);
+  const [officialChannelCount, setOfficialChannelCount] = useState(0);
 
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [autoReplyModalOpen, setAutoReplyModalOpen] = useState(false);
@@ -66,14 +69,16 @@ export default function GetStartedPage() {
   const [leaving, setLeaving] = useState(false);
 
   const loadAutomations = useCallback(async () => {
-    const [autoReplies, comments, campaigns] = await Promise.all([
+    const [autoReplies, comments, campaigns, officialChannels] = await Promise.all([
       autoReplyService.list().catch(() => []),
       commentAutomationService.list().catch(() => []),
       campaignService.listCampaigns().catch(() => []),
+      whatsappOfficialService.getInstances().catch(() => []),
     ]);
     setAutoReplyCount(autoReplies.length);
     setCommentCount(comments.length);
     setCampaignCount(campaigns.length);
+    setOfficialChannelCount(officialChannels.filter((ch) => ch.status === 'CONNECTED').length);
   }, []);
 
   useEffect(() => {
@@ -104,6 +109,7 @@ export default function GetStartedPage() {
   const autoReplyDone = autoReplyCount > 0;
   const commentDone = commentCount > 0;
   const campaignDone = campaignCount > 0;
+  const whatsappOfficialDone = officialChannelCount > 0;
   const hasAnyChannel = whatsappDone || instagramDone;
 
   useEffect(() => {
@@ -249,8 +255,12 @@ export default function GetStartedPage() {
       title: 'Crie sua primeira campanha',
       description: 'Envie uma mensagem para vários contatos do WhatsApp de uma vez, agora ou de forma agendada.',
       done: campaignDone,
-      locked: !whatsappDone,
-      lockedHint: 'Conecte o WhatsApp para liberar esta etapa.',
+      // A campanha só dispara pela API Oficial enquanto a flag estiver ligada, então esta
+      // etapa depende de um número oficial conectado — e não do WhatsApp comum.
+      locked: HIDDEN_FEATURES.campaignNonOfficialChannels ? !whatsappOfficialDone : !whatsappDone,
+      lockedHint: HIDDEN_FEATURES.campaignNonOfficialChannels
+        ? 'Conecte um número na API Oficial do WhatsApp para liberar esta etapa.'
+        : 'Conecte o WhatsApp para liberar esta etapa.',
       actionLabel: 'Criar campanha',
       onAction: () => setCampaignModalOpen(true),
     },

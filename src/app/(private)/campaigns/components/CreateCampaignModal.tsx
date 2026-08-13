@@ -19,6 +19,7 @@ import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 interface Channel {
     id: string;
@@ -180,7 +181,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         })),
       ];
       setTemplates(approvedTemplates.filter((t) => t.status === 'APPROVED'));
-      setChannels(allChannels);
+      // Enquanto HIDDEN_FEATURES.campaignNonOfficialChannels estiver ligada, a campanha só
+      // pode escolher canais da API Oficial. Os não oficiais continuam sendo carregados
+      // acima de propósito: o `waChannelIds` logo abaixo depende deles para não esconder
+      // grupos dinâmicos. Eles apenas deixam de aparecer como opção de seleção.
+      setChannels(HIDDEN_FEATURES.campaignNonOfficialChannels
+        ? allChannels.filter((ch) => ch.type === 'WHATSAPP_OFFICIAL')
+        : allChannels);
       setContacts(allContacts);
       const waChannelIds = new Set(allChannels.map((ch) => ch.id));
       const normalizedGroups = (groupsList as (Group & {
@@ -442,8 +449,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     () => new Set(channels.filter((c) => c.type === 'WHATSAPP_OFFICIAL').map((c) => c.id)),
     [channels],
   );
+  // Com HIDDEN_FEATURES.campaignNonOfficialChannels ligada só existe canal oficial para
+  // escolher, então a etapa de mensagem já abre direto no modo template. Sem isso o
+  // usuário veria o editor de texto livre até selecionar o canal — e perderia o que
+  // tivesse digitado quando a seção trocasse.
   const isOfficialCampaign = useMemo(
-    () => formData.channelIds.some((id) => officialChannelIds.has(id)),
+    () => HIDDEN_FEATURES.campaignNonOfficialChannels
+      || formData.channelIds.some((id) => officialChannelIds.has(id)),
     [formData.channelIds, officialChannelIds],
   );
   const toggleChannel = (channelId: string) => {
@@ -701,11 +713,19 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
             }))}
             value={formData.messageMeta?.templateId ?? ''}
             onChange={selectTemplate}
-            placeholder={availableTemplates.length === 0 ? 'Nenhum template aprovado para este canal' : 'Selecione um template...'}
+            placeholder={availableTemplates.length > 0
+              ? 'Selecione um template...'
+              : formData.channelIds.length === 0
+                ? 'Selecione um canal primeiro'
+                : 'Nenhum template aprovado para este canal'}
           />
           {availableTemplates.length === 0 && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Nenhum template aprovado para o canal selecionado. Crie um na área <strong>Templates</strong> e aguarde a aprovação da Meta.
+              {formData.channelIds.length === 0 ? (<>
+                Escolha o canal na etapa <strong>Origem dos Destinatários</strong>, abaixo, para listar os templates aprovados dele.
+              </>) : (<>
+                Nenhum template aprovado para o canal selecionado. Crie um na área <strong>Templates</strong> e aguarde a aprovação da Meta.
+              </>)}
             </p>
           )}
           <FieldError msg={errors.template}/>
@@ -860,10 +880,14 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
             <MessageCircle size={24} className="text-slate-300 dark:text-slate-600"/>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      Nenhum canal disponível
+              {HIDDEN_FEATURES.campaignNonOfficialChannels
+                ? 'Nenhum número da API Oficial conectado'
+                : 'Nenhum canal disponível'}
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-                      Configure seus canais primeiro nas configurações
+              {HIDDEN_FEATURES.campaignNonOfficialChannels
+                ? 'Conecte um número da API Oficial do WhatsApp em Canais para criar campanhas.'
+                : 'Configure seus canais primeiro nas configurações'}
             </p>
           </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {channels.map((channel) => {

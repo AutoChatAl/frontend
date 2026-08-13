@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
+import { AlertCircle, BadgeCheck, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,7 +16,7 @@ import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { campaignService } from '@/services/campaign.service';
 import { type Campaign } from '@/types/Campaign';
-import { LOCKED_FEATURES } from '@lib/featureFlags';
+import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 
 import { columns } from './components/CampaignsColumns';
 import CreateCampaignModal from './components/CreateCampaignModal';
@@ -123,9 +123,8 @@ function DeleteConfirmModal({ isOpen, campaignName, loading, onConfirm, onCancel
 }
 export default function CampaignsPage() {
   const router = useRouter();
-  // Campanhas ainda não é a versão oficial — bloqueado temporariamente.
-  // Enquanto LOCKED_FEATURES.campaigns for true, redirecionamos para o dashboard.
-  // Para reativar, mude a flag em @lib/featureFlags para false.
+  // Guarda de bloqueio da aba. Hoje LOCKED_FEATURES.campaigns é false (liberada);
+  // se voltar a ser true, a rota volta a redirecionar para o dashboard.
   useEffect(() => {
     if (LOCKED_FEATURES.campaigns) {
       router.replace('/dashboard');
@@ -139,6 +138,8 @@ export default function CampaignsPage() {
   return <CampaignsPageContent/>;
 }
 
+type CampaignChannelFilter = 'ALL' | 'WHATSAPP_OFFICIAL' | 'WHATSAPP' | 'INSTAGRAM';
+
 function CampaignsPageContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +151,7 @@ function CampaignsPageContent() {
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [nameFilter, setNameFilter] = useState('');
-  const [channelFilter, setChannelFilter] = useState<'ALL' | 'WHATSAPP' | 'INSTAGRAM'>('ALL');
+  const [channelFilter, setChannelFilter] = useState<CampaignChannelFilter>('ALL');
   const { toasts, addToast, removeToast } = useToast();
   useEffect(() => {
     loadCampaigns();
@@ -233,7 +234,9 @@ function CampaignsPageContent() {
       <div>
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Campanhas de Disparo</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Gerencie envios em massa para WhatsApp e Instagram
+          {HIDDEN_FEATURES.campaignNonOfficialChannels
+            ? 'Gerencie envios em massa pela API Oficial do WhatsApp'
+            : 'Gerencie envios em massa para WhatsApp e Instagram'}
         </p>
       </div>
     </div>
@@ -250,10 +253,13 @@ function CampaignsPageContent() {
       {showFilters && (<Card className="p-4 animate-in fade-in duration-200">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Nome da campanha" leftIcon={<Search size={16}/>} placeholder="Filtrar por nome..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)}/>
-          <Dropdown label="Canal" value={channelFilter} onChange={(v) => setChannelFilter(v as 'ALL' | 'WHATSAPP' | 'INSTAGRAM')} options={[
+          <Dropdown label="Canal" value={channelFilter} onChange={(v) => setChannelFilter(v as CampaignChannelFilter)} options={[
             { value: 'ALL', label: 'Todos os canais' },
-            { value: 'WHATSAPP', label: 'WhatsApp', icon: <MessageCircle size={15}/> },
-            { value: 'INSTAGRAM', label: 'Instagram', icon: <Smartphone size={15}/> },
+            { value: 'WHATSAPP_OFFICIAL', label: 'WhatsApp Oficial', icon: <BadgeCheck size={15}/> },
+            ...(HIDDEN_FEATURES.campaignNonOfficialChannels ? [] : [
+              { value: 'WHATSAPP', label: 'WhatsApp', icon: <MessageCircle size={15}/> },
+              { value: 'INSTAGRAM', label: 'Instagram', icon: <Smartphone size={15}/> },
+            ]),
           ]}/>
         </div>
         {hasActiveFilters && (<button type="button" onClick={() => { setNameFilter(''); setChannelFilter('ALL'); }} className="mt-3 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
@@ -282,7 +288,9 @@ function CampaignsPageContent() {
           {row.channels && row.channels.length > 0 && row.channels.map((ch) => {
             if (!ch.channel)
               return null;
-            return (<Badge key={ch.channelId} type={ch.channel.type.toLowerCase() || 'whatsapp'} text={ch.channel.type === 'WHATSAPP' ? 'WhatsApp' : 'Instagram'} icon={ch.channel.type === 'WHATSAPP' ? MessageCircle : Smartphone}/>);
+            const isOfficial = ch.channel.type === 'WHATSAPP_OFFICIAL';
+            const isWhatsApp = ch.channel.type === 'WHATSAPP';
+            return (<Badge key={ch.channelId} type={isOfficial || isWhatsApp ? 'whatsapp' : 'instagram'} text={isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'} icon={isOfficial ? BadgeCheck : isWhatsApp ? MessageCircle : Smartphone}/>);
           })}
           <span className="text-xs text-slate-500 dark:text-slate-400">
             {row.runs ? row.runs.length : 0} execução{(row.runs?.length ?? 0) !== 1 ? 'ões' : ''}
