@@ -60,4 +60,34 @@ export interface Product {
     name: string;
     priceCents: number;
     link: string;
+    notes: string;
+}
+export interface ProductPayload {
+    name?: string;
+    priceCents?: number;
+    link?: string;
+    notes?: string;
+}
+export type ProductImportMode = 'merge' | 'replace';
+export interface ProductImportIssue {
+    line: number;
+    reason: string;
+    value?: string;
+}
+export interface ProductImportReport {
+    detectedColumns: {
+        name: string | null;
+        price: string | null;
+        notes: string | null;
+        link: string | null;
+    };
+    totalRows: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    duplicatesInFile: number;
+    ignoredByLimit: number;
+    maxProducts: number;
+    totalAfterImport: number;
+    issues: ProductImportIssue[];
 }

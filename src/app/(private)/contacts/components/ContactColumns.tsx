@@ -5,6 +5,7 @@ import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
 import type { Contact } from '@/types/Contact';
+import { isUnlinkedContact } from '@/types/Contact';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function getInitials(name: string): string {
@@ -45,6 +46,9 @@ const ALL_COLUMNS = [
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400"/>
                 Aguardando atendimento
           </span>)}
+          {isUnlinkedContact(row) && (<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-[10px] font-semibold text-sky-700 dark:text-sky-400">
+                Importado
+          </span>)}
         </div>
       </div>);
     },
@@ -54,8 +58,14 @@ const ALL_COLUMNS = [
     accessor: 'identities' as keyof Contact,
     render: (_value: unknown, row: Contact) => {
       const identities = row.identities ?? [];
-      if (identities.length === 0)
-        return <span className="text-xs text-slate-400 italic">Sem identificador</span>;
+      if (identities.length === 0) {
+        return row.phoneE164
+          ? (<div className="flex flex-col gap-0.5">
+            <span className="text-xs font-mono text-slate-600 dark:text-slate-300">{row.phoneE164}</span>
+            <span className="text-[10px] text-slate-400">sem canal vinculado</span>
+          </div>)
+          : <span className="text-xs text-slate-400 italic">Sem identificador</span>;
+      }
       return (<div className="flex flex-col gap-0.5">
         {identities.map((identity, i) => (<span key={i} className="text-xs font-mono text-slate-600 dark:text-slate-300">
           {identity.phoneE164 ?? identity.igUsername ?? '—'}

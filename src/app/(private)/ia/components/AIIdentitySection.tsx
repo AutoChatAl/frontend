@@ -3,7 +3,7 @@ import { Bot, Building2, UserRound } from 'lucide-react';
 
 import Card from '@/components/Card';
 import Input from '@/components/Input';
-import type { Product } from '@/types/AI';
+import type { Product, ProductPayload } from '@/types/AI';
 
 import AIProductsInput from './AIProductsInput';
 import AISegmentSelector from './AISegmentSelector';
@@ -15,19 +15,25 @@ interface AIIdentitySectionProps {
     assistantName: string;
     tone: string;
     products: Product[];
+    productsTotal: number;
+    maxProducts: number;
+    productsLoading: boolean;
+    productSearch: string;
+    productPage: number;
+    productsPageSize: number;
     onSegmentChange: (value: string) => void;
     onBusinessNameChange: (value: string) => void;
     onAssistantNameChange: (value: string) => void;
     onToneChange: (value: string) => void;
+    onProductSearchChange: (value: string) => void;
+    onProductPageChange: (page: number) => void;
     onAddProduct: (name: string) => void;
-    onUpdateProduct: (id: string, data: {
-        name?: string;
-        priceCents?: number;
-        link?: string;
-    }) => void;
+    onUpdateProduct: (id: string, data: ProductPayload) => void;
     onDeleteProduct: (id: string) => void;
+    onOpenImport: () => void;
+    onClearCatalog: () => void;
 }
-export default function AIIdentitySection({ segment, businessName, assistantName, tone, products, onSegmentChange, onBusinessNameChange, onAssistantNameChange, onToneChange, onAddProduct, onUpdateProduct, onDeleteProduct }: AIIdentitySectionProps) {
+export default function AIIdentitySection({ segment, businessName, assistantName, tone, products, productsTotal, maxProducts, productsLoading, productSearch, productPage, productsPageSize, onSegmentChange, onBusinessNameChange, onAssistantNameChange, onToneChange, onProductSearchChange, onProductPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog }: AIIdentitySectionProps) {
   return (<Card className="p-4 sm:p-6 md:col-span-2">
     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
       <Bot size={18} className="text-indigo-600 dark:text-indigo-400"/>
@@ -40,7 +46,7 @@ export default function AIIdentitySection({ segment, businessName, assistantName
         <AISegmentSelector value={segment} onChange={onSegmentChange}/>
         <AIToneSelector value={tone} onChange={onToneChange}/>
       </div>
-      <AIProductsInput products={products} onAddProduct={onAddProduct} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct}/>
+      <AIProductsInput products={products} total={productsTotal} maxProducts={maxProducts} loading={productsLoading} search={productSearch} page={productPage} pageSize={productsPageSize} onSearchChange={onProductSearchChange} onPageChange={onProductPageChange} onAddProduct={onAddProduct} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct} onOpenImport={onOpenImport} onClearCatalog={onClearCatalog}/>
     </div>
   </Card>);
 }
