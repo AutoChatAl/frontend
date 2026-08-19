@@ -25,6 +25,7 @@ export function useAIConfig() {
   const [schedulingQueryEnabled, setSchedulingQueryEnabled] = useState(false);
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
+  const [crossSellEnabled, setCrossSellEnabled] = useState(false);
   const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsTotal, setProductsTotal] = useState(0);
@@ -114,6 +115,7 @@ export function useAIConfig() {
       setSchedulingQueryEnabled(aiConfig.schedulingQueryEnabled);
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
+      setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
@@ -144,8 +146,6 @@ export function useAIConfig() {
         tone,
         customRules,
         triggerSettings,
-        schedulingQueryEnabled,
-        schedulingBookingEnabled,
         funnelAutoMoveEnabled,
       });
       addToast('success', 'Configurações da IA salvas com sucesso!');
@@ -156,7 +156,7 @@ export function useAIConfig() {
     finally {
       setSaving(false);
     }
-  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, addToast]);
+  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, funnelAutoMoveEnabled, addToast]);
   const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
@@ -197,6 +197,21 @@ export function useAIConfig() {
     catch (err) {
       setFunnelAutoMoveEnabled(!enabled);
       addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração do funil.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
+  const toggleCrossSell = useCallback(async (enabled: boolean) => {
+    setCrossSellEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ crossSellEnabled: enabled });
+      addToast('success', enabled ? 'Sugestão de itens complementares ativada.' : 'Sugestão de itens complementares desativada.');
+    }
+    catch (err) {
+      setCrossSellEnabled(!enabled);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração de cross-sell.');
     }
     finally {
       setSaving(false);
@@ -331,6 +346,7 @@ export function useAIConfig() {
     schedulingBookingEnabled,
     setSchedulingBookingEnabled,
     funnelAutoMoveEnabled,
+    crossSellEnabled,
     funnelStages,
     products,
     productsTotal,
@@ -359,5 +375,6 @@ export function useAIConfig() {
     toggleSchedulingQuery,
     toggleSchedulingBooking,
     toggleFunnelAutoMove,
+    toggleCrossSell,
   };
 }

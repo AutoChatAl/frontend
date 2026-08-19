@@ -32,8 +32,10 @@ interface AIIdentitySectionProps {
     onDeleteProduct: (id: string) => void;
     onOpenImport: () => void;
     onClearCatalog: () => void;
+    crossSellEnabled: boolean;
+    onToggleCrossSell: (enabled: boolean) => void;
 }
-export default function AIIdentitySection({ segment, businessName, assistantName, tone, products, productsTotal, maxProducts, productsLoading, productSearch, productPage, productsPageSize, onSegmentChange, onBusinessNameChange, onAssistantNameChange, onToneChange, onProductSearchChange, onProductPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog }: AIIdentitySectionProps) {
+export default function AIIdentitySection({ segment, businessName, assistantName, tone, products, productsTotal, maxProducts, productsLoading, productSearch, productPage, productsPageSize, onSegmentChange, onBusinessNameChange, onAssistantNameChange, onToneChange, onProductSearchChange, onProductPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell }: AIIdentitySectionProps) {
   return (<Card className="p-4 sm:p-6 md:col-span-2">
     <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
       <Bot size={18} className="text-indigo-600 dark:text-indigo-400"/>
@@ -46,7 +48,7 @@ export default function AIIdentitySection({ segment, businessName, assistantName
         <AISegmentSelector value={segment} onChange={onSegmentChange}/>
         <AIToneSelector value={tone} onChange={onToneChange}/>
       </div>
-      <AIProductsInput products={products} total={productsTotal} maxProducts={maxProducts} loading={productsLoading} search={productSearch} page={productPage} pageSize={productsPageSize} onSearchChange={onProductSearchChange} onPageChange={onProductPageChange} onAddProduct={onAddProduct} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct} onOpenImport={onOpenImport} onClearCatalog={onClearCatalog}/>
+      <AIProductsInput products={products} total={productsTotal} maxProducts={maxProducts} loading={productsLoading} search={productSearch} page={productPage} pageSize={productsPageSize} onSearchChange={onProductSearchChange} onPageChange={onProductPageChange} onAddProduct={onAddProduct} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct} onOpenImport={onOpenImport} onClearCatalog={onClearCatalog} crossSellEnabled={crossSellEnabled} onToggleCrossSell={onToggleCrossSell}/>
     </div>
   </Card>);
 }

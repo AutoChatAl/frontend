@@ -18,6 +18,7 @@ export interface AiConfig {
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
+    crossSellEnabled: boolean;
 }
 export interface Product {
     id: string;
@@ -26,6 +27,9 @@ export interface Product {
     priceCents: number;
     link: string;
     notes: string;
+    keywords?: string;
+    active?: boolean;
+    featured?: boolean;
 }
 export interface ProductListResult {
     products: Product[];
@@ -62,6 +66,7 @@ class AiService {
         schedulingQueryEnabled: false,
         schedulingBookingEnabled: false,
         funnelAutoMoveEnabled: false,
+        crossSellEnabled: false,
       },
       products: [],
       productsTotal: 0,
@@ -69,7 +74,7 @@ class AiService {
       maxProducts: 0,
     };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled'>>): Promise<void> {
     const response = await apiClient.put('/ai/config', data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;

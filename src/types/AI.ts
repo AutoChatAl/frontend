@@ -53,6 +53,7 @@ export interface AiConfig {
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
+    crossSellEnabled: boolean;
 }
 export interface Product {
     id: string;
@@ -61,12 +62,18 @@ export interface Product {
     priceCents: number;
     link: string;
     notes: string;
+    keywords?: string;
+    active?: boolean;
+    featured?: boolean;
 }
 export interface ProductPayload {
     name?: string;
     priceCents?: number;
     link?: string;
     notes?: string;
+    keywords?: string;
+    active?: boolean;
+    featured?: boolean;
 }
 export type ProductImportMode = 'merge' | 'replace';
 export interface ProductImportIssue {

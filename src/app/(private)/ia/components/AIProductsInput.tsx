@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, Loader2, Plus, Search, ShoppingBag, Trash2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2, Plus, Search, ShoppingBag, Sparkles, Star, Trash2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { Product, ProductPayload } from '@/types/AI';
@@ -19,6 +19,8 @@ interface AIProductsInputProps {
     onDeleteProduct: (id: string) => void;
     onOpenImport: () => void;
     onClearCatalog: () => void;
+    crossSellEnabled: boolean;
+    onToggleCrossSell: (enabled: boolean) => void;
 }
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -27,7 +29,7 @@ function parseCents(value: string): number {
   const parsed = parseFloat(value.replace(/\./g, '').replace(',', '.'));
   return isNaN(parsed) ? 0 : Math.round(parsed * 100);
 }
-export default function AIProductsInput({ products, total, maxProducts, loading, search, page, pageSize, onSearchChange, onPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog }: AIProductsInputProps) {
+export default function AIProductsInput({ products, total, maxProducts, loading, search, page, pageSize, onSearchChange, onPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell }: AIProductsInputProps) {
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -88,6 +90,12 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
         Você atingiu o limite de itens do seu plano de IA. Remova itens ou faça upgrade para cadastrar mais.
     </p>)}
 
+    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+      <input type="checkbox" checked={crossSellEnabled} onChange={(e) => onToggleCrossSell(e.target.checked)} className="rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500/30"/>
+      <Sparkles size={14} className="text-indigo-400"/>
+        Sugerir itens complementares (cross-sell) durante a conversa
+    </label>
+
     {products.length === 0 && !loading && (<div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-10 text-center">
       <ShoppingBag size={28} className="mx-auto text-slate-300 dark:text-slate-600"/>
       <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -106,8 +114,9 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Nome</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-32">Preço (R$)</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Observação</th>
+              <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-44">Palavras-chave</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-52">Link</th>
-              <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-16 text-center">Ações</th>
+              <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-24 text-center">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -145,15 +154,19 @@ function useProductDraft(product: Product) {
   const [price, setPrice] = useState(formatCents(product.priceCents));
   const [link, setLink] = useState(product.link);
   const [notes, setNotes] = useState(product.notes);
+  const [keywords, setKeywords] = useState(product.keywords ?? '');
   useEffect(() => {
     setPrice(formatCents(product.priceCents));
     setLink(product.link);
     setNotes(product.notes);
-  }, [product.id, product.priceCents, product.link, product.notes]);
-  return { price, setPrice, link, setLink, notes, setNotes };
+    setKeywords(product.keywords ?? '');
+  }, [product.id, product.priceCents, product.link, product.notes, product.keywords]);
+  return { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords };
 }
 function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
-  const { price, setPrice, link, setLink, notes, setNotes } = useProductDraft(product);
+  const { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords } = useProductDraft(product);
+  const isActive = product.active !== false;
+  const isFeatured = product.featured === true;
   const handlePriceBlur = () => {
     const cents = parseCents(price);
     if (cents !== product.priceCents)
@@ -161,7 +174,7 @@ function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
     setPrice(formatCents(cents));
   };
   const cellInput = 'w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:ring-0';
-  return (<tr className="bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors align-top">
+  return (<tr className={`bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors align-top ${isActive ? '' : 'opacity-50'}`}>
     <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-white">{product.name}</td>
     <td className="px-4 py-2.5">
       <div className="flex items-center gap-1">
@@ -173,17 +186,30 @@ function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
       <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => { if (notes !== product.notes) onUpdate(product.id, { notes }); }} className={cellInput} placeholder="Opcional"/>
     </td>
     <td className="px-4 py-2.5">
+      <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} onBlur={() => { if (keywords !== (product.keywords ?? '')) onUpdate(product.id, { keywords }); }} className={cellInput} placeholder="notebook, laptop..."/>
+    </td>
+    <td className="px-4 py-2.5">
       <input type="text" value={link} onChange={(e) => setLink(e.target.value)} onBlur={() => { if (link !== product.link) onUpdate(product.id, { link }); }} className={cellInput} placeholder="https://..."/>
     </td>
-    <td className="px-4 py-2.5 text-center">
-      <button type="button" onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
-        <Trash2 size={15}/>
-      </button>
+    <td className="px-4 py-2.5">
+      <div className="flex items-center justify-center gap-1">
+        <button type="button" title={isFeatured ? 'Remover destaque' : 'Marcar como destaque'} onClick={() => onUpdate(product.id, { featured: !isFeatured })} className={`p-1 rounded-lg transition-colors ${isFeatured ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-amber-500'}`}>
+          <Star size={15} fill={isFeatured ? 'currentColor' : 'none'}/>
+        </button>
+        <button type="button" title={isActive ? 'Desativar (oculta da IA)' : 'Ativar'} onClick={() => onUpdate(product.id, { active: !isActive })} className={`p-1 rounded-lg transition-colors ${isActive ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' : 'text-slate-400 hover:text-emerald-500'}`}>
+          {isActive ? <Eye size={15}/> : <EyeOff size={15}/>}
+        </button>
+        <button type="button" onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+          <Trash2 size={15}/>
+        </button>
+      </div>
     </td>
   </tr>);
 }
 function ProductCard({ product, onUpdate, onDelete }: ProductEditorProps) {
-  const { price, setPrice, link, setLink, notes, setNotes } = useProductDraft(product);
+  const { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords } = useProductDraft(product);
+  const isActive = product.active !== false;
+  const isFeatured = product.featured === true;
   const handlePriceBlur = () => {
     const cents = parseCents(price);
     if (cents !== product.priceCents)
@@ -191,18 +217,27 @@ function ProductCard({ product, onUpdate, onDelete }: ProductEditorProps) {
     setPrice(formatCents(cents));
   };
   const inputClass = 'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400';
-  return (<div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
+  return (<div className={`bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 ${isActive ? '' : 'opacity-60'}`}>
     <div className="flex items-center justify-between">
       <p className="text-sm font-medium text-slate-800 dark:text-white">{product.name}</p>
-      <button type="button" onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-500 p-1">
-        <Trash2 size={15}/>
-      </button>
+      <div className="flex items-center gap-1">
+        <button type="button" title={isFeatured ? 'Remover destaque' : 'Destaque'} onClick={() => onUpdate(product.id, { featured: !isFeatured })} className={isFeatured ? 'text-amber-500 p-1' : 'text-slate-300 dark:text-slate-600 p-1'}>
+          <Star size={15} fill={isFeatured ? 'currentColor' : 'none'}/>
+        </button>
+        <button type="button" title={isActive ? 'Desativar' : 'Ativar'} onClick={() => onUpdate(product.id, { active: !isActive })} className={isActive ? 'text-emerald-500 p-1' : 'text-slate-400 p-1'}>
+          {isActive ? <Eye size={15}/> : <EyeOff size={15}/>}
+        </button>
+        <button type="button" onClick={() => onDelete(product.id)} className="text-slate-400 hover:text-red-500 p-1">
+          <Trash2 size={15}/>
+        </button>
+      </div>
     </div>
     <div className="flex items-center gap-2">
       <span className="text-xs text-slate-400 shrink-0">R$</span>
       <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} onBlur={handlePriceBlur} className={inputClass} placeholder="0,00"/>
     </div>
     <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => { if (notes !== product.notes) onUpdate(product.id, { notes }); }} className={inputClass} placeholder="Observação (opcional)"/>
+    <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} onBlur={() => { if (keywords !== (product.keywords ?? '')) onUpdate(product.id, { keywords }); }} className={inputClass} placeholder="Palavras-chave (ex.: notebook, laptop)"/>
     <input type="text" value={link} onChange={(e) => setLink(e.target.value)} onBlur={() => { if (link !== product.link) onUpdate(product.id, { link }); }} className={inputClass} placeholder="https://..."/>
   </div>);
 }

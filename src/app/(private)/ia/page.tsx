@@ -25,7 +25,7 @@ export default function IAPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
+  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
   if (subLoading || loading) {
     return <PageLoader message="Carregando configurações de IA"/>;
   }
@@ -43,7 +43,7 @@ export default function IAPage() {
     </div>
 
     {activeTab === 'general' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <AIIdentitySection segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onSegmentChange={setSegment} onBusinessNameChange={setBusinessName} onAssistantNameChange={setAssistantName} onToneChange={setTone} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)}/>
+      <AIIdentitySection segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onSegmentChange={setSegment} onBusinessNameChange={setBusinessName} onAssistantNameChange={setAssistantName} onToneChange={setTone} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)} crossSellEnabled={crossSellEnabled} onToggleCrossSell={toggleCrossSell}/>
       <AIPromptPreview segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products}/>
     </div>)}
 
