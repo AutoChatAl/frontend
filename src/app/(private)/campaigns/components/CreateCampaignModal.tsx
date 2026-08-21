@@ -17,6 +17,7 @@ import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+import { isUnlinkedContact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
@@ -476,7 +477,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       let newContactIds = prev.contactIds;
       if (isRemoving) {
         const channelContactIds = new Set(contacts
-          .filter((c) => c.identities?.some((i) => i.channelId === channelId))
+          .filter((c) => c.identities?.some((i) => i.channelId === channelId) || isUnlinkedContact(c))
           .map((c) => c.id));
         newContactIds = prev.contactIds.filter((id) => !channelContactIds.has(id));
       }
@@ -518,7 +519,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     if (formData.channelIds.length === 0)
       return [];
     const selectedChannelSet = new Set(formData.channelIds);
-    const filtered = contacts.filter((c) => c.identities?.some((i) => selectedChannelSet.has(i.channelId)));
+    const filtered = contacts.filter((c) => c.identities?.some((i) => selectedChannelSet.has(i.channelId))
+      || (isOfficialCampaign && isUnlinkedContact(c)));
     const uniqueById = new Map<string, Contact>();
     for (const contact of filtered) {
       if (!uniqueById.has(contact.id)) {
@@ -526,7 +528,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       }
     }
     return Array.from(uniqueById.values());
-  }, [contacts, formData.channelIds]);
+  }, [contacts, formData.channelIds, isOfficialCampaign]);
   const selectAllContacts = () => {
     const ids = Number.isFinite(maxContacts)
       ? channelContacts.map((c) => c.id).slice(0, maxContacts)
@@ -894,7 +896,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
               const isSelected = formData.channelIds.includes(channel.id);
               const isWhatsApp = channel.type === 'WHATSAPP';
               const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
-              const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id));
+              const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id)
+                || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
               return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
                 : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>

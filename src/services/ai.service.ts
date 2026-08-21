@@ -1,8 +1,9 @@
-import type { AiTriggerSettings } from '@/types/AI';
+import type { AiTriggerSettings, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
 
+const IMPORT_TIMEOUT_MS = 120000;
 export interface AiConfig {
     id: string;
     enabled: boolean;
@@ -17,6 +18,7 @@ export interface AiConfig {
     schedulingQueryEnabled: boolean;
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
+    crossSellEnabled: boolean;
 }
 export interface Product {
     id: string;
@@ -24,10 +26,24 @@ export interface Product {
     name: string;
     priceCents: number;
     link: string;
+    notes: string;
+    keywords?: string;
+    active?: boolean;
+    featured?: boolean;
+}
+export interface ProductListResult {
+    products: Product[];
+    total: number;
+    page: number;
+    pageSize: number;
+    maxProducts: number;
 }
 export interface AiConfigResponse {
     aiConfig: AiConfig;
     products: Product[];
+    productsTotal: number;
+    productsPageSize: number;
+    maxProducts: number;
     visibleTabs?: string[];
 }
 class AiService {
@@ -50,11 +66,15 @@ class AiService {
         schedulingQueryEnabled: false,
         schedulingBookingEnabled: false,
         funnelAutoMoveEnabled: false,
+        crossSellEnabled: false,
       },
       products: [],
+      productsTotal: 0,
+      productsPageSize: 50,
+      maxProducts: 0,
     };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled'>>): Promise<void> {
     const response = await apiClient.put('/ai/config', data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;
@@ -107,31 +127,69 @@ class AiService {
     }
     return [];
   }
-  public async listProducts(): Promise<Product[]> {
-    const response = await apiClient.get<Product[]>('/ai/products');
+  public async listProducts(params: { search?: string; page?: number; pageSize?: number } = {}): Promise<ProductListResult> {
+    const query = new URLSearchParams();
+    if (params.search?.trim())
+      query.set('search', params.search.trim());
+    query.set('page', String(params.page ?? 1));
+    query.set('pageSize', String(params.pageSize ?? 50));
+    const response = await apiClient.get<ProductListResult>(`/ai/products?${query.toString()}`);
     if (response.success && response.data) {
-      return response.data as Product[];
+      return response.data as ProductListResult;
     }
-    return [];
+    throw new Error('Falha ao carregar os produtos do catálogo.');
   }
-  public async createProduct(data: {
-        name: string;
-        priceCents?: number;
-        link?: string;
-    }): Promise<Product> {
+  public async createProduct(data: ProductPayload & { name: string }): Promise<Product> {
     const response = await apiClient.post<Product>('/ai/products', data);
+    if (!response.success) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao adicionar produto.');
+    }
     return response.data as Product;
   }
-  public async updateProduct(id: string, data: {
-        name?: string;
-        priceCents?: number;
-        link?: string;
-    }): Promise<Product> {
+  public async updateProduct(id: string, data: ProductPayload): Promise<Product> {
     const response = await apiClient.put<Product>(`/ai/products/${id}`, data);
+    if (!response.success) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao atualizar produto.');
+    }
     return response.data as Product;
   }
   public async deleteProduct(id: string): Promise<void> {
-    await apiClient.delete(`/ai/products/${id}`);
+    const response = await apiClient.delete(`/ai/products/${id}`);
+    if (!response.success)
+      throw new Error('Falha ao remover produto.');
+  }
+  public async deleteAllProducts(): Promise<number> {
+    const response = await apiClient.delete<{ deleted: number }>('/ai/products');
+    if (!response.success)
+      throw new Error('Falha ao limpar o catálogo.');
+    return (response.data as { deleted: number } | undefined)?.deleted ?? 0;
+  }
+  public async importProducts(file: File, mode: ProductImportMode): Promise<ProductImportReport> {
+    const fileBase64 = await this.readFileAsBase64(file);
+    const response = await apiClient.post<ProductImportReport>('/ai/products/import', {
+      fileName: file.name,
+      fileBase64,
+      mode,
+    }, { timeoutMs: IMPORT_TIMEOUT_MS });
+    if (!response.success || !response.data) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao importar a planilha.');
+    }
+    return response.data as ProductImportReport;
+  }
+  private readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        const separatorIndex = result.indexOf(',');
+        resolve(separatorIndex >= 0 ? result.slice(separatorIndex + 1) : result);
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsDataURL(file);
+    });
   }
 }
 export const aiService = new AiService();

@@ -1,5 +1,8 @@
-import type { Contact, ListContactsParams, PaginatedContacts } from '@/types/Contact';
+import type { Contact, ContactImportReport, ListContactsParams, PaginatedContacts } from '@/types/Contact';
+import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
+
+const IMPORT_TIMEOUT_MS = 120000;
 
 export interface SyncContactsResult {
     ok: boolean;
@@ -13,6 +16,10 @@ class ContactService {
       queryString.append('search', params.search);
     if (params?.channelId)
       queryString.append('channelId', params.channelId);
+    if (params?.includeUnlinked != null)
+      queryString.append('includeUnlinked', String(params.includeUnlinked));
+    if (params?.unlinkedOnly != null)
+      queryString.append('unlinkedOnly', String(params.unlinkedOnly));
     if (params?.tagName)
       queryString.append('tagName', params.tagName);
     if (params?.tagIds)
@@ -81,6 +88,30 @@ class ContactService {
     return response.data as {
             waitingCount: number;
         };
+  }
+  public async importContacts(file: File): Promise<ContactImportReport> {
+    const fileBase64 = await this.readFileAsBase64(file);
+    const response = await apiClient.post<ContactImportReport>('/contacts/import', {
+      fileName: file.name,
+      fileBase64,
+    }, { timeoutMs: IMPORT_TIMEOUT_MS });
+    if (!response.success || !response.data) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao importar a planilha de contatos.');
+    }
+    return response.data as ContactImportReport;
+  }
+  private readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        const separatorIndex = result.indexOf(',');
+        resolve(separatorIndex >= 0 ? result.slice(separatorIndex + 1) : result);
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsDataURL(file);
+    });
   }
   public async markHumanRead(contactId: string): Promise<void> {
     const response = await apiClient.post(`/contacts/${contactId}/mark-human-read`, {});
