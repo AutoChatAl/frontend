@@ -8,11 +8,13 @@ import { channelsService } from '@/services/channels.service';
 import { funnelService } from '@/services/funnel.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AIChannel } from '@/types/AI';
-import type { Product } from '@/types/AI';
+import type { Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import type { FunnelStageDefinition } from '@/types/Funnel';
 
+const PRODUCTS_PAGE_SIZE = 20;
+const PRODUCTS_SEARCH_DEBOUNCE_MS = 350;
 export function useAIConfig() {
   const [segment, setSegment] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -23,8 +25,15 @@ export function useAIConfig() {
   const [schedulingQueryEnabled, setSchedulingQueryEnabled] = useState(false);
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
+  const [crossSellEnabled, setCrossSellEnabled] = useState(false);
   const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsTotal, setProductsTotal] = useState(0);
+  const [maxProducts, setMaxProducts] = useState(0);
+  const [productSearch, setProductSearch] = useState('');
+  const [productPage, setProductPage] = useState(1);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const productsSeededRef = useRef(false);
   const [channels, setChannels] = useState<AIChannel[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -93,7 +102,8 @@ export function useAIConfig() {
   }, []);
   const loadConfig = useCallback(async () => {
     try {
-      const { aiConfig, products: fetchedProducts, visibleTabs: fetchedTabs } = await aiService.getConfig();
+      const aiConfigResponse = await aiService.getConfig();
+      const { aiConfig, products: fetchedProducts, visibleTabs: fetchedTabs } = aiConfigResponse;
       if (fetchedTabs)
         setVisibleTabs(fetchedTabs);
       setSegment(aiConfig.segment);
@@ -105,9 +115,12 @@ export function useAIConfig() {
       setSchedulingQueryEnabled(aiConfig.schedulingQueryEnabled);
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
+      setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
+      setProductsTotal(aiConfigResponse.productsTotal ?? fetchedProducts.length);
+      setMaxProducts(aiConfigResponse.maxProducts ?? 0);
       const activeIds = aiConfig.activeChannelIds && aiConfig.activeChannelIds.length > 0
         ? aiConfig.activeChannelIds
         : (aiConfig.activeChannelId ? [aiConfig.activeChannelId] : []);
@@ -133,8 +146,6 @@ export function useAIConfig() {
         tone,
         customRules,
         triggerSettings,
-        schedulingQueryEnabled,
-        schedulingBookingEnabled,
         funnelAutoMoveEnabled,
       });
       addToast('success', 'Configurações da IA salvas com sucesso!');
@@ -145,7 +156,7 @@ export function useAIConfig() {
     finally {
       setSaving(false);
     }
-  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, addToast]);
+  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, funnelAutoMoveEnabled, addToast]);
   const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
@@ -191,6 +202,21 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [addToast]);
+  const toggleCrossSell = useCallback(async (enabled: boolean) => {
+    setCrossSellEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ crossSellEnabled: enabled });
+      addToast('success', enabled ? 'Sugestão de itens complementares ativada.' : 'Sugestão de itens complementares desativada.');
+    }
+    catch (err) {
+      setCrossSellEnabled(!enabled);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração de cross-sell.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
   const toggleChannel = useCallback(async (channelId: string) => {
     setSaving(true);
     try {
@@ -212,55 +238,96 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [channels, loadConfig, addToast]);
+  const loadProducts = useCallback(async (page: number, search: string) => {
+    setProductsLoading(true);
+    try {
+      const result = await aiService.listProducts({ page, pageSize: PRODUCTS_PAGE_SIZE, search });
+      setProducts(result.products);
+      setProductsTotal(result.total);
+      setMaxProducts(result.maxProducts);
+      setProductPage(result.page);
+    }
+    catch {
+      addToast('error', 'Erro ao carregar os produtos do catálogo.');
+    }
+    finally {
+      setProductsLoading(false);
+    }
+  }, [addToast]);
+  useEffect(() => {
+    if (!productsSeededRef.current && productSearch === '') {
+      productsSeededRef.current = true;
+      return;
+    }
+    const handle = setTimeout(() => { void loadProducts(1, productSearch); }, PRODUCTS_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [productSearch, loadProducts]);
+  const goToProductPage = useCallback((page: number) => {
+    void loadProducts(page, productSearch);
+  }, [loadProducts, productSearch]);
   const addProduct = useCallback(async (name: string) => {
     setSaving(true);
     try {
       await aiService.createProduct({ name });
-      const refreshed = await aiService.listProducts();
-      setProducts(refreshed);
+      await loadProducts(1, productSearch);
       addToast('success', `Produto "${name}" adicionado.`);
     }
-    catch {
-      addToast('error', 'Erro ao adicionar produto.');
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao adicionar produto.');
     }
     finally {
       setSaving(false);
     }
-  }, [addToast]);
-  const updateProduct = useCallback(async (id: string, data: {
-        name?: string;
-        priceCents?: number;
-        link?: string;
-    }) => {
+  }, [addToast, loadProducts, productSearch]);
+  const updateProduct = useCallback(async (id: string, data: ProductPayload) => {
     setSaving(true);
     try {
       await aiService.updateProduct(id, data);
-      const refreshed = await aiService.listProducts();
-      setProducts(refreshed);
+      await loadProducts(productPage, productSearch);
       addToast('success', 'Produto atualizado.');
     }
-    catch {
-      addToast('error', 'Erro ao atualizar produto.');
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar produto.');
     }
     finally {
       setSaving(false);
     }
-  }, [addToast]);
+  }, [addToast, loadProducts, productPage, productSearch]);
   const deleteProduct = useCallback(async (id: string) => {
     setSaving(true);
     try {
       await aiService.deleteProduct(id);
-      const refreshed = await aiService.listProducts();
-      setProducts(refreshed);
+      await loadProducts(productPage, productSearch);
       addToast('success', 'Produto removido.');
     }
-    catch {
-      addToast('error', 'Erro ao remover produto.');
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao remover produto.');
     }
     finally {
       setSaving(false);
     }
-  }, [addToast]);
+  }, [addToast, loadProducts, productPage, productSearch]);
+  const clearProducts = useCallback(async () => {
+    setSaving(true);
+    try {
+      const deleted = await aiService.deleteAllProducts();
+      await loadProducts(1, '');
+      setProductSearch('');
+      addToast('success', deleted > 0 ? `${deleted} itens removidos do catálogo.` : 'O catálogo já estava vazio.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao limpar o catálogo.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, loadProducts]);
+  const importProducts = useCallback(async (file: File, mode: ProductImportMode): Promise<ProductImportReport> => {
+    const report = await aiService.importProducts(file, mode);
+    await loadProducts(1, '');
+    setProductSearch('');
+    return report;
+  }, [loadProducts]);
   return {
     segment,
     setSegment,
@@ -279,8 +346,19 @@ export function useAIConfig() {
     schedulingBookingEnabled,
     setSchedulingBookingEnabled,
     funnelAutoMoveEnabled,
+    crossSellEnabled,
     funnelStages,
     products,
+    productsTotal,
+    productsLoading,
+    productSearch,
+    productPage,
+    productsPageSize: PRODUCTS_PAGE_SIZE,
+    maxProducts,
+    setProductSearch,
+    goToProductPage,
+    clearProducts,
+    importProducts,
     channels,
     activeChannelId,
     enabled,
@@ -297,5 +375,6 @@ export function useAIConfig() {
     toggleSchedulingQuery,
     toggleSchedulingBooking,
     toggleFunnelAutoMove,
+    toggleCrossSell,
   };
 }

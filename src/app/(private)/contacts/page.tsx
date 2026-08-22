@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react';
+import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload, Users } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -19,6 +19,7 @@ import type { Contact } from '@/types/Contact';
 
 import { columns } from './components/ContactColumns';
 import EditContactModal from './components/EditContactModal';
+import ImportContactsModal from './components/ImportContactsModal';
 import SyncContactsModal from './components/SyncContactsModal';
 
 const PAGE_SIZE = 50;
@@ -156,6 +157,7 @@ export default function ContactsPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
@@ -293,17 +295,20 @@ export default function ContactsPage() {
         </p>
       </div>
 
-      <div data-tour="contacts-sync">
+      <div className="flex flex-wrap gap-2" data-tour="contacts-sync">
+        <Button variant="secondary" icon={<Upload size={15}/>} onClick={() => setIsImportModalOpen(true)}>
+          Importar Planilha
+        </Button>
         <Button variant="secondary" icon={<RefreshCw size={15}/>} onClick={() => setIsSyncModalOpen(true)}>
           Sincronizar Contatos
         </Button>
       </div>
     </header>
 
-    {contacts.length === 0 && !query ? (<EmptyState icon={<Users size={22}/>} title="Nenhum contato ainda" description="Sincronize contatos via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
-      label: 'Sincronizar Contatos',
-      icon: <RefreshCw size={15}/>,
-      onClick: () => setIsSyncModalOpen(true),
+    {contacts.length === 0 && !query ? (<EmptyState icon={<Users size={22}/>} title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
+      label: 'Importar Planilha',
+      icon: <Upload size={15}/>,
+      onClick: () => setIsImportModalOpen(true),
     }}/>) : (<Table columns={columns} data={contacts} actions={{
       searchBar: {
         placeholder: 'Buscar por nome, telefone ou @usuário...',
@@ -356,6 +361,8 @@ export default function ContactsPage() {
     <EditContactModal isOpen={!!editingContact} contact={editingContact} onClose={() => setEditingContact(null)} onSuccess={() => fetchContacts(query, 0, false)}/>
 
     <DeleteConfirmModal isOpen={!!deletingContact} contactName={deletingContact?.displayName || 'Sem nome'} loading={deletingLoading} onConfirm={handleDeleteContact} onCancel={() => setDeletingContact(null)}/>
+
+    <ImportContactsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(file) => contactService.importContacts(file)} onSuccess={() => { void fetchContacts(query, 0, false); }}/>
 
     <SyncContactsModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} onSuccess={(result) => {
       fetchContacts(query, 0, false);

@@ -2,6 +2,7 @@
 import { Bot, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -11,6 +12,7 @@ import AIChannelsList from './components/AIChannelsList';
 import AIFunnelSection from './components/AIFunnelSection';
 import AIIdentitySection from './components/AIIdentitySection';
 import AiPlanGate from './components/AiPlanGate';
+import AIProductsImportModal from './components/AIProductsImportModal';
 import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AISchedulingSection from './components/AISchedulingSection';
@@ -21,7 +23,9 @@ export default function IAPage() {
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, funnelStages, products, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
+  const [importOpen, setImportOpen] = useState(false);
+  const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
+  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
   if (subLoading || loading) {
     return <PageLoader message="Carregando configurações de IA"/>;
   }
@@ -39,7 +43,7 @@ export default function IAPage() {
     </div>
 
     {activeTab === 'general' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <AIIdentitySection segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products} onSegmentChange={setSegment} onBusinessNameChange={setBusinessName} onAssistantNameChange={setAssistantName} onToneChange={setTone} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct}/>
+      <AIIdentitySection segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onSegmentChange={setSegment} onBusinessNameChange={setBusinessName} onAssistantNameChange={setAssistantName} onToneChange={setTone} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)} crossSellEnabled={crossSellEnabled} onToggleCrossSell={toggleCrossSell}/>
       <AIPromptPreview segment={segment} businessName={businessName} assistantName={assistantName} tone={tone} products={products}/>
     </div>)}
 
@@ -59,6 +63,10 @@ export default function IAPage() {
         {saving ? 'Salvando...' : 'Salvar Alterações na IA'}
       </button>
     </div>)}
+
+    <AIProductsImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={importProducts}/>
+
+    <ConfirmDeleteModal isOpen={clearCatalogOpen} onClose={() => setClearCatalogOpen(false)} onConfirm={async () => { setClearCatalogOpen(false); await clearProducts(); }} title="Limpar catálogo" message="Todos os produtos e serviços cadastrados serão removidos. A IA deixa de conseguir citar itens até você cadastrar de novo. Esta ação não pode ser desfeita." confirmLabel="Limpar catálogo" loading={saving}/>
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

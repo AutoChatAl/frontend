@@ -16,6 +16,7 @@ import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { Campaign, UpdateCampaignInput } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+import { isUnlinkedContact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
@@ -502,7 +503,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       let newContactIds = prev.contactIds;
       if (isRemoving) {
         const channelContactIds = new Set(contacts
-          .filter((c) => c.identities?.some((i) => i.channelId === channelId))
+          .filter((c) => c.identities?.some((i) => i.channelId === channelId) || isUnlinkedContact(c))
           .map((c) => c.id));
         newContactIds = prev.contactIds.filter((id) => !channelContactIds.has(id));
       }
@@ -531,11 +532,25 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         : [...prev.contactIds, contactId],
     }));
   };
+  const officialChannelIds = useMemo(
+    () => new Set(channels.filter((c) => c.type === 'WHATSAPP_OFFICIAL').map((c) => c.id)),
+    [channels],
+  );
+  // Com HIDDEN_FEATURES.campaignNonOfficialChannels ligada só existe canal oficial para
+  // escolher, então a etapa de mensagem já abre direto no modo template. Sem isso o
+  // usuário veria o editor de texto livre até selecionar o canal — e perderia o que
+  // tivesse digitado quando a seção trocasse.
+  const isOfficialCampaign = useMemo(
+    () => HIDDEN_FEATURES.campaignNonOfficialChannels
+      || formData.channelIds.some((id) => officialChannelIds.has(id)),
+    [formData.channelIds, officialChannelIds],
+  );
   const channelContacts = useMemo(() => {
     if (formData.channelIds.length === 0)
       return [];
     const selectedChannelSet = new Set(formData.channelIds);
-    const filtered = contacts.filter((c) => c.identities?.some((i) => selectedChannelSet.has(i.channelId)));
+    const filtered = contacts.filter((c) => c.identities?.some((i) => selectedChannelSet.has(i.channelId))
+      || (isOfficialCampaign && isUnlinkedContact(c)));
     const uniqueById = new Map<string, Contact>();
     for (const contact of filtered) {
       if (!uniqueById.has(contact.id)) {
@@ -543,7 +558,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       }
     }
     return Array.from(uniqueById.values());
-  }, [contacts, formData.channelIds]);
+  }, [contacts, formData.channelIds, isOfficialCampaign]);
   const selectAllContacts = () => setFormData((prev) => ({ ...prev, contactIds: channelContacts.map((c) => c.id) }));
   const deselectAllContacts = () => setFormData((prev) => ({ ...prev, contactIds: [] }));
   const filteredContacts = useMemo(() => {
@@ -559,19 +574,6 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     });
   }, [channelContacts, contactFilter, formData.contactIds]);
   const selectedGroup = useMemo(() => groups.find((g) => g.id === formData.groupId), [groups, formData.groupId]);
-  const officialChannelIds = useMemo(
-    () => new Set(channels.filter((c) => c.type === 'WHATSAPP_OFFICIAL').map((c) => c.id)),
-    [channels],
-  );
-  // Com HIDDEN_FEATURES.campaignNonOfficialChannels ligada só existe canal oficial para
-  // escolher, então a etapa de mensagem já abre direto no modo template. Sem isso o
-  // usuário veria o editor de texto livre até selecionar o canal — e perderia o que
-  // tivesse digitado quando a seção trocasse.
-  const isOfficialCampaign = useMemo(
-    () => HIDDEN_FEATURES.campaignNonOfficialChannels
-      || formData.channelIds.some((id) => officialChannelIds.has(id)),
-    [formData.channelIds, officialChannelIds],
-  );
   const availableTemplates = useMemo(() => {
     if (!isOfficialCampaign) return [];
     const selectedSet = new Set(formData.channelIds);
