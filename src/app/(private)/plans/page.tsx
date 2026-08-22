@@ -59,7 +59,10 @@ export default function PlansPage() {
     }
     setLoading(null);
   };
-  const currentPlanId = isTrialing || isCanceled ? undefined : status?.subscription?.planId;
+  // Sem assinatura Stripe real (ex.: trial expirado com stripeSubscriptionId null),
+  // nenhum plano é "atual" — todos ficam assináveis via checkout.
+  const hasPaidSub = !!status?.subscription?.stripeSubscriptionId?.trim();
+  const currentPlanId = isTrialing || isCanceled || !hasPaidSub ? undefined : status?.subscription?.planId;
   return (<div className="max-w-5xl mx-auto">
     <div className="text-center mb-8">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Escolha seu plano</h1>

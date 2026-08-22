@@ -495,7 +495,11 @@ export default function BillingTab() {
     <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title="Escolher Plano" size="lg">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((p) => {
-          const isCurrent = !isTrialing && !isCanceled && p.id === sub?.planId;
+          // Só marca como "Plano Atual" quando existe assinatura Stripe real (paga).
+          // Trial expirado mantém planId preenchido mas stripeSubscriptionId null —
+          // nesse caso o usuário PRECISA conseguir assinar o mesmo plano (checkout).
+          const hasPaidSub = !!sub?.stripeSubscriptionId?.trim();
+          const isCurrent = hasPaidSub && !isTrialing && !isCanceled && p.id === sub?.planId;
           return (<div key={p.id} className={`border rounded-xl p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{p.name}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
