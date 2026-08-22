@@ -53,6 +53,8 @@ export interface CampaignSchedule {
     kind?: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
     timeOfDay?: string;
     onceAt?: string | null;
+    /** Próximo disparo calculado pelo backend (fonte oficial para "vai disparar quando"). */
+    nextRunAt?: string | null;
     startAt: string;
     endAt?: string | null;
     cron?: string | null;

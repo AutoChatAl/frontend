@@ -7,36 +7,33 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Header() {
-  const { activeTab, menuItems, setMobileMenuOpen } = useSidebar();
+  const { setMobileMenuOpen } = useSidebar();
   const { darkMode, toggleTheme } = useTheme();
   const { whatsappInstances, instagramAccounts } = useChannelStatus();
   const hasWhatsAppConnected = whatsappInstances.some((i) => i.status === 'CONNECTED');
   const hasInstagramConnected = instagramAccounts.some((a) => a.status === 'CONNECTED');
-  return (<header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-8 z-10 sticky top-0 transition-colors duration-300">
-    <div className="flex items-center gap-4">
-      <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-        <Menu size={24}/>
+  return (<header className="h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 z-10 sticky top-0 transition-colors duration-300">
+    <div className="flex items-center gap-3">
+      <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 -ml-1">
+        <Menu size={20}/>
       </button>
-      <h1 className="text-lg font-semibold text-slate-700 dark:text-slate-200 hidden md:block">
-        {menuItems.find((i) => i.id === activeTab)?.text || 'Dashboard'}
-      </h1>
     </div>
 
-    <div className="flex items-center gap-3 md:gap-6">
-      <div className="hidden sm:flex items-center gap-2">
-        {hasWhatsAppConnected && (<div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-100 dark:border-emerald-800/50">
+    <div className="flex items-center gap-2 md:gap-3">
+      <div className="hidden sm:flex items-center gap-1.5">
+        {hasWhatsAppConnected && (<div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[11px] font-medium border border-emerald-100 dark:border-emerald-500/20">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-              WhatsApp Conectado
+              WhatsApp
         </div>)}
-        {hasInstagramConnected && (<div className="flex items-center gap-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 px-3 py-1.5 rounded-full text-xs font-medium border border-fuchsia-100 dark:border-fuchsia-800/50">
+        {hasInstagramConnected && (<div className="flex items-center gap-1.5 bg-fuchsia-50 dark:bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 px-2.5 py-1 rounded-full text-[11px] font-medium border border-fuchsia-100 dark:border-fuchsia-500/20">
           <div className="w-1.5 h-1.5 bg-fuchsia-500 rounded-full animate-pulse"></div>
-              Instagram Conectado
+              Instagram
         </div>)}
       </div>
-      {(hasWhatsAppConnected || hasInstagramConnected) && (<div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>)}
+      {(hasWhatsAppConnected || hasInstagramConnected) && (<div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>)}
 
-      <button onClick={toggleTheme} className="text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
-        {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
+      <button onClick={toggleTheme} className="text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+        {darkMode ? <Sun size={17}/> : <Moon size={17}/>}
       </button>
 
       <NotificationDropdown />

@@ -41,3 +41,5 @@ yarn-error.log*
 next-env.d.ts
 
 certificates
+# Componentes antigos movidos durante o redesign (pode apagar a pasta)
+_to_delete/

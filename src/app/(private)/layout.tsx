@@ -38,10 +38,10 @@ export default function PrivateLayout({ children }: Readonly<{
     checkAuth();
   }, [router]);
   if (!isAuthenticated) {
-    return (<div className="min-h-screen flex items-center justify-center bg-gray-50">
+    return (<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p className="mt-4 text-slate-600">Verificando autenticação...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+        <p className="mt-4 text-slate-600 dark:text-slate-400">Verificando autenticação...</p>
       </div>
     </div>);
   }
@@ -67,7 +67,7 @@ export default function PrivateLayout({ children }: Readonly<{
                 <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
                 <div className="flex flex-col flex-1 min-w-0">
                   <Header />
-                  <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
+                  <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
                     <TrialBanner />
                     <SubscriptionBanner />
                     {children}

@@ -16,6 +16,11 @@ export interface DashboardMetrics {
         sent: number;
         received: number;
         read: number;
+        /** Campos opcionais para tolerar respostas antigas em cache. */
+        contacts?: number;
+        aiSent?: number;
+        automatedSent?: number;
+        manualSent?: number;
     }[];
 }
 export interface ProductRevenue {
