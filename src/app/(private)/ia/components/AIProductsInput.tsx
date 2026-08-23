@@ -1,8 +1,8 @@
 'use client';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2, Plus, Search, ShoppingBag, Sparkles, Star, Trash2, Upload } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, ImagePlus, Loader2, Plus, Search, ShoppingBag, Sparkles, Star, Trash2, Upload, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
-import type { Product, ProductPayload } from '@/types/AI';
+import type { InstagramProductLayout, Product, ProductPayload } from '@/types/AI';
 
 interface AIProductsInputProps {
     products: Product[];
@@ -21,7 +21,29 @@ interface AIProductsInputProps {
     onClearCatalog: () => void;
     crossSellEnabled: boolean;
     onToggleCrossSell: (enabled: boolean) => void;
+    productLayout: InstagramProductLayout;
+    onProductLayoutChange: (layout: InstagramProductLayout) => void;
+    onUploadImage: (id: string, file: File) => void;
+    onRemoveImage: (id: string) => void;
 }
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
+/**
+ * O backend devolve caminho relativo para imagem que subimos e URL absoluta para a que veio da
+ * planilha. O caminho é resolvido contra a API — não contra o front — porque é a API que serve
+ * o arquivo.
+ */
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
+function resolveImageUrl(url?: string): string {
+  const value = (url ?? '').trim();
+  if (!value)
+    return '';
+  return /^https?:\/\//i.test(value) ? value : `${API_BASE}${value}`;
+}
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const LAYOUT_OPTIONS: Array<{ value: InstagramProductLayout; label: string; hint: string }> = [
+  { value: 'QUICK_REPLY', label: 'Botões de resposta', hint: 'Sem foto e nome curto, mas tocar envia o texto do botão como mensagem do cliente.' },
+  { value: 'CAROUSEL', label: 'Carrossel com foto', hint: 'Foto, nome e preço em cada card. Exige imagem em todos os itens ativos.' },
+];
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -29,7 +51,7 @@ function parseCents(value: string): number {
   const parsed = parseFloat(value.replace(/\./g, '').replace(',', '.'));
   return isNaN(parsed) ? 0 : Math.round(parsed * 100);
 }
-export default function AIProductsInput({ products, total, maxProducts, loading, search, page, pageSize, onSearchChange, onPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell }: AIProductsInputProps) {
+export default function AIProductsInput({ products, total, maxProducts, loading, search, page, pageSize, onSearchChange, onPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell, productLayout, onProductLayoutChange, onUploadImage, onRemoveImage }: AIProductsInputProps) {
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -96,6 +118,16 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
         Sugerir itens complementares (cross-sell) durante a conversa
     </label>
 
+    <div className="space-y-2 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+      <span className="block text-xs font-medium text-slate-600 dark:text-slate-300">Como as opções de produto aparecem no Instagram</span>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {LAYOUT_OPTIONS.map((option) => (<button key={option.value} type="button" onClick={() => onProductLayoutChange(option.value)} className={`rounded-lg border px-3 py-2 text-left transition-colors ${productLayout === option.value ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+          <span className="block text-xs font-medium text-slate-800 dark:text-white">{option.label}</span>
+          <span className="mt-0.5 block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{option.hint}</span>
+        </button>))}
+      </div>
+    </div>
+
     {products.length === 0 && !loading && (<div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 py-10 text-center">
       <ShoppingBag size={28} className="mx-auto text-slate-300 dark:text-slate-600"/>
       <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -111,6 +143,7 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/80 text-left">
+              <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-20">Imagem</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Nome</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400 w-32">Preço (R$)</th>
               <th className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">Observação</th>
@@ -120,13 +153,13 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {products.map((product) => (<ProductRow key={product.id} product={product} onUpdate={onUpdateProduct} onDelete={onDeleteProduct}/>))}
+            {products.map((product) => (<ProductRow key={product.id} product={product} onUpdate={onUpdateProduct} onDelete={onDeleteProduct} onUploadImage={onUploadImage} onRemoveImage={onRemoveImage}/>))}
           </tbody>
         </table>
       </div>
 
       <div className="sm:hidden space-y-3">
-        {products.map((product) => (<ProductCard key={product.id} product={product} onUpdate={onUpdateProduct} onDelete={onDeleteProduct}/>))}
+        {products.map((product) => (<ProductCard key={product.id} product={product} onUpdate={onUpdateProduct} onDelete={onDeleteProduct} onUploadImage={onUploadImage} onRemoveImage={onRemoveImage}/>))}
       </div>
     </>)}
 
@@ -149,6 +182,45 @@ interface ProductEditorProps {
     product: Product;
     onUpdate: (id: string, data: ProductPayload) => void;
     onDelete: (id: string) => void;
+    onUploadImage: (id: string, file: File) => void;
+    onRemoveImage: (id: string) => void;
+}
+function ProductImageCell({ product, onUploadImage, onRemoveImage, size }: {
+    product: Product;
+    onUploadImage: (id: string, file: File) => void;
+    onRemoveImage: (id: string) => void;
+    size: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [sizeError, setSizeError] = useState(false);
+  const preview = resolveImageUrl(product.imagePreviewUrl);
+  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Zera o input para que escolher o MESMO arquivo de novo continue disparando onChange.
+    event.target.value = '';
+    if (!file)
+      return;
+    if (file.size > MAX_IMAGE_BYTES) {
+      setSizeError(true);
+      return;
+    }
+    setSizeError(false);
+    onUploadImage(product.id, file);
+  };
+  return (<div className="flex flex-col items-start gap-1">
+    <div className="relative">
+      <button type="button" onClick={() => inputRef.current?.click()} title={preview ? 'Trocar imagem' : 'Adicionar imagem'} style={{ width: size, height: size }} className="flex items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 hover:border-indigo-400 transition-colors">
+        {preview
+          ? <img src={preview} alt={product.name} className="h-full w-full object-cover"/>
+          : <ImagePlus size={16} className="text-slate-400 dark:text-slate-500"/>}
+      </button>
+      {preview && (<button type="button" onClick={() => onRemoveImage(product.id)} title="Remover imagem" className="absolute -right-1.5 -top-1.5 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 p-0.5 text-slate-400 hover:text-red-500 shadow-sm">
+        <X size={11}/>
+      </button>)}
+      <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} onChange={handleFile} className="hidden"/>
+    </div>
+    {sizeError && <span className="text-[10px] text-red-500">Máx. 2 MB</span>}
+  </div>);
 }
 function useProductDraft(product: Product) {
   const [price, setPrice] = useState(formatCents(product.priceCents));
@@ -163,7 +235,7 @@ function useProductDraft(product: Product) {
   }, [product.id, product.priceCents, product.link, product.notes, product.keywords]);
   return { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords };
 }
-function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
+function ProductRow({ product, onUpdate, onDelete, onUploadImage, onRemoveImage }: ProductEditorProps) {
   const { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords } = useProductDraft(product);
   const isActive = product.active !== false;
   const isFeatured = product.featured === true;
@@ -175,6 +247,9 @@ function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
   };
   const cellInput = 'w-full bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:ring-0';
   return (<tr className={`bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors align-top ${isActive ? '' : 'opacity-50'}`}>
+    <td className="px-4 py-2.5">
+      <ProductImageCell product={product} onUploadImage={onUploadImage} onRemoveImage={onRemoveImage} size={44}/>
+    </td>
     <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-white">{product.name}</td>
     <td className="px-4 py-2.5">
       <div className="flex items-center gap-1">
@@ -206,7 +281,7 @@ function ProductRow({ product, onUpdate, onDelete }: ProductEditorProps) {
     </td>
   </tr>);
 }
-function ProductCard({ product, onUpdate, onDelete }: ProductEditorProps) {
+function ProductCard({ product, onUpdate, onDelete, onUploadImage, onRemoveImage }: ProductEditorProps) {
   const { price, setPrice, link, setLink, notes, setNotes, keywords, setKeywords } = useProductDraft(product);
   const isActive = product.active !== false;
   const isFeatured = product.featured === true;
@@ -218,8 +293,11 @@ function ProductCard({ product, onUpdate, onDelete }: ProductEditorProps) {
   };
   const inputClass = 'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400';
   return (<div className={`bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 ${isActive ? '' : 'opacity-60'}`}>
-    <div className="flex items-center justify-between">
-      <p className="text-sm font-medium text-slate-800 dark:text-white">{product.name}</p>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <ProductImageCell product={product} onUploadImage={onUploadImage} onRemoveImage={onRemoveImage} size={40}/>
+        <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{product.name}</p>
+      </div>
       <div className="flex items-center gap-1">
         <button type="button" title={isFeatured ? 'Remover destaque' : 'Destaque'} onClick={() => onUpdate(product.id, { featured: !isFeatured })} className={isFeatured ? 'text-amber-500 p-1' : 'text-slate-300 dark:text-slate-600 p-1'}>
           <Star size={15} fill={isFeatured ? 'currentColor' : 'none'}/>

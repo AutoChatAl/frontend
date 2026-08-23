@@ -8,7 +8,7 @@ import { channelsService } from '@/services/channels.service';
 import { funnelService } from '@/services/funnel.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AIChannel } from '@/types/AI';
-import type { Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
+import type { InstagramProductLayout, Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import type { FunnelStageDefinition } from '@/types/Funnel';
@@ -26,6 +26,7 @@ export function useAIConfig() {
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
   const [crossSellEnabled, setCrossSellEnabled] = useState(false);
+  const [instagramProductLayout, setInstagramProductLayout] = useState<InstagramProductLayout>('QUICK_REPLY');
   const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsTotal, setProductsTotal] = useState(0);
@@ -116,6 +117,7 @@ export function useAIConfig() {
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
       setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
+      setInstagramProductLayout(aiConfig.instagramProductLayout ?? 'QUICK_REPLY');
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
@@ -217,6 +219,27 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [addToast]);
+  const changeProductLayout = useCallback(async (layout: InstagramProductLayout) => {
+    const previous = instagramProductLayout;
+    if (layout === previous)
+      return;
+    setInstagramProductLayout(layout);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ instagramProductLayout: layout });
+      addToast('success', layout === 'CAROUSEL'
+        ? 'As opções passam a ser enviadas como carrossel com foto.'
+        : 'As opções voltam a ser botões de resposta rápida.');
+    }
+    catch (err) {
+      // Falha típica: existe item sem imagem. Volta o seletor para não mentir sobre o estado salvo.
+      setInstagramProductLayout(previous);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao trocar o formato das opções.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, instagramProductLayout]);
   const toggleChannel = useCallback(async (channelId: string) => {
     setSaving(true);
     try {
@@ -288,6 +311,34 @@ export function useAIConfig() {
     }
     catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar produto.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, loadProducts, productPage, productSearch]);
+  const uploadProductImage = useCallback(async (id: string, file: File) => {
+    setSaving(true);
+    try {
+      await aiService.uploadProductImage(id, file);
+      await loadProducts(productPage, productSearch);
+      addToast('success', 'Imagem do produto atualizada.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao enviar a imagem do produto.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, loadProducts, productPage, productSearch]);
+  const removeProductImage = useCallback(async (id: string) => {
+    setSaving(true);
+    try {
+      await aiService.removeProductImage(id);
+      await loadProducts(productPage, productSearch);
+      addToast('success', 'Imagem removida.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao remover a imagem do produto.');
     }
     finally {
       setSaving(false);
@@ -376,5 +427,9 @@ export function useAIConfig() {
     toggleSchedulingBooking,
     toggleFunnelAutoMove,
     toggleCrossSell,
+    instagramProductLayout,
+    changeProductLayout,
+    uploadProductImage,
+    removeProductImage,
   };
 }
