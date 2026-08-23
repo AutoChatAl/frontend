@@ -11,6 +11,7 @@ import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
 import type { Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
+import { EXTRA_COLLABORATOR_PRICE_CENTS, EXTRA_INSTANCE_PRICE_CENTS, formatBRLFromCents } from '@/utils/billing';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number) {
@@ -358,7 +359,7 @@ export default function BillingTab() {
         <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Instâncias Extras</p>
-            <p className="text-xs text-slate-500">R$ 24,90/mês cada</p>
+            <p className="text-xs text-slate-500">{formatBRLFromCents(EXTRA_INSTANCE_PRICE_CENTS)}/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setConfirmRemoveExtra({ type: 'instance' })} disabled={loadingExtra !== null || (sub?.extraInstances ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
@@ -373,7 +374,7 @@ export default function BillingTab() {
         <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Colaboradores Extras</p>
-            <p className="text-xs text-slate-500">R$ 19,90/mês cada</p>
+            <p className="text-xs text-slate-500">{formatBRLFromCents(EXTRA_COLLABORATOR_PRICE_CENTS)}/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setConfirmRemoveExtra({ type: 'collaborator' })} disabled={loadingExtra !== null || (sub?.extraCollaborators ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
@@ -575,7 +576,7 @@ export default function BillingTab() {
             {confirmExtra.type === 'instance' ? 'Instância Extra' : 'Colaborador Extra'}
           </p>
           <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-            {confirmExtra.type === 'instance' ? 'R$ 24,90' : 'R$ 19,90'}
+            {formatBRLFromCents(confirmExtra.type === 'instance' ? EXTRA_INSTANCE_PRICE_CENTS : EXTRA_COLLABORATOR_PRICE_CENTS)}
             <span className="text-sm font-normal text-slate-500">/mês</span>
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">

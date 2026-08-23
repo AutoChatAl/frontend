@@ -1,6 +1,7 @@
 'use client';
 import { Bot, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import PageLoader from '@/components/PageLoader';
@@ -19,6 +20,8 @@ import AISchedulingSection from './components/AISchedulingSection';
 import AITabs from './components/AITabs';
 
 export default function IAPage() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const { hasAiPlan, loading: subLoading, status } = useSubscription();
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
@@ -26,6 +29,12 @@ export default function IAPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
   const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, toasts, removeToast, visibleTabs } = useAIConfig();
+  // Abre uma aba direto pela URL (?tab=), usado pela busca do header.
+  useEffect(() => {
+    if (tabParam && visibleTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam, visibleTabs]);
   if (subLoading || loading) {
     return <PageLoader message="Carregando configurações de IA"/>;
   }

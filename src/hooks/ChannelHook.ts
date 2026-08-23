@@ -75,6 +75,28 @@ export function useWhatsAppInstances() {
       throw new Error(errorMsg);
     }
   };
+  const disconnectInstance = async (id: string) => {
+    try {
+      await channelsService.disconnectWhatsAppInstance(id);
+      await fetchInstances();
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao desativar instância');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
+  const renameInstance = async (id: string, name: string) => {
+    try {
+      await channelsService.renameWhatsAppInstance(id, name);
+      setInstances((prev) => prev.map((inst) => (inst.id === id ? { ...inst, name } : inst)));
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear instância');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
   const deleteInstance = async (id: string) => {
     try {
       await channelsService.deleteWhatsAppInstance(id);
@@ -93,6 +115,8 @@ export function useWhatsAppInstances() {
     refetch: fetchInstances,
     createInstance,
     connectInstance,
+    disconnectInstance,
+    renameInstance,
     getQRCode,
     getStatus,
     deleteInstance,
@@ -130,6 +154,17 @@ export function useInstagramAccounts() {
       throw new Error(errorMsg);
     }
   };
+  const renameAccount = async (id: string, name: string) => {
+    try {
+      await channelsService.renameInstagramAccount(id, name);
+      setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, name } : acc)));
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear conta');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
   const getOAuthUrl = async () => {
     try {
       const { url } = await channelsService.getInstagramOAuthUrl();
@@ -147,6 +182,7 @@ export function useInstagramAccounts() {
     error,
     refetch: fetchAccounts,
     deleteAccount,
+    renameAccount,
     getOAuthUrl,
   };
 }

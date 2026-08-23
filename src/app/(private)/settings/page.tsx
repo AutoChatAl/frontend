@@ -1,4 +1,5 @@
 'use client';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { authService } from '@/services/auth.service';
@@ -19,6 +20,8 @@ const TABS: Record<string, React.ReactNode> = {
 };
 const OWNER_ONLY_TABS = ['notifications', 'billing', 'members'];
 const SettingsPage = () => {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState('account');
   const [role, setRole] = useState<string>('owner');
   useEffect(() => {
@@ -26,6 +29,16 @@ const SettingsPage = () => {
     if (user?.role)
       setRole(user.role);
   }, []);
+  // Abre uma aba direto pela URL (?tab=), usado pela busca do header.
+  useEffect(() => {
+    if (!tabParam || !TABS[tabParam]) {
+      return;
+    }
+    if (role === 'collaborator' && OWNER_ONLY_TABS.includes(tabParam)) {
+      return;
+    }
+    setActiveTab(tabParam);
+  }, [tabParam, role]);
   const handleTabChange = (tab: string) => {
     if (role === 'collaborator' && OWNER_ONLY_TABS.includes(tab))
       return;

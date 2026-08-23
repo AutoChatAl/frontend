@@ -41,6 +41,11 @@ class WhatsAppOfficialService {
     return unwrap<WhatsAppOfficialInstance>(response, 'Falha ao atualizar as informacoes da conta.');
   }
 
+  public async renameInstance(channelId: string, name: string): Promise<void> {
+    const response = await apiClient.patch(`/channels/whatsapp-official/${channelId}`, { name });
+    if (!response.success) throwApiError(response, 'Falha ao renomear o canal oficial.');
+  }
+
   public async deleteInstance(channelId: string): Promise<void> {
     const response = await apiClient.delete(`/channels/whatsapp-official/${channelId}`);
     if (!response.success) throwApiError(response, 'Falha ao desconectar a conta oficial.');

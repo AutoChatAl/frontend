@@ -77,6 +77,13 @@ export type WhatsAppStatusResponse = {
         [key: string]: unknown;
     };
 };
+/** Mensagens enviadas (direcao OUT) por tipo de canal no periodo. */
+export type ChannelMessageStats = {
+    days: number;
+    WHATSAPP: number;
+    WHATSAPP_OFFICIAL: number;
+    INSTAGRAM: number;
+};
 export type InstagramAccount = {
     id: string;
     name: string;

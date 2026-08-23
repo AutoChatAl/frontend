@@ -165,10 +165,10 @@ const ALL_TOURS: TourConfig[] = [
       {
         id: 'channels:tabs',
         tourId: 'channels',
-        selector: '[data-tour="channels-tabs"]',
-        title: 'Escolha o tipo de canal',
+        selector: '[data-tour="channels-cards"]',
+        title: 'Um card por tipo de canal',
         description:
-          'Alterne entre WhatsApp e Instagram. Você pode ter vários canais conectados ao mesmo tempo, inclusive contas distintas.',
+          'WhatsApp e Instagram ficam lado a lado, cada um listando as contas já conectadas. Você pode ter vários canais ao mesmo tempo, inclusive contas distintas.',
         placement: 'bottom',
       },
       {
@@ -177,8 +177,8 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="channels-add"]',
         title: 'Adicione uma nova instância',
         description:
-          'Clique para conectar uma nova conta. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
-        placement: 'left',
+          'Cada card tem seu botão de conectar. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
+        placement: 'bottom',
       },
     ],
   },

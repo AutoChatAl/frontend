@@ -388,6 +388,9 @@ Usadas via classes `animate-in` do Tailwind (plugin `tailwindcss-animate`):
 | Backdrop do modal | `animate-in fade-in duration-200` |
 | Conteúdo do modal | `animate-in zoom-in-95 duration-200` |
 | Toast notification | `animate-in slide-in-from-right-4 duration-300` |
+| Dropdown do header (busca) | `animate-dropdown` |
+
+> `animate-dropdown` é um utilitário próprio, definido em `src/app/globals.css` (`@utility` + `@keyframes synq-dropdown-in`): fade + deslocamento de 4px em 150ms. Use em menus flutuantes ancorados no topo.
 
 ### 6.4 Loading State
 
