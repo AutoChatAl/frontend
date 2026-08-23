@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
 import Card from '@/components/Card';
+import CardEmptyState from '@/components/CardEmptyState';
 import { campaignService } from '@/services/campaign.service';
 import type { Campaign } from '@/types/Campaign';
 
@@ -180,12 +181,11 @@ export default function UpcomingCampaignsCard() {
 
     {loading ? (<div className="flex-1 flex flex-col justify-center animate-pulse" aria-hidden>
       <div className="h-9 w-full rounded-md bg-slate-100 dark:bg-slate-700/60"/>
-    </div>) : visible.length === 0 ? (<div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-center">
-      <p className="text-[13px] text-slate-600 dark:text-slate-400">Nenhum disparo para hoje.</p>
+    </div>) : visible.length === 0 ? (<CardEmptyState message="Nenhum disparo para hoje." action={
       <Link href="/campaigns" className="text-[13px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           Criar uma campanha
       </Link>
-    </div>) : (<div className="flex-1 flex flex-col justify-center">
+    }/>) : (<div className="flex-1 flex flex-col justify-center">
       {visible.map((row) => (<div key={row.key} className="flex items-center justify-between gap-3 py-2 border-b last:border-0 border-slate-100 dark:border-slate-700/60 min-w-0">
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-slate-900 dark:text-white truncate">{row.name}</p>

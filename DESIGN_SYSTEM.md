@@ -388,9 +388,6 @@ Usadas via classes `animate-in` do Tailwind (plugin `tailwindcss-animate`):
 | Backdrop do modal | `animate-in fade-in duration-200` |
 | Conteúdo do modal | `animate-in zoom-in-95 duration-200` |
 | Toast notification | `animate-in slide-in-from-right-4 duration-300` |
-| Dropdown do header (busca) | `animate-dropdown` |
-
-> `animate-dropdown` é um utilitário próprio, definido em `src/app/globals.css` (`@utility` + `@keyframes synq-dropdown-in`): fade + deslocamento de 4px em 150ms. Use em menus flutuantes ancorados no topo.
 
 ### 6.4 Loading State
 
@@ -536,10 +533,13 @@ Aceita `className` para extensão. Usado como container padrão de seções.
 
 **Props:**
 - `label`: texto do label (opcional)
+- `required`: boolean — exibe asterisco vermelho (`text-red-500`) após o label; disponível também em Textarea e Dropdown. Campos obrigatórios em formulários devem usá-lo
 - `error`: mensagem de erro (muda borda para red-400)
 - `hint`: texto de ajuda (aparece quando não há erro)
 - `leftIcon`: ReactNode — ícone dentro do input à esquerda
 - `rightElement`: ReactNode — elemento à direita (ex: botão de senha)
+
+**Contador de caracteres:** quando o campo tem limite, o contador fica **abaixo do campo, alinhado à direita** (`text-[11px] tabular-nums text-slate-400`), nunca dentro do label.
 
 **Estados visuais:**
 
@@ -641,6 +641,39 @@ body: flex-1 overflow-y-auto p-6
 // Uso via ToastContainer + hook/context
 toast.success('Salvo com sucesso')
 toast.error('Algo deu errado')
+```
+
+---
+
+### 8.6a MetricCard
+
+**Arquivo:** `src/components/MetricCard.tsx`
+
+KPI compacto padrão das páginas: título `text-sm font-semibold`, número
+`text-xl sm:text-2xl tabular-nums`, `hint` opcional abaixo (11px) e `trend`
+opcional — chip pill **alinhado à direita** na linha do número, com tom
+`positive` (verde), `negative` (vermelho) ou `neutral` (cinza), usado para
+variações tipo "+32%" / "-33% vs sem. passada".
+
+```tsx
+<MetricCard title="Total de Contatos" value="1.240" hint="82 sem canal vinculado"
+  trend={{ label: '+12% vs sem. passada', tone: 'positive' }}/>
+```
+
+---
+
+### 8.6b CardEmptyState
+
+**Arquivo:** `src/components/CardEmptyState.tsx`
+
+Estado vazio **dentro de cards** (o `EmptyState` continua sendo o de página inteira).
+Mensagem sempre **centralizada** (horizontal e vertical, `min-h-24`) em
+`text-[13px] text-slate-400 dark:text-slate-500`, com `action` opcional (ex.: um `Link`).
+Regra: todo card sem dados usa este componente — nunca um `<p>` solto alinhado à esquerda.
+
+```tsx
+<CardEmptyState message="Nenhum consumo no período."/>
+<CardEmptyState message="Nenhum disparo para hoje." action={<Link href="/campaigns">Criar uma campanha</Link>}/>
 ```
 
 ---

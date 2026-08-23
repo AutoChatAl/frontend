@@ -9,6 +9,16 @@ export interface SyncContactsResult {
     created: number;
     updated: number;
 }
+export interface ContactsStats {
+    total: number;
+    whatsapp: number;
+    instagram: number;
+    /** Contatos sem canal vinculado (ex.: importados por planilha). */
+    unlinked: number;
+    awaitingHuman: number;
+    /** Novos contatos por dia nos últimos 30 dias (apenas dias com criação). */
+    daily: { date: string; count: number }[];
+}
 class ContactService {
   public async listContacts(params?: ListContactsParams): Promise<PaginatedContacts> {
     const queryString = new URLSearchParams();
@@ -76,6 +86,12 @@ class ContactService {
             ok: boolean;
             upserted: number;
         };
+  }
+  public async getStats(): Promise<ContactsStats> {
+    const response = await apiClient.get<ContactsStats>('/contacts/stats');
+    if (!response.success || !response.data)
+      throw new Error('Falha ao buscar o resumo de contatos.');
+    return response.data as ContactsStats;
   }
   public async getHumanQueueSummary(): Promise<{
         waitingCount: number;

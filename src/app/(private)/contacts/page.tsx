@@ -1,6 +1,6 @@
 'use client';
 import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload, Users } from 'lucide-react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 import Badge from '@/components/Badge';
@@ -8,21 +8,34 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
+import MetricCard, { type MetricTrend } from '@/components/MetricCard';
 import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import { channelsService } from '@/services/channels.service';
-import { contactService } from '@/services/contact.service';
+import { contactService, type ContactsStats } from '@/services/contact.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 
 import { columns } from './components/ContactColumns';
+import ContactsGrowthChart, { type ContactsGrowthPoint } from './components/ContactsGrowthChart';
 import EditContactModal from './components/EditContactModal';
 import ImportContactsModal from './components/ImportContactsModal';
 import SyncContactsModal from './components/SyncContactsModal';
 
 const PAGE_SIZE = 50;
+/** Preenche os últimos `n` dias (chave YYYY-MM-DD local) com os dados existentes. */
+function fillLastDays(rows: ContactsStats['daily'], n: number): ContactsGrowthPoint[] {
+  const byDate = new Map(rows.map((r) => [r.date, r.count]));
+  const filled: ContactsGrowthPoint[] = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const key = new Date(now.getTime() - i * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
+    filled.push({ date: key, count: byDate.get(key) ?? 0 });
+  }
+  return filled;
+}
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -151,6 +164,7 @@ function DeleteConfirmModal({ isOpen, contactName, loading, onConfirm, onCancel 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<ContactsStats | null>(null);
   const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -206,17 +220,27 @@ export default function ContactsPage() {
       setLoadingMore(false);
     }
   }, []);
+  const fetchStats = useCallback(async () => {
+    try {
+      setStats(await contactService.getStats());
+    }
+    catch {
+      // Os cards são complementares — a lista continua funcionando sem eles.
+    }
+  }, []);
   useEffect(() => {
     Promise.all([
       fetchContacts('', 0, false),
+      fetchStats(),
       channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
-    ]).then(([, waChannels]) => {
+    ]).then(([, , waChannels]) => {
       setWhatsappChannels(waChannels);
     });
   }, []);
   useEffect(() => {
     const refresh = () => {
       fetchContacts(query, 0, false);
+      fetchStats();
     };
     const timer = setInterval(refresh, 15000);
     window.addEventListener('focus', refresh);
@@ -224,7 +248,27 @@ export default function ContactsPage() {
       clearInterval(timer);
       window.removeEventListener('focus', refresh);
     };
-  }, [fetchContacts, query]);
+  }, [fetchContacts, fetchStats, query]);
+  const growth30 = useMemo(() => (stats ? fillLastDays(stats.daily, 30) : []), [stats]);
+  const newLast30 = useMemo(() => growth30.reduce((sum, d) => sum + d.count, 0), [growth30]);
+  // Variação de novos contatos: últimos 7 dias vs os 7 anteriores.
+  const contactsTrend = useMemo((): MetricTrend | undefined => {
+    if (growth30.length < 14)
+      return undefined;
+    const last7 = growth30.slice(-7).reduce((sum, d) => sum + d.count, 0);
+    const prev7 = growth30.slice(-14, -7).reduce((sum, d) => sum + d.count, 0);
+    if (prev7 <= 0)
+      return undefined;
+    const pct = Math.round(((last7 - prev7) / prev7) * 100);
+    if (pct === 0)
+      return { label: '0% vs sem. passada', tone: 'neutral' };
+    return pct > 0
+      ? { label: `+${pct}% vs sem. passada`, tone: 'positive' }
+      : { label: `${pct}% vs sem. passada`, tone: 'negative' };
+  }, [growth30]);
+  const pctOfBase = (value: number): string => {
+    return stats && stats.total > 0 ? `${Math.round((value / stats.total) * 100)}% da base` : '—';
+  };
   const handleSearchChange = useCallback((value: string) => {
     setQuery(value);
     if (searchTimeout.current)
@@ -247,6 +291,7 @@ export default function ContactsPage() {
       addToast('success', `Contato "${deletingContact.displayName || 'Sem nome'}" excluído com sucesso.`);
       setDeletingContact(null);
       await fetchContacts(query, 0, false);
+      fetchStats();
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao excluir contato';
@@ -262,6 +307,7 @@ export default function ContactsPage() {
       window.dispatchEvent(new Event('human-queue-decrement'));
       addToast('success', `Contato "${contact.displayName || 'Sem nome'}" marcado como lido.`);
       await fetchContacts(query, 0, false);
+      fetchStats();
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao marcar contato como lido';
@@ -283,15 +329,12 @@ export default function ContactsPage() {
       </div>
     </div>);
   }
-  return (<div className="space-y-6 animate-in fade-in duration-500">
-    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Contatos</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">
+  return (<div className="w-full max-w-full space-y-3">
+    <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Contatos</h1>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
             Gerencie sua base de contatos e leads
-          {total > 0 && (<span className="ml-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
-            {total} no total
-          </span>)}
         </p>
       </div>
 
@@ -304,6 +347,31 @@ export default function ContactsPage() {
         </Button>
       </div>
     </header>
+
+    {stats && stats.total > 0 && (<>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <MetricCard title="Total de Contatos" value={stats.total.toLocaleString('pt-BR')} {...(contactsTrend ? { trend: contactsTrend } : {})} hint={stats.unlinked > 0 ? `${stats.unlinked.toLocaleString('pt-BR')} sem canal vinculado` : `+${newLast30.toLocaleString('pt-BR')} nos últimos 30 dias`}/>
+        <MetricCard title="WhatsApp" value={stats.whatsapp.toLocaleString('pt-BR')} hint={pctOfBase(stats.whatsapp)}/>
+        <MetricCard title="Instagram" value={stats.instagram.toLocaleString('pt-BR')} hint={pctOfBase(stats.instagram)}/>
+        <MetricCard title="Aguardando Atendimento" value={stats.awaitingHuman.toLocaleString('pt-BR')} hint="na fila de atendimento humano"/>
+      </div>
+
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Evolução de contatos</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Novos contatos por dia nos últimos 30 dias
+            </p>
+          </div>
+          <span className="shrink-0 text-[13px] font-semibold tabular-nums text-slate-900 dark:text-white">
+              +{newLast30.toLocaleString('pt-BR')}
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500"> no mês</span>
+          </span>
+        </div>
+        <ContactsGrowthChart data={growth30} height={170}/>
+      </Card>
+    </>)}
 
     {contacts.length === 0 && !query ? (<EmptyState icon={<Users size={22}/>} title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
       label: 'Importar Planilha',
@@ -362,10 +430,11 @@ export default function ContactsPage() {
 
     <DeleteConfirmModal isOpen={!!deletingContact} contactName={deletingContact?.displayName || 'Sem nome'} loading={deletingLoading} onConfirm={handleDeleteContact} onCancel={() => setDeletingContact(null)}/>
 
-    <ImportContactsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(file) => contactService.importContacts(file)} onSuccess={() => { void fetchContacts(query, 0, false); }}/>
+    <ImportContactsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(file) => contactService.importContacts(file)} onSuccess={() => { void fetchContacts(query, 0, false); fetchStats(); }}/>
 
     <SyncContactsModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} onSuccess={(result) => {
       fetchContacts(query, 0, false);
+      fetchStats();
       addToast('success', `Você tem ${result.created} sincronizados via WhatsApp.`);
     }} whatsappChannels={whatsappChannels}/>
 

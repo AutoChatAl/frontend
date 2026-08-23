@@ -11,6 +11,7 @@ import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
 import Input from '@/components/Input';
+import MetricCard from '@/components/MetricCard';
 import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
@@ -213,6 +214,28 @@ function CampaignsPageContent() {
       return matchesName && matchesChannel;
     });
   }, [campaigns, nameFilter, channelFilter]);
+  const campaignStats = useMemo(() => {
+    const today = new Date();
+    const isToday = (iso?: string | null): boolean => {
+      if (!iso)
+        return false;
+      const d = new Date(iso);
+      return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+    };
+    let dispatchesToday = 0;
+    for (const campaign of campaigns) {
+      for (const run of campaign.runs ?? []) {
+        if (isToday(run.startedAt ?? run.scheduledFor))
+          dispatchesToday++;
+      }
+    }
+    return {
+      active: campaigns.filter((c) => c.status === 'ACTIVE').length,
+      paused: campaigns.filter((c) => c.status === 'PAUSED').length,
+      completed: campaigns.filter((c) => c.status === 'COMPLETED').length,
+      dispatchesToday,
+    };
+  }, [campaigns]);
   const hasActiveFilters = nameFilter.trim() !== '' || channelFilter !== 'ALL';
   if (loading) {
     return <PageLoader message="Carregando campanhas..."/>;
@@ -228,28 +251,35 @@ function CampaignsPageContent() {
       </div>
     </div>);
   }
-  return (<div className="space-y-6 animate-in fade-in duration-500">
+  return (<div className="w-full max-w-full space-y-3">
 
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Campanhas de Disparo</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Campanhas de Disparo</h1>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
           {HIDDEN_FEATURES.campaignNonOfficialChannels
             ? 'Gerencie envios em massa pela API Oficial do WhatsApp'
             : 'Gerencie envios em massa para WhatsApp e Instagram'}
         </p>
       </div>
+      {campaigns.length > 0 && (<div className="flex flex-wrap gap-2" data-tour="campaigns-new">
+        <Button onClick={() => setShowFilters((prev) => !prev)} icon={<Filter size={16}/>} variant="secondary">Filtros</Button>
+        <Button onClick={() => setIsCreateModalOpen(true)} icon={<Plus size={16}/>} variant="primary">Nova Campanha</Button>
+      </div>)}
     </div>
+
+    {campaigns.length > 0 && (<div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+      <MetricCard title="Ativas" value={campaignStats.active.toLocaleString('pt-BR')} hint="prontas para disparar"/>
+      <MetricCard title="Pausadas" value={campaignStats.paused.toLocaleString('pt-BR')} hint="não disparam até reativar"/>
+      <MetricCard title="Concluídas" value={campaignStats.completed.toLocaleString('pt-BR')} hint="campanhas encerradas"/>
+      <MetricCard title="Disparos Hoje" value={campaignStats.dispatchesToday.toLocaleString('pt-BR')} hint="executados ou agendados"/>
+    </div>)}
 
     {campaigns.length === 0 ? (<div data-tour="campaigns-new"><EmptyState icon={<Play size={20}/>} title="Nenhuma campanha criada ainda" action={{
       label: 'Criar primeira campanha',
       icon: <Plus size={16}/>,
       onClick: () => setIsCreateModalOpen(true),
-    }}/></div>) : (<div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button onClick={() => setShowFilters((prev) => !prev)} icon={<Filter size={16}/>} variant="secondary">Filtros</Button>
-        <Button onClick={() => setIsCreateModalOpen(true)} icon={<Plus size={16}/>} variant="primary">Nova Campanha</Button>
-      </div>
+    }}/></div>) : (<div className="space-y-3">
       {showFilters && (<Card className="p-4 animate-in fade-in duration-200">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Nome da campanha" leftIcon={<Search size={16}/>} placeholder="Filtrar por nome..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)}/>

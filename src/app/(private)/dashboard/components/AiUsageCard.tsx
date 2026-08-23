@@ -2,6 +2,7 @@
 import Link from 'next/link';
 
 import Card from '@/components/Card';
+import CardEmptyState from '@/components/CardEmptyState';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 /**
@@ -25,12 +26,11 @@ export default function AiUsageCard() {
     {loading && !usage ? (<div className="flex-1 flex flex-col justify-center gap-2 mt-2 animate-pulse" aria-hidden>
       <div className="h-6 w-20 rounded-md bg-slate-100 dark:bg-slate-700/60"/>
       <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700/60"/>
-    </div>) : !hasAiPlan && limit <= 0 ? (<div className="flex-1 flex flex-col items-start justify-center gap-0.5 mt-2 min-w-0">
-      <p className="text-xs text-slate-600 dark:text-slate-400">Seu plano ainda não inclui IA.</p>
+    </div>) : !hasAiPlan && limit <= 0 ? (<CardEmptyState className="mt-2 min-h-0" message="Seu plano ainda não inclui IA." action={
       <Link href="/plans" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           Conhecer planos de IA
       </Link>
-    </div>) : (<div className="flex-1 flex flex-col justify-end mt-2 min-w-0">
+    }/>) : (<div className="flex-1 flex flex-col justify-end mt-2 min-w-0">
       <p className="text-xl sm:text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white truncate">
         {used.toLocaleString('pt-BR')}
         <span className="text-xs font-medium text-slate-400 dark:text-slate-500">

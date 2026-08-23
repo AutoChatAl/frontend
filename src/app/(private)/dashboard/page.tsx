@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import Card from '@/components/Card';
+import Sparkline from '@/components/Sparkline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dashboardService, type DashboardMetrics, type BillingMetrics } from '@/services/dashboard.service';
 
@@ -11,7 +12,6 @@ import AiUsageCard from './components/AiUsageCard';
 import MessagesAreaChart, { MESSAGE_SERIES, seriesColor, type MessageSeriesKey } from './components/MessagesAreaChart';
 import MessagesSummaryCard from './components/MessagesSummaryCard';
 import RevenueAreaChart, { type RevenuePoint } from './components/RevenueAreaChart';
-import Sparkline from './components/Sparkline';
 import UpcomingCampaignsCard from './components/UpcomingCampaignsCard';
 
 /** Preenche os últimos `n` dias (chave YYYY-MM-DD local) com os dados existentes. */
@@ -168,6 +168,7 @@ export default function DashboardPage() {
               <span className={`w-2 h-2 rounded-full shrink-0 ${active ? '' : 'bg-slate-300 dark:bg-slate-600'}`} {...(active ? { style: { backgroundColor: seriesColor(s, darkMode) } } : {})}/>
               <span className="sm:hidden">{s.shortLabel}</span>
               <span className="hidden sm:inline">{s.label}</span>
+              <span className="font-semibold tabular-nums">{originTotals[s.key].toLocaleString('pt-BR')}</span>
             </button>);
           })}
         </div>
@@ -175,13 +176,9 @@ export default function DashboardPage() {
       <MessagesAreaChart data={daily7} height={240} visibleKeys={activeSeries}/>
     </Card>
 
-    <div className="grid gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-5">
-      <div className="xl:col-span-2 min-w-0">
-        <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0}/>
-      </div>
-      <div className="xl:col-span-3 min-w-0">
-        <UpcomingCampaignsCard />
-      </div>
+    <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
+      <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0}/>
+      <UpcomingCampaignsCard />
     </div>
 
     {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5 flex items-start gap-3">
