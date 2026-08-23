@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { inboxService } from '@/services/inbox.service';
-import type { InboxChannelType, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
+import type { InboxAgent, InboxChannelType, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
 
 const STATUS_RANK: Record<MessageDeliveryStatus, number> = { SENT: 1, DELIVERED: 2, READ: 3 };
 
@@ -33,12 +33,17 @@ interface UseInboxReturn {
   channelFilter: InboxChannelType | 'ALL';
   search: string;
   transcribingId: string | null;
+  agents: InboxAgent[];
+  assigning: boolean;
   setChannelFilter: (value: InboxChannelType | 'ALL') => void;
   setSearch: (value: string) => void;
   selectConversation: (conversationId: string) => void;
   sendMessage: (body: string, media?: InboxOutgoingMedia, replyTo?: InboxMessage | null) => Promise<void>;
   notifyTyping: () => void;
   transcribeMessage: (message: InboxMessage) => Promise<void>;
+  assignConversation: (conversationId: string, userId: string) => Promise<void>;
+  unassignConversation: (conversationId: string) => Promise<void>;
+  resumeAi: (conversationId: string) => Promise<void>;
 }
 
 export function useInbox(): UseInboxReturn {
@@ -53,6 +58,8 @@ export function useInbox(): UseInboxReturn {
   const [channelFilter, setChannelFilter] = useState<InboxChannelType | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [contactTyping, setContactTyping] = useState(false);
+  const [agents, setAgents] = useState<InboxAgent[]>([]);
+  const [assigning, setAssigning] = useState(false);
   const selectedIdRef = useRef<string | null>(null);
   const conversationsRef = useRef<InboxConversation[]>([]);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,6 +130,43 @@ export function useInbox(): UseInboxReturn {
       source?.close();
     };
   }, []);
+
+  useEffect(() => {
+    inboxService.listAgents()
+      .then(setAgents)
+      .catch(() => setAgents([]));
+  }, []);
+
+  /**
+   * Transferir pode tirar a conversa da vista de quem transferiu (colaborador que
+   * passa para outro), então a lista é recarregada em vez de remendada no cliente.
+   */
+  const applyAssignment = useCallback(async (action: () => Promise<InboxConversation>) => {
+    setAssigning(true);
+    setError(null);
+    try {
+      const updated = await action();
+      setConversations((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+      loadConversationsRef.current();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao atualizar o atendimento.');
+      throw e;
+    } finally {
+      setAssigning(false);
+    }
+  }, []);
+
+  const assignConversation = useCallback(async (conversationId: string, userId: string) => {
+    await applyAssignment(() => inboxService.assign(conversationId, userId));
+  }, [applyAssignment]);
+
+  const unassignConversation = useCallback(async (conversationId: string) => {
+    await applyAssignment(() => inboxService.unassign(conversationId));
+  }, [applyAssignment]);
+
+  const resumeAi = useCallback(async (conversationId: string) => {
+    await applyAssignment(() => inboxService.resumeAi(conversationId));
+  }, [applyAssignment]);
 
   const loadMessages = useCallback(async (conversationId: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
@@ -339,11 +383,16 @@ export function useInbox(): UseInboxReturn {
     channelFilter,
     search,
     transcribingId,
+    agents,
+    assigning,
     setChannelFilter,
     setSearch,
     selectConversation,
     sendMessage,
     notifyTyping,
     transcribeMessage,
+    assignConversation,
+    unassignConversation,
+    resumeAi,
   };
 }

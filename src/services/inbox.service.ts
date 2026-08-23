@@ -1,5 +1,5 @@
 import { authService } from '@/services/auth.service';
-import type { InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings } from '@/types/Inbox';
+import type { InboxAgent, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings } from '@/types/Inbox';
 import { apiClient } from '@/utils/ApiClient';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -31,6 +31,45 @@ class InboxService {
       throw new Error('Não foi possível carregar as conversas.');
     }
     return response.data.conversations;
+  }
+
+  public async listAgents(): Promise<InboxAgent[]> {
+    const response = await apiClient.get<{ agents: InboxAgent[] }>('/inbox/agents');
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível carregar os atendentes.');
+    }
+    return response.data.agents;
+  }
+
+  public async assign(conversationId: string, userId: string): Promise<InboxConversation> {
+    const response = await apiClient.post<{ conversation: InboxConversation }>(
+      `/inbox/conversations/${conversationId}/assign`,
+      { userId },
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível transferir a conversa.');
+    }
+    return response.data.conversation;
+  }
+
+  public async unassign(conversationId: string): Promise<InboxConversation> {
+    const response = await apiClient.post<{ conversation: InboxConversation }>(
+      `/inbox/conversations/${conversationId}/unassign`,
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível devolver a conversa para a fila.');
+    }
+    return response.data.conversation;
+  }
+
+  public async resumeAi(conversationId: string): Promise<InboxConversation> {
+    const response = await apiClient.post<{ conversation: InboxConversation }>(
+      `/inbox/conversations/${conversationId}/ai/resume`,
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível reativar a IA nesta conversa.');
+    }
+    return response.data.conversation;
   }
 
   public async listMessages(conversationId: string): Promise<InboxMessage[]> {

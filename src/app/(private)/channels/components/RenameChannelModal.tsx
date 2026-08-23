@@ -60,7 +60,7 @@ export default function RenameChannelModal({ isOpen, currentName, hint, loading,
           ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
           : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'}`}/>
         <p className={`text-xs ${tooShort ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
-          {tooShort ? `Use pelo menos ${MIN_LENGTH} caracteres.` : 'Só o nome interno muda — a conexão e as conversas continuam iguais.'}
+          {tooShort ? `Use pelo menos ${MIN_LENGTH} caracteres.` : 'Só o nome interno muda, a conexão e as conversas continuam iguais.'}
         </p>
       </div>
 
