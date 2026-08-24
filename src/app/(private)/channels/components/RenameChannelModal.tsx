@@ -56,7 +56,7 @@ export default function RenameChannelModal({ isOpen, currentName, hint, loading,
         <label htmlFor="channel-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
             Novo nome
         </label>
-        <input id="channel-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={MAX_LENGTH} autoFocus disabled={loading} placeholder="Ex.: Atendimento Comercial" className={`w-full px-4 py-2.5 border rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-colors disabled:opacity-50 ${tooShort
+        <input id="channel-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={MAX_LENGTH} autoFocus disabled={loading} placeholder="Ex.: Atendimento Comercial" className={`w-full px-4 py-2.5 border rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-colors disabled:opacity-50 ${tooShort
           ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
           : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'}`}/>
         <p className={`text-xs ${tooShort ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>

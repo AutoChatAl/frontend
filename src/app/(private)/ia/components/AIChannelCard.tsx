@@ -42,7 +42,7 @@ export default function AIChannelCard({ channel, active, onToggle }: AIChannelCa
       </span>
       <button type="button" onClick={() => onToggle(channel.id)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active
         ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-600 dark:bg-indigo-500'
-        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600'}`}>
+        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600'}`}>
         {active && <div className="w-2 h-2 rounded-full bg-white"/>}
       </button>
     </div>

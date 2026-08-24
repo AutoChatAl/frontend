@@ -761,7 +761,7 @@ export default function InboxPage() {
                     rows={1}
                     placeholder={recording ? 'Gravando áudio…' : 'Escreva uma mensagem...'}
                     disabled={recording}
-                    className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
+                    className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
                   />
                   {/* No celular o rótulo sai: o ícone basta e o campo ganha a largura. */}
                   <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">

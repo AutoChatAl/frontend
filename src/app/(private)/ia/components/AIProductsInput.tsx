@@ -68,10 +68,10 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
     <div className="flex flex-col sm:flex-row gap-2">
       <div className="relative flex-1">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
-        <input type="text" value={search} onChange={(e) => onSearchChange(e.target.value)} placeholder="Buscar no catálogo por nome ou observação..." className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+        <input type="text" value={search} onChange={(e) => onSearchChange(e.target.value)} placeholder="Buscar no catálogo por nome ou observação..." className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
       </div>
       <div className="flex gap-2">
-        <input ref={inputRef} type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} disabled={limitReached} placeholder="Novo produto..." className="flex-1 sm:w-52 px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors disabled:opacity-50"/>
+        <input ref={inputRef} type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} disabled={limitReached} placeholder="Novo produto..." className="flex-1 sm:w-52 px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors disabled:opacity-50"/>
         <button type="button" onClick={handleAdd} disabled={limitReached || !inputValue.trim()} className="px-3 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 disabled:hover:scale-100">
           <Plus size={16}/>
         </button>
@@ -216,7 +216,7 @@ function ProductCard({ product, onUpdate, onDelete }: ProductEditorProps) {
       onUpdate(product.id, { priceCents: cents });
     setPrice(formatCents(cents));
   };
-  const inputClass = 'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400';
+  const inputClass = 'w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400';
   return (<div className={`bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2 ${isActive ? '' : 'opacity-60'}`}>
     <div className="flex items-center justify-between">
       <p className="text-sm font-medium text-slate-800 dark:text-white">{product.name}</p>

@@ -190,7 +190,7 @@ export default function HeaderSearch() {
       <input ref={inputRef} type="text" value={query} onChange={(event) => {
         setQuery(event.target.value);
         setOpen(true);
-      }} onFocus={() => setOpen(true)} onKeyDown={handleKeyDown} placeholder={compact ? 'Buscar...' : 'Buscar no sistema...'} role="combobox" aria-expanded={open} aria-controls="header-search-results" aria-autocomplete="list" aria-label="Buscar páginas e ações do sistema" className="w-full h-9 pl-9 pr-3 lg:pr-16 rounded-lg border text-[13px] bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+      }} onFocus={() => setOpen(true)} onKeyDown={handleKeyDown} placeholder={compact ? 'Buscar...' : 'Buscar no sistema...'} role="combobox" aria-expanded={open} aria-controls="header-search-results" aria-autocomplete="list" aria-label="Buscar páginas e ações do sistema" className="w-full h-9 pl-9 pr-3 lg:pr-16 rounded-lg border text-[13px] bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
       <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden lg:block text-[10px] font-medium text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-0.5 pointer-events-none select-none">
         {isMac ? '⌘' : 'Ctrl'} K
       </kbd>

@@ -1,94 +1,122 @@
 'use client';
 import { Clock3 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+
+/**
+ * Campo de hora: input comum com máscara `HH:MM`.
+ *
+ * A pessoa digita só os dígitos e os dois pontos aparecem sozinhos. A validação
+ * roda ao sair do campo: hora fora de 00:00–23:59, ou incompleta, vira a hora
+ * do momento — nunca sobra um valor quebrado para o backend.
+ *
+ * Enquanto o campo está em foco o valor vindo de fora não sobrescreve o que
+ * está sendo digitado; fora do foco, quem manda é a prop.
+ */
 
 interface TimePickerProps {
-    value: string;
-    onChange: (value: string) => void;
-    minuteStep?: number;
-    disabled?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  /** Em grades estreitas o relógio só rouba largura — dá para desligar. */
+  showIcon?: boolean;
+  /**
+   * `md` (padrão) tem 42px de altura, a mesma de Input e DatePicker, para as
+   * três coisas ficarem alinhadas numa linha de formulário. `sm` é a versão
+   * compacta da grade de horários semanais.
+   */
+  size?: 'sm' | 'md';
+  ariaLabel?: string;
 }
-function normalizePart(input: string | undefined, fallback: string, max: number) {
-  const numeric = Number(input);
-  if (!Number.isFinite(numeric) || numeric < 0 || numeric > max)
-    return fallback;
-  return String(numeric).padStart(2, '0');
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Só dígitos, no máximo quatro, com os dois pontos entrando a partir do terceiro. */
+function maskTime(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
-export default function TimePicker({ value, onChange, minuteStep = 5, disabled = false }: TimePickerProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [openMenu, setOpenMenu] = useState<'hour' | 'minute' | null>(null);
-  const [rawHour, rawMinute] = String(value || '').split(':');
-  const hour = normalizePart(rawHour, '00', 23);
-  const minute = normalizePart(rawMinute, '00', 59);
-  const safeStep = Number.isFinite(minuteStep) && minuteStep > 0 && minuteStep <= 60 ? minuteStep : 5;
-  const minuteOptions = useMemo(() => {
-    const options = Array.from({ length: Math.ceil(60 / safeStep) }, (_, idx) => {
-      const val = Math.min(idx * safeStep, 59);
-      return String(val).padStart(2, '0');
-    });
-    if (!options.includes(minute)) {
-      options.push(minute);
-      options.sort((a, b) => Number(a) - Number(b));
-    }
-    return options;
-  }, [safeStep, minute]);
-  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, idx) => String(idx).padStart(2, '0')), []);
+
+function currentTime(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+export default function TimePicker({
+  value,
+  onChange,
+  disabled = false,
+  showIcon = true,
+  size = 'md',
+  ariaLabel,
+}: TimePickerProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(() => maskTime(value));
+  const [focused, setFocused] = useState(false);
+
   useEffect(() => {
-    if (!openMenu)
+    if (!focused) setDraft(maskTime(value));
+  }, [value, focused]);
+
+  const handleChange = (raw: string) => {
+    const masked = maskTime(raw);
+    setDraft(masked);
+    // Assim que fica válido já sobe, para o formulário acompanhar a digitação
+    // sem depender do blur.
+    if (TIME_PATTERN.test(masked) && masked !== value) onChange(masked);
+  };
+
+  const commit = () => {
+    setFocused(false);
+    const next = TIME_PATTERN.test(draft) ? draft : currentTime();
+    setDraft(next);
+    if (next !== value) onChange(next);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      inputRef.current?.blur();
       return;
-    const handleOutside = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpenMenu(null);
-      }
-    };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [openMenu]);
-  const handleMinuteChange = (nextMinute: string) => {
-    onChange(`${hour}:${nextMinute}`);
-    setOpenMenu(null);
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setDraft(maskTime(value));
+      inputRef.current?.blur();
+    }
   };
-  const handleHourChange = (nextHour: string) => {
-    onChange(`${nextHour}:${minute}`);
-    setOpenMenu(null);
-  };
-  return (<div ref={rootRef} className={`relative w-full min-w-0 flex items-center gap-1 px-3 py-2 border rounded-xl text-sm bg-white dark:bg-slate-900 transition-all ${openMenu
-    ? 'border-indigo-500 ring-2 ring-indigo-500/20'
-    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-    <Clock3 size={14} className="shrink-0 text-slate-400 dark:text-slate-500"/>
 
-    <div className="flex-1 flex items-center justify-center">
-      <div className="flex items-center justify-center gap-1.5">
-        <button type="button" onClick={() => !disabled && setOpenMenu((prev) => (prev === 'hour' ? null : 'hour'))} disabled={disabled} className={`w-8 h-6 px-1 text-sm tabular-nums flex items-center justify-center transition-colors rounded-md ${openMenu === 'hour'
-          ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-          : 'text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-          <span>{hour}</span>
-        </button>
+  // Só acusa erro quando os quatro dígitos estão lá e ainda assim não fecham
+  // (25:00, 08:74). Meio caminho digitado não é erro, é meio caminho.
+  const invalid = draft.length === 5 && !TIME_PATTERN.test(draft);
 
-        <span className="text-slate-400 dark:text-slate-500 text-xs">:</span>
-
-        <button type="button" onClick={() => !disabled && setOpenMenu((prev) => (prev === 'minute' ? null : 'minute'))} disabled={disabled} className={`w-8 h-6 px-1 text-sm tabular-nums flex items-center justify-center transition-colors rounded-md ${openMenu === 'minute'
-          ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-          : 'text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-          <span>{minute}</span>
-        </button>
-      </div>
+  return (
+    <div
+      className={`flex w-full min-w-0 items-center gap-1.5 rounded-lg border bg-white px-2 transition-colors dark:bg-slate-800 ${
+        invalid
+          ? 'border-rose-400 focus-within:ring-2 focus-within:ring-rose-500/20'
+          : 'border-slate-200 hover:border-slate-300 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700 dark:hover:border-slate-600'
+      } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+    >
+      {showIcon && <Clock3 size={14} className="shrink-0 text-slate-400 dark:text-slate-500" />}
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        maxLength={5}
+        placeholder="00:00"
+        aria-label={ariaLabel ?? 'Hora'}
+        aria-invalid={invalid}
+        value={draft}
+        disabled={disabled}
+        onFocus={() => setFocused(true)}
+        onChange={(event) => handleChange(event.target.value)}
+        onBlur={commit}
+        onKeyDown={handleKeyDown}
+        className={`w-full min-w-0 bg-transparent text-center tabular-nums text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed dark:text-white dark:placeholder:text-slate-500 ${
+          size === 'sm' ? 'h-8 text-[13px]' : 'h-10 text-sm'
+        }`}
+      />
     </div>
-
-    {openMenu === 'hour' && (<div className="absolute z-50 top-full mt-2 left-8 w-18 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1">
-      {hourOptions.map((h) => (<button key={h} type="button" onClick={() => handleHourChange(h)} className={`w-full px-2 py-1.5 text-sm text-center rounded-md tabular-nums transition-colors ${h === hour
-        ? 'bg-indigo-600 text-white'
-        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-        {h}
-      </button>))}
-    </div>)}
-
-    {openMenu === 'minute' && (<div className="absolute z-50 top-full mt-2 right-0 w-18 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg p-1">
-      {minuteOptions.map((m) => (<button key={m} type="button" onClick={() => handleMinuteChange(m)} className={`w-full px-2 py-1.5 text-sm text-center rounded-md tabular-nums transition-colors ${m === minute
-        ? 'bg-indigo-600 text-white'
-        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-        {m}
-      </button>))}
-    </div>)}
-  </div>);
+  );
 }

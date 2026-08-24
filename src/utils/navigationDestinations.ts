@@ -207,10 +207,10 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     id: 'comment-automations',
     label: 'Automatizar Comentários',
     description: 'Respostas automáticas a comentários do Instagram',
-    href: '/comment-automations',
+    href: '/auto-replies?tipo=comentario',
     icon: MessageSquare,
     section: 'Automação',
-    menuId: 'comment-automations',
+    menuId: 'auto-replies',
     keywords: ['comentario', 'instagram', 'post', 'dm automatica', 'reels'],
   },
   {

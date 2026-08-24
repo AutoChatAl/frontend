@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, RefreshCw } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, RefreshCw } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
 import type { Product } from '@/services/ai.service';
@@ -134,6 +134,31 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
       return hour >= sh && hour < eh;
     });
   };
+  /**
+   * O dia atende? Exceção BLOCKED fecha, exceção CUSTOM abre, e sem exceção
+   * vale a grade semanal. Usado onde não existe hora — a visão de mês.
+   */
+  const isWorkingDay = (date: Date) => {
+    if (!businessHours)
+      return true;
+    const exception = businessHours.exceptions.find((e) => e.date === formatDateStr(date));
+    if (exception)
+      return exception.type !== 'BLOCKED';
+    const daySchedule = businessHours.weeklySchedule.find((d) => d.dayOfWeek === date.getDay());
+    return Boolean(daySchedule?.enabled);
+  };
+  /**
+   * Uma classe de fundo só por célula. Antes "hoje" e "fechado" eram dois
+   * `bg-*` no mesmo className e quem ganhava dependia da ordem no CSS gerado —
+   * no escuro o fechado (`slate-800/50` sobre `slate-800`) sumia de qualquer jeito.
+   */
+  const cellTone = (open: boolean, today: boolean) => {
+    if (!open)
+      return 'bg-slate-100 dark:bg-slate-900/70';
+    if (today)
+      return 'cursor-pointer bg-indigo-50/50 hover:bg-indigo-50 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/15';
+    return 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10';
+  };
   const navigateWeek = (direction: number) => {
     const newStart = new Date(currentWeekStart);
     if (viewMode === 'week') {
@@ -174,7 +199,7 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
   };
   return (<div className="space-y-4">
 
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 sm:p-4">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none p-3 sm:p-4">
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <button onClick={() => navigateWeek(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
           <ChevronLeft size={18} className="text-slate-600 dark:text-slate-400"/>
@@ -203,7 +228,7 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
 
     {viewMode === 'week' && (<>
 
-      <div className="sm:hidden bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="sm:hidden bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none overflow-hidden">
 
         <div className="flex border-b border-slate-200 dark:border-slate-700">
           {weekDays.map((day, i) => {
@@ -227,10 +252,8 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
           {HOURS.map((hour) => {
             const dayAppts = getAppointmentsForHour(mobileSelectedDay, hour);
             const isWorking = isWorkingHour(mobileSelectedDay, hour);
-            return (<div key={hour} onClick={() => isWorking ? onCreateAppointment(formatDateStr(mobileSelectedDay), `${String(hour).padStart(2, '0')}:00`) : undefined} className={`flex border-b border-slate-100 dark:border-slate-700 last:border-b-0 min-h-13 transition-colors overflow-visible ${isWorking
-              ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
-              : 'bg-slate-50 dark:bg-slate-800/50'}`}>
-              <div className="w-14 shrink-0 text-[10px] text-slate-400 dark:text-slate-500 text-right pr-3 pt-2 font-medium border-r border-slate-100 dark:border-slate-700">
+            return (<div key={hour} onClick={() => isWorking ? onCreateAppointment(formatDateStr(mobileSelectedDay), `${String(hour).padStart(2, '0')}:00`) : undefined} title={isWorking ? undefined : 'Fora do horário de atendimento'} className={`flex border-b border-slate-200 dark:border-slate-700 last:border-b-0 min-h-13 transition-colors overflow-visible ${cellTone(isWorking, false)}`}>
+              <div className="w-14 shrink-0 text-[10px] text-slate-400 dark:text-slate-500 text-right pr-3 pt-2 font-medium border-r border-slate-200 dark:border-slate-700">
                 {String(hour).padStart(2, '0')}:00
               </div>
               <div className="flex-1 p-1 relative overflow-visible">
@@ -246,32 +269,37 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
         </div>
       </div>
 
-      <div className="hidden sm:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="hidden sm:block bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
           <div className="min-w-140">
 
             <div className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
-              <div className="p-2 border-r border-slate-100 dark:border-slate-700"/>
-              {weekDays.map((day, i) => (<div key={i} className={`p-2 sm:p-3 text-center border-r last:border-r-0 border-slate-100 dark:border-slate-700 ${isToday(day) ? 'bg-indigo-50 dark:bg-indigo-900/10' : ''}`}>
-                <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">
-                  {DAY_SHORT[day.getDay()]}
-                </div>
-                <div className={`text-sm sm:text-lg font-bold mt-0.5 ${isToday(day) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                  {day.getDate()}
-                </div>
-              </div>))}
+              <div className="p-2 border-r border-slate-200 dark:border-slate-700"/>
+              {weekDays.map((day, i) => {
+                const openDay = isWorkingDay(day);
+                return (<div key={i} className={`p-2 sm:p-3 text-center border-r last:border-r-0 border-slate-200 dark:border-slate-700 ${isToday(day) ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''}`}>
+                  <div className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">
+                    {DAY_SHORT[day.getDay()]}
+                  </div>
+                  <div className={`text-sm sm:text-lg font-semibold mt-0.5 ${isToday(day) ? 'text-indigo-600 dark:text-indigo-400' : openDay ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {day.getDate()}
+                  </div>
+                  {!openDay && (<div className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-slate-400 dark:text-slate-500">
+                    <Ban size={9}/>
+                    fechado
+                  </div>)}
+                </div>);
+              })}
             </div>
 
-            {HOURS.map((hour) => (<div key={hour} className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-slate-100 dark:border-slate-700 last:border-b-0">
-              <div className="p-1 sm:p-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-right pr-2 sm:pr-3 border-r border-slate-100 dark:border-slate-700 font-medium">
+            {HOURS.map((hour) => (<div key={hour} className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-700 last:border-b-0">
+              <div className="p-1 sm:p-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 text-right pr-2 sm:pr-3 border-r border-slate-200 dark:border-slate-700 font-medium">
                 {String(hour).padStart(2, '0')}:00
               </div>
               {weekDays.map((day, dayIdx) => {
                 const dayAppts = getAppointmentsForHour(day, hour);
                 const isWorking = isWorkingHour(day, hour);
-                return (<div key={dayIdx} onClick={() => isWorking ? onCreateAppointment(formatDateStr(day), `${String(hour).padStart(2, '0')}:00`) : undefined} className={`min-h-14 p-1 border-r last:border-r-0 border-slate-100 dark:border-slate-700 transition-colors relative overflow-visible ${isWorking
-                  ? 'hover:bg-indigo-50/50 dark:hover:bg-indigo-900/5 cursor-pointer'
-                  : 'bg-slate-50 dark:bg-slate-800/50'} ${isToday(day) ? 'bg-indigo-50/30 dark:bg-indigo-900/5' : ''}`}>
+                return (<div key={dayIdx} onClick={() => isWorking ? onCreateAppointment(formatDateStr(day), `${String(hour).padStart(2, '0')}:00`) : undefined} title={isWorking ? undefined : 'Fora do horário de atendimento'} className={`min-h-14 p-1 border-r last:border-r-0 border-slate-200 dark:border-slate-700 transition-colors relative overflow-visible ${cellTone(isWorking, isToday(day))}`}>
                   {dayAppts.map((apt) => (<div key={apt.id} onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }} style={getCardLayoutStyle(apt, DESKTOP_SLOT_HEIGHT)} className={`absolute left-1 right-1 text-xs p-1.5 rounded-md cursor-pointer border-l-2 shadow-sm z-20 ${aptCardClass(apt)}`}>
                     <div className="font-semibold flex items-center gap-1">
                       {apt.createdBy === 'GOOGLE' && (<span title="Sincronizado do Google Agenda"><RefreshCw size={10} className="shrink-0"/></span>)}
@@ -286,7 +314,7 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
       </div>
     </>)}
 
-    {viewMode === 'month' && (<div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    {viewMode === 'month' && (<div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none overflow-hidden">
       <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
         {DAY_SHORT.map((d) => (<div key={d} className="p-2 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">
           {d}
@@ -296,11 +324,21 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
         {monthDays.map((day, idx) => {
           const dayAppts = getAppointmentsForDate(day);
           const isCurrMonth = isCurrentMonth(day);
-          return (<div key={idx} onClick={() => onCreateAppointment(formatDateStr(day))} className={`min-h-17.5 sm:min-h-25 p-1 sm:p-2 border-r border-b border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${idx % 7 === 6 ? 'border-r-0' : ''} ${!isCurrMonth ? 'opacity-40' : ''} ${isToday(day) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}>
-            <div className={`text-xs sm:text-sm font-medium mb-1 ${isToday(day)
-              ? 'text-indigo-600 dark:text-indigo-400 font-bold'
-              : 'text-slate-600 dark:text-slate-400'}`}>
-              {day.getDate()}
+          // Dia sem atendimento não abre o modal: era por aqui que dava para
+          // agendar num domingo marcado como "Não atende".
+          const openDay = isWorkingDay(day);
+          return (<div key={idx} onClick={() => openDay ? onCreateAppointment(formatDateStr(day)) : undefined} title={openDay ? undefined : 'Dia sem atendimento'} className={`min-h-17.5 sm:min-h-25 p-1 sm:p-2 border-r border-b border-slate-200 dark:border-slate-700 transition-colors ${idx % 7 === 6 ? 'border-r-0' : ''} ${!isCurrMonth ? 'opacity-40' : ''} ${openDay
+            ? isToday(day)
+              ? 'cursor-pointer bg-indigo-50/60 hover:bg-indigo-50 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/15'
+              : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30'
+            : 'cursor-not-allowed bg-slate-100 dark:bg-slate-900/70'}`}>
+            <div className="mb-1 flex items-center justify-between gap-1">
+              <span className={`text-xs sm:text-sm font-medium ${isToday(day)
+                ? 'font-bold text-indigo-600 dark:text-indigo-400'
+                : openDay ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                {day.getDate()}
+              </span>
+              {!openDay && <Ban size={11} className="shrink-0 text-slate-400 dark:text-slate-500"/>}
             </div>
             <div className="space-y-0.5">
               {dayAppts.slice(0, 3).map((apt) => (<div key={apt.id} onClick={(e) => { e.stopPropagation(); onEditAppointment(apt); }} className={`text-[9px] sm:text-[11px] px-1 py-0.5 rounded truncate cursor-pointer ${apt.type === 'BLOCK' ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
@@ -316,5 +354,10 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
         })}
       </div>
     </div>)}
+
+    <p className="flex items-center gap-1.5 px-1 text-[11px] text-slate-400 dark:text-slate-500">
+      <Ban size={11} className="shrink-0"/>
+      As áreas em cinza estão fora do horário de atendimento e não aceitam novo agendamento.
+    </p>
   </div>);
 }

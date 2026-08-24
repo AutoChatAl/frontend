@@ -22,6 +22,8 @@ import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
+import { EXECUTION_HOURS } from './executionHours';
+
 interface Channel {
     id: string;
     name: string;
@@ -76,7 +78,6 @@ function matchesContactSearch(contact: Contact, rawTerm: string): boolean {
     return normalizedUsername.includes(term) || normalizedPhone.includes(term);
   });
 }
-const EXECUTION_HOURS = [8, 10, 12, 14, 16, 18];
 const INITIAL_FORM: CreateCampaignInput = {
   name: '',
   description: '',
@@ -88,7 +89,7 @@ const INITIAL_FORM: CreateCampaignInput = {
   messageType: 'TEXT',
 };
 function inputCls(hasError: boolean) {
-  return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${hasError
+  return `w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 bg-white dark:bg-slate-800 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${hasError
     ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
     : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'}`;
 }
@@ -742,7 +743,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
               return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
                   ? 'bg-green-100 dark:bg-green-900/30'
                   : 'bg-pink-100 dark:bg-pink-900/30'}`}>
@@ -792,7 +793,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
               const count = group.memberCount ?? group.memberContactIds?.length ?? 0;
               return (<div key={group.id} onClick={() => selectGroup(group.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected
                   ? 'bg-indigo-500 dark:bg-indigo-600'
                   : isManual
@@ -1061,7 +1062,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </div>) : (<>
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
-            <input type="text" value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white text-sm transition-colors placeholder:text-slate-400"/>
+            <input type="text" value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-800 dark:text-white text-sm transition-colors placeholder:text-slate-400"/>
             {contactFilter && (<button type="button" onClick={() => setContactFilter('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
               <X size={15}/>
             </button>)}
@@ -1137,8 +1138,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 }} className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
                   : errors.frequency
-                    ? 'border-red-400 hover:border-red-400 bg-white dark:bg-slate-900'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
+                    ? 'border-red-400 hover:border-red-400 bg-white dark:bg-slate-800'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
                   <span className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</span>
                   <span className="text-xs text-slate-400 dark:text-slate-500">{opt.desc}</span>
                 </div>);
@@ -1173,8 +1174,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 }} className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
                   : errors.executionHour
-                    ? 'border-red-400 hover:border-red-400 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'}`}>
+                    ? 'border-red-400 hover:border-red-400 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'}`}>
                   {String(hour).padStart(2, '0')}:00
                 </button>);
               })}

@@ -106,6 +106,30 @@ export interface CreateCampaignInput {
     executionHour?: number;
 }
 export type UpdateCampaignInput = CreateCampaignInput;
+
+export interface ScheduleGridCell {
+  hour: number;
+  count: number;
+  /** A hora já começou: o número veio de execuções reais, não de projeção. */
+  past: boolean;
+}
+
+export interface ScheduleGridDay {
+  /** yyyy-MM-dd no fuso do workspace. */
+  date: string;
+  /** dd/MM já formatado no servidor, que é quem conhece o fuso. */
+  label: string;
+  weekday: string;
+  isToday: boolean;
+  cells: ScheduleGridCell[];
+}
+
+export interface ScheduleGrid {
+  timezone: string;
+  hours: number[];
+  days: ScheduleGridDay[];
+  total: number;
+}
 export enum CampaignStatus {
     SUCCESS = 'success',
     PROCESSING = 'processing',

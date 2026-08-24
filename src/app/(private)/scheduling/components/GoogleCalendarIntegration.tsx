@@ -97,15 +97,15 @@ export default function GoogleCalendarIntegration({ onToast }: GoogleCalendarInt
     });
   };
   if (loading) {
-    return (<div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6 flex items-center justify-center h-40">
+    return (<div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none p-4 flex items-center justify-center h-40">
       <Loader2 size={24} className="animate-spin text-indigo-600 dark:text-indigo-400"/>
     </div>);
   }
   return (<div className="space-y-4">
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none p-4">
       <div className="flex items-center gap-2 mb-4">
         <Calendar size={18} className="text-indigo-600 dark:text-indigo-400"/>
-        <h3 className="text-base font-bold text-slate-800 dark:text-white">Google Agenda</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Google Agenda</h3>
         <Badge type="beta" text="BETA" pill/>
         {status?.connected && (<Badge type="success" text="Conectado" icon={CheckCircle} pill/>)}
       </div>

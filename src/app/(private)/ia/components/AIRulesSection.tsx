@@ -62,6 +62,6 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
       </p>
     </div>
 
-    <textarea rows={6} value={customRules} onChange={(e) => onCustomRulesChange(e.target.value)} className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm leading-relaxed placeholder:text-slate-300 dark:placeholder:text-slate-500 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200" placeholder="Ex: Sempre responda em português. Não ofereça descontos sem aprovação. Encaminhe reclamações para o suporte humano..."/>
+    <textarea rows={6} value={customRules} onChange={(e) => onCustomRulesChange(e.target.value)} className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm leading-relaxed placeholder:text-slate-300 dark:placeholder:text-slate-500 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" placeholder="Ex: Sempre responda em português. Não ofereça descontos sem aprovação. Encaminhe reclamações para o suporte humano..."/>
   </Card>);
 }

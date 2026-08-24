@@ -803,7 +803,7 @@ export default function BillingTab() {
           <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1.5">
             Digite <span className="font-mono font-semibold">confirmar</span> para prosseguir
           </label>
-          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400" />
+          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400" />
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setCancelStep(1)} disabled={loading}>

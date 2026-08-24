@@ -23,7 +23,7 @@ export default function Input({ label, error, hint, leftIcon, rightElement, wrap
       </div>)}
       <input id={inputId} required={required} {...props} className={[
         'w-full py-2.5 border rounded-xl text-sm',
-        'bg-white dark:bg-slate-900 text-slate-900 dark:text-white',
+        'bg-white dark:bg-slate-800 text-slate-900 dark:text-white',
         'placeholder:text-slate-400 dark:placeholder:text-slate-500',
         'focus:outline-none focus:ring-2 transition-colors',
         leftIcon ? 'pl-10' : 'pl-4',

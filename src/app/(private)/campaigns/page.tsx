@@ -22,6 +22,7 @@ import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 import { columns } from './components/CampaignsColumns';
 import CreateCampaignModal from './components/CreateCampaignModal';
 import EditCampaignModal from './components/EditCampaignModal';
+import ScheduleGrid from './components/ScheduleGrid';
 
 function ActionsDropdown({ campaign, onEdit, onDelete }: {
     campaign: Campaign;
@@ -143,6 +144,7 @@ type CampaignChannelFilter = 'ALL' | 'WHATSAPP_OFFICIAL' | 'WHATSAPP' | 'INSTAGR
 
 function CampaignsPageContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [scheduleKey, setScheduleKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [runningCampaign, setRunningCampaign] = useState<string | null>(null);
@@ -163,6 +165,8 @@ function CampaignsPageContent() {
       setError(null);
       const data = await campaignService.listCampaigns();
       setCampaigns(data);
+      // A agenda depende do agendamento das campanhas: recarrega junto.
+      setScheduleKey((prev) => prev + 1);
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar campanhas');
@@ -334,6 +338,8 @@ function CampaignsPageContent() {
       {filteredCampaigns.length === 0 && (<p className="text-center text-sm text-slate-500 dark:text-slate-400 py-6">
         Nenhuma campanha encontrada com os filtros aplicados.
       </p>)}
+
+      <ScheduleGrid refreshKey={scheduleKey}/>
     </div>)}
 
     <CreateCampaignModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={() => loadCampaigns()} addToast={addToast}/>

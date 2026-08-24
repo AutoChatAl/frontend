@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Flame,
   Instagram,
   MessageCircle,
@@ -12,7 +13,16 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { AttendanceStatus, ChannelType, LeadOrigin, LeadTemperature, StageColor } from '@/types/Funnel';
+import type {
+  AttendanceStatus,
+  ChannelType,
+  ConversionConfidence,
+  LeadOrigin,
+  LeadTemperature,
+  SourceChannelType,
+  StageColor,
+} from '@/types/Funnel';
+import { formatPhoneNumber } from '@/utils/phone';
 
 export interface TemperatureMeta {
   label: string;
@@ -66,6 +76,13 @@ export const ORIGIN_META: Record<LeadOrigin, { label: string; icon: LucideIcon }
   TELEGRAM: { label: 'Telegram', icon: Send },
 };
 
+/**
+ * Origens oferecidas no funil. O contato pode carregar outras (importação,
+ * campanha, carrinho), mas essas três são as que fazem sentido escolher aqui —
+ * é por elas que um lead entra em contato.
+ */
+export const FUNNEL_ORIGIN_OPTIONS: LeadOrigin[] = ['WHATSAPP', 'INSTAGRAM', 'COMMENT'];
+
 export const ATTENDANCE_META: Record<AttendanceStatus, { label: string; dot: string }> = {
   OPEN: { label: 'Aberto', dot: 'bg-slate-400' },
   IN_PROGRESS: { label: 'Em andamento', dot: 'bg-blue-500' },
@@ -85,6 +102,46 @@ export const CHANNEL_META: Record<ChannelType, { label: string; icon: LucideIcon
     className: 'bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-900/30 dark:text-fuchsia-400',
   },
 };
+
+/**
+ * O canal do negócio por onde o lead entrou. O oficial ganha ícone próprio para
+ * não ser confundido com o WhatsApp conectado por QR Code.
+ */
+export const SOURCE_CHANNEL_META: Record<SourceChannelType, { label: string; icon: LucideIcon; className: string }> = {
+  WHATSAPP: {
+    label: 'WhatsApp',
+    icon: MessageCircle,
+    className: 'text-emerald-600 dark:text-emerald-400',
+  },
+  WHATSAPP_OFFICIAL: {
+    label: 'WhatsApp Oficial',
+    icon: BadgeCheck,
+    className: 'text-emerald-600 dark:text-emerald-400',
+  },
+  INSTAGRAM: {
+    label: 'Instagram',
+    icon: Instagram,
+    className: 'text-fuchsia-600 dark:text-fuchsia-400',
+  },
+};
+
+export const CONFIDENCE_META: Record<ConversionConfidence, { label: string; short: string }> = {
+  high: { label: 'amostra grande, taxa estável', short: 'alta confiança' },
+  medium: { label: 'amostra média, taxa ainda oscila', short: 'confiança média' },
+  low: { label: 'amostra pequena, trate como ordem de grandeza', short: 'baixa confiança' },
+};
+
+/**
+ * `@usuario` passa direto; número brasileiro ganha máscara de leitura. Qualquer
+ * outro formato volta como veio — melhor mostrar cru que mascarar errado.
+ */
+export function formatIdentifier(value: string | null): string | null {
+  if (!value) return null;
+  if (value.startsWith('@')) return value;
+  const digits = value.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length >= 12 && digits.length <= 13) return formatPhoneNumber(digits);
+  return value;
+}
 
 export interface StageColorMeta {
   dot: string;

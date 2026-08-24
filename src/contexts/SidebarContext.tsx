@@ -1,5 +1,5 @@
 'use client';
-import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessageSquare, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
+import { Users, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -72,7 +72,6 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
-  { id: 'comment-automations', icon: MessageSquare, text: 'Comentários', href: '/comment-automations', permission: 'auto-replies', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
