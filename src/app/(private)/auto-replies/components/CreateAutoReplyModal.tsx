@@ -16,6 +16,7 @@ import type { CreateAutoReplyInput } from '@/types/AutoReply';
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 import type { WhatsAppOfficialInstance } from '@/types/WhatsAppOfficial';
 import { AUDIO_UPLOAD, validateAudioFile } from '@/utils/audio';
+import { stripWhatsAppFormatting } from '@/utils/whatsappFormat';
 import { getChannelStatusBadgeClasses, getChannelStatusLabel } from '@/utils/channelStatus';
 
 interface Channel {
@@ -45,13 +46,6 @@ const REPLY_TYPES = [
   { value: 'TEXT_AND_DOCUMENT' as const, label: 'Texto + Doc', icon: FileText },
   { value: 'DOCUMENT_AND_AUDIO' as const, label: 'Doc + Áudio', icon: FileText },
 ] as const;
-function stripWhatsAppFormatting(text: string) {
-  return text
-    .replace(/```([\s\S]*?)```/g, '$1')
-    .replace(/\*([^*\n]+)\*/g, '$1')
-    .replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '$1')
-    .replace(/~([^~\n]+)~/g, '$1');
-}
 export default function CreateAutoReplyModal({ isOpen, onClose, onSuccess }: CreateAutoReplyModalProps) {
   const [loading, setLoading] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);

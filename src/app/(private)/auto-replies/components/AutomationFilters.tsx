@@ -2,7 +2,7 @@
 import Select from '@/components/Select';
 import type { WorkspaceChannel } from '@/hooks/WorkspaceChannelsHook';
 
-import { CHANNEL_TYPE_LABEL, KIND_META, type AutomationKind } from './automationMeta';
+import { CHANNEL_TYPE_META, KIND_META, type AutomationKind } from './automationMeta';
 
 export type KindFilter = AutomationKind | 'ALL';
 
@@ -66,7 +66,7 @@ export default function AutomationFilters({
           options={channels.map((channel) => ({
             value: channel.id,
             label: channel.name,
-            description: CHANNEL_TYPE_LABEL[channel.type],
+            description: CHANNEL_TYPE_META[channel.type].label,
           }))}
         />
       </div>

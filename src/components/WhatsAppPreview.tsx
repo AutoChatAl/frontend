@@ -1,23 +1,13 @@
 'use client';
 import { Check, ExternalLink } from 'lucide-react';
 
+import { whatsAppToHtml } from '@/utils/whatsappFormat';
+
 interface WhatsAppPreviewProps {
     message: string;
     senderName?: string;
     linkUrl?: string | undefined;
     linkLabel?: string | undefined;
-}
-function formatWhatsAppText(text: string): string {
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  html = html.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
-  html = html.replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '<em>$1</em>');
-  html = html.replace(/~([^~\n]+)~/g, '<del>$1</del>');
-  html = html.replace(/```([^`]+)```/g, '<code class="bg-gray-200/50 dark:bg-gray-600/50 px-1 rounded text-xs font-mono">$1</code>');
-  html = html.replace(/\n/g, '<br/>');
-  return html;
 }
 export default function WhatsAppPreview({ message, senderName = 'Synq', linkUrl, linkLabel }: WhatsAppPreviewProps) {
   const now = new Date();
@@ -40,7 +30,7 @@ export default function WhatsAppPreview({ message, senderName = 'Synq', linkUrl,
       {message ? (<div className="flex justify-end">
         <div className="bg-[#DCF8C6] dark:bg-[#005C4B] rounded-lg rounded-tr-sm max-w-[85%] shadow-sm overflow-hidden">
           <div className="px-3 py-2">
-            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed wrap-break-word whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message) }}/>
+            <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed wrap-break-word whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: whatsAppToHtml(message) }}/>
             <div className="flex items-center justify-end mt-1">
               <span className="text-[10px] text-gray-500 dark:text-gray-400 pr-1">{time}</span>
               <Check size={12} className="text-gray-500"/>

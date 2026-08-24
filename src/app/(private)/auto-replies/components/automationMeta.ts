@@ -1,4 +1,4 @@
-import { MessageCircle, MessageSquare, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Instagram, MessageCircle, MessageSquare, type LucideIcon } from 'lucide-react';
 
 import type { WorkspaceChannelType } from '@/hooks/WorkspaceChannelsHook';
 import type { AutoReply } from '@/types/AutoReply';
@@ -55,10 +55,30 @@ export const KIND_META: Record<AutomationKind, {
   },
 };
 
-export const CHANNEL_TYPE_LABEL: Record<WorkspaceChannelType, string> = {
-  WHATSAPP: 'WhatsApp',
-  WHATSAPP_OFFICIAL: 'API Oficial',
-  INSTAGRAM: 'Instagram',
+/**
+ * Mesma paleta por plataforma da página de Canais (emerald / teal / fuchsia),
+ * para o número ou a @conta serem reconhecidos pela cor antes da leitura.
+ */
+export const CHANNEL_TYPE_META: Record<WorkspaceChannelType, {
+  label: string;
+  icon: LucideIcon;
+  chip: string;
+}> = {
+  WHATSAPP: {
+    label: 'WhatsApp',
+    icon: MessageCircle,
+    chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
+  },
+  WHATSAPP_OFFICIAL: {
+    label: 'API Oficial',
+    icon: BadgeCheck,
+    chip: 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-400',
+  },
+  INSTAGRAM: {
+    label: 'Instagram',
+    icon: Instagram,
+    chip: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-400',
+  },
 };
 
 export const MATCH_MODE_LABELS: Record<string, string> = {
