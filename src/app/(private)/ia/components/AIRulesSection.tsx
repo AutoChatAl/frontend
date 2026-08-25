@@ -15,6 +15,8 @@ interface AIRulesSectionProps {
     triggerSettings: AiTriggerSettings;
     onCustomRulesChange: (value: string) => void;
     onToggleTrigger: (triggerKey: keyof AiTriggerSettings) => void;
+    /** Limite vindo do GET /config. Tem prioridade sobre o da assinatura, que pode estar em cache. */
+    maxChars?: number;
 }
 const triggerOptions: Array<{
     key: keyof AiTriggerSettings;
@@ -42,10 +44,11 @@ const triggerOptions: Array<{
     description: 'Prioriza acolhimento e orientação direta em mensagens urgentes.',
   },
 ];
-export default function AIRulesSection({ customRules, triggerSettings, onCustomRulesChange, onToggleTrigger }: AIRulesSectionProps) {
+export default function AIRulesSection({ customRules, triggerSettings, onCustomRulesChange, onToggleTrigger, maxChars: maxCharsProp }: AIRulesSectionProps) {
   const { status } = useSubscription();
-  const maxChars = status?.limits?.maxCustomRulesChars ?? 0;
+  const maxChars = maxCharsProp && maxCharsProp > 0 ? maxCharsProp : (status?.limits?.maxCustomRulesChars ?? 0);
   const overLimit = maxChars > 0 && customRules.length > maxChars;
+  const remaining = maxChars - customRules.length;
   const locked = LOCKED_FEATURES.iaTriggers;
   return (
     <div className="space-y-3">
@@ -89,7 +92,13 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
           placeholder={'Sempre responda em português.\nNão ofereça descontos sem aprovação.\nEncaminhe reclamações para o suporte humano.'}
         />
         {maxChars > 0 && (
-          <p className={`mt-1.5 text-right text-[11px] tabular-nums ${overLimit ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
+          <p className={`mt-1.5 text-right text-[11px] tabular-nums ${
+            overLimit
+              ? 'text-red-500'
+              : remaining <= maxChars * 0.1
+                ? 'text-amber-500'
+                : 'text-slate-400 dark:text-slate-500'
+          }`}>
             {customRules.length.toLocaleString('pt-BR')} / {maxChars.toLocaleString('pt-BR')}
           </p>
         )}

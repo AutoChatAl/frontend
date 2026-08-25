@@ -16,6 +16,7 @@ import AIFunnelSection from './components/AIFunnelSection';
 import AIIdentitySection from './components/AIIdentitySection';
 import AiPlanGate from './components/AiPlanGate';
 import AIProductsImportModal from './components/AIProductsImportModal';
+import AIProfileSwitcher from './components/AIProfileSwitcher';
 import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AISchedulingSection from './components/AISchedulingSection';
@@ -33,7 +34,10 @@ export default function IAPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs } = useAIConfig();
+  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
+  const customRulesLimit = maxCustomRulesChars > 0 ? maxCustomRulesChars : (status?.limits?.maxCustomRulesChars ?? 0);
+  // Passar do limite é erro 422 garantido no backend — o botão trava antes de gastar a ida.
+  const customRulesOverLimit = customRulesLimit > 0 && customRules.length > customRulesLimit;
   const tabIds = useMemo(() => resolveAiTabs(visibleTabs).map((tab) => tab.id), [visibleTabs]);
   // Abre uma aba direto pela URL (?tab=), usado pela busca do header.
   useEffect(() => {
@@ -66,6 +70,16 @@ export default function IAPage() {
     <div className="flex flex-col gap-4 lg:flex-row">
       <div data-tour="ia-tabs" className="lg:w-52 lg:shrink-0">
         <AITabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs}/>
+        <AIProfileSwitcher
+          profiles={profiles}
+          activeProfileId={activeProfileId}
+          maxProfiles={maxProfiles}
+          busy={switchingProfile || saving}
+          onSelect={switchProfile}
+          onCreate={createProfile}
+          onRename={renameProfile}
+          onDelete={deleteProfile}
+        />
       </div>
 
       <div className="min-w-0 flex-1 space-y-3">
@@ -74,13 +88,13 @@ export default function IAPage() {
           <AIPromptPreview segment={segment} businessName={businessName} assistantName={assistantName} products={products}/>
         </>)}
 
-        {activeTab === 'catalog' && (<AICatalogSection products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)} crossSellEnabled={crossSellEnabled} onToggleCrossSell={toggleCrossSell} productLayout={instagramProductLayout} onProductLayoutChange={changeProductLayout} onUploadProductImage={uploadProductImage} onRemoveProductImage={removeProductImage}/>)}
+        {activeTab === 'catalog' && (<AICatalogSection products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)} crossSellEnabled={crossSellEnabled} onToggleCrossSell={toggleCrossSell} productLayout={instagramProductLayout} onProductLayoutChange={changeProductLayout} onUploadProductImage={uploadProductImage} onRemoveProductImage={removeProductImage} profileCount={profiles.length} catalogScope={catalogScope} onCatalogScopeChange={changeCatalogScope}/>)}
 
         {activeTab === 'channels' && (<div data-tour="ia-channels">
-          <AIChannelsList channels={channels} onToggle={toggleChannel}/>
+          <AIChannelsList channels={channels} onToggle={toggleChannel} activeProfileId={activeProfileId}/>
         </div>)}
 
-        {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} triggerSettings={triggerSettings} onCustomRulesChange={setCustomRules} onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))}/>)}
+        {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} triggerSettings={triggerSettings} maxChars={customRulesLimit} onCustomRulesChange={setCustomRules} onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))}/>)}
 
         {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
 
@@ -88,9 +102,11 @@ export default function IAPage() {
 
         {TABS_WITH_DRAFT.includes(activeTab) && (<div className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            As mudanças desta aba só valem depois de salvar.
+            {activeTab === 'triggers' && customRulesOverLimit
+              ? `As regras personalizadas passaram de ${customRulesLimit.toLocaleString('pt-BR')} caracteres. Corte o texto para salvar.`
+              : 'As mudanças desta aba só valem depois de salvar.'}
           </p>
-          <Button onClick={saveConfig} loading={saving} loadingText="Salvando..." icon={<Bot size={16}/>} className="w-full justify-center sm:w-auto">
+          <Button onClick={saveConfig} loading={saving} loadingText="Salvando..." disabled={customRulesOverLimit} icon={<Bot size={16}/>} className="w-full justify-center sm:w-auto">
             Salvar alterações
           </Button>
         </div>)}

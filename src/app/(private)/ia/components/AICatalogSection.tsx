@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
-import type { InstagramProductLayout, Product, ProductPayload } from '@/types/AI';
+import type { AiCatalogScope, InstagramProductLayout, Product, ProductPayload } from '@/types/AI';
 
 import AIProductsInput from './AIProductsInput';
 import AISectionHeader from './AISectionHeader';
@@ -36,13 +36,17 @@ interface AICatalogSectionProps {
     onProductLayoutChange: (layout: InstagramProductLayout) => void;
     onUploadProductImage: (id: string, file: File) => void;
     onRemoveProductImage: (id: string) => void;
+    /** Quantos perfis o usuário tem — com um só, separar catálogo não faz sentido. */
+    profileCount: number;
+    catalogScope: AiCatalogScope;
+    onCatalogScopeChange: (scope: AiCatalogScope) => void;
 }
 
 /**
  * Aba própria desde o redesign. O que a IA pode citar fica no primeiro card;
  * como ela oferece isso ao cliente, no segundo — são decisões diferentes.
  */
-export default function AICatalogSection({ products, productsTotal, maxProducts, productsLoading, productSearch, productPage, productsPageSize, onProductSearchChange, onProductPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell, productLayout, onProductLayoutChange, onUploadProductImage, onRemoveProductImage }: AICatalogSectionProps) {
+export default function AICatalogSection({ products, productsTotal, maxProducts, productsLoading, productSearch, productPage, productsPageSize, onProductSearchChange, onProductPageChange, onAddProduct, onUpdateProduct, onDeleteProduct, onOpenImport, onClearCatalog, crossSellEnabled, onToggleCrossSell, productLayout, onProductLayoutChange, onUploadProductImage, onRemoveProductImage, profileCount, catalogScope, onCatalogScopeChange }: AICatalogSectionProps) {
   // O GET /config semeia 50 itens de prévia, mas a paginação é de 20 — sem recarregar,
   // a primeira tela mostra mais itens do que o rodapé promete.
   const reloadedRef = useRef(false);
@@ -70,6 +74,17 @@ export default function AICatalogSection({ products, productsTotal, maxProducts,
             )}
           </>}
         />
+        {profileCount > 1 && (
+          <div className="mb-3 border-b border-slate-100 pb-3 dark:border-slate-700/60">
+            <AIToggleRow
+              title="Catálogo separado por perfil"
+              description="Ligado, cada perfil enxerga só os itens cadastrados nele — os que já existiam ficam com o primeiro perfil. Desligado, todos os perfis oferecem o mesmo catálogo."
+              checked={catalogScope === 'profile'}
+              onChange={(checked) => onCatalogScopeChange(checked ? 'profile' : 'shared')}
+            />
+          </div>
+        )}
+
         <AIProductsInput
           products={products}
           total={productsTotal}
