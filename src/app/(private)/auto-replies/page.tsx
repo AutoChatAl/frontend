@@ -17,11 +17,8 @@ import type { CommentAutomation } from '@/types/CommentAutomation';
 import AutomationCard from './components/AutomationCard';
 import AutomationFilters, { type KindFilter } from './components/AutomationFilters';
 import { toCommentRow, toDmRow, type AutomationKind, type AutomationRow } from './components/automationMeta';
+import AutomationModal from './components/AutomationModal';
 import AutomationTypeModal from './components/AutomationTypeModal';
-import CreateAutoReplyModal from './components/CreateAutoReplyModal';
-import CreateCommentAutomationModal from './components/CreateCommentAutomationModal';
-import EditAutoReplyModal from './components/EditAutoReplyModal';
-import EditCommentAutomationModal from './components/EditCommentAutomationModal';
 
 /** `?tipo=` abre a tela já filtrada — é por onde a rota antiga de comentários chega. */
 function kindFromParam(value: string | null): KindFilter {
@@ -47,7 +44,7 @@ export default function AutoRepliesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const { toasts, addToast, removeToast } = useToast();
-  const { channels } = useWorkspaceChannels();
+  const { channels, loading: channelsLoading } = useWorkspaceChannels();
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -202,42 +199,29 @@ export default function AutoRepliesPage() {
       }}
     />
 
-    <CreateAutoReplyModal
-      isOpen={creating === 'DM'}
-      onClose={() => setCreating(null)}
-      onSuccess={() => {
-        setCreating(null);
-        afterSave('Auto-resposta criada com sucesso!');
-      }}
-    />
-
-    <CreateCommentAutomationModal
-      isOpen={creating === 'COMMENT'}
-      onClose={() => setCreating(null)}
-      onSuccess={() => {
-        setCreating(null);
-        afterSave('Automação de comentário criada com sucesso!');
-      }}
-    />
-
-    {editTarget?.kind === 'DM' && (<EditAutoReplyModal
+    {creating && (<AutomationModal
       isOpen
-      onClose={() => setEditTarget(null)}
+      kind={creating}
+      channels={channels}
+      channelsLoading={channelsLoading}
+      onClose={() => setCreating(null)}
       onSuccess={() => {
-        setEditTarget(null);
-        afterSave('Auto-resposta atualizada com sucesso!');
+        setCreating(null);
+        afterSave('Automação criada com sucesso!');
       }}
-      autoReply={editTarget.rule}
     />)}
 
-    {editTarget?.kind === 'COMMENT' && (<EditCommentAutomationModal
+    {editTarget && (<AutomationModal
       isOpen
+      kind={editTarget.kind}
+      automation={editTarget}
+      channels={channels}
+      channelsLoading={channelsLoading}
       onClose={() => setEditTarget(null)}
       onSuccess={() => {
         setEditTarget(null);
         afterSave('Automação atualizada com sucesso!');
       }}
-      automation={editTarget.rule}
     />)}
 
     {deleteTarget && (<ConfirmDeleteModal

@@ -1,4 +1,4 @@
-import type { ChannelMessageStats, InstagramAccount, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
+import type { ChannelMessageStats, InstagramAccount, InstagramMedia, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
 import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
 
@@ -87,6 +87,14 @@ class ChannelsService {
     if (!response.success || !response.data)
       throwApiError(response, 'Nao foi possivel buscar contas do Instagram. Tente novamente.');
     return response.data as InstagramAccount[];
+  }
+  public async getInstagramMedia(channelId: string, limit = 24): Promise<InstagramMedia[]> {
+    const response = await apiClient.get<{
+            data: InstagramMedia[];
+        }>(`/channels/instagram/${channelId}/media?limit=${limit}`);
+    if (!response.success || !response.data)
+      throwApiError(response, 'Nao foi possivel carregar as publicacoes do Instagram. Tente novamente.');
+    return (response.data as { data: InstagramMedia[] }).data;
   }
   public async getInstagramOAuthUrl(): Promise<{
         url: string;

@@ -104,14 +104,13 @@ export default function GoogleCalendarIntegration({ onToast }: GoogleCalendarInt
   return (<div className="space-y-4">
     <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Calendar size={18} className="text-indigo-600 dark:text-indigo-400"/>
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Google Agenda</h3>
         <Badge type="beta" text="BETA" pill/>
         {status?.connected && (<Badge type="success" text="Conectado" icon={CheckCircle} pill/>)}
       </div>
 
       {!status?.connected && (<div className="space-y-4">
-        <div className="flex items-start gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 rounded-lg p-3">
+        <div className="flex max-w-5xl items-center gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 rounded-lg p-3">
           <AlertTriangle size={16} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5"/>
           <p className="text-sm text-violet-700 dark:text-violet-500">
                 Esta integração está em fase beta. Para usar, envie o e-mail da sua conta do Google Agenda para o nosso suporte e aguarde a liberação antes de conectar.
