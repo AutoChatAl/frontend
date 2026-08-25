@@ -1,4 +1,4 @@
-import type { AiTriggerSettings, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
+import type { AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
@@ -19,6 +19,7 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    instagramProductLayout: InstagramProductLayout;
 }
 export interface Product {
     id: string;
@@ -28,6 +29,9 @@ export interface Product {
     link: string;
     notes: string;
     keywords?: string;
+    imageUrl?: string;
+    imageUploadedAt?: string | null;
+    imagePreviewUrl?: string;
     active?: boolean;
     featured?: boolean;
 }
@@ -67,6 +71,7 @@ class AiService {
         schedulingBookingEnabled: false,
         funnelAutoMoveEnabled: false,
         crossSellEnabled: false,
+        instagramProductLayout: 'QUICK_REPLY',
       },
       products: [],
       productsTotal: 0,
@@ -74,7 +79,7 @@ class AiService {
       maxProducts: 0,
     };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled'>>): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'instagramProductLayout'>>): Promise<void> {
     const response = await apiClient.put('/ai/config', data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;
@@ -153,6 +158,24 @@ class AiService {
       const body = response.data as { reason?: string } | undefined;
       throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao atualizar produto.');
     }
+    return response.data as Product;
+  }
+  public async uploadProductImage(id: string, file: File): Promise<Product> {
+    const imageBase64 = await this.readFileAsBase64(file);
+    const response = await apiClient.put<Product>(`/ai/products/${id}/image`, {
+      imageBase64,
+      imageMimeType: file.type,
+    });
+    if (!response.success) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao enviar a imagem do produto.');
+    }
+    return response.data as Product;
+  }
+  public async removeProductImage(id: string): Promise<Product> {
+    const response = await apiClient.delete<Product>(`/ai/products/${id}/image`);
+    if (!response.success)
+      throw new Error('Falha ao remover a imagem do produto.');
     return response.data as Product;
   }
   public async deleteProduct(id: string): Promise<void> {
