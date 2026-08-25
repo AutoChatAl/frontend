@@ -3,13 +3,13 @@ import { Bot, Instagram, Lock, MessageCircle, MessageSquare, PartyPopper, Send, 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import CreateAutoReplyModal from '@/app/(private)/auto-replies/components/CreateAutoReplyModal';
+import AutomationModal from '@/app/(private)/auto-replies/components/AutomationModal';
 import CreateCampaignModal from '@/app/(private)/campaigns/components/CreateCampaignModal';
 import WhatsAppCreateModal from '@/app/(private)/channels/components/WhatsAppCreateModal';
-import CreateCommentAutomationModal from '@/app/(private)/comment-automations/components/CreateCommentAutomationModal';
 import Button from '@/components/Button';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useInstagramAccounts, useWhatsAppInstances } from '@/hooks/ChannelHook';
+import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { authService } from '@/services/auth.service';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { campaignService } from '@/services/campaign.service';
@@ -43,6 +43,7 @@ export default function GetStartedPage() {
 
   const { instances, refetch: refetchWhatsApp, createInstance, connectInstance, deleteInstance, getStatus } = useWhatsAppInstances();
   const { accounts, refetch: refetchInstagram, getOAuthUrl } = useInstagramAccounts();
+  const { channels: workspaceChannels, loading: workspaceChannelsLoading } = useWorkspaceChannels();
 
   const refetchWaRef = useRef(refetchWhatsApp);
   const refetchIgRef = useRef(refetchInstagram);
@@ -394,17 +395,27 @@ export default function GetStartedPage() {
         />
       )}
 
-      <CreateAutoReplyModal
-        isOpen={autoReplyModalOpen}
-        onClose={() => setAutoReplyModalOpen(false)}
-        onSuccess={() => void loadAutomations()}
-      />
+      {autoReplyModalOpen && (
+        <AutomationModal
+          isOpen
+          kind="DM"
+          channels={workspaceChannels}
+          channelsLoading={workspaceChannelsLoading}
+          onClose={() => setAutoReplyModalOpen(false)}
+          onSuccess={() => void loadAutomations()}
+        />
+      )}
 
-      <CreateCommentAutomationModal
-        isOpen={commentModalOpen}
-        onClose={() => setCommentModalOpen(false)}
-        onSuccess={() => void loadAutomations()}
-      />
+      {commentModalOpen && (
+        <AutomationModal
+          isOpen
+          kind="COMMENT"
+          channels={workspaceChannels}
+          channelsLoading={workspaceChannelsLoading}
+          onClose={() => setCommentModalOpen(false)}
+          onSuccess={() => void loadAutomations()}
+        />
+      )}
 
       <CreateCampaignModal
         isOpen={campaignModalOpen}

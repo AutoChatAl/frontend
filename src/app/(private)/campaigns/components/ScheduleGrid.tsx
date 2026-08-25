@@ -14,7 +14,7 @@ import type { ScheduleGrid as ScheduleGridData } from '@/types/Campaign';
  * contraste do extremo claro contra a superfície, nos dois modos.
  */
 const HEAT_STEPS = [
-  'bg-indigo-400 text-slate-900 dark:bg-indigo-700 dark:text-white',
+  'bg-indigo-400 text-white dark:bg-indigo-700 dark:text-white',
   'bg-indigo-500 text-white dark:bg-indigo-500 dark:text-white',
   'bg-indigo-600 text-white dark:bg-indigo-400 dark:text-slate-900',
   'bg-indigo-800 text-white dark:bg-indigo-300 dark:text-slate-900',
@@ -192,7 +192,6 @@ export default function ScheduleGrid({ refreshKey = 0 }: ScheduleGridProps) {
             {grid.total === 0
               ? 'Nenhuma execução agendada para os próximos 5 dias.'
               : 'Horas que já passaram mostram o que realmente rodou; as demais são projeção do agendamento das campanhas ativas.'}
-            {' '}Fuso: {grid.timezone.replace('_', ' ')}.
           </p>
         </>
       )}

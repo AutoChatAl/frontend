@@ -84,6 +84,20 @@ export type ChannelMessageStats = {
     WHATSAPP_OFFICIAL: number;
     INSTAGRAM: number;
 };
+/**
+ * Publicação do Instagram, no formato enxuto que o backend devolve em
+ * `/channels/instagram/:id/media` — só o que o seletor de post precisa.
+ */
+export type InstagramMedia = {
+    id: string;
+    caption: string | null;
+    mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' | null;
+    /** Capa. Em vídeo o backend já troca pelo thumbnail, nunca pelo arquivo. */
+    thumbnailUrl: string | null;
+    permalink: string | null;
+    timestamp: string | null;
+};
+
 export type InstagramAccount = {
     id: string;
     name: string;
