@@ -1,50 +1,59 @@
 'use client';
-import { BadgeCheck, MessageCircle, Smartphone } from 'lucide-react';
+import { BadgeCheck, Instagram, MessageCircle } from 'lucide-react';
 
+import Badge from '@/components/Badge';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import type { AIChannel } from '@/types/AI';
 
 interface AIChannelCardProps {
     channel: AIChannel;
     active: boolean;
     onToggle: (id: string) => void;
+    /** Verdadeiro quando o plano já está no limite e este canal está desligado. */
+    blocked?: boolean;
+    blockedReason?: string | undefined;
 }
-export default function AIChannelCard({ channel, active, onToggle }: AIChannelCardProps) {
+export default function AIChannelCard({ channel, active, onToggle, blocked = false, blockedReason }: AIChannelCardProps) {
   const isOfficial = channel.type === 'whatsapp_official';
   const isWhatsApp = channel.type === 'whatsapp' || isOfficial;
-  return (<div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 sm:p-4 border rounded-xl transition-all ${active
-    ? 'bg-white dark:bg-slate-800 border-indigo-100 dark:border-indigo-900 shadow-sm'
-    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700 opacity-75'}`}>
-    <div className="flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-700 shadow-sm ${isWhatsApp
-        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-        : 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400'}`}>
-        {isOfficial ? <BadgeCheck size={22}/> : isWhatsApp ? <MessageCircle size={22}/> : <Smartphone size={22}/>}
-      </div>
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="font-bold text-slate-800 dark:text-white">{channel.name}</p>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase ${isWhatsApp
-            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
-            : 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-100 dark:border-fuchsia-800'}`}>
-            {isOfficial ? 'whatsapp oficial' : channel.type}
-          </span>
+  const Icon = isOfficial ? BadgeCheck : isWhatsApp ? MessageCircle : Instagram;
+  const meta = [channel.identifier, channel.ownerName ? `Colaborador: ${channel.ownerName}` : ''].filter(Boolean).join(' · ');
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${
+        active
+          ? 'border-indigo-200 bg-indigo-50/50 dark:border-indigo-500/30 dark:bg-indigo-500/5'
+          : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+      } ${blocked ? 'opacity-60' : ''}`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+            isWhatsApp
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+              : 'bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/10 dark:text-fuchsia-400'
+          }`}
+        >
+          <Icon size={18}/>
         </div>
-        {channel.ownerName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              Colaborador: <span className="font-medium text-slate-500 dark:text-slate-400">{channel.ownerName}</span>
-        </p>)}
-        {channel.identifier && (<p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{channel.identifier}</p>)}
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{channel.name}</p>
+            <Badge
+              type={isWhatsApp ? 'whatsapp' : 'instagram'}
+              text={isOfficial ? 'WhatsApp oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
+              pill
+            />
+          </div>
+          <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+            {meta || (active ? 'IA respondendo neste canal' : 'IA desligada neste canal')}
+          </p>
+        </div>
+      </div>
+
+      <div className="shrink-0" {...(blocked && blockedReason ? { title: blockedReason } : {})}>
+        <ToggleSwitch checked={active} onChange={() => onToggle(channel.id)} disabled={blocked} ariaLabel={`IA no canal ${channel.name}`}/>
       </div>
     </div>
-
-    <div className="flex items-center gap-3 self-end sm:self-auto">
-      <span className={`text-xs font-medium ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-        {active ? 'IA Ativa' : 'Desativada'}
-      </span>
-      <button type="button" onClick={() => onToggle(channel.id)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${active
-        ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-600 dark:bg-indigo-500'
-        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600'}`}>
-        {active && <div className="w-2 h-2 rounded-full bg-white"/>}
-      </button>
-    </div>
-  </div>);
+  );
 }

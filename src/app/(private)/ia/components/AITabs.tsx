@@ -1,33 +1,71 @@
 'use client';
-import { Settings, Share2, Zap, CalendarDays, Trello } from 'lucide-react';
+import { CalendarDays, Settings, Share2, ShoppingBag, Trello, Zap } from 'lucide-react';
 
 import type { AITab } from '@/types/AI';
 
-const allTabs: AITab[] = [
+/**
+ * "Catálogo" saiu de dentro de "Geral": a tabela de produtos é a maior seção da
+ * página e brigava por espaço com os campos de identidade. O backend não conhece
+ * essa aba, então ela herda a visibilidade de "Geral".
+ */
+const ALL_TABS: AITab[] = [
   { id: 'general', label: 'Geral', icon: Settings },
+  { id: 'catalog', label: 'Catálogo', icon: ShoppingBag },
   { id: 'channels', label: 'Canais', icon: Share2 },
   { id: 'triggers', label: 'Gatilhos', icon: Zap },
   { id: 'scheduling', label: 'Agendamento', icon: CalendarDays },
   { id: 'funnel', label: 'Funil', icon: Trello },
 ];
+
+/** Ids liberados, na ordem do menu. Usado também para validar o `?tab=` da URL. */
+export function resolveAiTabs(visibleTabs?: string[]): AITab[] {
+  if (!visibleTabs) {
+    return ALL_TABS;
+  }
+  const allowed = new Set(visibleTabs);
+  if (allowed.has('general')) {
+    allowed.add('catalog');
+  }
+  return ALL_TABS.filter((tab) => allowed.has(tab.id));
+}
+
 interface AITabsProps {
     activeTab: string;
     onTabChange: (tabId: string) => void;
     visibleTabs?: string[];
 }
+
+/**
+ * Navegação lateral no desktop, fila rolável no mobile — mesmo padrão de
+ * Agendamentos. Seis itens empilhados numa tela de celular roubariam a altura
+ * que o conteúdo precisa.
+ */
 export default function AITabs({ activeTab, onTabChange, visibleTabs }: AITabsProps) {
-  const tabs = visibleTabs ? allTabs.filter((t) => visibleTabs.includes(t.id)) : allTabs;
-  return (<div>
-    <div className="grid grid-cols-2 sm:flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full sm:w-fit">
-      {tabs.map((tab) => (<button key={tab.id} onClick={() => onTabChange(tab.id)} className={`
-              flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap justify-center sm:justify-start
-              ${activeTab === tab.id
-          ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-sm'
-          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}
-            `}>
-        <tab.icon size={16}/>
-        <span>{tab.label}</span>
-      </button>))}
-    </div>
-  </div>);
+  const tabs = resolveAiTabs(visibleTabs);
+  return (
+    <nav
+      aria-label="Seções da IA"
+      className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap"
+    >
+      {tabs.map((tab) => {
+        const active = tab.id === activeTab;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onTabChange(tab.id)}
+            aria-current={active ? 'page' : undefined}
+            className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-semibold transition-colors lg:w-full ${
+              active
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700/50'
+            }`}
+          >
+            <tab.icon size={16} className="shrink-0" />
+            <span className="truncate">{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
 }

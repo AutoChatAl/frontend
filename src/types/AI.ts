@@ -40,6 +40,8 @@ export const tonesOptions = [
   'Empático e Prestativo',
   'Direto e Objetivo',
 ];
+/** Formato das opções de produto no Instagram. Carrossel exige imagem em todo item ativo. */
+export type InstagramProductLayout = 'QUICK_REPLY' | 'CAROUSEL';
 export interface AiConfig {
     id: string;
     enabled: boolean;
@@ -54,6 +56,7 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    instagramProductLayout: InstagramProductLayout;
 }
 export interface Product {
     id: string;
@@ -63,6 +66,12 @@ export interface Product {
     link: string;
     notes: string;
     keywords?: string;
+    /** URL externa da imagem, quando veio da planilha. */
+    imageUrl?: string;
+    /** Data do upload próprio; presente significa que a imagem é um arquivo nosso. */
+    imageUploadedAt?: string | null;
+    /** URL pronta para exibir, montada pelo backend seja qual for a origem da imagem. */
+    imagePreviewUrl?: string;
     active?: boolean;
     featured?: boolean;
 }
@@ -72,6 +81,7 @@ export interface ProductPayload {
     link?: string;
     notes?: string;
     keywords?: string;
+    imageUrl?: string;
     active?: boolean;
     featured?: boolean;
 }
@@ -87,6 +97,8 @@ export interface ProductImportReport {
         price: string | null;
         notes: string | null;
         link: string | null;
+        keywords: string | null;
+        image: string | null;
     };
     totalRows: number;
     created: number;

@@ -72,7 +72,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
-  { id: 'ia', icon: Bot, text: 'IA', href: '/ia', permission: 'ia', group: 'automation' },
+  { id: 'ia', icon: Bot, text: 'Inteligência Artificial', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
 ];
