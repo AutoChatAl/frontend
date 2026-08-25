@@ -1,11 +1,14 @@
 'use client';
-import { FileText } from 'lucide-react';
 
 import Card from '@/components/Card';
+import Textarea from '@/components/Textarea';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import type { AiTriggerSettings } from '@/types/AI';
 import { LOCKED_FEATURES } from '@lib/featureFlags';
 
-import AIRuleToggle from './AIRuleToggle';
+import AINote from './AINote';
+import AISectionHeader from './AISectionHeader';
+import AIToggleRow from './AIToggleRow';
 
 interface AIRulesSectionProps {
     customRules: string;
@@ -40,28 +43,57 @@ const triggerOptions: Array<{
   },
 ];
 export default function AIRulesSection({ customRules, triggerSettings, onCustomRulesChange, onToggleTrigger }: AIRulesSectionProps) {
-  return (<Card className="p-6">
-    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
-      <FileText size={18} className="text-indigo-600 dark:text-indigo-400"/>
-        Gatilhos e Regras
-    </h3>
-    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-        Ative gatilhos prontos para comportamentos comuns da IA. Todos começam desativados por padrão.
-    </p>
+  const { status } = useSubscription();
+  const maxChars = status?.limits?.maxCustomRulesChars ?? 0;
+  const overLimit = maxChars > 0 && customRules.length > maxChars;
+  const locked = LOCKED_FEATURES.iaTriggers;
+  return (
+    <div className="space-y-3">
+      <Card className="p-4">
+        <AISectionHeader
+          title="Gatilhos prontos"
+          hint="Comportamentos comuns já escritos para você. Todos começam desligados."
+        />
 
-    <div className="mb-3">
-      {triggerOptions.map((trigger) => (<AIRuleToggle key={trigger.key} title={trigger.title} description={trigger.description} enabled={triggerSettings[trigger.key]} onToggle={() => onToggleTrigger(trigger.key)} disabled={LOCKED_FEATURES.iaTriggers}/>))}
+        {locked && (
+          <AINote tone="warning" className="mb-3">
+            Os gatilhos prontos estão temporariamente indisponíveis enquanto ajustamos o comportamento deles. Use as regras
+            personalizadas abaixo — elas continuam valendo normalmente.
+          </AINote>
+        )}
+
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+          {triggerOptions.map((trigger) => (
+            <AIToggleRow
+              key={trigger.key}
+              title={trigger.title}
+              description={trigger.description}
+              checked={triggerSettings[trigger.key]}
+              onChange={() => onToggleTrigger(trigger.key)}
+              disabled={locked}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <AISectionHeader
+          title="Regras personalizadas"
+          hint="Uma regra por linha. Entram no prompt exatamente como você escrever, então seja direto."
+        />
+        <Textarea
+          rows={7}
+          value={customRules}
+          onChange={(e) => onCustomRulesChange(e.target.value)}
+          {...(overLimit ? { error: `Passou do limite de ${maxChars.toLocaleString('pt-BR')} caracteres do seu plano — corte o texto antes de salvar.` } : {})}
+          placeholder={'Sempre responda em português.\nNão ofereça descontos sem aprovação.\nEncaminhe reclamações para o suporte humano.'}
+        />
+        {maxChars > 0 && (
+          <p className={`mt-1.5 text-right text-[11px] tabular-nums ${overLimit ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
+            {customRules.length.toLocaleString('pt-BR')} / {maxChars.toLocaleString('pt-BR')}
+          </p>
+        )}
+      </Card>
     </div>
-
-    <div className="mb-4 border-t border-slate-200 dark:border-slate-700 pt-4">
-      <p className="text-sm font-semibold text-slate-800 dark:text-white">
-        Regras personalizadas adicionais
-      </p>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-          Escreva regras específicas para o comportamento da IA que não estejam cobertas pelos gatilhos acima. Use uma regra por linha.
-      </p>
-    </div>
-
-    <textarea rows={6} value={customRules} onChange={(e) => onCustomRulesChange(e.target.value)} className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm leading-relaxed placeholder:text-slate-300 dark:placeholder:text-slate-500 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" placeholder="Ex: Sempre responda em português. Não ofereça descontos sem aprovação. Encaminhe reclamações para o suporte humano..."/>
-  </Card>);
+  );
 }

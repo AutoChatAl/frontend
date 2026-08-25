@@ -1,9 +1,14 @@
 'use client';
-import { AlertTriangle, ArrowRight, Check, Trello } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import Link from 'next/link';
 
 import Badge from '@/components/Badge';
+import Card from '@/components/Card';
 import type { FunnelStageDefinition } from '@/types/Funnel';
+
+import AINote from './AINote';
+import AISectionHeader from './AISectionHeader';
+import AIToggleRow from './AIToggleRow';
 
 interface AIFunnelSectionProps {
     funnelAutoMoveEnabled: boolean;
@@ -12,84 +17,67 @@ interface AIFunnelSectionProps {
 }
 export default function AIFunnelSection({ funnelAutoMoveEnabled, stages, onToggle }: AIFunnelSectionProps) {
   const withoutCriteria = stages.filter((stage) => !stage.aiCriteria.trim());
-  return (<div className="space-y-6">
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-      <div className="flex items-center gap-2 mb-2">
-        <Trello size={20} className="text-indigo-600 dark:text-indigo-400"/>
-        <h3 className="text-base font-bold text-slate-800 dark:text-white">Movimentação do funil por IA</h3>
-      </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Permita que a IA mova os leads entre as etapas do funil automaticamente, conforme os critérios que você define em cada etapa.
-      </p>
+  return (
+    <div className="space-y-3">
+      <Card className="p-4">
+        <AISectionHeader
+          title="Movimentação do funil pela IA"
+          hint="A cada mensagem recebida, a IA lê a conversa e avança o lead para a etapa que bate com o critério da etapa."
+        />
+        <AIToggleRow
+          title="Mover leads automaticamente"
+          description="O lead nunca volta para uma etapa anterior de forma automática — a IA só avança."
+          checked={funnelAutoMoveEnabled}
+          onChange={onToggle}
+          badge={<Badge type="beta" text="BETA" pill/>}
+        >
+        </AIToggleRow>
+      </Card>
 
-      <div className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-100 dark:border-slate-700">
-        <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-0.5">
-          <ArrowRight size={20} className="text-indigo-600 dark:text-indigo-400"/>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Mover leads automaticamente</h4>
-              <Badge type="beta" text="BETA" pill/>
-            </div>
-            <button
-              onClick={() => onToggle(!funnelAutoMoveEnabled)}
-              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${funnelAutoMoveEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
-              <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform" style={{ transform: funnelAutoMoveEnabled ? 'translateX(22px)' : 'translateX(0)' }}/>
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-              A cada mensagem recebida, a IA analisa a conversa e avança o lead para a etapa que combina com o critério definido. O lead nunca volta para uma etapa anterior de forma automática.
-          </p>
-          {funnelAutoMoveEnabled && (<div className="mt-3 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-900/20">
-            <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                Movimentações feitas pela IA aparecem no funil com o motivo da mudança. Etapas de ganho e perda exigem confirmação ou recusa explícita do cliente.
-            </p>
-          </div>)}
-        </div>
-      </div>
+      {stages.length > 0 && (
+        <Card className="p-4">
+          <AISectionHeader
+            title="Critérios por etapa"
+            hint="É o critério que ensina a IA quando mover o lead. A edição fica na tela do funil."
+            action={
+              <Link href="/funnel" className="text-[13px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+                Abrir funil
+              </Link>
+            }
+          />
+
+          {withoutCriteria.length > 0 && (
+            <AINote tone="warning" className="mb-3">
+              {withoutCriteria.length === 1
+                ? `A etapa "${withoutCriteria[0]?.name}" não tem critério definido. Sem ele, a IA adivinha pelo nome da etapa e a precisão cai.`
+                : `${withoutCriteria.length} etapas não têm critério definido. Sem ele, a IA adivinha pelo nome da etapa e a precisão cai.`}
+            </AINote>
+          )}
+
+          <ul className="divide-y divide-slate-100 dark:divide-slate-700/60">
+            {stages.map((stage) => {
+              const hasCriteria = Boolean(stage.aiCriteria.trim());
+              return (
+                <li key={stage.id} className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0">
+                  <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
+                    hasCriteria
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400'
+                      : 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400'
+                  }`}>
+                    {hasCriteria ? <Check size={10}/> : <AlertTriangle size={10}/>}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-slate-900 dark:text-white">{stage.name}</p>
+                    <p className={`mt-0.5 text-xs leading-relaxed ${hasCriteria ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 italic dark:text-slate-500'}`}>
+                      {hasCriteria ? stage.aiCriteria : 'Sem critério definido'}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
     </div>
-
-    {stages.length > 0 && (<div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-white">Critérios por etapa</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              É o critério que ensina a IA quando mover o lead. Edite cada etapa na tela do funil.
-          </p>
-        </div>
-        <Link href="/funnel" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-            Abrir funil
-        </Link>
-      </div>
-
-      {withoutCriteria.length > 0 && (<div className="flex items-start gap-2 mb-4 px-3 py-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-900/20">
-        <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5"/>
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          {withoutCriteria.length === 1
-            ? `A etapa "${withoutCriteria[0]?.name}" não tem critério definido. Sem ele, a IA precisa adivinhar pelo nome da etapa e a precisão cai.`
-            : `${withoutCriteria.length} etapas não têm critério definido. Sem ele, a IA precisa adivinhar pelo nome da etapa e a precisão cai.`}
-        </p>
-      </div>)}
-
-      <ul className="space-y-2">
-        {stages.map((stage) => {
-          const hasCriteria = Boolean(stage.aiCriteria.trim());
-          return (<li key={stage.id} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-100 dark:border-slate-700">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${hasCriteria ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-slate-200 dark:bg-slate-600'}`}>
-              {hasCriteria
-                ? <Check size={12} className="text-emerald-600 dark:text-emerald-400"/>
-                : <AlertTriangle size={12} className="text-slate-500 dark:text-slate-400"/>}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{stage.name}</p>
-              <p className={`text-xs mt-0.5 leading-relaxed ${hasCriteria ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500 italic'}`}>
-                {hasCriteria ? stage.aiCriteria : 'Sem critério definido'}
-              </p>
-            </div>
-          </li>);
-        })}
-      </ul>
-    </div>)}
-  </div>);
+  );
 }
