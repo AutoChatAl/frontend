@@ -3,10 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
-import { authService } from '@/services/auth.service';
-import { channelsService } from '@/services/channels.service';
 import { funnelService } from '@/services/funnel.service';
-import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AiCatalogScope, AIChannel, AiProfile } from '@/types/AI';
 import type { InstagramProductLayout, Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
@@ -62,59 +59,27 @@ export function useAIConfig() {
   }, []);
   const loadChannels = useCallback(async (currentActiveChannelIds: string[]) => {
     try {
-      const user = authService.getUser();
-      const isOwner = !user?.role || user.role === 'owner' || user.role === 'admin';
-      if (isOwner) {
-        const allChannels = await aiService.listChannels();
-        // Canal do próprio dono: `active` é relativo ao perfil aberto, e um canal ligado em
-        // outro perfil dele aparece desligado, com o aviso de onde está. Canal de colaborador
-        // continua com o estado do workspace — a régua de perfis aqui não é a dele, e o dono
-        // precisa seguir podendo ligar e desligar a IA nesses canais.
-        const currentUserId = user?.id ?? null;
-        const mapped: AIChannel[] = allChannels.map((ch) => {
-          const isOwnChannel = !ch.createdBy || ch.createdBy === currentUserId;
-          return {
-            id: ch.id,
-            name: ch.name,
-            type: ch.type.toLowerCase() as AIChannel['type'],
-            active: isOwnChannel ? currentActiveChannelIds.includes(ch.id) : ch.aiEnabled,
-            identifier: '',
-            createdBy: ch.createdBy,
-            ownerName: ch.ownerName,
-            aiProfileId: isOwnChannel ? ch.aiProfileId : null,
-            aiProfileName: isOwnChannel ? ch.aiProfileName : null,
-          };
-        });
-        setChannels(mapped);
-        return;
-      }
-      const [whatsappInstances, officialInstances, instagramAccounts] = await Promise.all([
-        channelsService.getWhatsAppInstances().catch(() => []),
-        whatsappOfficialService.getInstances().catch(() => []),
-        channelsService.getInstagramAccounts().catch(() => []),
-      ]);
-      const waChannels: AIChannel[] = whatsappInstances.map((inst) => ({
-        id: inst.id,
-        name: inst.name,
-        type: 'whatsapp' as const,
-        active: currentActiveChannelIds.includes(inst.id),
-        identifier: inst.whatsapp?.phoneNumber || inst.number || '',
+      // Fonte única: o /ai/channels é o que sabe QUAL perfil segura cada canal.
+      // Antes o colaborador montava a lista pelos endpoints crus de canal e
+      // marcava "ligado" só pelo próprio perfil — um canal atendido pelo perfil
+      // de outra pessoa aparecia desligado e, ao clicar, voltava o erro de
+      // "já está em outro perfil". Duas fontes de verdade para o mesmo estado.
+      const allChannels = await aiService.listChannels();
+      const mapped: AIChannel[] = allChannels.map((ch) => ({
+        id: ch.id,
+        name: ch.name,
+        type: ch.type.toLowerCase() as AIChannel['type'],
+        // Ligado aqui = preso ao perfil que está aberto. Em qualquer outro
+        // perfil o cartão mostra de quem é e pede para desligar lá.
+        active: currentActiveChannelIds.includes(ch.id),
+        identifier: ch.identifier ?? '',
+        createdBy: ch.createdBy,
+        ownerName: ch.ownerName,
+        aiProfileId: ch.aiProfileId,
+        aiProfileName: ch.aiProfileName,
+        aiProfileOwnerName: ch.aiProfileOwnerName,
       }));
-      const officialChannels: AIChannel[] = officialInstances.map((inst) => ({
-        id: inst.id,
-        name: inst.whatsappOfficial.verifiedName || inst.name,
-        type: 'whatsapp_official' as const,
-        active: currentActiveChannelIds.includes(inst.id),
-        identifier: inst.whatsappOfficial.displayPhoneNumber || '',
-      }));
-      const igChannels: AIChannel[] = instagramAccounts.map((acc) => ({
-        id: acc.id,
-        name: acc.name,
-        type: 'instagram' as const,
-        active: currentActiveChannelIds.includes(acc.id),
-        identifier: acc.instagram?.username || '',
-      }));
-      setChannels([...waChannels, ...officialChannels, ...igChannels]);
+      setChannels(mapped);
     }
     catch {
       setChannels([]);
@@ -273,7 +238,11 @@ export function useAIConfig() {
     setSaving(true);
     try {
       const target = channels.find((ch) => ch.id === channelId);
-      if (target?.active) {
+      // Decide pelo perfil que SEGURA o canal, não pelo `active` do perfil aberto:
+      // o dono vê ligado um canal preso ao perfil de um colaborador, e o toque ali
+      // precisa desligar. O backend já barra quem não pode soltar o canal.
+      const heldBySomeProfile = !!target?.aiProfileId;
+      if (target?.active || heldBySomeProfile) {
         await aiService.deactivateAi(channelId, activeProfileRef.current);
         addToast('success', 'IA desativada com sucesso.');
       }

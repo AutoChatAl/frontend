@@ -156,11 +156,13 @@ class AiService {
         type: string;
         status: string;
         createdBy: string | null;
+        identifier: string;
         ownerName: string | null;
         ownerEmail: string | null;
         aiEnabled: boolean;
         aiProfileId: string | null;
         aiProfileName: string | null;
+        aiProfileOwnerName: string | null;
     }>> {
     const response = await apiClient.get<Array<{
             id: string;
@@ -168,11 +170,13 @@ class AiService {
             type: string;
             status: string;
             createdBy: string | null;
+            identifier: string;
             ownerName: string | null;
             ownerEmail: string | null;
             aiEnabled: boolean;
             aiProfileId: string | null;
             aiProfileName: string | null;
+            aiProfileOwnerName: string | null;
         }>>('/ai/channels');
     if (response.success && response.data) {
       return response.data as Array<{
@@ -181,11 +185,13 @@ class AiService {
                 type: string;
                 status: string;
                 createdBy: string | null;
+                identifier: string;
                 ownerName: string | null;
                 ownerEmail: string | null;
                 aiEnabled: boolean;
                 aiProfileId: string | null;
                 aiProfileName: string | null;
+                aiProfileOwnerName: string | null;
             }>;
     }
     return [];

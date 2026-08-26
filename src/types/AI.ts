@@ -11,6 +11,8 @@ export interface AIChannel {
     /** Perfil de IA que hoje responde por este canal — null quando a IA está desligada nele. */
     aiProfileId?: string | null;
     aiProfileName?: string | null;
+    /** Dono do perfil que segurou o canal, quando é de outra pessoa do time. */
+    aiProfileOwnerName?: string | null;
 }
 /** Um canal só pode responder por um perfil, então cada perfil tem seus próprios canais. */
 export interface AiProfile {

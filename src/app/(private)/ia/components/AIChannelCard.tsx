@@ -19,7 +19,9 @@ export default function AIChannelCard({ channel, active, onToggle, blocked = fal
   const isOfficial = channel.type === 'whatsapp_official';
   const isWhatsApp = channel.type === 'whatsapp' || isOfficial;
   const Icon = isOfficial ? BadgeCheck : isWhatsApp ? MessageCircle : Instagram;
-  const meta = [channel.identifier, channel.ownerName ? `Colaborador: ${channel.ownerName}` : ''].filter(Boolean).join(' · ');
+  // "Conectado por" e não "Colaborador": agora o time inteiro enxerga os mesmos
+  // canais, e quem aparece aqui pode ser o dono da conta vendo-o de fora.
+  const meta = [channel.identifier, channel.ownerName ? `Conectado por ${channel.ownerName}` : ''].filter(Boolean).join(' · ');
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${

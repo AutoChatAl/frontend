@@ -48,21 +48,28 @@ export default function AIChannelsList({ channels, onToggle, activeProfileId }: 
       ) : (
         <div className="space-y-2">
           {channels.map((channel) => {
-            // Canal preso em outro perfil: desligar lá é a única forma de trazê-lo para cá.
-            const heldElsewhere = !channel.active && !!channel.aiProfileId && channel.aiProfileId !== activeProfileId;
-            const blocked = heldElsewhere || (limitReached && !channel.active);
-            const blockedReason = heldElsewhere
-              ? `Este canal já é atendido pelo ${channel.aiProfileName ?? 'outro perfil'}. Desligue-o lá antes de ativar aqui.`
-              : `Seu plano de IA permite ${maxAiChannels} ${maxAiChannels === 1 ? 'canal ativo' : 'canais ativos'}. Desligue outro canal para liberar este.`;
+            // Canal atendido por outro perfil aparece LIGADO, porque é a verdade: a
+            // IA está respondendo por ali. O toque desliga, e só depois disso ele
+            // fica livre para ser ativado no perfil aberto — é o caminho de troca.
+            const inOtherProfile = !channel.active && !!channel.aiProfileId && channel.aiProfileId !== activeProfileId;
+            const showAsActive = channel.active || inOtherProfile;
+            // Só a cota do plano trava o botão; desligar nunca é bloqueado.
+            const blocked = limitReached && !showAsActive;
+            // Dizer de quem é o perfil importa: com o time todo enxergando os
+            // mesmos canais, "outro perfil" sem dono não diz a quem pedir.
+            const heldBy = channel.aiProfileOwnerName
+              ? `${channel.aiProfileName ?? 'outro perfil'} (de ${channel.aiProfileOwnerName})`
+              : (channel.aiProfileName ?? 'outro perfil');
+            const blockedReason = `Seu plano de IA permite ${maxAiChannels} ${maxAiChannels === 1 ? 'canal ativo' : 'canais ativos'}. Desligue outro canal para liberar este.`;
             return (
               <AIChannelCard
                 key={channel.id}
                 channel={channel}
-                active={channel.active}
+                active={showAsActive}
                 onToggle={onToggle}
                 blocked={blocked}
                 blockedReason={blockedReason}
-                {...(heldElsewhere && channel.aiProfileName ? { heldByProfileName: channel.aiProfileName } : {})}
+                {...(inOtherProfile && channel.aiProfileName ? { heldByProfileName: heldBy } : {})}
               />
             );
           })}

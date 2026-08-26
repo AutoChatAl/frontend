@@ -4,11 +4,13 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/components/Button';
+import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 import AICatalogSection from './components/AICatalogSection';
 import AIChannelsList from './components/AIChannelsList';
@@ -29,6 +31,8 @@ export default function IAPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const { hasAiPlan, loading: subLoading, status } = useSubscription();
+  const user = useAuthUser();
+  const canManageBilling = !user?.role || user.role === 'owner' || user.role === 'admin';
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');
@@ -56,7 +60,24 @@ export default function IAPage() {
     return <PageLoader message="Carregando configurações de IA"/>;
   }
   if (!hasAiPlan) {
-    return <AiPlanGate />;
+    // Contratar plano é ação de cobrança, do dono. Mostrar a vitrine de planos a
+    // um colaborador com permissão de IA só o deixa numa tela que ele não pode
+    // concluir — o certo é dizer que a IA ainda não foi ativada na conta.
+    return canManageBilling
+      ? <AiPlanGate />
+      : (<Card className="mx-auto mt-10 max-w-lg p-8 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10">
+          <Bot size={24} className="text-violet-600 dark:text-violet-400"/>
+        </div>
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+          A IA ainda não está ativa nesta conta
+        </h1>
+        <p className="mt-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+          Você tem permissão para configurar a inteligência artificial, mas o plano de IA
+          precisa ser contratado pelo administrador da conta. Peça a ele para ativar e esta
+          tela abre automaticamente.
+        </p>
+      </Card>);
   }
   return (<div className="w-full max-w-full space-y-3">
     <div className="min-w-0">
