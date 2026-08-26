@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Bot,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -11,6 +10,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import BrandLogo from '@/components/BrandLogo';
 import type { TourPlacement, TourStep } from '@/components/onboarding/tours';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
@@ -153,9 +153,9 @@ function WelcomeModal({
           {/* Vignette nas bordas */}
           <div className="absolute inset-0 bg-radial-gradient pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(2,6,23,0.9) 100%)' }} />
 
-          {/* Bot icon central */}
+          {/* Marca no centro */}
           <div className="relative w-20 h-20 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/15 flex items-center justify-center shadow-2xl shadow-emerald-500/20">
-            <Bot size={40} className="text-white" />
+            <BrandLogo size={40} on="dark"/>
             <Sparkles size={12} className="absolute -top-1 -right-1 text-emerald-300 animate-pulse" />
           </div>
         </div>

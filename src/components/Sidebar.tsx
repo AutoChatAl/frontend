@@ -1,9 +1,9 @@
 'use client';
 import { Menu, LogOut, X, ChevronDown, Lock } from 'lucide-react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import BrandLogo from '@/components/BrandLogo';
 import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
@@ -232,8 +232,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         `}>
       <div className="h-14 flex items-center justify-center border-b border-slate-100 dark:border-slate-700 px-3">
         <div className={`flex items-center gap-2 w-full overflow-hidden ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          {/* O roxo da marca some no fundo escuro da sidebar, daí o brightness no dark. */}
-          <Image src="/logo.png" alt={brandName} width={28} height={28} priority className="h-7 w-7 shrink-0 object-contain dark:brightness-[1.9]"/>
+          <BrandLogo size={28} alt={brandName} priority/>
           {!sidebarCollapsed && (<span className="font-semibold text-[15px] text-slate-900 dark:text-white tracking-tight">
             {brandName}
           </span>)}
@@ -284,7 +283,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       `}>
       <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <Image src="/logo.png" alt="" width={24} height={24} className="h-6 w-6 shrink-0 object-contain dark:brightness-[1.9]"/>
+          <BrandLogo size={24}/>
           <span className="text-base font-semibold text-slate-900 dark:text-white">{brandName}</span>
         </div>
         <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1">

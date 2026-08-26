@@ -4,11 +4,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 import Input from '@/components/Input';
+import { resolveLandingRoute } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
 import { collaboratorService } from '@/services/collaborator.service';
 
 import AuthShell from '../components/AuthShell';
-import { resolveLandingRoute } from '@/contexts/SidebarContext';
 
 function InviteForm() {
   const router = useRouter();

@@ -1,11 +1,12 @@
 'use client';
-import { Bot, Instagram, Lock, MessageCircle, MessageSquare, PartyPopper, Send, Sparkles } from 'lucide-react';
+import { Bot, Instagram, Lock, MessageCircle, MessageSquare, PartyPopper, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import AutomationModal from '@/app/(private)/auto-replies/components/AutomationModal';
 import CreateCampaignModal from '@/app/(private)/campaigns/components/CreateCampaignModal';
 import WhatsAppCreateModal from '@/app/(private)/channels/components/WhatsAppCreateModal';
+import BrandLogo from '@/components/BrandLogo';
 import Button from '@/components/Button';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useInstagramAccounts, useWhatsAppInstances } from '@/hooks/ChannelHook';
@@ -283,9 +284,9 @@ export default function GetStartedPage() {
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-          <Sparkles size={18} />
-          <span className="text-sm font-bold tracking-tight">Synq</span>
+        <div className="flex items-center gap-2">
+          <BrandLogo size={22}/>
+          <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Synq</span>
         </div>
 
         <header className="mt-8">

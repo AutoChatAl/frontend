@@ -1,7 +1,8 @@
 'use client';
-import { ArrowLeft, Bot, Compass, Home } from 'lucide-react';
+import { ArrowLeft, Compass, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import BrandLogo from '@/components/BrandLogo';
 import Button from '@/components/Button';
 
 export default function NotFound() {
@@ -9,9 +10,7 @@ export default function NotFound() {
   return (<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
     <div className="w-full max-w-md text-center space-y-6">
       <div className="flex items-center justify-center gap-2">
-        <div className="w-9 h-9 bg-linear-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-200 dark:shadow-none">
-          <Bot size={20} className="text-white"/>
-        </div>
+        <BrandLogo size={36}/>
         <span className="font-bold text-xl text-slate-800 dark:text-white tracking-tight">Synq</span>
       </div>
 
