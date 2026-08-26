@@ -1,5 +1,6 @@
 'use client';
-import { Bot, Menu, Sparkles, LogOut, X, ChevronDown, Lock } from 'lucide-react';
+import { Menu, LogOut, X, ChevronDown, Lock } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -231,9 +232,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         `}>
       <div className="h-14 flex items-center justify-center border-b border-slate-100 dark:border-slate-700 px-3">
         <div className={`flex items-center gap-2 w-full overflow-hidden ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-7 h-7 bg-linear-to-br from-indigo-600 to-violet-600 rounded-md flex items-center justify-center shrink-0">
-            <Bot size={15} className="text-white"/>
-          </div>
+          {/* O roxo da marca some no fundo escuro da sidebar, daí o brightness no dark. */}
+          <Image src="/logo.png" alt={brandName} width={28} height={28} priority className="h-7 w-7 shrink-0 object-contain dark:brightness-[1.9]"/>
           {!sidebarCollapsed && (<span className="font-semibold text-[15px] text-slate-900 dark:text-white tracking-tight">
             {brandName}
           </span>)}
@@ -247,8 +247,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       <div className="p-2.5 border-t border-slate-100 dark:border-slate-700">
         {!sidebarCollapsed && (<div onClick={() => router.push('/settings?tab=billing')} className="bg-slate-50 dark:bg-slate-700/40 p-2.5 rounded-md border border-slate-200 dark:border-slate-700 mb-2 cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500 transition-colors">
           <div className="flex items-center gap-1.5 mb-1.5">
-            
-            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">{isCanceled ? 'Plano cancelado' :`Plano ${planName}` }</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">{isCanceled ? 'Plano cancelado' : `Plano ${planName}`}</span>
             {isTrialing && (<span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">
                     Teste
             </span>)}
@@ -284,7 +283,10 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
       <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-700">
-        <span className="font-semibold text-base text-slate-900 dark:text-white">{brandName}</span>
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="" width={24} height={24} className="h-6 w-6 shrink-0 object-contain dark:brightness-[1.9]"/>
+          <span className="text-base font-semibold text-slate-900 dark:text-white">{brandName}</span>
+        </div>
         <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1">
           <X size={20}/>
         </button>
