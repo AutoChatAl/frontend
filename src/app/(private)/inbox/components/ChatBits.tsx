@@ -45,12 +45,12 @@ export const CHANNEL_LABEL: Record<InboxChannelType, string> = {
 };
 
 /**
- * O rótulo é o número/@ do canal que recebeu a mensagem — o ícone já diz a
- * plataforma. Sem identificador (canal apagado, número não pareado) cai no nome
- * da plataforma para não ficar um selo vazio.
+ * O rótulo identifica o canal que recebeu a mensagem — o ícone já diz a
+ * plataforma. Sem um rótulo disponível (canal apagado), cai no nome da
+ * plataforma para não ficar um selo vazio.
  */
-export function channelBadge(type: InboxChannelType, identifier?: string | null) {
-  const label = identifier?.trim() || CHANNEL_LABEL[type];
+export function channelBadge(type: InboxChannelType, channelLabel?: string | null) {
+  const label = channelLabel?.trim() || CHANNEL_LABEL[type];
   if (type === 'INSTAGRAM') {
     return <Badge type="instagram" text={label} icon={Instagram} pill/>;
   }

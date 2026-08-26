@@ -85,7 +85,10 @@ export default function ConversationContextPanel({
         </p>)}
       </div>
       <div className="flex justify-center">
-        {channelBadge(conversation.channelType, conversation.channelIdentifier)}
+        {channelBadge(
+          conversation.channelType,
+          conversation.channelName || conversation.channelIdentifier,
+        )}
       </div>
     </div>
 
@@ -202,7 +205,7 @@ export default function ConversationContextPanel({
       <SectionTitle>Detalhes</SectionTitle>
       <div className="mt-1 divide-y divide-slate-100 dark:divide-slate-700/60">
         <Row label="Canal" value={CHANNEL_LABEL[conversation.channelType]}/>
-        <Row label="Recebido em" value={conversation.channelIdentifier || conversation.channelName || '—'}/>
+        <Row label="Recebido em" value={conversation.channelName || conversation.channelIdentifier || '—'}/>
         <Row label="Última mensagem" value={relativeTime(conversation.lastMessageAt)}/>
         <Row label="Conversa criada" value={new Date(conversation.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}/>
         <Row label="Mensagens na janela" value={messageCount.toLocaleString('pt-BR')}/>

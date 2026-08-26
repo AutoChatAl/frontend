@@ -238,11 +238,12 @@ export function useAIConfig() {
     setSaving(true);
     try {
       const target = channels.find((ch) => ch.id === channelId);
-      // Decide pelo perfil que SEGURA o canal, não pelo `active` do perfil aberto:
-      // o dono vê ligado um canal preso ao perfil de um colaborador, e o toque ali
-      // precisa desligar. O backend já barra quem não pode soltar o canal.
-      const heldBySomeProfile = !!target?.aiProfileId;
-      if (target?.active || heldBySomeProfile) {
+      const heldByAnotherProfile = !!target?.aiProfileId && target.aiProfileId !== activeProfileRef.current;
+      if (heldByAnotherProfile) {
+        addToast('error', `Este canal já está ativo no ${target.aiProfileName ?? 'outro perfil'}. Desative-o nesse perfil antes de ativar aqui.`);
+        return;
+      }
+      if (target?.active) {
         await aiService.deactivateAi(channelId, activeProfileRef.current);
         addToast('success', 'IA desativada com sucesso.');
       }
@@ -345,7 +346,9 @@ export function useAIConfig() {
   const deleteProduct = useCallback(async (id: string) => {
     setSaving(true);
     try {
-      await aiService.deleteProduct(id);
+      const { layoutChanged } = await aiService.deleteProduct(id);
+      if (layoutChanged)
+        setInstagramProductLayout('QUICK_REPLY');
       await loadProducts(productPage, productSearch);
       addToast('success', 'Produto removido.');
     }
@@ -359,7 +362,9 @@ export function useAIConfig() {
   const clearProducts = useCallback(async () => {
     setSaving(true);
     try {
-      const deleted = await aiService.deleteAllProducts(activeProfileRef.current);
+      const { deleted, layoutChanged } = await aiService.deleteAllProducts(activeProfileRef.current);
+      if (layoutChanged)
+        setInstagramProductLayout('QUICK_REPLY');
       await loadProducts(1, '');
       setProductSearch('');
       addToast('success', deleted > 0 ? `${deleted} itens removidos do catálogo.` : 'O catálogo já estava vazio.');

@@ -244,16 +244,17 @@ class AiService {
       throw new Error('Falha ao remover a imagem do produto.');
     return response.data as Product;
   }
-  public async deleteProduct(id: string): Promise<void> {
-    const response = await apiClient.delete(`/ai/products/${id}`);
+  public async deleteProduct(id: string): Promise<{ layoutChanged: boolean }> {
+    const response = await apiClient.delete<{ layoutChanged: boolean }>(`/ai/products/${id}`);
     if (!response.success)
       throw new Error('Falha ao remover produto.');
+    return (response.data as { layoutChanged: boolean } | undefined) ?? { layoutChanged: false };
   }
-  public async deleteAllProducts(profileId?: string | null): Promise<number> {
-    const response = await apiClient.delete<{ deleted: number }>(`/ai/products${profileId ? `?profileId=${encodeURIComponent(profileId)}` : ''}`);
+  public async deleteAllProducts(profileId?: string | null): Promise<{ deleted: number; layoutChanged: boolean }> {
+    const response = await apiClient.delete<{ deleted: number; layoutChanged: boolean }>(`/ai/products${profileId ? `?profileId=${encodeURIComponent(profileId)}` : ''}`);
     if (!response.success)
       throw new Error('Falha ao limpar o catálogo.');
-    return (response.data as { deleted: number } | undefined)?.deleted ?? 0;
+    return (response.data as { deleted: number; layoutChanged: boolean } | undefined) ?? { deleted: 0, layoutChanged: false };
   }
   public async importProducts(file: File, mode: ProductImportMode, profileId?: string | null): Promise<ProductImportReport> {
     const fileBase64 = await this.readFileAsBase64(file);

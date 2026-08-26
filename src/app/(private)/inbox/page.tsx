@@ -167,7 +167,10 @@ function ConversationRow({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          {channelBadge(conversation.channelType, conversation.channelIdentifier)}
+          {channelBadge(
+            conversation.channelType,
+            conversation.channelName || conversation.channelIdentifier,
+          )}
           {conversation.awaitingHuman && !assignedTo && (
             <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
               aguardando
@@ -412,9 +415,8 @@ export default function InboxPage() {
   ];
 
   return (
-    // Altura = viewport − header (4rem) − padding vertical do main (p-3/sm:p-5),
-    // com teto para o chat não se esticar de ponta a ponta em telas altas.
-    <div className="flex h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] max-h-176 flex-col gap-3">
+    // Altura = viewport − header (4rem) − padding vertical do main (p-3/sm:p-5).
+    <div className="flex h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] flex-col gap-3">
       {/* Cabeçalho some no celular: a caixa de entrada usa a altura toda. */}
       <div className="hidden sm:flex items-end justify-between gap-3">
         <div className="min-w-0">
@@ -576,7 +578,10 @@ export default function InboxPage() {
                       {selectedConversation.assignedTo === currentUserId ? 'Você' : selectedConversation.assignedToName}
                     </span>
                   )}
-                  {channelBadge(selectedConversation.channelType, selectedConversation.channelIdentifier)}
+                  {channelBadge(
+                    selectedConversation.channelType,
+                    selectedConversation.channelName || selectedConversation.channelIdentifier,
+                  )}
                   <button
                     type="button"
                     onClick={toggleDetails}
