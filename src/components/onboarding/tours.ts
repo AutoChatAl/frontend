@@ -108,15 +108,6 @@ const ALL_TOURS: TourConfig[] = [
         placement: 'right',
       },
       {
-        id: 'dashboard:comments-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-comment-automations"]',
-        title: 'Automação de comentários no Instagram',
-        description:
-          'Responda comentários em posts ou Reels automaticamente, e ainda envie um DM com link/cupom para cada pessoa que comentar.',
-        placement: 'right',
-      },
-      {
         id: 'dashboard:cart-recovery-nav',
         tourId: 'dashboard',
         selector: '[data-tour="sidebar-cart-recovery"]',
@@ -165,10 +156,10 @@ const ALL_TOURS: TourConfig[] = [
       {
         id: 'channels:tabs',
         tourId: 'channels',
-        selector: '[data-tour="channels-tabs"]',
-        title: 'Escolha o tipo de canal',
+        selector: '[data-tour="channels-cards"]',
+        title: 'Um card por tipo de canal',
         description:
-          'Alterne entre WhatsApp e Instagram. Você pode ter vários canais conectados ao mesmo tempo, inclusive contas distintas.',
+          'WhatsApp e Instagram ficam lado a lado, cada um listando as contas já conectadas. Você pode ter vários canais ao mesmo tempo, inclusive contas distintas.',
         placement: 'bottom',
       },
       {
@@ -177,8 +168,8 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="channels-add"]',
         title: 'Adicione uma nova instância',
         description:
-          'Clique para conectar uma nova conta. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
-        placement: 'left',
+          'Cada card tem seu botão de conectar. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
+        placement: 'bottom',
       },
     ],
   },
@@ -206,34 +197,6 @@ const ALL_TOURS: TourConfig[] = [
         title: 'Crie uma nova regra',
         description:
           'Escolha o tipo de match (contém, exato, começa com), a palavra-chave e a resposta. Pode anexar mídia e áudio também.',
-        placement: 'left',
-      },
-    ],
-  },
-
-  {
-    id: 'comment-automations',
-    pathname: '/comment-automations',
-    label: 'Comentários',
-    permission: 'auto-replies',
-    steps: [
-      {
-        id: 'comment-automations:intro',
-        tourId: 'comment-automations',
-        selector: null,
-        title: 'Automação de comentários no Instagram',
-        description:
-          'Quando alguém comentar a palavra-chave no seu post/Reel, a plataforma responde no comentário e ainda envia um DM com o que você quiser.',
-        placement: 'center',
-        allowMissingTarget: true,
-      },
-      {
-        id: 'comment-automations:new',
-        tourId: 'comment-automations',
-        selector: '[data-tour="comment-automations-new"]',
-        title: 'Crie sua primeira automação',
-        description:
-          'Escolha o post, a palavra-chave de gatilho e a resposta no DM (com link, cupom, áudio ou imagem). Aumenta muito a conversão.',
         placement: 'left',
       },
     ],

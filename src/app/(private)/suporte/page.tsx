@@ -338,7 +338,7 @@ export default function SupportPage() {
 
     <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="flex h-[70vh] min-h-0 max-h-[70vh] flex-col rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800">
           <Search size={16} className="text-slate-400"/>
           <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou mensagem" className="w-full bg-transparent text-sm text-slate-700 outline-none dark:text-slate-200"/>
         </div>
@@ -435,7 +435,7 @@ export default function SupportPage() {
             {error && <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</div>}
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} placeholder="Responder atendimento..." className="min-h-26 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-950 dark:text-white"/>
+              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} placeholder="Responder atendimento..." className="min-h-26 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-800 dark:text-white"/>
               <div className="flex items-center gap-2 lg:flex-col">
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => {
                   const nextFile = event.target.files?.[0] || null;

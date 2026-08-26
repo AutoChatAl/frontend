@@ -3,7 +3,12 @@ export interface AutoReply {
     workspaceId: string;
     channelId: string;
     channelType: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
+    /** Primeira palavra-chave. Mantido para as regras criadas antes de `keywords`. */
     keyword: string;
+    /** Vazio nas regras antigas — aí vale só `keyword`. */
+    keywords?: string[];
+    /** ANY = basta uma bater. ALL = todas precisam estar na mensagem. */
+    keywordLogic?: 'ANY' | 'ALL';
     matchMode: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive: boolean;
     replyType: 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'DOCUMENT' | 'TEXT_AND_DOCUMENT' | 'DOCUMENT_AND_AUDIO';
@@ -27,6 +32,8 @@ export interface CreateAutoReplyInput {
     channelId: string;
     channelType: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     keyword: string;
+    keywords?: string[];
+    keywordLogic?: 'ANY' | 'ALL';
     matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive?: boolean;
     replyType?: ReplyType;
@@ -47,6 +54,8 @@ export interface UpdateAutoReplyInput {
     channelId?: string;
     channelType?: 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
     keyword?: string;
+    keywords?: string[];
+    keywordLogic?: 'ANY' | 'ALL';
     matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive?: boolean;
     replyType?: ReplyType;

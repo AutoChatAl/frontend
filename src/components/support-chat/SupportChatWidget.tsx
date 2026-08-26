@@ -144,7 +144,7 @@ export default function SupportChatWidget() {
         </div>
 
         <div className="border-t border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950">
-          {!closedConversationMessage && (<textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} placeholder="Digite sua mensagem..." className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-white"/>)}
+          {!closedConversationMessage && (<textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} placeholder="Digite sua mensagem..." className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-800 dark:text-white"/>)}
 
           {!closedConversationMessage && imageFile && (<div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
             <span className="truncate">{imageFile.name}</span>

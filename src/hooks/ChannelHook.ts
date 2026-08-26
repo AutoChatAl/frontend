@@ -1,14 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { channelsService } from '@/services/channels.service';
 import type { InstagramAccount, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
 import { getErrorMessageFromCatch } from '@/utils/ErrorHandling';
 
-export function useWhatsAppInstances() {
+/**
+ * @param options.enabled  `false` não busca nada. Serve para quem não tem a
+ *   permissão `channels`: sem isso a página dispararia um 403 por carga.
+ */
+export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-  const fetchInstances = async () => {
+  const fetchInstances = useCallback(async () => {
+    if (!enabled) {
+      setInstances([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -21,10 +31,10 @@ export function useWhatsAppInstances() {
     finally {
       setLoading(false);
     }
-  };
+  }, [enabled]);
   useEffect(() => {
     fetchInstances();
-  }, []);
+  }, [fetchInstances]);
   const createInstance = async (data: {
         name?: string;
         systemName?: string;
@@ -75,6 +85,28 @@ export function useWhatsAppInstances() {
       throw new Error(errorMsg);
     }
   };
+  const disconnectInstance = async (id: string) => {
+    try {
+      await channelsService.disconnectWhatsAppInstance(id);
+      await fetchInstances();
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao desativar instância');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
+  const renameInstance = async (id: string, name: string) => {
+    try {
+      await channelsService.renameWhatsAppInstance(id, name);
+      setInstances((prev) => prev.map((inst) => (inst.id === id ? { ...inst, name } : inst)));
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear instância');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
   const deleteInstance = async (id: string) => {
     try {
       await channelsService.deleteWhatsAppInstance(id);
@@ -93,16 +125,25 @@ export function useWhatsAppInstances() {
     refetch: fetchInstances,
     createInstance,
     connectInstance,
+    disconnectInstance,
+    renameInstance,
     getQRCode,
     getStatus,
     deleteInstance,
   };
 }
-export function useInstagramAccounts() {
+/** @param options.enabled  igual a useWhatsAppInstances — evita 403 inútil. */
+export function useInstagramAccounts(options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
   const [accounts, setAccounts] = useState<InstagramAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
+    if (!enabled) {
+      setAccounts([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -115,10 +156,10 @@ export function useInstagramAccounts() {
     finally {
       setLoading(false);
     }
-  };
+  }, [enabled]);
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
   const deleteAccount = async (id: string) => {
     try {
       await channelsService.deleteInstagramAccount(id);
@@ -126,6 +167,17 @@ export function useInstagramAccounts() {
     }
     catch (err) {
       const errorMsg = getErrorMessageFromCatch(err, 'Erro ao deletar conta');
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
+  const renameAccount = async (id: string, name: string) => {
+    try {
+      await channelsService.renameInstagramAccount(id, name);
+      setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, name } : acc)));
+    }
+    catch (err) {
+      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear conta');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -147,6 +199,7 @@ export function useInstagramAccounts() {
     error,
     refetch: fetchAccounts,
     deleteAccount,
+    renameAccount,
     getOAuthUrl,
   };
 }

@@ -1,39 +1,86 @@
 'use client';
-import { Clock, Loader2, Mail, Plus, Trash2, Users, Edit3, X, Check } from 'lucide-react';
+import { Check, Clock, Edit3, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
+import SectionHeader from '@/components/SectionHeader';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService, type AuthUser, type Permission } from '@/services/auth.service';
 import { collaboratorService, type Member, type Invite } from '@/services/collaborator.service';
+import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
-const PERMISSION_OPTIONS: {
+interface PermissionOption {
     value: Permission;
     label: string;
-}[] = [
-  { value: 'contacts', label: 'Contatos' },
-  { value: 'groups', label: 'Grupos' },
-  { value: 'campaigns', label: 'Campanhas' },
-  { value: 'scheduling', label: 'Agendamentos' },
-  { value: 'auto-replies', label: 'Auto-Respostas' },
-  { value: 'ia', label: 'IA' },
-  { value: 'channels', label: 'Canais' },
+    hint: string;
+    /** Some da lista quando a feature está oculta na navegação. */
+    hidden?: boolean;
+}
+
+/**
+ * Espelha WORKSPACE_PERMISSIONS do backend, na mesma ordem da sidebar.
+ * Ao criar uma área nova no produto, adicione a permissão aqui, no tipo
+ * `Permission` (services/auth.service.ts) e no backend.
+ */
+const PERMISSION_OPTIONS: PermissionOption[] = [
+  { value: 'dashboard', label: 'Visão Geral', hint: 'Painel com métricas do workspace' },
+  { value: 'channels', label: 'Canais', hint: 'WhatsApp por QR Code e contas do Instagram' },
+  { value: 'whatsapp-official', label: 'API Oficial', hint: 'Números oficiais da Meta, templates e consumo' },
+  { value: 'inbox', label: 'Chat', hint: 'Atender conversas na caixa de entrada' },
+  { value: 'contacts', label: 'Contatos', hint: 'Base de contatos e fila de atendimento' },
+  { value: 'groups', label: 'Grupos', hint: 'Segmentações e listas' },
+  { value: 'campaigns', label: 'Campanhas', hint: 'Disparos e templates' },
+  { value: 'funnel', label: 'Funil', hint: 'Quadro de estágios e leads' },
+  { value: 'cart-recovery', label: 'Recuperação', hint: 'Recuperação de carrinhos abandonados', hidden: HIDDEN_FEATURES.cartRecovery },
+  { value: 'scheduling', label: 'Agendamentos', hint: 'Agenda, serviços e horários' },
+  { value: 'auto-replies', label: 'Auto-Respostas', hint: 'Respostas automáticas e automação de comentários' },
+  { value: 'ia', label: 'IA', hint: 'Configuração do agente de inteligência artificial' },
 ];
-function PermissionCheckbox({ label, checked, onChange }: {
+
+const VISIBLE_PERMISSION_OPTIONS = PERMISSION_OPTIONS.filter((opt) => !opt.hidden);
+const VISIBLE_PERMISSION_VALUES: Permission[] = VISIBLE_PERMISSION_OPTIONS.map((opt) => opt.value);
+
+/**
+ * O papel do membro, não a suposição de que "tudo que não é dono é
+ * colaborador" — uma conta `admin` (suporte do Synq) tem acesso total e
+ * aparecia como colaborador antes disso.
+ */
+function memberBadge(member: Member): { type: 'admin' | 'collaborator'; text: string } {
+  if (member.role === 'owner') return { type: 'admin', text: 'Administrador' };
+  if (member.role === 'admin') return { type: 'admin', text: 'Admin do sistema' };
+  return { type: 'collaborator', text: 'Colaborador' };
+}
+
+function allSelected(selected: Permission[]): boolean {
+  return VISIBLE_PERMISSION_VALUES.every((value) => selected.includes(value));
+}
+
+/**
+ * Alterna todas as opções VISÍVEIS preservando as ocultas que o membro já tem.
+ * Sem isso, "Marcar todas" apagaria silenciosamente uma permissão de feature
+ * escondida da navegação (hoje, Recuperação) na hora de salvar.
+ */
+function toggleAll(selected: Permission[]): Permission[] {
+  const hiddenKept = selected.filter((value) => !VISIBLE_PERMISSION_VALUES.includes(value));
+  return allSelected(selected) ? hiddenKept : [...hiddenKept, ...VISIBLE_PERMISSION_VALUES];
+}
+function PermissionCheckbox({ label, hint, checked, onChange }: {
     label: string;
+    hint?: string;
     checked: boolean;
     onChange: () => void;
 }) {
   return (<div role="checkbox" aria-checked={checked} tabIndex={0} onClick={onChange} onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') {
     e.preventDefault();
     onChange();
-  } }} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors select-none ${checked
+  } }} className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition-colors select-none ${checked
     ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/20'
     : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
     <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors shrink-0 ${checked
@@ -41,7 +88,10 @@ function PermissionCheckbox({ label, checked, onChange }: {
       : 'border-slate-300 dark:border-slate-600'}`}>
       {checked && <Check size={12} className="text-white"/>}
     </div>
-    <span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
+    <span className="min-w-0">
+      <span className="block text-[13px] leading-tight text-slate-700 dark:text-slate-300">{label}</span>
+      {hint && <span className="block text-[11px] leading-tight text-slate-400 dark:text-slate-500">{hint}</span>}
+    </span>
   </div>);
 }
 export default function MembersTab() {
@@ -69,7 +119,7 @@ export default function MembersTab() {
   const collaboratorLimit = usage?.collaborators?.limit ?? -1;
   const isUnlimitedCollaborators = collaboratorLimit === -1;
   // Vagas consumidas = colaboradores aceitos + convites pendentes (cada pendente ocupará uma vaga).
-  const usedCollaboratorSlots = members.filter((m) => m.role === 'collaborator').length + invites.length;
+  const usedCollaboratorSlots = members.filter((m) => !m.fullAccess).length + invites.length;
   const atCollaboratorLimit = !isUnlimitedCollaborators && usedCollaboratorSlots >= collaboratorLimit;
   const collaboratorLimitMessage = collaboratorLimit === 0
     ? `O plano ${planName} não inclui colaboradores. Faça upgrade para convidar.`
@@ -181,96 +231,104 @@ export default function MembersTab() {
       <Loader2 size={20} className="animate-spin text-slate-400"/>
     </div>);
   }
-  return (<>
-    <Card className="p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-        <div>
-          <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Users size={18} className="text-indigo-600 dark:text-indigo-400"/>
-              Equipe
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie quem tem acesso ao painel.</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            {isUnlimitedCollaborators
-              ? 'Colaboradores ilimitados'
-              : `${usedCollaboratorSlots} / ${collaboratorLimit} colaboradores`}
-          </p>
-        </div>
-        <Button size="sm" icon={<Plus size={14}/>} className="self-start sm:self-auto" disabled={atCollaboratorLimit} onClick={() => setShowInviteModal(true)}>
-            Convidar Membro
-        </Button>
-      </div>
-      {atCollaboratorLimit && (<div className="mb-4 sm:mb-6 -mt-1 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10 px-3.5 py-2.5">
-        <p className="text-xs text-amber-700 dark:text-amber-400">{collaboratorLimitMessage}</p>
-      </div>)}
+  return (<div className="space-y-3">
+    <Card className="p-4">
+      <SectionHeader
+        title="Equipe"
+        hint="Quem entra no painel e o que cada um pode abrir."
+        action={<>
+          <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold tabular-nums text-slate-600 dark:border-slate-700 dark:text-slate-300">
+            {isUnlimitedCollaborators ? 'Ilimitado' : `${usedCollaboratorSlots}/${collaboratorLimit}`}
+          </span>
+          <Button size="sm" icon={<Plus size={14}/>} disabled={atCollaboratorLimit} onClick={() => setShowInviteModal(true)} className="flex-1 justify-center py-2 sm:flex-none sm:py-1.5">
+              Convidar
+          </Button>
+        </>}
+      />
 
-      <div className="space-y-3">
-        {members.map((member) => (<div key={member.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 border border-slate-100 dark:border-slate-700 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-200 dark:border-indigo-800">
-              {getInitials(member.name)}
+      {atCollaboratorLimit && <Callout tone="warning" className="mb-3">{collaboratorLimitMessage}</Callout>}
+
+      <div className="space-y-2">
+        {members.map((member) => (
+          <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                {getInitials(member.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{member.name}</p>
+                  <Badge type={memberBadge(member).type} text={memberBadge(member).text} pill/>
+                  {member.isSelf && (
+                    <span className="rounded-full border border-slate-200 px-1.5 text-[10px] font-medium leading-4 text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                      você
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{member.email}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-white">{member.name}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{member.email}</p>
-            </div>
+            {/* `manageable` vem do servidor: dono, admin e a própria conta nunca
+                são editáveis nem removíveis por esta tela. */}
+            {member.manageable && (
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button type="button" title="Editar permissões" onClick={() => {
+                  setEditingMember(member);
+                  setEditPermissions([...member.permissions]);
+                }} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-700 dark:hover:text-indigo-400">
+                  <Edit3 size={15}/>
+                </button>
+                <button type="button" title="Remover membro" onClick={() => setDeleteTarget({ type: 'member', id: member.id, name: member.name })} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400">
+                  <Trash2 size={15}/>
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            {member.role === 'owner' ? (<Badge type="admin" text="Administrador"/>) : (<>
-              <Badge type="collaborator" text="Colaborador"/>
-              <button onClick={() => {
-                setEditingMember(member);
-                setEditPermissions([...member.permissions]);
-              }} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                <Edit3 size={14}/>
-              </button>
-              <button onClick={() => setDeleteTarget({ type: 'member', id: member.id, name: member.name })} className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                <Trash2 size={14}/>
-              </button>
-            </>)}
-          </div>
-        </div>))}
+        ))}
       </div>
     </Card>
 
-    {invites.length > 0 && (<Card className="p-4 sm:p-6">
-      <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
-        <Mail size={18} className="text-amber-600 dark:text-amber-400"/>
-            Convites Pendentes
-      </h3>
-      <div className="space-y-3">
-        {invites.map((invite) => (<div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 p-3 border border-amber-100 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-              <Clock size={18}/>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800 dark:text-white">{invite.email}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+    {invites.length > 0 && (
+      <Card className="p-4">
+        <SectionHeader title="Convites pendentes" hint="Cada convite já ocupa uma vaga do plano até ser aceito ou cancelado."/>
+        <div className="space-y-2">
+          {invites.map((invite) => (
+            <div key={invite.id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+                  <Clock size={16}/>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{invite.email}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                       Expira em {new Date(invite.expiresAt).toLocaleDateString('pt-BR')}
-              </p>
+                  </p>
+                </div>
+              </div>
+              <button type="button" title="Cancelar convite" onClick={() => setDeleteTarget({ type: 'invite', id: invite.id, name: invite.email })} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400">
+                <X size={15}/>
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge type="warning" text="Pendente"/>
-            <button onClick={() => setDeleteTarget({ type: 'invite', id: invite.id, name: invite.email })} className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-              <X size={14}/>
-            </button>
-          </div>
-        </div>))}
-      </div>
-    </Card>)}
+          ))}
+        </div>
+      </Card>
+    )}
 
     <Modal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} title="Convidar Colaborador" size="sm">
       <div className="space-y-5">
         <Input label="Email do colaborador" type="email" placeholder="colaborador@empresa.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}/>
 
         <div>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Permissões de acesso
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Permissões de acesso
+            </p>
+            <button type="button" onClick={() => setInvitePermissions(toggleAll(invitePermissions))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
+              {allSelected(invitePermissions) ? 'Limpar' : 'Marcar todas'}
+            </button>
+          </div>
           <div className="space-y-2">
-            {PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} checked={invitePermissions.includes(opt.value)} onChange={() => toggleInvitePermission(opt.value)}/>))}
+            {VISIBLE_PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={invitePermissions.includes(opt.value)} onChange={() => toggleInvitePermission(opt.value)}/>))}
           </div>
         </div>
 
@@ -286,11 +344,16 @@ export default function MembersTab() {
     <Modal isOpen={!!editingMember} onClose={() => setEditingMember(null)} title={`Editar permissões - ${editingMember?.name || ''}`} size="sm">
       <div className="space-y-5">
         <div>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Permissões de acesso
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Permissões de acesso
+            </p>
+            <button type="button" onClick={() => setEditPermissions(toggleAll(editPermissions))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
+              {allSelected(editPermissions) ? 'Limpar' : 'Marcar todas'}
+            </button>
+          </div>
           <div className="space-y-2">
-            {PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} checked={editPermissions.includes(opt.value)} onChange={() => toggleEditPermission(opt.value)}/>))}
+            {VISIBLE_PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={editPermissions.includes(opt.value)} onChange={() => toggleEditPermission(opt.value)}/>))}
           </div>
         </div>
 
@@ -308,5 +371,5 @@ export default function MembersTab() {
       : `Tem certeza que deseja cancelar o convite para "${deleteTarget?.name}"?`} confirmLabel={deleteTarget?.type === 'member' ? 'Remover' : 'Cancelar Convite'} loading={deleteLoading}/>
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
-  </>);
+  </div>);
 }

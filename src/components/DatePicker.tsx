@@ -105,7 +105,7 @@ export default function DatePicker({ value, onChange, min, placeholder = 'Seleci
     }
   };
   return (<div ref={ref} className="relative w-full min-w-0">
-    <button type="button" onClick={() => setOpen((v) => !v)} className={`w-full min-w-0 overflow-hidden flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm transition-all bg-white dark:bg-slate-900 ${open
+    <button type="button" onClick={() => setOpen((v) => !v)} className={`w-full min-w-0 overflow-hidden flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm transition-all bg-white dark:bg-slate-800 ${open
       ? 'border-indigo-500 ring-2 ring-indigo-500/20'
       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}>
       <Calendar size={16} className={`shrink-0 transition-colors ${open ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}/>
@@ -115,7 +115,7 @@ export default function DatePicker({ value, onChange, min, placeholder = 'Seleci
       <ChevronRight size={14} className={`shrink-0 transition-transform text-slate-300 dark:text-slate-600 ${open ? 'rotate-90' : 'rotate-0'}`}/>
     </button>
 
-    {open && (<div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-black/30 p-4 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150">
+    {open && (<div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-black/30 p-4 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150">
 
       <div className="flex items-center justify-between mb-4">
         <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">

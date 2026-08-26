@@ -1,5 +1,7 @@
-import { Bot, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import React, { type ReactNode } from 'react';
+
+import BrandLogo from '@/components/BrandLogo';
 
 interface AuthShellProps {
     children: ReactNode;
@@ -15,8 +17,8 @@ export default function AuthShell({ children, title, subtitle }: AuthShellProps)
       }}></div>
 
       <div className="relative z-10 text-white max-w-lg px-10">
-        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-8 border border-white/30 shadow-xl">
-          <Bot size={40} className="text-white"/>
+        <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-xl">
+          <BrandLogo size={40} on="light"/>
         </div>
         <h2 className="text-4xl font-bold mb-6">Potencialize seu atendimento com IA</h2>
         <p className="text-indigo-100 text-lg leading-relaxed">

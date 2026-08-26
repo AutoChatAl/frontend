@@ -32,6 +32,8 @@ export interface Plan {
 }
 export interface AiPlanLimits {
     maxChannels: number;
+    /** Quantos perfis de IA o plano libera por usuário. */
+    maxProfiles: number;
     maxAiMessagesPerMonth: number;
     extraAiMessagePriceCents: number;
     schedulingQueryEnabled: boolean;
@@ -97,6 +99,7 @@ export interface EffectiveLimits {
     supportLevel: 'standard' | 'vip';
     aiEnabled: boolean;
     maxAiChannels: number;
+    maxAiProfiles: number;
     maxAiMessagesPerMonth: number;
     maxProducts: number;
     maxCustomRulesChars: number;

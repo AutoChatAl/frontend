@@ -3,12 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Toast } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
-import { authService } from '@/services/auth.service';
-import { channelsService } from '@/services/channels.service';
 import { funnelService } from '@/services/funnel.service';
-import { whatsappOfficialService } from '@/services/whatsapp-official.service';
-import type { AIChannel } from '@/types/AI';
-import type { Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
+import type { AiCatalogScope, AIChannel, AiProfile } from '@/types/AI';
+import type { InstagramProductLayout, Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import type { FunnelStageDefinition } from '@/types/Funnel';
@@ -26,6 +23,7 @@ export function useAIConfig() {
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
   const [crossSellEnabled, setCrossSellEnabled] = useState(false);
+  const [instagramProductLayout, setInstagramProductLayout] = useState<InstagramProductLayout>('QUICK_REPLY');
   const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsTotal, setProductsTotal] = useState(0);
@@ -35,6 +33,15 @@ export function useAIConfig() {
   const [productsLoading, setProductsLoading] = useState(false);
   const productsSeededRef = useRef(false);
   const [channels, setChannels] = useState<AIChannel[]>([]);
+  const [profiles, setProfiles] = useState<AiProfile[]>([]);
+  const [activeProfileId, setActiveProfileIdState] = useState<string | null>(null);
+  const [maxProfiles, setMaxProfiles] = useState(1);
+  const [catalogScope, setCatalogScopeState] = useState<AiCatalogScope>('shared');
+  const [maxCustomRulesChars, setMaxCustomRulesChars] = useState(0);
+  const [switchingProfile, setSwitchingProfile] = useState(false);
+  // O perfil também vive em ref: os callbacks de produto e de canal precisam do valor
+  // atual sem virar dependência de si mesmos e refazer o carregamento a cada troca.
+  const activeProfileRef = useRef<string | null>(null);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<string[]>(['general', 'channels', 'triggers', 'scheduling']);
@@ -52,58 +59,46 @@ export function useAIConfig() {
   }, []);
   const loadChannels = useCallback(async (currentActiveChannelIds: string[]) => {
     try {
-      const user = authService.getUser();
-      const isOwner = !user?.role || user.role === 'owner' || user.role === 'admin';
-      if (isOwner) {
-        const allChannels = await aiService.listChannels();
-        const mapped: AIChannel[] = allChannels.map((ch) => ({
-          id: ch.id,
-          name: ch.name,
-          type: ch.type.toLowerCase() as AIChannel['type'],
-          active: ch.aiEnabled,
-          identifier: '',
-          createdBy: ch.createdBy,
-          ownerName: ch.ownerName,
-        }));
-        setChannels(mapped);
-        return;
-      }
-      const [whatsappInstances, officialInstances, instagramAccounts] = await Promise.all([
-        channelsService.getWhatsAppInstances().catch(() => []),
-        whatsappOfficialService.getInstances().catch(() => []),
-        channelsService.getInstagramAccounts().catch(() => []),
-      ]);
-      const waChannels: AIChannel[] = whatsappInstances.map((inst) => ({
-        id: inst.id,
-        name: inst.name,
-        type: 'whatsapp' as const,
-        active: currentActiveChannelIds.includes(inst.id),
-        identifier: inst.whatsapp?.phoneNumber || inst.number || '',
+      // Fonte única: o /ai/channels é o que sabe QUAL perfil segura cada canal.
+      // Antes o colaborador montava a lista pelos endpoints crus de canal e
+      // marcava "ligado" só pelo próprio perfil — um canal atendido pelo perfil
+      // de outra pessoa aparecia desligado e, ao clicar, voltava o erro de
+      // "já está em outro perfil". Duas fontes de verdade para o mesmo estado.
+      const allChannels = await aiService.listChannels();
+      const mapped: AIChannel[] = allChannels.map((ch) => ({
+        id: ch.id,
+        name: ch.name,
+        type: ch.type.toLowerCase() as AIChannel['type'],
+        // Ligado aqui = preso ao perfil que está aberto. Em qualquer outro
+        // perfil o cartão mostra de quem é e pede para desligar lá.
+        active: currentActiveChannelIds.includes(ch.id),
+        identifier: ch.identifier ?? '',
+        createdBy: ch.createdBy,
+        ownerName: ch.ownerName,
+        aiProfileId: ch.aiProfileId,
+        aiProfileName: ch.aiProfileName,
+        aiProfileOwnerName: ch.aiProfileOwnerName,
       }));
-      const officialChannels: AIChannel[] = officialInstances.map((inst) => ({
-        id: inst.id,
-        name: inst.whatsappOfficial.verifiedName || inst.name,
-        type: 'whatsapp_official' as const,
-        active: currentActiveChannelIds.includes(inst.id),
-        identifier: inst.whatsappOfficial.displayPhoneNumber || '',
-      }));
-      const igChannels: AIChannel[] = instagramAccounts.map((acc) => ({
-        id: acc.id,
-        name: acc.name,
-        type: 'instagram' as const,
-        active: currentActiveChannelIds.includes(acc.id),
-        identifier: acc.instagram?.username || '',
-      }));
-      setChannels([...waChannels, ...officialChannels, ...igChannels]);
+      setChannels(mapped);
     }
     catch {
       setChannels([]);
     }
   }, []);
-  const loadConfig = useCallback(async () => {
+  const setActiveProfile = useCallback((id: string | null) => {
+    activeProfileRef.current = id;
+    setActiveProfileIdState(id);
+  }, []);
+  const loadConfig = useCallback(async (profileId?: string | null) => {
     try {
-      const aiConfigResponse = await aiService.getConfig();
+      const requested = profileId !== undefined ? profileId : activeProfileRef.current;
+      const aiConfigResponse = await aiService.getConfig(requested);
       const { aiConfig, products: fetchedProducts, visibleTabs: fetchedTabs } = aiConfigResponse;
+      setProfiles(aiConfigResponse.profiles ?? []);
+      setMaxProfiles(aiConfigResponse.maxProfiles ?? 1);
+      setCatalogScopeState(aiConfigResponse.catalogScope ?? 'shared');
+      setMaxCustomRulesChars(aiConfigResponse.maxCustomRulesChars ?? 0);
+      setActiveProfile(aiConfigResponse.activeProfileId || aiConfig.id || null);
       if (fetchedTabs)
         setVisibleTabs(fetchedTabs);
       setSegment(aiConfig.segment);
@@ -116,6 +111,7 @@ export function useAIConfig() {
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
       setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
+      setInstagramProductLayout(aiConfig.instagramProductLayout ?? 'QUICK_REPLY');
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
       setProducts(fetchedProducts);
@@ -131,7 +127,7 @@ export function useAIConfig() {
     }
     catch {
     }
-  }, [loadChannels]);
+  }, [loadChannels, setActiveProfile]);
   useEffect(() => {
     setLoading(true);
     loadConfig().finally(() => setLoading(false));
@@ -147,11 +143,11 @@ export function useAIConfig() {
         customRules,
         triggerSettings,
         funnelAutoMoveEnabled,
-      });
+      }, activeProfileRef.current);
       addToast('success', 'Configurações da IA salvas com sucesso!');
     }
-    catch {
-      addToast('error', 'Erro ao salvar configurações da IA.');
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao salvar configurações da IA.');
     }
     finally {
       setSaving(false);
@@ -161,7 +157,7 @@ export function useAIConfig() {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
     try {
-      await aiService.updateConfig({ schedulingQueryEnabled: enabled, schedulingBookingEnabled });
+      await aiService.updateConfig({ schedulingQueryEnabled: enabled, schedulingBookingEnabled }, activeProfileRef.current);
       addToast('success', enabled ? 'Consulta de disponibilidade ativada.' : 'Consulta de disponibilidade desativada.');
     }
     catch (err) {
@@ -176,7 +172,7 @@ export function useAIConfig() {
     setSchedulingBookingEnabled(enabled);
     setSaving(true);
     try {
-      await aiService.updateConfig({ schedulingQueryEnabled, schedulingBookingEnabled: enabled });
+      await aiService.updateConfig({ schedulingQueryEnabled, schedulingBookingEnabled: enabled }, activeProfileRef.current);
       addToast('success', enabled ? 'Criação de agendamentos ativada.' : 'Criação de agendamentos desativada.');
     }
     catch (err) {
@@ -191,7 +187,7 @@ export function useAIConfig() {
     setFunnelAutoMoveEnabled(enabled);
     setSaving(true);
     try {
-      await aiService.updateConfig({ funnelAutoMoveEnabled: enabled });
+      await aiService.updateConfig({ funnelAutoMoveEnabled: enabled }, activeProfileRef.current);
       addToast('success', enabled ? 'Movimentação automática do funil ativada.' : 'Movimentação automática do funil desativada.');
     }
     catch (err) {
@@ -206,7 +202,7 @@ export function useAIConfig() {
     setCrossSellEnabled(enabled);
     setSaving(true);
     try {
-      await aiService.updateConfig({ crossSellEnabled: enabled });
+      await aiService.updateConfig({ crossSellEnabled: enabled }, activeProfileRef.current);
       addToast('success', enabled ? 'Sugestão de itens complementares ativada.' : 'Sugestão de itens complementares desativada.');
     }
     catch (err) {
@@ -217,16 +213,42 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [addToast]);
+  const changeProductLayout = useCallback(async (layout: InstagramProductLayout) => {
+    const previous = instagramProductLayout;
+    if (layout === previous)
+      return;
+    setInstagramProductLayout(layout);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ instagramProductLayout: layout }, activeProfileRef.current);
+      addToast('success', layout === 'CAROUSEL'
+        ? 'As opções passam a ser enviadas como carrossel com foto.'
+        : 'As opções voltam a ser botões de resposta rápida.');
+    }
+    catch (err) {
+      // Falha típica: existe item sem imagem. Volta o seletor para não mentir sobre o estado salvo.
+      setInstagramProductLayout(previous);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao trocar o formato das opções.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, instagramProductLayout]);
   const toggleChannel = useCallback(async (channelId: string) => {
     setSaving(true);
     try {
       const target = channels.find((ch) => ch.id === channelId);
+      const heldByAnotherProfile = !!target?.aiProfileId && target.aiProfileId !== activeProfileRef.current;
+      if (heldByAnotherProfile) {
+        addToast('error', `Este canal já está ativo no ${target.aiProfileName ?? 'outro perfil'}. Desative-o nesse perfil antes de ativar aqui.`);
+        return;
+      }
       if (target?.active) {
-        await aiService.deactivateAi(channelId);
+        await aiService.deactivateAi(channelId, activeProfileRef.current);
         addToast('success', 'IA desativada com sucesso.');
       }
       else {
-        await aiService.activateChannel(channelId);
+        await aiService.activateChannel(channelId, activeProfileRef.current);
         addToast('success', 'Canal ativado para IA com sucesso!');
       }
       await loadConfig();
@@ -241,7 +263,7 @@ export function useAIConfig() {
   const loadProducts = useCallback(async (page: number, search: string) => {
     setProductsLoading(true);
     try {
-      const result = await aiService.listProducts({ page, pageSize: PRODUCTS_PAGE_SIZE, search });
+      const result = await aiService.listProducts({ page, pageSize: PRODUCTS_PAGE_SIZE, search, profileId: activeProfileRef.current });
       setProducts(result.products);
       setProductsTotal(result.total);
       setMaxProducts(result.maxProducts);
@@ -268,7 +290,7 @@ export function useAIConfig() {
   const addProduct = useCallback(async (name: string) => {
     setSaving(true);
     try {
-      await aiService.createProduct({ name });
+      await aiService.createProduct({ name }, activeProfileRef.current);
       await loadProducts(1, productSearch);
       addToast('success', `Produto "${name}" adicionado.`);
     }
@@ -293,10 +315,40 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [addToast, loadProducts, productPage, productSearch]);
+  const uploadProductImage = useCallback(async (id: string, file: File) => {
+    setSaving(true);
+    try {
+      await aiService.uploadProductImage(id, file);
+      await loadProducts(productPage, productSearch);
+      addToast('success', 'Imagem do produto atualizada.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao enviar a imagem do produto.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, loadProducts, productPage, productSearch]);
+  const removeProductImage = useCallback(async (id: string) => {
+    setSaving(true);
+    try {
+      await aiService.removeProductImage(id);
+      await loadProducts(productPage, productSearch);
+      addToast('success', 'Imagem removida.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao remover a imagem do produto.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, loadProducts, productPage, productSearch]);
   const deleteProduct = useCallback(async (id: string) => {
     setSaving(true);
     try {
-      await aiService.deleteProduct(id);
+      const { layoutChanged } = await aiService.deleteProduct(id);
+      if (layoutChanged)
+        setInstagramProductLayout('QUICK_REPLY');
       await loadProducts(productPage, productSearch);
       addToast('success', 'Produto removido.');
     }
@@ -310,7 +362,9 @@ export function useAIConfig() {
   const clearProducts = useCallback(async () => {
     setSaving(true);
     try {
-      const deleted = await aiService.deleteAllProducts();
+      const { deleted, layoutChanged } = await aiService.deleteAllProducts(activeProfileRef.current);
+      if (layoutChanged)
+        setInstagramProductLayout('QUICK_REPLY');
       await loadProducts(1, '');
       setProductSearch('');
       addToast('success', deleted > 0 ? `${deleted} itens removidos do catálogo.` : 'O catálogo já estava vazio.');
@@ -322,8 +376,92 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [addToast, loadProducts]);
+  // Trocar de perfil troca o catálogo junto: o GET /config traz uma prévia de 50 itens,
+  // então a lista é recarregada na paginação real logo em seguida.
+  const openProfile = useCallback(async (profileId: string | null) => {
+    await loadConfig(profileId);
+    await loadProducts(1, productSearch);
+  }, [loadConfig, loadProducts, productSearch]);
+  const switchProfile = useCallback(async (profileId: string) => {
+    if (profileId === activeProfileRef.current)
+      return;
+    setSwitchingProfile(true);
+    try {
+      await openProfile(profileId);
+    }
+    finally {
+      setSwitchingProfile(false);
+    }
+  }, [openProfile]);
+  const createProfile = useCallback(async () => {
+    setSaving(true);
+    try {
+      const profile = await aiService.createProfile();
+      await openProfile(profile.id);
+      addToast('success', `${profile.name} criado. Configure a identidade e os canais dele.`);
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao criar o perfil de IA.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, openProfile]);
+  const renameProfile = useCallback(async (profileId: string, name: string) => {
+    setSaving(true);
+    try {
+      const result = await aiService.updateProfile(profileId, { name: name.trim() });
+      setProfiles(result.profiles);
+      addToast('success', 'Nome do perfil atualizado.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao renomear o perfil de IA.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
+  const deleteProfile = useCallback(async (profileId: string) => {
+    setSaving(true);
+    try {
+      const result = await aiService.deleteProfile(profileId);
+      // O catálogo do perfil excluído é adotado pelo perfil que sobra, então nada some.
+      await openProfile(result.activeProfileId);
+      addToast('success', 'Perfil excluído. Os canais dele voltaram a ser atendidos só por você.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao excluir o perfil de IA.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, openProfile]);
+  const changeCatalogScope = useCallback(async (scope: AiCatalogScope) => {
+    const previous = catalogScope;
+    if (scope === previous)
+      return;
+    setCatalogScopeState(scope);
+    setSaving(true);
+    try {
+      const target = activeProfileRef.current;
+      if (!target)
+        throw new Error('Nenhum perfil de IA carregado.');
+      await aiService.updateProfile(target, { catalogScope: scope });
+      await openProfile(target);
+      addToast('success', scope === 'profile'
+        ? 'Cada perfil passa a ter o próprio catálogo. Os itens que já existiam ficaram com o primeiro perfil.'
+        : 'O catálogo voltou a ser o mesmo em todos os perfis.');
+    }
+    catch (err) {
+      setCatalogScopeState(previous);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao trocar o escopo do catálogo.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, catalogScope, openProfile]);
   const importProducts = useCallback(async (file: File, mode: ProductImportMode): Promise<ProductImportReport> => {
-    const report = await aiService.importProducts(file, mode);
+    const report = await aiService.importProducts(file, mode, activeProfileRef.current);
     await loadProducts(1, '');
     setProductSearch('');
     return report;
@@ -363,6 +501,17 @@ export function useAIConfig() {
     activeChannelId,
     enabled,
     visibleTabs,
+    profiles,
+    activeProfileId,
+    maxProfiles,
+    switchingProfile,
+    switchProfile,
+    createProfile,
+    renameProfile,
+    deleteProfile,
+    catalogScope,
+    changeCatalogScope,
+    maxCustomRulesChars,
     loading,
     saving,
     toasts,
@@ -376,5 +525,9 @@ export function useAIConfig() {
     toggleSchedulingBooking,
     toggleFunnelAutoMove,
     toggleCrossSell,
+    instagramProductLayout,
+    changeProductLayout,
+    uploadProductImage,
+    removeProductImage,
   };
 }

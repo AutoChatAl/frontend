@@ -95,7 +95,7 @@ export default function InstagramInstances() {
               <User size={20}/>
             </div>)}
           </div>
-        </div>} title={displayUsername} subtitle={account.name} status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'} colorClass="fuchsia" createdBy={account.createdBy} ownerName={account.ownerName} onRefresh={handleRefresh} onDelete={handleDeleteClick}/>);
+        </div>} title={displayUsername} subtitle={account.name} status={account.status === 'CONNECTED' ? 'connected' : 'disconnected'} colorClass="fuchsia" createdBy={account.createdBy} ownerName={account.ownerName} canManage={account.canManage} onRefresh={handleRefresh} onDelete={handleDeleteClick}/>);
       })}
     </div>
 

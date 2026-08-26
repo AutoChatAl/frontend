@@ -143,9 +143,8 @@ export default function FunnelPage() {
           next[key] = (prev[key] ?? []).filter((lead) => lead.id !== updated.id);
         }
         if (targetStageId) {
-          const sameStage = fromStageId === targetStageId;
           const base = next[targetStageId] ?? [];
-          next[targetStageId] = sameStage ? [updated, ...base] : [updated, ...base];
+          next[targetStageId] = [updated, ...base];
         }
         return next;
       });
@@ -202,8 +201,6 @@ export default function FunnelPage() {
     }
   }, [deletingStage, loadBoard, addToast]);
 
-  const totalLeads = stages.reduce((sum, stage) => sum + stage.total, 0);
-
   if (loading) {
     return <PageLoader message="Carregando o funil..." />;
   }
@@ -225,20 +222,15 @@ export default function FunnelPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-500">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Funil de vendas</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Acompanhe e qualifique seus leads
-              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                {totalLeads} leads
-              </span>
-            </p>
-          </div>
+    <div className="w-full max-w-full space-y-3">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Funil de vendas</h1>
+          <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+            Onde cada lead está e quanto ainda dá para fechar
+          </p>
         </div>
-      </header>
+      </div>
 
       <FunnelFilters
         search={search}

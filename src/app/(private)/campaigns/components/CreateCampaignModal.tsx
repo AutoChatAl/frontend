@@ -22,6 +22,8 @@ import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
+import { EXECUTION_HOURS } from './executionHours';
+
 interface Channel {
     id: string;
     name: string;
@@ -76,7 +78,6 @@ function matchesContactSearch(contact: Contact, rawTerm: string): boolean {
     return normalizedUsername.includes(term) || normalizedPhone.includes(term);
   });
 }
-const EXECUTION_HOURS = [8, 10, 12, 14, 16, 18];
 const INITIAL_FORM: CreateCampaignInput = {
   name: '',
   description: '',
@@ -88,7 +89,7 @@ const INITIAL_FORM: CreateCampaignInput = {
   messageType: 'TEXT',
 };
 function inputCls(hasError: boolean) {
-  return `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${hasError
+  return `w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 bg-white dark:bg-slate-800 dark:text-white transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 ${hasError
     ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
     : 'border-slate-200 dark:border-slate-700 focus:ring-indigo-500/20 focus:border-indigo-400'}`;
 }
@@ -671,8 +672,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     {loadingData ? (<div className="flex flex-col items-center justify-center py-16 gap-3">
       <Loader2 className="animate-spin text-indigo-500" size={28}/>
       <p className="text-slate-500 dark:text-slate-400 text-sm">Carregando dados...</p>
-    </div>) : (<div className="space-y-8">
-      <section>
+    </div>) : (<div className="space-y-6">
+      <section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">
         <SectionHeader step={1} label="Informações"/>
         <div className="space-y-4">
           <div>
@@ -696,12 +697,177 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </div>
       </section>
 
-      <section>
-        <SectionHeader step={2} label="Mensagem"/>
+      <section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">
+        <SectionHeader step={2} label="Origem dos Destinatários"/>
+        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5 w-full">
+          {([
+            { value: 'CHANNEL' as const, label: 'Canal', icon: MessageCircle },
+            { value: 'GROUP' as const, label: 'Grupo', icon: Users },
+          ]).map((opt) => {
+            const isActive = formData.sourceType === opt.value;
+            const Icon = opt.icon;
+            return (<button key={opt.value} type="button" onClick={() => handleSourceTypeChange(opt.value)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all select-none ${isActive
+              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+              <Icon size={16}/>
+              {opt.label}
+            </button>);
+          })}
+        </div>
+
+        <p className="text-xs text-slate-400 dark:text-slate-500 -mt-3 mb-4">
+          {formData.sourceType === 'CHANNEL'
+            ? 'Selecione um canal e escolha os contatos para envio.'
+            : 'Selecione um grupo existente — os contatos dele serão usados automaticamente.'}
+        </p>
+
+        {formData.sourceType === 'CHANNEL' && (<>
+          {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+            <MessageCircle size={24} className="text-slate-300 dark:text-slate-600"/>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+              {HIDDEN_FEATURES.campaignNonOfficialChannels
+                ? 'Nenhum número da API Oficial conectado'
+                : 'Nenhum canal disponível'}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {HIDDEN_FEATURES.campaignNonOfficialChannels
+                ? 'Conecte um número da API Oficial do WhatsApp em Canais para criar campanhas.'
+                : 'Configure seus canais primeiro nas configurações'}
+            </p>
+          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {channels.map((channel) => {
+              const isSelected = formData.channelIds.includes(channel.id);
+              const isWhatsApp = channel.type === 'WHATSAPP';
+              const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
+              const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id)
+                || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
+              return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
+                  ? 'bg-green-100 dark:bg-green-900/30'
+                  : 'bg-pink-100 dark:bg-pink-900/30'}`}>
+                  {isOfficial ? (<BadgeCheck size={18} className="text-emerald-600 dark:text-emerald-400"/>) : isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {channel.name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp || isOfficial
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                      : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'}`}>
+                      {isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
+                    </span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
+                  ? 'border-indigo-500 bg-indigo-500'
+                  : 'border-slate-300 dark:border-slate-600'}`}>
+                  {isSelected && <CheckCircle2 size={12} className="text-white"/>}
+                </div>
+              </div>);
+            })}
+          </div>)}
+          <FieldError msg={errors.channels}/>
+        </>)}
+
+        {formData.sourceType === 'GROUP' && (<>
+          {groups.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+            <Users size={24} className="text-slate-300 dark:text-slate-600"/>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                      Nenhum grupo disponível
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Crie um grupo de contatos primeiro
+            </p>
+          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {groups.map((group) => {
+              const isSelected = formData.groupId === group.id;
+              const isManual = group.type === 'MANUAL';
+              const count = group.memberCount ?? group.memberContactIds?.length ?? 0;
+              return (<div key={group.id} onClick={() => selectGroup(group.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected
+                  ? 'bg-indigo-500 dark:bg-indigo-600'
+                  : isManual
+                    ? 'bg-violet-100 dark:bg-violet-900/30'
+                    : 'bg-cyan-100 dark:bg-cyan-900/30'}`}>
+                  <Users size={18} className={isSelected
+                    ? 'text-white'
+                    : isManual
+                      ? 'text-violet-600 dark:text-violet-400'
+                      : 'text-cyan-600 dark:text-cyan-400'}/>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {group.name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isManual
+                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400'
+                      : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400'}`}>
+                      {isManual ? 'Manual' : 'Dinâmico'}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Users size={11} className="opacity-60"/>
+                      {count} contato{count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
+                  ? 'border-indigo-500 bg-indigo-500'
+                  : 'border-slate-300 dark:border-slate-600'}`}>
+                  {isSelected && <CheckCircle2 size={12} className="text-white"/>}
+                </div>
+              </div>);
+            })}
+          </div>)}
+          <FieldError msg={errors.group}/>
+
+          {selectedGroup && (() => {
+            const count = selectedGroup.memberCount ?? selectedGroup.memberContactIds?.length ?? 0;
+            return (<div className="mt-4 p-4 bg-linear-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/30 border border-indigo-200/80 dark:border-indigo-800/60 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500 dark:bg-indigo-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={20} className="text-white"/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    {selectedGroup.name}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Os contatos deste grupo serão usados automaticamente
+                  </p>
+                </div>
+                <div className="text-center shrink-0 px-3">
+                  <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">
+                    {count}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-indigo-500/70 dark:text-indigo-400/60 font-semibold">
+                    {count === 1 ? 'contato' : 'contatos'}
+                  </div>
+                </div>
+              </div>
+            </div>);
+          })()}
+        </>)}
+      </section>
+
+      <section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">
+        <SectionHeader step={3} label="Mensagem"/>
         {isOfficialCampaign ? (<div className="space-y-4">
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
-            <BadgeCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"/>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
+            <BadgeCheck size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5"/>
+            <p className="text-xs text-indigo-700 dark:text-indigo-300">
               Campanha pela <strong>API Oficial</strong>: a Meta exige um template aprovado para iniciar conversas.
               A cobrança é por mensagem entregue, conforme a categoria do template.
             </p>
@@ -724,7 +890,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           {availableTemplates.length === 0 && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               {formData.channelIds.length === 0 ? (<>
-                Escolha o canal na etapa <strong>Origem dos Destinatários</strong>, abaixo, para listar os templates aprovados dele.
+                Escolha o canal na etapa <strong>Origem dos Destinatários</strong>, acima, para listar os templates aprovados dele.
               </>) : (<>
                 Nenhum template aprovado para o canal selecionado. Crie um na área <strong>Templates</strong> e aguarde a aprovação da Meta.
               </>)}
@@ -854,172 +1020,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </div>)}
       </section>
 
-      <section>
-        <SectionHeader step={3} label="Origem dos Destinatários"/>
-        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-5 w-full">
-          {([
-            { value: 'CHANNEL' as const, label: 'Canal', icon: MessageCircle },
-            { value: 'GROUP' as const, label: 'Grupo', icon: Users },
-          ]).map((opt) => {
-            const isActive = formData.sourceType === opt.value;
-            const Icon = opt.icon;
-            return (<button key={opt.value} type="button" onClick={() => handleSourceTypeChange(opt.value)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all select-none ${isActive
-              ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-              <Icon size={16}/>
-              {opt.label}
-            </button>);
-          })}
-        </div>
-
-        <p className="text-xs text-slate-400 dark:text-slate-500 -mt-3 mb-4">
-          {formData.sourceType === 'CHANNEL'
-            ? 'Selecione um canal e escolha os contatos para envio.'
-            : 'Selecione um grupo existente — os contatos dele serão usados automaticamente.'}
-        </p>
-
-        {formData.sourceType === 'CHANNEL' && (<>
-          {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-            <MessageCircle size={24} className="text-slate-300 dark:text-slate-600"/>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-              {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Nenhum número da API Oficial conectado'
-                : 'Nenhum canal disponível'}
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Conecte um número da API Oficial do WhatsApp em Canais para criar campanhas.'
-                : 'Configure seus canais primeiro nas configurações'}
-            </p>
-          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {channels.map((channel) => {
-              const isSelected = formData.channelIds.includes(channel.id);
-              const isWhatsApp = channel.type === 'WHATSAPP';
-              const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
-              const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id)
-                || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
-              return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
-                  ? 'bg-green-100 dark:bg-green-900/30'
-                  : 'bg-pink-100 dark:bg-pink-900/30'}`}>
-                  {isOfficial ? (<BadgeCheck size={18} className="text-emerald-600 dark:text-emerald-400"/>) : isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                    {channel.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp || isOfficial
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                      : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'}`}>
-                      {isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
-                    </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                  ? 'border-indigo-500 bg-indigo-500'
-                  : 'border-slate-300 dark:border-slate-600'}`}>
-                  {isSelected && <CheckCircle2 size={12} className="text-white"/>}
-                </div>
-              </div>);
-            })}
-          </div>)}
-          <FieldError msg={errors.channels}/>
-        </>)}
-
-        {formData.sourceType === 'GROUP' && (<>
-          {groups.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-            <Users size={24} className="text-slate-300 dark:text-slate-600"/>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      Nenhum grupo disponível
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-                      Crie um grupo de contatos primeiro
-            </p>
-          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {groups.map((group) => {
-              const isSelected = formData.groupId === group.id;
-              const isManual = group.type === 'MANUAL';
-              const count = group.memberCount ?? group.memberContactIds?.length ?? 0;
-              return (<div key={group.id} onClick={() => selectGroup(group.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
-                ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/50 shadow-sm shadow-indigo-500/10'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected
-                  ? 'bg-indigo-500 dark:bg-indigo-600'
-                  : isManual
-                    ? 'bg-violet-100 dark:bg-violet-900/30'
-                    : 'bg-cyan-100 dark:bg-cyan-900/30'}`}>
-                  <Users size={18} className={isSelected
-                    ? 'text-white'
-                    : isManual
-                      ? 'text-violet-600 dark:text-violet-400'
-                      : 'text-cyan-600 dark:text-cyan-400'}/>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                    {group.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isManual
-                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400'
-                      : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400'}`}>
-                      {isManual ? 'Manual' : 'Dinâmico'}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <Users size={11} className="opacity-60"/>
-                      {count} contato{count !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                  ? 'border-indigo-500 bg-indigo-500'
-                  : 'border-slate-300 dark:border-slate-600'}`}>
-                  {isSelected && <CheckCircle2 size={12} className="text-white"/>}
-                </div>
-              </div>);
-            })}
-          </div>)}
-          <FieldError msg={errors.group}/>
-
-          {selectedGroup && (() => {
-            const count = selectedGroup.memberCount ?? selectedGroup.memberContactIds?.length ?? 0;
-            return (<div className="mt-4 p-4 bg-linear-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/30 border border-indigo-200/80 dark:border-indigo-800/60 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500 dark:bg-indigo-600 flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={20} className="text-white"/>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                    {selectedGroup.name}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Os contatos deste grupo serão usados automaticamente
-                  </p>
-                </div>
-                <div className="text-center shrink-0 px-3">
-                  <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">
-                    {count}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-indigo-500/70 dark:text-indigo-400/60 font-semibold">
-                    {count === 1 ? 'contato' : 'contatos'}
-                  </div>
-                </div>
-              </div>
-            </div>);
-          })()}
-        </>)}
-      </section>
-
-      {formData.sourceType === 'CHANNEL' && (<section>
+      {formData.sourceType === 'CHANNEL' && (<section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <SectionHeader step={4} label="Destinatários" inline/>
@@ -1061,7 +1062,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </div>) : (<>
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16}/>
-            <input type="text" value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white text-sm transition-colors placeholder:text-slate-400"/>
+            <input type="text" value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-800 dark:text-white text-sm transition-colors placeholder:text-slate-400"/>
             {contactFilter && (<button type="button" onClick={() => setContactFilter('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
               <X size={15}/>
             </button>)}
@@ -1113,7 +1114,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </>)}
       </section>)}
 
-      <section>
+      <section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">
         <SectionHeader step={formData.sourceType === 'CHANNEL' ? 5 : 4} label="Agendamento"/>
         <div className="space-y-4">
           <div>
@@ -1137,8 +1138,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 }} className={`flex flex-col gap-1 p-3.5 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
                   : errors.frequency
-                    ? 'border-red-400 hover:border-red-400 bg-white dark:bg-slate-900'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900'}`}>
+                    ? 'border-red-400 hover:border-red-400 bg-white dark:bg-slate-800'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
                   <span className="text-sm font-medium text-slate-900 dark:text-white">{opt.label}</span>
                   <span className="text-xs text-slate-400 dark:text-slate-500">{opt.desc}</span>
                 </div>);
@@ -1173,8 +1174,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 }} className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
                   : errors.executionHour
-                    ? 'border-red-400 hover:border-red-400 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'}`}>
+                    ? 'border-red-400 hover:border-red-400 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800'}`}>
                   {String(hour).padStart(2, '0')}:00
                 </button>);
               })}

@@ -1,11 +1,10 @@
 'use client';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 
-import Button from '@/components/Button';
 import Select from '@/components/Select';
 import type { ChannelType, LeadOrigin, LeadTemperature } from '@/types/Funnel';
 
-import { ORIGIN_META, TEMPERATURE_META, TEMPERATURE_ORDER } from './meta';
+import { FUNNEL_ORIGIN_OPTIONS, ORIGIN_META, TEMPERATURE_META, TEMPERATURE_ORDER } from './meta';
 
 interface FunnelFiltersProps {
   search: string;
@@ -26,7 +25,7 @@ const CHANNEL_OPTIONS: { value: ChannelType; label: string }[] = [
   { value: 'INSTAGRAM', label: 'Instagram' },
 ];
 
-const ORIGIN_OPTIONS = (Object.keys(ORIGIN_META) as LeadOrigin[]).map((value) => ({
+const ORIGIN_OPTIONS = FUNNEL_ORIGIN_OPTIONS.map((value) => ({
   value,
   label: ORIGIN_META[value].label,
 }));
@@ -52,12 +51,12 @@ export default function FunnelFilters({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative min-w-48 flex-1 sm:max-w-xs">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar por nome, telefone ou @usuário..."
-          className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
+          className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-900 transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600"
         />
       </div>
 
@@ -97,15 +96,21 @@ export default function FunnelFilters({
       <button
         type="button"
         onClick={onRefresh}
-        className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
         title="Atualizar"
+        aria-label="Atualizar o funil"
+        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-slate-300"
       >
-        <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
       </button>
 
-      <Button variant="secondary" size="sm" icon={<Plus size={15} />} onClick={onNewStage}>
+      <button
+        type="button"
+        onClick={onNewStage}
+        className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-indigo-200 px-2.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+      >
+        <Plus size={13} />
         Nova etapa
-      </Button>
+      </button>
     </div>
   );
 }

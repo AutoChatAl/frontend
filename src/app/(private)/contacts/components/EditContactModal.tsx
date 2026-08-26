@@ -125,7 +125,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Nome
             </label>
-            <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white transition-colors placeholder:text-slate-400" placeholder="Nome do contato"/>
+            <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-800 dark:text-white transition-colors placeholder:text-slate-400" placeholder="Nome do contato"/>
           </div>
           {identifier && (<div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -165,13 +165,13 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
               return (<div key={tag.id} className="group flex items-center">
                 <button type="button" onClick={() => toggleTag(tag.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-lg text-sm font-medium border-2 transition-all ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300'
-                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
                   {isSelected && <Check size={13} className="text-indigo-500"/>}
                   {tag.name}
                 </button>
                 <button type="button" onClick={() => handleDeleteTag(tag.id)} className={`px-1.5 py-1.5 border-2 border-l-0 rounded-r-lg transition-all opacity-0 group-hover:opacity-100 ${isSelected
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
-                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'}`} title="Excluir tag">
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'}`} title="Excluir tag">
                   <Trash2 size={13}/>
                 </button>
               </div>);
@@ -189,7 +189,7 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
                 setShowNewTagInput(false);
                 setNewTagName('');
               }
-            }} className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-900 dark:text-white text-sm placeholder:text-slate-400" placeholder="Nome da tag..." autoFocus/>
+            }} className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white dark:bg-slate-800 dark:text-white text-sm placeholder:text-slate-400" placeholder="Nome da tag..." autoFocus/>
             <button type="button" onClick={handleCreateTag} disabled={!newTagName.trim() || creatingTag} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
               {creatingTag ? <Loader2 size={14} className="animate-spin"/> : <Plus size={14}/>}
                       Criar

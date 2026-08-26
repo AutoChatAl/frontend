@@ -1,14 +1,29 @@
 'use client';
-import { X, Search, Clock, User, Package, FileText, Trash2, CheckCircle, Plus, Loader2, Ban, CalendarDays } from 'lucide-react';
+import { X, Search, Trash2, CheckCircle, Plus, Loader2, Ban, CalendarDays } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
+import Button from '@/components/Button';
 import DatePicker from '@/components/DatePicker';
+import Input from '@/components/Input';
 import Select from '@/components/Select';
+import Textarea from '@/components/Textarea';
 import TimePicker from '@/components/TimePicker';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
 import type { Contact } from '@/types/Contact';
-import { STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment, type AppointmentType } from '@/types/Scheduling';
+import { DAY_NAMES, STATUS_LABELS, STATUS_COLORS, type AppointmentStatus, type Appointment, type AppointmentType, type BusinessHours } from '@/types/Scheduling';
+
+/**
+ * Rótulo para os campos que não passam por Input/Textarea (DatePicker e
+ * TimePicker). Repete a marcação daqueles componentes — inclusive o asterisco
+ * vermelho — para os obrigatórios ficarem iguais no formulário inteiro.
+ */
+function FieldLabel({ children, required = false }: { children: string; required?: boolean }) {
+  return (<label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+    {children}
+    {required && <span className="ml-0.5 text-red-500" aria-hidden>*</span>}
+  </label>);
+}
 
 interface AppointmentModalProps {
     appointment: Appointment | null;
@@ -17,6 +32,8 @@ interface AppointmentModalProps {
     initialDate: string | null;
     initialTime: string | null;
     slotDuration: number;
+    /** Só para avisar quando a data escolhida cai num dia sem atendimento. */
+    businessHours?: BusinessHours | null;
     onSave: (data: {
         type?: string;
         contactId?: string;
@@ -32,7 +49,7 @@ interface AppointmentModalProps {
     onClose: () => void;
     onProductCreated?: (product: Product) => void;
 }
-export default function AppointmentModal({ appointment, contacts, products, initialDate, initialTime, slotDuration, onSave, onDelete, onClose, onProductCreated }: AppointmentModalProps) {
+export default function AppointmentModal({ appointment, contacts, products, initialDate, initialTime, slotDuration, businessHours = null, onSave, onDelete, onClose, onProductCreated }: AppointmentModalProps) {
   const isEditing = !!appointment;
   const toLocalDateTimeParts = (value: Date) => {
     const year = value.getFullYear();
@@ -110,6 +127,23 @@ export default function AppointmentModal({ appointment, contacts, products, init
     const appointmentDate = toLocalDateTimeParts(new Date(appointment.startAt)).date;
     return appointmentDate < todayStr ? appointmentDate : todayStr;
   }, [appointment]);
+  const closedDayWarning = useMemo(() => {
+    if (!businessHours || !date)
+      return null;
+    const parsed = new Date(`${date}T12:00:00`);
+    if (Number.isNaN(parsed.getTime()))
+      return null;
+    const exception = businessHours.exceptions.find((e) => e.date === date);
+    if (exception) {
+      return exception.type === 'BLOCKED'
+        ? `${parsed.toLocaleDateString('pt-BR')} está bloqueado nas exceções de data.`
+        : null;
+    }
+    const daySchedule = businessHours.weeklySchedule.find((d) => d.dayOfWeek === parsed.getDay());
+    if (daySchedule?.enabled)
+      return null;
+    return `${DAY_NAMES[parsed.getDay()]} está marcado como "Não atende" nos horários semanais.`;
+  }, [businessHours, date]);
   const filteredContacts = useMemo(() => {
     if (!contactSearch)
       return contacts.slice(0, 10);
@@ -174,9 +208,9 @@ export default function AppointmentModal({ appointment, contacts, products, init
   const statuses: AppointmentStatus[] = ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
   return (<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}/>
-    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
+    <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200">
       <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex items-center justify-between z-10">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
           {isEditing
             ? (type === 'BLOCK' ? 'Editar Bloqueio' : 'Editar Agendamento')
             : (type === 'BLOCK' ? 'Novo Bloqueio' : 'Novo Agendamento')}
@@ -206,15 +240,16 @@ export default function AppointmentModal({ appointment, contacts, products, init
           </div>
         </div>)}
 
-        <div>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Título *</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
-        </div>
+        <Input
+          label="Título"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={type === 'BLOCK' ? 'Ex: Almoço, Intervalo, Folga...' : 'Ex: Consulta, Reunião, Corte...'}
+        />
 
         {type === 'APPOINTMENT' && (<div className="relative">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-            <User size={14}/> Contato
-          </label>
+          <FieldLabel>Contato</FieldLabel>
           {selectedContact ? (<div className="flex items-center justify-between px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
             <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
               {selectedContact.displayName || 'Sem nome'}
@@ -224,7 +259,7 @@ export default function AppointmentModal({ appointment, contacts, products, init
             </button>
           </div>) : (<div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-            <input type="text" value={contactSearch} onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }} onFocus={() => setShowContactDropdown(true)} placeholder="Buscar contato..." className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+            <input type="text" value={contactSearch} onChange={(e) => { setContactSearch(e.target.value); setShowContactDropdown(true); }} onFocus={() => setShowContactDropdown(true)} placeholder="Buscar contato..." className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
             {showContactDropdown && (<div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
               {filteredContacts.length === 0 ? (<div className="px-3 py-2 text-sm text-slate-400">Nenhum contato encontrado</div>) : (filteredContacts.map((c) => (<button key={c.id} onClick={() => { setContactId(c.id); setContactSearch(''); setShowContactDropdown(false); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm text-slate-700 dark:text-slate-200 transition-colors">
                 <div className="font-medium">{c.displayName || 'Sem nome'}</div>
@@ -236,17 +271,15 @@ export default function AppointmentModal({ appointment, contacts, products, init
 
         {type === 'APPOINTMENT' && (<div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Package size={14}/> Produto / Serviço
-            </label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Produto / Serviço</label>
             {!showNewProduct && (<button type="button" onClick={() => setShowNewProduct(true)} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium flex items-center gap-1 transition-colors">
               <Plus size={14}/> Novo
             </button>)}
           </div>
 
           {showNewProduct ? (<div className="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/40 rounded-lg space-y-2.5">
-            <input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="Nome do produto ou serviço" autoFocus className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
-            <input type="text" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="Preço (opcional) ex: 50,00" className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"/>
+            <Input value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="Nome do produto ou serviço" aria-label="Nome do produto ou serviço" autoFocus/>
+            <Input value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="Preço (opcional) ex: 50,00" aria-label="Preço do produto"/>
             <div className="flex gap-2">
               <button type="button" onClick={() => { setShowNewProduct(false); setNewProductName(''); setNewProductPrice(''); }} className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors">
                       Cancelar
@@ -262,7 +295,7 @@ export default function AppointmentModal({ appointment, contacts, products, init
             onChange={(v) => setProductId(v)}
             clearable
             onClear={() => setProductId('')}
-            leftIcon={<Package size={14}/>}
+            triggerClassName="h-[42px]"
             options={localProducts.map((p) => ({
               value: p.id,
               label: p.name,
@@ -273,36 +306,46 @@ export default function AppointmentModal({ appointment, contacts, products, init
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           <div className="min-w-0 sm:col-span-4">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Data *</label>
+            <FieldLabel required>Data</FieldLabel>
             <DatePicker value={date} onChange={setDate} min={minAllowedDate}/>
           </div>
           <div className="min-w-0 sm:col-span-4">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Clock size={14}/> Início *
-            </label>
-            <TimePicker value={startTime} onChange={setStartTime}/>
+            <FieldLabel required>Início</FieldLabel>
+            <TimePicker value={startTime} onChange={setStartTime} ariaLabel="Hora de início"/>
           </div>
           <div className="min-w-0 sm:col-span-4">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Fim *</label>
-            <TimePicker value={endTime} onChange={setEndTime}/>
+            <FieldLabel required>Fim</FieldLabel>
+            <TimePicker value={endTime} onChange={setEndTime} ariaLabel="Hora de fim"/>
           </div>
         </div>
+
+        {/* O calendário já não deixa clicar num dia fechado; aqui a data é
+            digitada à mão, então avisa em vez de bloquear — agendar fora do
+            expediente é uma decisão legítima de quem está marcando. */}
+        {closedDayWarning && (<div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          <Ban size={14} className="mt-0.5 shrink-0"/>
+          {closedDayWarning}
+        </div>)}
 
         {submitError && (<div className="text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2">
           {submitError}
         </div>)}
 
-        <div>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-            <FileText size={14}/> Descrição
-          </label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Detalhes do agendamento..." className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"/>
-        </div>
+        <Textarea
+          label="Descrição"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          placeholder="Detalhes do agendamento..."
+        />
 
-        <div>
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Observações</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Notas internas..." className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"/>
-        </div>
+        <Textarea
+          label="Observações"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Notas internas..."
+        />
 
         {isEditing && (<div>
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Status</label>
@@ -318,23 +361,27 @@ export default function AppointmentModal({ appointment, contacts, products, init
 
       <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 p-4 sm:p-5 flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:justify-between">
         <div>
-          {onDelete && (<button onClick={onDelete} className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg flex items-center justify-center gap-1.5 transition-colors">
-            <Trash2 size={16}/>
-                Excluir
-          </button>)}
+          {onDelete && (<Button variant="ghost" onClick={onDelete} icon={<Trash2 size={16}/>} className="w-full justify-center text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/10 sm:w-auto">
+            Excluir
+          </Button>)}
         </div>
-        <div className="flex flex-col-reverse sm:flex-row gap-2">
-          <button onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-              Cancelar
-          </button>
-          <button onClick={handleSubmit} disabled={saving || !title.trim()} className={`px-6 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm font-medium flex items-center justify-center gap-2 transition-colors ${type === 'BLOCK'
-            ? 'bg-red-600 hover:bg-red-700 shadow-red-200 dark:shadow-none'
-            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none'}`}>
-            {saving ? (<div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>) : (<CheckCircle size={16}/>)}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <Button variant="ghost" onClick={onClose} className="justify-center">
+            Cancelar
+          </Button>
+          <Button
+            variant={type === 'BLOCK' ? 'danger' : 'primary'}
+            onClick={handleSubmit}
+            disabled={!title.trim()}
+            loading={saving}
+            loadingText="Salvando..."
+            icon={<CheckCircle size={16}/>}
+            className="justify-center"
+          >
             {isEditing
-              ? 'Salvar Alterações'
-              : type === 'BLOCK' ? 'Criar Bloqueio' : 'Criar Agendamento'}
-          </button>
+              ? 'Salvar alterações'
+              : type === 'BLOCK' ? 'Criar bloqueio' : 'Criar agendamento'}
+          </Button>
         </div>
       </div>
     </div>

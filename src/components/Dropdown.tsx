@@ -19,8 +19,10 @@ interface DropdownProps {
     disabled?: boolean;
     wrapperClassName?: string;
     id?: string;
+    /** Exibe um asterisco vermelho no label indicando campo obrigatório. */
+    required?: boolean;
 }
-export default function Dropdown({ label, error, hint, leftIcon, options, value, onChange, placeholder = 'Selecione...', disabled = false, wrapperClassName = '', id }: DropdownProps) {
+export default function Dropdown({ label, error, hint, leftIcon, options, value, onChange, placeholder = 'Selecione...', disabled = false, wrapperClassName = '', id, required = false }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
@@ -78,11 +80,12 @@ export default function Dropdown({ label, error, hint, leftIcon, options, value,
   return (<div className={`space-y-1.5 ${wrapperClassName}`}>
     {label && (<label htmlFor={buttonId} className="block text-sm font-medium text-slate-700 dark:text-slate-300">
       {label}
+      {required && <span className="text-red-500 ml-0.5" aria-hidden>*</span>}
     </label>)}
     <div ref={ref} className="relative">
       <button id={buttonId} type="button" disabled={disabled} onClick={() => !disabled && setOpen((v) => !v)} onKeyDown={handleKeyDown} aria-haspopup="listbox" aria-expanded={open} className={[
         'w-full flex items-center gap-2 py-2.5 border rounded-xl text-sm text-left transition-colors',
-        'bg-white dark:bg-slate-900 focus:outline-none focus:ring-2',
+        'bg-white dark:bg-slate-800 focus:outline-none focus:ring-2',
         leftIcon ? 'pl-10' : 'pl-4',
         'pr-10',
         disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',

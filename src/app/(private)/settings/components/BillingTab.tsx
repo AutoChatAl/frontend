@@ -3,14 +3,17 @@ import { CheckCircle, Download, MessageSquare, Megaphone, Reply, MessageCircle, 
 import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import CardPaymentModal from '@/components/CardPaymentModal';
 import Modal from '@/components/Modal';
 import PlanCheckoutModal from '@/components/PlanCheckoutModal';
+import SectionHeader from '@/components/SectionHeader';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
 import type { Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
+import { EXTRA_COLLABORATOR_PRICE_CENTS, EXTRA_INSTANCE_PRICE_CENTS, formatBRLFromCents } from '@/utils/billing';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number) {
@@ -245,13 +248,13 @@ export default function BillingTab() {
   const periodStart = sub?.currentPeriodStart
     ? new Date(sub.currentPeriodStart).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
     : null;
-  return (<div className="space-y-6">
+  return (<div className="space-y-3">
 
-    <Card className="p-4 sm:p-6">
+    <Card className="p-4">
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2 sm:gap-0 mb-4 sm:mb-6">
         <div>
           <p className="text-indigo-600 dark:text-indigo-400 text-xs uppercase tracking-wider font-semibold">Plano Atual</p>
-          <h3 className="text-xl sm:text-2xl font-bold mt-1 text-slate-900 dark:text-white flex items-center gap-2">
+          <h3 className="mt-1 flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             {isCanceled ? 'Nenhum plano ativo' : planName}
             {isTrialing && (<span className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
               Período de Teste
@@ -267,43 +270,28 @@ export default function BillingTab() {
       </div>
 
       {hasFailedPayment && (
-        <div className="mb-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-900/20 p-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div className="w-full">
-              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Falha no pagamento da assinatura</p>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                Identificamos falha no pagamento. Regularize a assinatura para voltar a usar todos os recursos do seu plano.
-              </p>
-              <div className="mt-3">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="justify-center"
-                  onClick={() => {
-                    setRegularizingCard(true);
-                    setShowCardModal(true);
-                  }}
-                >
-                  <CreditCard size={14} /> Atualizar cartão
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Callout tone="warning" className="mb-3">
+          <p className="font-semibold">Falha no pagamento da assinatura</p>
+          <p className="mt-0.5">Regularize para voltar a usar todos os recursos do plano.</p>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="mt-2 justify-center"
+            icon={<CreditCard size={14}/>}
+            onClick={() => {
+              setRegularizingCard(true);
+              setShowCardModal(true);
+            }}
+          >
+            Atualizar cartão
+          </Button>
+        </Callout>
       )}
 
       {isCanceled && (
-        <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-900/20 p-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-red-800 dark:text-red-300">Assinatura cancelada</p>
-              <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                O acesso aos recursos pagos foi encerrado. Assine um plano para criar instâncias, campanhas, canais e disparar mensagens novamente.
-              </p>
-            </div>
-          </div>
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs leading-relaxed text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          <p className="font-semibold">Assinatura cancelada</p>
+          <p className="mt-0.5">O acesso aos recursos pagos foi encerrado. Assine um plano para criar instâncias, campanhas, canais e disparar mensagens de novo.</p>
         </div>
       )}
 
@@ -327,10 +315,8 @@ export default function BillingTab() {
       )}
     </Card>
 
-    {isPaidActive && (<Card className="p-4 sm:p-6">
-      <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-        <Bot size={18} /> Plano de IA
-      </h3>
+    {isPaidActive && (<Card className="p-4">
+      <SectionHeader title="Plano de IA" hint="Cobrado à parte do plano principal. Define o limite de mensagens que a IA responde por mês."/>
       {hasAiPlan ? (<div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{aiPlan?.name ?? 'IA Incluída'}</p>
@@ -352,13 +338,13 @@ export default function BillingTab() {
       </div>)}
     </Card>)}
 
-    {isPaidActive && (<Card className="p-4 sm:p-6">
-      <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">Recursos Extras</h3>
+    {isPaidActive && (<Card className="p-4">
+      <SectionHeader title="Recursos extras" hint="Somados ao que o plano já inclui. A cobrança entra na próxima fatura."/>
       <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Instâncias Extras</p>
-            <p className="text-xs text-slate-500">R$ 24,90/mês cada</p>
+            <p className="text-xs text-slate-500">{formatBRLFromCents(EXTRA_INSTANCE_PRICE_CENTS)}/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setConfirmRemoveExtra({ type: 'instance' })} disabled={loadingExtra !== null || (sub?.extraInstances ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
@@ -370,10 +356,10 @@ export default function BillingTab() {
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Colaboradores Extras</p>
-            <p className="text-xs text-slate-500">R$ 19,90/mês cada</p>
+            <p className="text-xs text-slate-500">{formatBRLFromCents(EXTRA_COLLABORATOR_PRICE_CENTS)}/mês cada</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setConfirmRemoveExtra({ type: 'collaborator' })} disabled={loadingExtra !== null || (sub?.extraCollaborators ?? 0) === 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-30">
@@ -388,8 +374,8 @@ export default function BillingTab() {
       </div>
     </Card>)}
 
-    <Card className="p-4 sm:p-6">
-      <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">Histórico de Faturas</h3>
+    <Card className="p-4">
+      <SectionHeader title="Faturas" hint="Cobranças do plano, dos extras e da IA."/>
       <div className="space-y-2">
         {upcomingInvoice && (<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg">
           <div className="flex items-center gap-3">
@@ -431,62 +417,78 @@ export default function BillingTab() {
       </div>
     </Card>
 
-    {sub && sub.status !== 'canceled' && (<Card className="p-4 sm:p-6 border border-red-200 dark:border-red-900/60">
-      <h3 className="text-base font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">
-        <AlertTriangle size={16} /> Zona de Perigo
-      </h3>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-        Cancele sua assinatura com efeito imediato.
-      </p>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/40">
-        <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-white">Cancelar plano</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            O acesso ao plano e aos recursos pagos é encerrado imediatamente.
+    {sub && sub.status !== 'canceled' && (
+      <Card className="p-4">
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Zona de perigo</h3>
+          <p className="mt-0.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+              Ações irreversíveis. Não dá para desfazer depois de confirmar.
           </p>
         </div>
-        <Button variant="danger" size="sm" className="shrink-0" onClick={openCancelModal} disabled={loading}>
-          Cancelar plano
-        </Button>
-      </div>
-    </Card>)}
+        <div className="flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-red-500/20 dark:bg-red-500/10">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">Cancelar plano</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-red-600 dark:text-red-400">
+                O acesso ao plano e aos recursos pagos é encerrado imediatamente.
+            </p>
+          </div>
+          <Button variant="danger" size="sm" className="w-full shrink-0 justify-center py-2 sm:w-auto sm:py-1.5" onClick={openCancelModal} disabled={loading}>
+              Cancelar plano
+          </Button>
+        </div>
+      </Card>
+    )}
 
-    <Modal isOpen={showManageModal} onClose={() => setShowManageModal(false)} title="Gerenciar Assinatura" size="md">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Uso do período atual</p>
-        {periodStart && periodEnd && (<p className="text-xs text-slate-400 dark:text-slate-500">{periodStart} – {periodEnd}</p>)}
-      </div>
-      <div className="space-y-1 mb-6">
-        {usageItems.map(({ label, icon: Icon, used, limit }) => {
-          const isUnlimited = limit === -1;
-          const pct = isUnlimited || limit === 0 ? 0 : Math.min(100, Math.round((used / limit) * 100));
-          const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-indigo-500';
-          return (<div key={label} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
-            <Icon size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center mb-1.5">
-                <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 tabular-nums">
-                  {formatNumber(used)}{isUnlimited ? '' : ` / ${formatNumber(limit)}`}
-                </span>
-              </div>
-              {!isUnlimited && limit > 0 && (<div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1">
-                <div className={`h-1 rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
-              </div>)}
-            </div>
-            {!isUnlimited && limit > 0 && (<span className={`text-xs font-medium w-9 text-right tabular-nums ${pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-500' : 'text-slate-400'}`}>{pct}%</span>)}
-          </div>);
-        })}
-      </div>
+    <Modal isOpen={showManageModal} onClose={() => setShowManageModal(false)} title="Gerenciar assinatura" size="md">
+      <div className="space-y-4">
+        <div>
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Uso do período atual</p>
+            {periodStart && periodEnd && (<p className="text-xs text-slate-500 dark:text-slate-400">{periodStart} – {periodEnd}</p>)}
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+            {usageItems.map(({ label, icon: Icon, used, limit }) => {
+              const isUnlimited = limit === -1;
+              const pct = isUnlimited || limit === 0 ? 0 : Math.min(100, Math.round((used / limit) * 100));
+              const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-indigo-500';
+              const pctColor = pct >= 90 ? 'text-red-600 dark:text-red-400' : pct >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500';
+              return (
+                <div key={label} className="py-2.5 first:pt-0 last:pb-0">
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2 text-[13px] text-slate-600 dark:text-slate-300">
+                      <Icon size={14} className="shrink-0 text-slate-400 dark:text-slate-500"/>
+                      <span className="truncate">{label}</span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-700 dark:text-slate-200">
+                      {formatNumber(used)}{isUnlimited ? '' : ` / ${formatNumber(limit)}`}
+                      {!isUnlimited && limit > 0 && (<span className={`ml-1.5 font-medium ${pctColor}`}>{pct}%</span>)}
+                    </span>
+                  </div>
+                  {isUnlimited
+                    ? <p className="text-[11px] text-slate-400 dark:text-slate-500">Sem limite no seu plano</p>
+                    : limit > 0
+                      ? (<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }}/>
+                      </div>)
+                      : <p className="text-[11px] text-slate-400 dark:text-slate-500">Não incluído no seu plano</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-400 dark:text-slate-500">Cancelamento com efeito imediato</p>
-          <Button variant="danger" size="sm" onClick={() => {
+        <div className="flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-red-500/20 dark:bg-red-500/10">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">Cancelar assinatura</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-red-600 dark:text-red-400">
+                Efeito imediato: o acesso aos recursos pagos é encerrado na hora.
+            </p>
+          </div>
+          <Button variant="danger" size="sm" className="w-full shrink-0 justify-center py-2 sm:w-auto sm:py-1.5" onClick={() => {
             setShowManageModal(false);
             openCancelModal();
           }}>
-            Cancelar assinatura
+              Cancelar assinatura
           </Button>
         </div>
       </div>
@@ -500,7 +502,7 @@ export default function BillingTab() {
           // nesse caso o usuário PRECISA conseguir assinar o mesmo plano (checkout).
           const hasPaidSub = !!sub?.stripeSubscriptionId?.trim();
           const isCurrent = hasPaidSub && !isTrialing && !isCanceled && p.id === sub?.planId;
-          return (<div key={p.id} className={`border rounded-xl p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
+          return (<div key={p.id} className={`border rounded-lg p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{p.name}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">
@@ -532,7 +534,7 @@ export default function BillingTab() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {aiPlans.map((ap) => {
           const isCurrent = ap.id === sub?.aiPlanId;
-          return (<div key={ap.id} className={`border rounded-xl p-4 ${isCurrent ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
+          return (<div key={ap.id} className={`border rounded-lg p-4 ${isCurrent ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{ap.name}</h4>
             <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 my-3">
               {formatBRL(ap.priceCents)}<span className="text-sm font-normal text-slate-500">/mês</span>
@@ -544,6 +546,7 @@ export default function BillingTab() {
               {ap.limits.schedulingBookingEnabled && <li>• Agendamento</li>}
               <li>• {ap.limits.maxProducts === -1 ? 'Produtos ilimitados' : `${ap.limits.maxProducts} produtos`}</li>
               <li>• Regras até {formatNumber(ap.limits.maxCustomRulesChars)} caracteres</li>
+              {ap.limits.maxProfiles > 1 && <li>• {ap.limits.maxProfiles} perfis de IA</li>}
             </ul>
             <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 mb-3">
               <span className="text-violet-500">*</span> Mensagens de IA que excederem o limite mensal são cobradas como excedente: {formatPricePerMsg(ap.limits.extraAiMessagePriceCents)}/msg.
@@ -570,12 +573,12 @@ export default function BillingTab() {
 
     <Modal isOpen={!!confirmExtra} onClose={() => setConfirmExtra(null)} title={confirmExtra?.type === 'instance' ? 'Adicionar instância extra?' : 'Adicionar colaborador extra?'} size="sm">
       {confirmExtra && (<div className="space-y-4">
-        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
           <p className="text-sm font-semibold text-slate-800 dark:text-white">
             {confirmExtra.type === 'instance' ? 'Instância Extra' : 'Colaborador Extra'}
           </p>
           <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-            {confirmExtra.type === 'instance' ? 'R$ 24,90' : 'R$ 19,90'}
+            {formatBRLFromCents(confirmExtra.type === 'instance' ? EXTRA_INSTANCE_PRICE_CENTS : EXTRA_COLLABORATOR_PRICE_CENTS)}
             <span className="text-sm font-normal text-slate-500">/mês</span>
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -608,7 +611,7 @@ export default function BillingTab() {
 
     <Modal isOpen={!!confirmRemoveExtra} onClose={() => setConfirmRemoveExtra(null)} title={confirmRemoveExtra?.type === 'instance' ? 'Remover instância extra?' : 'Remover colaborador extra?'} size="sm">
       {confirmRemoveExtra && (<div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
           <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
@@ -636,7 +639,7 @@ export default function BillingTab() {
 
     <Modal isOpen={!!confirmPlanChange} onClose={() => setConfirmPlanChange(null)} title="Confirmar troca de plano" size="sm">
       {confirmPlanChange && (<div className="space-y-4">
-        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs text-slate-500 dark:text-slate-400">Plano atual</p>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{planName}</p>
@@ -649,7 +652,7 @@ export default function BillingTab() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
           <div className="flex items-center gap-2">
             <CreditCard size={15} className="text-slate-400" />
             <span className="text-sm text-slate-700 dark:text-slate-300">
@@ -674,7 +677,7 @@ export default function BillingTab() {
 
     <Modal isOpen={!!confirmAiPlan} onClose={() => setConfirmAiPlan(null)} title={hasAiPlan ? 'Confirmar troca de plano de IA' : 'Confirmar ativação de IA'} size="sm">
       {confirmAiPlan && (<div className="space-y-4">
-        <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+        <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
           {hasAiPlan && (<div className="flex items-center justify-between mb-1">
             <p className="text-xs text-slate-500 dark:text-slate-400">Plano atual</p>
             <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{aiPlan?.name}</p>
@@ -687,7 +690,7 @@ export default function BillingTab() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">
+        <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
           <div className="flex items-center gap-2">
             <CreditCard size={15} className="text-slate-400" />
             <span className="text-sm text-slate-700 dark:text-slate-300">
@@ -712,7 +715,7 @@ export default function BillingTab() {
 
     <Modal isOpen={showCancelAiModal} onClose={() => setShowCancelAiModal(false)} title="Cancelar plano de IA?" size="sm">
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+        <div className="flex items-start gap-3 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
           <Bot size={18} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-violet-700 dark:text-violet-400 mb-1">
@@ -723,7 +726,7 @@ export default function BillingTab() {
             </p>
           </div>
         </div>
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
           <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-600 dark:text-amber-400 opacity-90">
             Seus recursos de IA serão cancelados imediatamente. A cobrança deixará de ser incluída a partir da próxima fatura. Para ter acesso aos recursos de IA novamente, será necessário escolher um plano de IA ativo.
@@ -745,7 +748,7 @@ export default function BillingTab() {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você perde acesso imediato a:
         </p>
-        <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {[
             { icon: <MonitorSmartphone size={16} />, label: 'Instâncias WhatsApp/Instagram', value: plan ? `${plan.limits.maxInstances} instâncias` : '—' },
             { icon: <Megaphone size={16} />, label: 'Campanhas de disparo', value: plan ? `${plan.limits.maxCampaigns} campanhas` : '—' },
@@ -763,7 +766,7 @@ export default function BillingTab() {
             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.value}</span>
           </div>))}
         </div>
-        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/70 dark:bg-red-900/15 px-3.5 py-3">
+        <div className="flex items-start gap-2.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/70 dark:bg-red-900/15 px-3.5 py-3">
           <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
           <div className="text-xs text-red-700 dark:text-red-300 space-y-1">
             <p className="font-semibold">Esta ação é irreversível.</p>
@@ -787,7 +790,7 @@ export default function BillingTab() {
 
     <Modal isOpen={showCancelImmediatelyModal && cancelStep === 2} onClose={closeCancelModal} title="Confirmar cancelamento" size="sm">
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
           <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
@@ -802,7 +805,7 @@ export default function BillingTab() {
           <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1.5">
             Digite <span className="font-mono font-semibold">confirmar</span> para prosseguir
           </label>
-          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400" />
+          <input type="text" value={cancelConfirmText} onChange={(e) => setCancelConfirmText(e.target.value)} placeholder="confirmar" className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400" />
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1 justify-center" onClick={() => setCancelStep(1)} disabled={loading}>

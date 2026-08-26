@@ -76,31 +76,39 @@ className="focus:ring-indigo-500/20 focus:border-indigo-400"
 
 ---
 
-### 2.2 Neutros — Slate
+### 2.2 Neutros — Zinc (via classes `slate-*`)
 
 Base de toda a interface: fundos, textos, bordas, separadores.
 
-| Token Tailwind | Hex | Uso |
-|---|---|---|
-| `slate-50` | `#f8fafc` | Fundo de página (light) |
-| `slate-100` | `#f1f5f9` | Fundo de botão secondary, hover ghost |
-| `slate-200` | `#e2e8f0` | Bordas de card/input (light) |
-| `slate-300` | `#cbd5e1` | Scrollbar thumb (light), bordas sutis |
-| `slate-400` | `#94a3b8` | Placeholder, ícones secundários |
-| `slate-500` | `#64748b` | Texto de hint, meta info |
-| `slate-600` | `#475569` | Texto de corpo (light) |
-| `slate-700` | `#334155` | Texto médio, botão secondary (dark bg) |
-| `slate-800` | `#1e293b` | Fundo de card (dark), texto escuro |
-| `slate-900` | `#0f172a` | Fundo de input (dark), texto principal (light) |
+> **Remapeamento central:** o código usa classes `slate-*`/`gray-*`, mas os valores são
+> **remapeados para a escala Zinc** (cinza 100% neutro) num bloco `@theme` do
+> `src/app/globals.css`. Os tons 700–950 foram deslocados um passo para baixo para
+> produzir o dark mode moderno (página `#09090b`, card `#18181b`, borda `#27272a`).
+> Nunca altere os hex no código — altere o `@theme` e esta tabela juntos.
+
+| Token no código | Hex renderizado | Equivalente Zinc | Uso |
+|---|---|---|---|
+| `slate-50` | `#fafafa` | zinc-50 | Fundo de página (light) |
+| `slate-100` | `#f4f4f5` | zinc-100 | Fundo de botão secondary, hover ghost |
+| `slate-200` | `#e4e4e7` | zinc-200 | Bordas de card/input (light) |
+| `slate-300` | `#d4d4d8` | zinc-300 | Scrollbar thumb (light), bordas sutis |
+| `slate-400` | `#a1a1aa` | zinc-400 | Placeholder, ícones secundários |
+| `slate-500` | `#71717a` | zinc-500 | Texto de hint, meta info |
+| `slate-600` | `#52525b` | zinc-600 | Texto de corpo (light) |
+| `slate-700` | `#27272a` | zinc-800 | Borda (dark), hover de superfície (dark) |
+| `slate-800` | `#18181b` | zinc-900 | Fundo de card (dark), texto escuro |
+| `slate-900` | `#09090b` | zinc-950 | Fundo de página (dark), texto principal (light) |
+
+As classes `gray-*` são remapeadas para os mesmos valores (gray-50 = slate-50, etc.).
 
 **Mapeamento semântico:**
 
 | Semântica | Light | Dark |
 |---|---|---|
-| Fundo de página | `slate-50` ou `white` | `slate-900` |
-| Fundo de card | `white` | `slate-800` |
+| Fundo de página | `slate-50` ou `white` | `slate-900` (`#09090b`) |
+| Fundo de card | `white` | `slate-800` (`#18181b`) |
 | Fundo de input | `white` | `slate-900` |
-| Borda padrão | `slate-200` | `slate-700` |
+| Borda padrão | `slate-200` | `slate-700` (`#27272a`) |
 | Texto primário | `slate-900` | `white` |
 | Texto secundário | `slate-600` | `slate-400` |
 | Texto terciário / meta | `slate-500` | `slate-400` |
@@ -311,15 +319,16 @@ flex-col sm:flex-row → empilha no mobile, lado a lado no desktop
 
 | Classe | Valor | Uso |
 |---|---|---|
-| `rounded-md` | 6px | Badges padrão |
-| `rounded-lg` | 8px | Botões, modais, elementos de UI pequenos |
-| `rounded-xl` | 12px | Cards, inputs — padrão principal |
-| `rounded-full` | 9999px | Badges pill, avatares, scrollbar thumb |
+| `rounded-md` | 6px | Badges padrão, itens de menu da sidebar |
+| `rounded-lg` | 8px | **Cards, botões, modais — padrão principal** |
+| `rounded-xl` | 12px | Inputs (legado; novos containers usam `rounded-lg`) |
+| `rounded-full` | 9999px | Badges pill, avatares, scrollbar thumb, barras de progresso |
 
-**Regra geral:**
-- `rounded-xl` → cards, inputs, containers principais
-- `rounded-lg` → botões, modais, menus
-- `rounded-full` → elementos circulares, pills
+**Regra geral (visual minimalista — raios contidos):**
+- `rounded-lg` → cards, containers principais, botões, modais, menus
+- `rounded-md` → badges, itens de navegação, chips
+- `rounded-full` → elementos circulares, pills, barras finas
+- `rounded-xl` só permanece em inputs existentes — não usar em cards novos
 
 ### 5.2 Bordas
 
@@ -336,13 +345,14 @@ flex-col sm:flex-row → empilha no mobile, lado a lado no desktop
 
 | Classe | Uso |
 |---|---|
-| `shadow-sm` | Cards padrão, botão secondary |
+| `shadow-xs dark:shadow-none` | Cards padrão (elevação mínima — visual chapado/minimalista) |
+| `shadow-sm` | Botão secondary, dropdowns |
 | `shadow-sm shadow-indigo-200` | Botão primary (light only) |
 | `shadow-sm shadow-red-200` | Botão danger (light only) |
 | `shadow-xl` | Modais |
-| `dark:shadow-none` | Remove sombras coloridas no dark |
+| `dark:shadow-none` | Remove sombras no dark |
 
-**Princípio:** No dark mode, sombras coloridas são removidas. Apenas `shadow-xl` é mantida em modais para separação visual via elevação.
+**Princípio:** No dark mode, a separação visual vem das superfícies (card `#18181b` sobre página `#09090b`) e das bordas `#27272a` — não de sombras. Apenas `shadow-xl` é mantida em modais.
 
 ---
 
@@ -402,7 +412,22 @@ Dark mode é controlado por classe na raiz:
 
 A classe `.dark` é aplicada no `<html>` ou no elemento raiz. O toggle é feito via JavaScript pelo componente de tema.
 
-### 7.2 Padrão de Classes
+### 7.2 Superfícies — Zinc
+
+O dark mode usa a escala Zinc deslocada (ver §2.2). Resultado prático:
+
+| Superfície | Classe no código | Hex renderizado |
+|---|---|---|
+| Página | `dark:bg-slate-900` | `#09090b` (zinc-950) |
+| Card / sidebar / header | `dark:bg-slate-800` | `#18181b` (zinc-900) |
+| Borda / separador | `dark:border-slate-700` | `#27272a` (zinc-800) |
+| Hover de superfície | `dark:hover:bg-slate-700(/50)` | `#27272a` |
+| Elemento elevado (tooltip) | `dark:bg-slate-700` | `#27272a` |
+
+O `globals.css` também define `color-scheme: dark` dentro de `.dark`, para que
+controles nativos (inputs de data, scrollbars, autofill) acompanhem o tema.
+
+### 7.3 Padrão de Classes
 
 Sempre use o par `light / dark:` em cores:
 
@@ -423,16 +448,16 @@ border-slate-200 dark:border-slate-700
 hover:bg-slate-100 dark:hover:bg-slate-700
 ```
 
-### 7.3 Scrollbar (globals.css)
+### 7.4 Scrollbar (globals.css)
 
 ```css
 /* Light */
-scrollbar-color: #cbd5e1 transparent;   /* slate-300 */
-thumb hover: #94a3b8;                    /* slate-400 */
+scrollbar-color: #d4d4d8 transparent;   /* zinc-300 */
+thumb hover: #a1a1aa;                    /* zinc-400 */
 
 /* Dark */
-scrollbar-color: #475569 transparent;   /* slate-600 */
-thumb hover: #64748b;                    /* slate-500 */
+scrollbar-color: #3f3f46 transparent;   /* zinc-700 */
+thumb hover: #52525b;                    /* zinc-600 */
 
 /* Dimensões */
 width: 6px; height: 6px;
@@ -489,7 +514,7 @@ border-radius: 9999px;
 
 ```tsx
 // Estilo fixo
-bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm
+bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none
 ```
 
 Aceita `className` para extensão. Usado como container padrão de seções.
@@ -508,10 +533,13 @@ Aceita `className` para extensão. Usado como container padrão de seções.
 
 **Props:**
 - `label`: texto do label (opcional)
+- `required`: boolean — exibe asterisco vermelho (`text-red-500`) após o label; disponível também em Textarea e Dropdown. Campos obrigatórios em formulários devem usá-lo
 - `error`: mensagem de erro (muda borda para red-400)
 - `hint`: texto de ajuda (aparece quando não há erro)
 - `leftIcon`: ReactNode — ícone dentro do input à esquerda
 - `rightElement`: ReactNode — elemento à direita (ex: botão de senha)
+
+**Contador de caracteres:** quando o campo tem limite, o contador fica **abaixo do campo, alinhado à direita** (`text-[11px] tabular-nums text-slate-400`), nunca dentro do label.
 
 **Estados visuais:**
 
@@ -617,6 +645,39 @@ toast.error('Algo deu errado')
 
 ---
 
+### 8.6a MetricCard
+
+**Arquivo:** `src/components/MetricCard.tsx`
+
+KPI compacto padrão das páginas: título `text-sm font-semibold`, número
+`text-xl sm:text-2xl tabular-nums`, `hint` opcional abaixo (11px) e `trend`
+opcional — chip pill **alinhado à direita** na linha do número, com tom
+`positive` (verde), `negative` (vermelho) ou `neutral` (cinza), usado para
+variações tipo "+32%" / "-33% vs sem. passada".
+
+```tsx
+<MetricCard title="Total de Contatos" value="1.240" hint="82 sem canal vinculado"
+  trend={{ label: '+12% vs sem. passada', tone: 'positive' }}/>
+```
+
+---
+
+### 8.6b CardEmptyState
+
+**Arquivo:** `src/components/CardEmptyState.tsx`
+
+Estado vazio **dentro de cards** (o `EmptyState` continua sendo o de página inteira).
+Mensagem sempre **centralizada** (horizontal e vertical, `min-h-24`) em
+`text-[13px] text-slate-400 dark:text-slate-500`, com `action` opcional (ex.: um `Link`).
+Regra: todo card sem dados usa este componente — nunca um `<p>` solto alinhado à esquerda.
+
+```tsx
+<CardEmptyState message="Nenhum consumo no período."/>
+<CardEmptyState message="Nenhum disparo para hoje." action={<Link href="/campaigns">Criar uma campanha</Link>}/>
+```
+
+---
+
 ### 8.7 IconButton
 
 Botão compacto somente com ícone. Usado em ações terciárias (editar, excluir inline, copiar).
@@ -669,9 +730,9 @@ Player de áudio com forma de onda, usado no `AudioPicker` (auto-respostas) e no
 └──────────┴──────────────────────────────┘
 ```
 
-- **Header**: `h-16`, borda inferior, tema toggle, notificações
-- **Sidebar**: `w-64` expandida, `w-16` colapsada, fundo `white/slate-800`
-- **Main**: flex-1, padding interno `p-6`, background `slate-50/slate-900`
+- **Header**: `h-14`, borda inferior, tema toggle, notificações
+- **Sidebar**: `w-60` expandida, `w-16` colapsada, fundo `white/slate-800`; itens compactos (`text-[13px]`, ícone 16, `py-[7px]`, `rounded-md`)
+- **Main**: flex-1, padding interno `p-3 sm:p-5`, background `gray-50/slate-900`
 
 ### 9.2 Padrão de Seção em Página
 
@@ -792,7 +853,7 @@ Segue os pares de cor testados:
 
 ### 12.1 O que fazer
 
-- Use `rounded-xl` em containers e inputs; `rounded-lg` em botões e modais
+- Use `rounded-lg` em cards, containers, botões e modais; `rounded-md` em badges e itens de navegação
 - Aplique sempre o par `light / dark:` ao definir cores
 - Use `transition-colors` em elementos interativos
 - Use a hierarquia tipográfica definida (não misture pesos/tamanhos arbitrários)
@@ -842,4 +903,52 @@ No dark mode use a notação `color/opacity` (ex: `dark:bg-blue-500/10 dark:text
 
 ---
 
-*Última atualização: 2026-06-13 — adicionada a escala de Temperatura de Lead (Funil/CRM).*
+## 14. Gráficos (Dashboard)
+
+Gráficos são SVG feitos à mão (sem biblioteca), largura sempre 100% do card
+(medida real via `ResizeObserver` — nunca `viewBox` esticado).
+
+### 14.1 Série temporal — área preenchida (Origem dos envios)
+
+**Arquivo:** `src/app/(private)/dashboard/components/MessagesAreaChart.tsx`
+
+- Séries: origem dos envios por dia — **Enviadas pela IA** (indigo), **Enviadas manualmente** (emerald), **Enviadas por automações** (âmbar); dados de `daily[].aiSent/manualSent/automatedSent`.
+- Área com gradiente vertical (topo ~22–32% de opacidade → base transparente) + linha de 2px com curva suave (bumpX).
+- Grid horizontal recessivo (`slate-100/slate-700-60`), 4 linhas, labels de eixo `fontSize 10` em `slate-400`.
+- Hover: crosshair vertical + pontos com anel de 2px na cor da superfície + tooltip em card do tema (`bg-white dark:bg-slate-700`).
+- **Tabs de série no header** (substituem a legenda): segmented control (`border p-1 rounded-lg`, ativo = `bg-white dark:bg-slate-700`), cada tab com ponto da cor da série + label + total. Todas ativas por padrão; clicar alterna a série (`visibleKeys`), e o eixo Y reescala para as séries visíveis. Ponto cinza quando inativa. No mobile usa `shortLabel` ("IA", "Manualmente", "Automações") para as três caberem lado a lado.
+
+### 14.2b Sparkline (cards de KPI)
+
+**Arquivo:** `src/app/(private)/dashboard/components/Sparkline.tsx`
+
+- Mini-linha (1.75px, bumpX) com área em gradiente e ponto no último valor; sem eixos, grid ou tooltip (`aria-hidden`).
+- Os cards de KPI são gerados de `MESSAGE_SERIES` (Enviadas pela IA / manualmente / por automações) — mesmo label, cor e dado das séries do gráfico; o número fica **abaixo** do gráfico. Cards sem série diária usam `reserveSpark` para alinhar a altura.
+
+### 14.2c Uso de IA (progresso)
+
+**Arquivo:** `src/app/(private)/dashboard/components/AiUsageCard.tsx`
+
+- Fonte: `useSubscription().usage.aiMessages` (workspace, ciclo atual) — sem fetch novo.
+- Barra de progresso `h-2 rounded-full`: violet (`bg-violet-500 dark:bg-violet-600`), âmbar ≥ 80%, vermelho ≥ 100%; excedentes (`extraAiMessages.used`) em texto âmbar; limite `-1` = ilimitado (barra a 25% de opacidade).
+
+### 14.3 Paleta de séries (validada para daltonismo e contraste)
+
+As cores mudam com o tema (dark usa o degrau 600 para ficar dentro da faixa de
+luminância correta sobre `#18181b`):
+
+| Série / slot | Light | Dark |
+|---|---|---|
+| Enviadas pela IA | `#6366f1` | `#6366f1` |
+| Enviadas manualmente | `#10b981` | `#059669` |
+| Enviadas por automações | `#f59e0b` | `#d97706` |
+| Reserva categórica (slots 4–8) | `#0ea5e9 #a855f7 #f43f5e #14b8a6 #f97316` | `#0284c7 #9333ea #e11d48 #0d9488 #ea580c` |
+| "Outros" | `#a1a1aa` | `#71717a` |
+
+Regras: valores e labels sempre em tokens de texto (nunca na cor da série);
+identidade de série visível fora da cor (tabs/nome ao lado do ponto); um único
+eixo Y; sem rosca/pizza para distribuições.
+
+---
+
+*Última atualização: 2026-08-22 — Zinc via @theme, cards `rounded-lg` + `shadow-xs`, layout compacto; §14: tabs de série no gráfico de mensagens, distribuição em barras horizontais, Sparkline nos KPIs e card de Uso de IA. Backend: `/dashboard/metrics` passou a enviar `daily[].contacts`.*

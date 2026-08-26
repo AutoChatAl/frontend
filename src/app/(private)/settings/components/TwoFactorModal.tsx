@@ -185,13 +185,13 @@ function SetupView({ setupData, onVerify, onClose }: {
     <div className="flex gap-0 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden text-sm font-medium">
       <button type="button" onClick={() => setStep('scan')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors ${step === 'scan'
         ? 'bg-indigo-600 text-white'
-        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
         <QrCode size={15}/>
           Escanear QR
       </button>
       <button type="button" onClick={() => setStep('verify')} className={`flex-1 flex items-center justify-center gap-2 py-2.5 border-l border-slate-200 dark:border-slate-700 transition-colors ${step === 'verify'
         ? 'bg-indigo-600 text-white border-indigo-600'
-        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
         <KeyRound size={15}/>
           Verificar Código
       </button>

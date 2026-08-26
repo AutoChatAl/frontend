@@ -8,7 +8,25 @@ export interface AIChannel {
     identifier: string;
     createdBy?: string | null;
     ownerName?: string | null;
+    /** Perfil de IA que hoje responde por este canal — null quando a IA está desligada nele. */
+    aiProfileId?: string | null;
+    aiProfileName?: string | null;
+    /** Dono do perfil que segurou o canal, quando é de outra pessoa do time. */
+    aiProfileOwnerName?: string | null;
 }
+/** Um canal só pode responder por um perfil, então cada perfil tem seus próprios canais. */
+export interface AiProfile {
+    id: string;
+    /** Rótulo pronto para exibir: nome dado pelo usuário ou "Perfil N". */
+    name: string;
+    /** Nome digitado pelo usuário, vazio quando ele nunca renomeou. */
+    customName: string;
+    order: number;
+    enabled: boolean;
+    activeChannelIds: string[];
+}
+/** Catálogo unificado entre os perfis ou um catálogo por perfil. */
+export type AiCatalogScope = 'shared' | 'profile';
 export interface AIRule {
     id: string;
     title: string;
@@ -40,8 +58,13 @@ export const tonesOptions = [
   'Empático e Prestativo',
   'Direto e Objetivo',
 ];
+/** Formato das opções de produto no Instagram. Carrossel exige imagem em todo item ativo. */
+export type InstagramProductLayout = 'QUICK_REPLY' | 'CAROUSEL';
 export interface AiConfig {
     id: string;
+    profileName: string;
+    profileOrder: number;
+    catalogScope: AiCatalogScope;
     enabled: boolean;
     activeChannelId: string | null;
     segment: string;
@@ -54,6 +77,7 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    instagramProductLayout: InstagramProductLayout;
 }
 export interface Product {
     id: string;
@@ -63,6 +87,12 @@ export interface Product {
     link: string;
     notes: string;
     keywords?: string;
+    /** URL externa da imagem, quando veio da planilha. */
+    imageUrl?: string;
+    /** Data do upload próprio; presente significa que a imagem é um arquivo nosso. */
+    imageUploadedAt?: string | null;
+    /** URL pronta para exibir, montada pelo backend seja qual for a origem da imagem. */
+    imagePreviewUrl?: string;
     active?: boolean;
     featured?: boolean;
 }
@@ -72,6 +102,7 @@ export interface ProductPayload {
     link?: string;
     notes?: string;
     keywords?: string;
+    imageUrl?: string;
     active?: boolean;
     featured?: boolean;
 }
@@ -87,6 +118,8 @@ export interface ProductImportReport {
         price: string | null;
         notes: string | null;
         link: string | null;
+        keywords: string | null;
+        image: string | null;
     };
     totalRows: number;
     created: number;

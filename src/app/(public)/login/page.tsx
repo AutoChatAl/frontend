@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 
 import Input from '@/components/Input';
+import { resolveLandingRoute } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
 
 import AuthShell from '../components/AuthShell';
@@ -33,7 +34,7 @@ export default function LoginPage() {
         setIsLoading(false);
         return;
       }
-      router.push('/dashboard');
+      router.push(resolveLandingRoute(authService.getUser()));
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');

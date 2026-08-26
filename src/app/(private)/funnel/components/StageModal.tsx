@@ -67,7 +67,7 @@ export default function StageModal({
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && handleSubmit()}
             placeholder="Ex: Proposta enviada"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
           />
           {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
@@ -101,7 +101,7 @@ export default function StageModal({
             maxLength={AI_CRITERIA_MAX_LENGTH}
             onChange={(event) => setAiCriteria(event.target.value)}
             placeholder="Ex: cliente pediu orçamento ou perguntou sobre formas de pagamento"
-            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
           />
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs text-slate-500 dark:text-slate-400">

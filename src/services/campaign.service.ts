@@ -1,4 +1,4 @@
-import type { Campaign, CampaignRun, CreateCampaignInput, UpdateCampaignInput } from '@/types/Campaign';
+import type { Campaign, CampaignRun, CreateCampaignInput, ScheduleGrid, UpdateCampaignInput } from '@/types/Campaign';
 import type { WaCampaignEstimate } from '@/types/WhatsAppOfficial';
 import { apiClient } from '@/utils/ApiClient';
 import { getErrorFromResponse } from '@/utils/ErrorHandling';
@@ -36,6 +36,10 @@ export class CampaignService {
     return Array.isArray(data) ? data.map((c) => normalizeId(c as Campaign & {
             _id?: string;
         })) : [];
+  }
+  public async getScheduleGrid(): Promise<ScheduleGrid> {
+    const response = await apiClient.get<BackendResponse<ScheduleGrid>>('/campaigns/schedule-grid');
+    return extractData<ScheduleGrid>(response, 'Falha ao buscar a agenda de execuções. Tente novamente.');
   }
   public async getCampaign(campaignId: string): Promise<Campaign> {
     const response = await apiClient.get<BackendResponse<Campaign>>(`/campaigns/${campaignId}`);

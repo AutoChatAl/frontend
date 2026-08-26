@@ -1,5 +1,5 @@
 'use client';
-import { Plus, Trash2, Megaphone, Wrench, KeyRound } from 'lucide-react';
+import { AlertCircle, ExternalLink, KeyRound, Megaphone, Phone, Plus, Reply, Trash2, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -34,16 +34,16 @@ const LANGUAGES = [
   { value: 'es', label: 'Espanhol' },
 ];
 
-const CATEGORIES = [
-  { value: 'MARKETING', label: 'Marketing — promoções e novidades (sempre cobrado)' },
-  { value: 'UTILITY', label: 'Utilidade — pedidos, avisos e pós-venda (grátis na janela de 24h)' },
-  { value: 'AUTHENTICATION', label: 'Autenticação — códigos de verificação' },
+const CATEGORY_OPTIONS: { value: WaTemplateCategory; label: string; description: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+  { value: 'MARKETING', label: 'Marketing', description: 'Promoções e novidades — sempre cobrado', icon: Megaphone },
+  { value: 'UTILITY', label: 'Utilidade', description: 'Pedidos e avisos — grátis na janela de 24h', icon: Wrench },
+  { value: 'AUTHENTICATION', label: 'Autenticação', description: 'Códigos de verificação — tarifa própria', icon: KeyRound },
 ];
 
-const CATEGORY_ICON: Record<WaTemplateCategory, React.ReactNode> = {
-  MARKETING: <Megaphone size={14} />,
-  UTILITY: <Wrench size={14} />,
-  AUTHENTICATION: <KeyRound size={14} />,
+const BUTTON_PREVIEW_ICON: Record<ButtonDraft['type'], React.ComponentType<{ size?: number; className?: string }>> = {
+  QUICK_REPLY: Reply,
+  URL: ExternalLink,
+  PHONE_NUMBER: Phone,
 };
 
 type ButtonDraft = { type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER'; text: string; url: string; phoneNumber: string; trackUrl: boolean };
@@ -55,6 +55,10 @@ function extractVariables(text: string): string[] {
     if (name && !names.includes(name)) names.push(name);
   }
   return names;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">{children}</p>;
 }
 
 export default function TemplateBuilderModal({
@@ -81,6 +85,7 @@ export default function TemplateBuilderModal({
 
   const isEditing = !!editing;
   const lockIdentity = isEditing;
+  const categoryLocked = isEditing && editing?.status === 'APPROVED';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -243,107 +248,154 @@ export default function TemplateBuilderModal({
     }
   };
 
+  const previewButtons = buttons.filter((b) => b.text.trim());
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? `Editar template: ${editing?.name}` : 'Novo template'} size="xl">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {!isEditing && (
-            <Dropdown
-              label="Canal oficial"
-              options={channels.map((c) => ({
-                value: c.id,
-                label: c.whatsappOfficial.verifiedName || c.whatsappOfficial.displayPhoneNumber || c.name,
-              }))}
-              value={channelId}
-              onChange={setChannelId}
-            />
-          )}
-
-          <Input
-            label="Nome do template"
-            placeholder="ex.: promo_primeira_compra"
-            value={name}
-            onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-            disabled={lockIdentity}
-            hint={lockIdentity ? 'O nome não pode ser alterado após o envio.' : 'Apenas letras minúsculas, números e underscore.'}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Dropdown label="Idioma" options={LANGUAGES} value={language} onChange={setLanguage} disabled={lockIdentity} />
-            <Dropdown
-              label="Categoria"
-              options={CATEGORIES}
-              value={category}
-              onChange={(v) => setCategory(v as WaTemplateCategory)}
-              disabled={isEditing && editing?.status === 'APPROVED'}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            {CATEGORY_ICON[category]}
-            {category === 'MARKETING' && <span>Mensagens de marketing são cobradas por mensagem entregue pela Meta.</span>}
-            {category === 'UTILITY' && <span>Gratuito quando a janela de atendimento de 24h do contato está aberta.</span>}
-            {category === 'AUTHENTICATION' && <span>Para envio de códigos — tarifa própria da Meta.</span>}
-          </div>
-
-          <Input
-            label="Cabeçalho (opcional)"
-            placeholder="ex.: Olá, {{1}}!"
-            value={headerText}
-            onChange={(e) => setHeaderText(e.target.value.slice(0, 60))}
-            hint="Máx. 60 caracteres."
-          />
-
-          <div>
-            <Textarea
-              label="Corpo da mensagem"
-              placeholder="ex.: Olá {{1}}! Temos uma oferta especial para você..."
-              value={bodyText}
-              onChange={(e) => setBodyText(e.target.value.slice(0, 1024))}
-              rows={5}
-              hint={`${bodyText.length}/1024 · Use {{1}}, {{2}}... para variáveis.`}
-            />
-            <button
-              type="button"
-              onClick={insertVariable}
-              className="mt-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              + Adicionar variável
-            </button>
-          </div>
-
-          {variables.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Exemplos das variáveis (exigido pela Meta)</p>
-              {variables.map((variable) => (
-                <Input
-                  key={variable}
-                  label={`Exemplo para {{${variable}}}`}
-                  placeholder="ex.: Maria"
-                  value={variableExamples[variable] ?? ''}
-                  onChange={(e) => setVariableExamples((prev) => ({ ...prev, [variable]: e.target.value }))}
-                />
-              ))}
-            </div>
-          )}
-
-          <Input
-            label="Rodapé (opcional)"
-            placeholder="ex.: Responda SAIR para não receber mais ofertas"
-            value={footerText}
-            onChange={(e) => setFooterText(e.target.value.slice(0, 60))}
-            hint={category === 'MARKETING' ? 'Recomendado: instrução de descadastro reduz denúncias e protege a qualidade do número.' : 'Máx. 60 caracteres.'}
-          />
-
+        <div className="space-y-5">
           <div className="space-y-3">
+            <SectionLabel>Identificação</SectionLabel>
+            {!isEditing && (
+              <Dropdown
+                label="Canal oficial"
+                required
+                options={channels.map((c) => ({
+                  value: c.id,
+                  label: c.whatsappOfficial.verifiedName || c.whatsappOfficial.displayPhoneNumber || c.name,
+                }))}
+                value={channelId}
+                onChange={setChannelId}
+              />
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Nome do template"
+                required
+                placeholder="ex.: promo_primeira_compra"
+                value={name}
+                onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                disabled={lockIdentity}
+                hint={lockIdentity ? 'Não pode ser alterado após o envio.' : 'Minúsculas, números e underscore.'}
+              />
+              <Dropdown label="Idioma" required options={LANGUAGES} value={language} onChange={setLanguage} disabled={lockIdentity} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                Categoria<span className="text-red-500 ml-0.5" aria-hidden>*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Categoria do template">
+                {CATEGORY_OPTIONS.map((option) => {
+                  const selected = category === option.value;
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={categoryLocked}
+                      onClick={() => setCategory(option.value)}
+                      className={`rounded-lg border p-2.5 text-left transition-colors ${selected
+                        ? 'border-indigo-400 dark:border-indigo-500/60 bg-indigo-50 dark:bg-indigo-500/10'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'} ${categoryLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <span className={`flex items-center gap-1.5 text-[13px] font-medium ${selected ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <Icon size={14} className="shrink-0" /> {option.label}
+                      </span>
+                      <span className="block mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {categoryLocked && (
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">A categoria de um template aprovado não pode mudar.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+            <SectionLabel>Conteúdo da mensagem</SectionLabel>
+            <div>
+              <Input
+                label="Cabeçalho (opcional)"
+                placeholder="ex.: Olá, {{1}}!"
+                value={headerText}
+                onChange={(e) => setHeaderText(e.target.value.slice(0, 60))}
+              />
+              <p className="mt-1 text-right text-[11px] tabular-nums text-slate-400 dark:text-slate-500">{headerText.length}/60</p>
+            </div>
+
+            <div>
+              <Textarea
+                label="Corpo da mensagem"
+                required
+                placeholder="ex.: Olá {{1}}! Temos uma oferta especial para você..."
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value.slice(0, 1024))}
+                rows={5}
+                hint="Use {{1}}, {{2}}... para variáveis preenchidas no envio."
+              />
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={insertVariable}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+                >
+                  <Plus size={12} /> Adicionar variável
+                </button>
+                <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">{bodyText.length}/1024</span>
+              </div>
+            </div>
+
+            {variables.length > 0 && (
+              <div className="rounded-lg border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-500/5 p-3 space-y-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  Exemplos das variáveis · exigido pela Meta
+                </p>
+                {variables.map((variable) => (
+                  <Input
+                    key={variable}
+                    label={`Exemplo para {{${variable}}}`}
+                    required
+                    placeholder="ex.: Maria"
+                    value={variableExamples[variable] ?? ''}
+                    onChange={(e) => setVariableExamples((prev) => ({ ...prev, [variable]: e.target.value }))}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div>
+              <Input
+                label="Rodapé (opcional)"
+                placeholder="ex.: Responda SAIR para não receber mais ofertas"
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value.slice(0, 60))}
+              />
+              <div className="mt-1 flex items-start justify-between gap-3">
+                {category === 'MARKETING'
+                  ? (<span className="text-xs text-slate-400 dark:text-slate-500">Instrução de descadastro reduz denúncias e protege a qualidade do número.</span>)
+                  : <span/>}
+                <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">{footerText.length}/60</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 pt-4 border-t border-slate-100 dark:border-slate-700/60">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Botões (opcional)</p>
+              <SectionLabel>Botões (opcional)</SectionLabel>
               <Button variant="ghost" size="sm" icon={<Plus size={14} />} onClick={addButton} disabled={buttons.length >= 10}>
                 Adicionar
               </Button>
             </div>
+            {buttons.length === 0 && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">Respostas rápidas, links rastreáveis ou botão de ligação — até 10 por template.</p>
+            )}
             {buttons.map((button, index) => (
-              <div key={index} className="flex flex-col sm:flex-row gap-2 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
+              <div key={index} className="flex flex-col sm:flex-row gap-2 items-start p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
                 <div className="w-full sm:w-40">
                   <Dropdown
                     options={[
@@ -368,7 +420,7 @@ export default function TemplateBuilderModal({
                           className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-400">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — no envio, cada contato recebe o link com rastreio próprio (sck/UTM), permitindo atribuir compras e recuperação de carrinho.
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — cada contato recebe o link com rastreio próprio (sck/UTM) para atribuir compras.
                         </span>
                       </label>
                     </>
@@ -377,27 +429,32 @@ export default function TemplateBuilderModal({
                     <Input placeholder="+5511999999999" value={button.phoneNumber} onChange={(e) => updateButton(index, { phoneNumber: e.target.value })} />
                   )}
                 </div>
-                <button type="button" onClick={() => removeButton(index)} className="p-2 text-rose-500 hover:text-rose-600 dark:text-rose-400" aria-label="Remover botão">
-                  <Trash2 size={16} />
+                <button type="button" onClick={() => removeButton(index)} className="p-1.5 text-rose-500 hover:text-rose-600 dark:text-rose-400 transition-colors" aria-label="Remover botão">
+                  <Trash2 size={15} />
                 </button>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Pré-visualização</p>
+        <div className="lg:sticky lg:top-0 self-start space-y-3">
+          <SectionLabel>Pré-visualização</SectionLabel>
           <WhatsAppPreview message={previewMessage} />
-          {buttons.filter((b) => b.text.trim()).length > 0 && (
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700 overflow-hidden">
-              {buttons.filter((b) => b.text.trim()).map((b, i) => (
-                <div key={i} className="py-2.5 text-center text-sm font-medium text-sky-600 dark:text-sky-400 bg-white dark:bg-slate-800">
-                  {b.text}
-                </div>
-              ))}
+          {previewButtons.length > 0 && (
+            <div className="flex justify-end">
+              <div className="w-[85%] rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700/60 overflow-hidden bg-white dark:bg-slate-800">
+                {previewButtons.map((b, i) => {
+                  const Icon = BUTTON_PREVIEW_ICON[b.type];
+                  return (
+                    <div key={i} className="py-2 px-3 flex items-center justify-center gap-1.5 text-[13px] font-medium text-sky-600 dark:text-sky-400">
+                      <Icon size={13} className="shrink-0" /> {b.text}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
-          <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+          <div className="rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700/60 p-3 space-y-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
             <p>• A Meta analisa o template automaticamente (minutos a 24h na maioria dos casos).</p>
             <p>• Evite conteúdo promocional em templates de utilidade — causa reprovação por categoria incorreta.</p>
             <p>• Templates aprovados podem ser editados até 10x por mês (1x a cada 24h).</p>
@@ -405,13 +462,22 @@ export default function TemplateBuilderModal({
         </div>
       </div>
 
-      {formError && <p className="mt-4 text-sm text-rose-600 dark:text-rose-400">{formError}</p>}
+      {formError && (
+        <div className="mt-4 flex items-start gap-2 text-[13px] text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg px-3 py-2.5">
+          <AlertCircle size={15} className="mt-0.5 shrink-0" /> {formError}
+        </div>
+      )}
 
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSubmit} loading={saving} loadingText="Enviando...">
-          {isEditing ? 'Salvar e reenviar para análise' : 'Enviar para aprovação'}
-        </Button>
+      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          Enviando, o template vai direto para a análise automática da Meta.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSubmit} loading={saving} loadingText="Enviando...">
+            {isEditing ? 'Salvar e reenviar para análise' : 'Enviar para aprovação'}
+          </Button>
+        </div>
       </div>
     </Modal>
   );

@@ -2,6 +2,7 @@
 import { CalendarDays } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
+import Button from '@/components/Button';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
@@ -182,29 +183,35 @@ export default function SchedulingPage() {
   if (loading) {
     return <PageLoader message="Carregando agendamentos"/>;
   }
-  return (<div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">Agendamentos</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Gerencie seus horários e compromissos</p>
+  return (<div className="w-full max-w-full space-y-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Agendamentos</h1>
+        <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+          Sua agenda, os horários de atendimento e a integração com o Google
+        </p>
       </div>
-      <button onClick={() => handleCreateAppointment()} className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-medium flex items-center justify-center gap-2 transition-colors">
-        <CalendarDays size={18}/>
-          Novo Agendamento
-      </button>
+      <Button onClick={() => handleCreateAppointment()} icon={<CalendarDays size={16}/>} className="justify-center">
+        Novo agendamento
+      </Button>
     </div>
 
-    <div data-tour="scheduling-tabs">
-      <SchedulingTabs activeTab={activeTab} onTabChange={setActiveTab}/>
+    {/* Nav à esquerda e conteúdo ao lado; no mobile a nav vira uma fila rolável em cima. */}
+    <div className="flex flex-col gap-4 lg:flex-row">
+      <div data-tour="scheduling-tabs" className="lg:w-52 lg:shrink-0">
+        <SchedulingTabs activeTab={activeTab} onTabChange={setActiveTab}/>
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-3">
+        {activeTab === 'calendar' && (<CalendarView appointments={appointments} businessHours={businessHours} contacts={contacts} products={products} currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart} onCreateAppointment={handleCreateAppointment} onEditAppointment={handleEditAppointment} onUpdateStatus={handleUpdateStatus}/>)}
+
+        {activeTab === 'business-hours' && businessHours && (<BusinessHoursConfig businessHours={businessHours} onSave={handleSaveBusinessHours} schedulingReminderEnabled={schedulingReminderEnabled} onSchedulingReminderChange={handleSchedulingReminderChange}/>)}
+
+        {activeTab === 'integrations' && (<GoogleCalendarIntegration onToast={addToast}/>)}
+      </div>
     </div>
 
-    {activeTab === 'calendar' && (<CalendarView appointments={appointments} businessHours={businessHours} contacts={contacts} products={products} currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart} onCreateAppointment={handleCreateAppointment} onEditAppointment={handleEditAppointment} onUpdateStatus={handleUpdateStatus}/>)}
-
-    {activeTab === 'business-hours' && businessHours && (<BusinessHoursConfig businessHours={businessHours} onSave={handleSaveBusinessHours} schedulingReminderEnabled={schedulingReminderEnabled} onSchedulingReminderChange={handleSchedulingReminderChange}/>)}
-
-    {activeTab === 'integrations' && (<GoogleCalendarIntegration onToast={addToast}/>)}
-
-    {modalOpen && (<AppointmentModal appointment={editingAppointment} contacts={contacts} products={products} initialDate={selectedDate} initialTime={selectedTime} slotDuration={businessHours?.slotDurationMinutes || 30} onSave={handleSaveAppointment} {...(editingAppointment && { onDelete: () => { void handleDeleteAppointment(editingAppointment.id); } })} onClose={() => setModalOpen(false)} onProductCreated={(product) => setProducts((prev) => [...prev, product])}/>)}
+    {modalOpen && (<AppointmentModal appointment={editingAppointment} contacts={contacts} products={products} initialDate={selectedDate} initialTime={selectedTime} slotDuration={businessHours?.slotDurationMinutes || 30} businessHours={businessHours} onSave={handleSaveAppointment} {...(editingAppointment && { onDelete: () => { void handleDeleteAppointment(editingAppointment.id); } })} onClose={() => setModalOpen(false)} onProductCreated={(product) => setProducts((prev) => [...prev, product])}/>)}
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

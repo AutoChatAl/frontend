@@ -1,199 +1,239 @@
 'use client';
-import { AlertCircle, FileText, Image as ImageIcon, MessageCircle, Mic, Pencil, Plus, Reply, Trash2 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { AlertCircle, Plus, Reply } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
-import IconButton from '@/components/IconButton';
 import PageLoader from '@/components/PageLoader';
 import { ToastContainer, useToast } from '@/components/Toast';
-import ToggleSwitch from '@/components/ToggleSwitch';
+import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { autoReplyService } from '@/services/auto-reply.service';
+import { commentAutomationService } from '@/services/comment-automation.service';
 import type { AutoReply } from '@/types/AutoReply';
+import type { CommentAutomation } from '@/types/CommentAutomation';
 
-import CreateAutoReplyModal from './components/CreateAutoReplyModal';
-import EditAutoReplyModal from './components/EditAutoReplyModal';
+import AutomationCard from './components/AutomationCard';
+import AutomationFilters, { type KindFilter } from './components/AutomationFilters';
+import { toCommentRow, toDmRow, type AutomationKind, type AutomationRow } from './components/automationMeta';
+import AutomationModal from './components/AutomationModal';
+import AutomationTypeModal from './components/AutomationTypeModal';
 
-const MATCH_MODE_LABELS: Record<string, string> = {
-  CONTAINS: 'Contém',
-  EXACT: 'Exata',
-  STARTS_WITH: 'Começa com',
-};
+/** `?tipo=` abre a tela já filtrada — é por onde a rota antiga de comentários chega. */
+function kindFromParam(value: string | null): KindFilter {
+  if (value === 'comentario' || value === 'comment') return 'COMMENT';
+  if (value === 'dm' || value === 'mensagem') return 'DM';
+  return 'ALL';
+}
+
+type WithMongoId<T> = T & { _id?: string };
+
 export default function AutoRepliesPage() {
-  const [rules, setRules] = useState<AutoReply[]>([]);
+  const searchParams = useSearchParams();
+  const [rows, setRows] = useState<AutomationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<AutoReply | null>(null);
-  const [editTarget, setEditTarget] = useState<AutoReply | null>(null);
+  const [kind, setKind] = useState<KindFilter>(() => kindFromParam(searchParams.get('tipo')));
+  const [channelId, setChannelId] = useState('');
+
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
+  const [creating, setCreating] = useState<AutomationKind | null>(null);
+  const [editTarget, setEditTarget] = useState<AutomationRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AutomationRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
   const { toasts, addToast, removeToast } = useToast();
-  const fetchRules = useCallback(async () => {
+  const { channels, loading: channelsLoading } = useWorkspaceChannels();
+
+  const fetchRows = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      const data = await autoReplyService.list();
-      const normalized = data.map((r: AutoReply & {
-                _id?: string;
-            }) => ({
-        ...r,
-        id: r.id || r._id || '',
-      }));
-      setRules(normalized);
-    }
-    catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar auto-respostas');
-    }
-    finally {
+      // Uma lista falhando não pode esconder a outra: cada serviço tem o seu catch.
+      const [dms, comments] = await Promise.all([
+        autoReplyService.list().catch(() => null),
+        commentAutomationService.list().catch(() => null),
+      ]);
+      if (dms === null && comments === null) {
+        throw new Error('Erro ao carregar as automações');
+      }
+      const merged: AutomationRow[] = [
+        ...(dms ?? []).map((rule: WithMongoId<AutoReply>) => toDmRow({ ...rule, id: rule.id || rule._id || '' })),
+        ...(comments ?? []).map((rule: WithMongoId<CommentAutomation>) => toCommentRow({ ...rule, id: rule.id || rule._id || '' })),
+      ];
+      merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRows(merged);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar as automações');
+    } finally {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
-    fetchRules();
-  }, [fetchRules]);
-  const handleToggle = async (rule: AutoReply) => {
+    fetchRows();
+  }, [fetchRows]);
+
+  const channelNameById = useMemo(
+    () => new Map(channels.map((channel) => [channel.id, channel.name])),
+    [channels],
+  );
+
+  // O contador das abas respeita o canal escolhido, mas não o próprio tipo —
+  // senão a aba não selecionada mostraria sempre zero.
+  const byChannel = useMemo(
+    () => (channelId ? rows.filter((row) => row.channelId === channelId) : rows),
+    [rows, channelId],
+  );
+  const counts: Record<KindFilter, number> = useMemo(() => ({
+    ALL: byChannel.length,
+    DM: byChannel.filter((row) => row.kind === 'DM').length,
+    COMMENT: byChannel.filter((row) => row.kind === 'COMMENT').length,
+  }), [byChannel]);
+  const visible = useMemo(
+    () => (kind === 'ALL' ? byChannel : byChannel.filter((row) => row.kind === kind)),
+    [byChannel, kind],
+  );
+
+  const handleToggle = async (row: AutomationRow) => {
     try {
-      await autoReplyService.toggle(rule.id);
-      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r)));
-      addToast('success', `Auto-resposta ${rule.enabled ? 'desativada' : 'ativada'}`);
-    }
-    catch (_err) {
-      addToast('error', 'Erro ao alterar status da auto-resposta');
+      if (row.kind === 'DM') await autoReplyService.toggle(row.id);
+      else await commentAutomationService.toggle(row.id);
+      setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, enabled: !item.enabled } : item)));
+      addToast('success', `Automação ${row.enabled ? 'desativada' : 'ativada'}`);
+    } catch {
+      addToast('error', 'Erro ao alterar o status da automação');
     }
   };
+
   const handleDelete = async () => {
-    if (!deleteTarget)
-      return;
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      setDeleting(true);
-      await autoReplyService.delete(deleteTarget.id);
-      setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-      addToast('success', 'Auto-resposta excluída');
-    }
-    catch (_err) {
-      addToast('error', 'Erro ao excluir auto-resposta');
-    }
-    finally {
+      if (deleteTarget.kind === 'DM') await autoReplyService.delete(deleteTarget.id);
+      else await commentAutomationService.delete(deleteTarget.id);
+      setRows((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      addToast('success', 'Automação excluída');
+    } catch {
+      addToast('error', 'Erro ao excluir a automação');
+    } finally {
       setDeleting(false);
       setDeleteTarget(null);
     }
   };
+
+  const afterSave = (message: string) => {
+    fetchRows();
+    addToast('success', message);
+  };
+
   if (loading) {
-    return <PageLoader message="Carregando auto-respostas..."/>;
+    return <PageLoader message="Carregando automações..."/>;
   }
-  if (error && rules.length === 0) {
-    return (<div className="flex items-center justify-center h-64">
+
+  if (error && rows.length === 0) {
+    return (<div className="flex h-64 items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="flex items-center gap-2 text-red-500">
           <AlertCircle size={20}/>
           <span className="text-sm font-medium">{error}</span>
         </div>
-        <Button onClick={fetchRules} size="sm">Tentar novamente</Button>
+        <Button onClick={fetchRows} size="sm">Tentar novamente</Button>
       </div>
     </div>);
   }
-  return (<div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500">
-    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Auto-Respostas</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Configure respostas automáticas baseadas em palavras-chave
-          {rules.length > 0 && (<span className="ml-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
-            {rules.length} {rules.length === 1 ? 'regra' : 'regras'}
-          </span>)}
+
+  return (<div className="w-full max-w-full space-y-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Auto-respostas</h1>
+        <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+          Respostas automáticas por palavra-chave, em mensagens diretas e em comentários
         </p>
       </div>
-
       <div data-tour="auto-replies-new">
-        <Button icon={<Plus size={16}/>} onClick={() => setIsCreateOpen(true)}>
-          Nova Auto-Resposta
+        <Button icon={<Plus size={16}/>} onClick={() => setTypePickerOpen(true)} className="w-full justify-center sm:w-auto">
+          Nova automação
         </Button>
       </div>
-    </header>
+    </div>
 
-    {rules.length === 0 ? (<EmptyState icon={<Reply size={22}/>} title="Nenhuma auto-resposta configurada" description="Crie regras para responder automaticamente quando um contato enviar uma palavra-chave." action={{
-      label: 'Criar primeira regra',
-      icon: <Plus size={15}/>,
-      onClick: () => setIsCreateOpen(true),
-    }}/>) : (<div className="grid gap-4">
-      {rules.map((rule) => {
-        const isWA = rule.channelType === 'WHATSAPP';
-        const isOfficial = rule.channelType === 'WHATSAPP_OFFICIAL';
-        return (<div key={rule.id} className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-5 transition-all ${!rule.enabled ? 'opacity-60' : ''}`}>
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
-            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${isWA ? 'bg-green-100 dark:bg-green-900/30' : 'bg-pink-100 dark:bg-pink-900/30'}`}>
-                <MessageCircle size={18} className={isWA ? 'text-green-600 dark:text-green-400' : 'text-pink-600 dark:text-pink-400'}/>
-              </div>
+    {rows.length > 0 && (
+      <AutomationFilters
+        kind={kind}
+        onKindChange={setKind}
+        channelId={channelId}
+        onChannelChange={setChannelId}
+        channels={channels}
+        counts={counts}
+      />
+    )}
 
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
-                  <Badge type={isWA || isOfficial ? 'whatsapp' : 'instagram'} text={isWA ? 'WhatsApp' : isOfficial ? 'API Oficial' : 'Instagram'} pill/>
-                  <Badge type="neutral" text={MATCH_MODE_LABELS[rule.matchMode] || rule.matchMode} pill/>
-                  {rule.caseSensitive && (<Badge type="warning" text="Aa" pill/>)}
-                </div>
-
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Quando receber:</p>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg inline-block">
-                            &quot;{rule.keyword}&quot;
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Responder com:</p>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50 space-y-1">
-                      {['TEXT', 'TEXT_AND_AUDIO', 'TEXT_AND_IMAGE', 'TEXT_AND_DOCUMENT'].includes(rule.replyType) && rule.replyMessage && (<p className="line-clamp-3 whitespace-pre-wrap">{rule.replyMessage}</p>)}
-                      {rule.channelType === 'INSTAGRAM' && rule.replyLinkDescription && (<p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 whitespace-pre-wrap">
-                        {rule.replyLinkDescription}
-                      </p>)}
-                      {rule.replyLinkUrl && (<div className="pt-0.5">
-                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                          <Reply size={12}/>
-                          <span className="text-xs font-medium truncate">{rule.replyLinkLabel || rule.replyLinkUrl}</span>
-                        </div>
-                      </div>)}
-                      {['AUDIO', 'TEXT_AND_AUDIO', 'IMAGE_AND_AUDIO', 'DOCUMENT_AND_AUDIO'].includes(rule.replyType) && (<div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                        <Mic size={14}/>
-                        <span className="text-xs font-medium">Mensagem de áudio</span>
-                      </div>)}
-                      {['IMAGE', 'TEXT_AND_IMAGE', 'IMAGE_AND_AUDIO'].includes(rule.replyType) && (<div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                        <ImageIcon size={14}/>
-                        <span className="text-xs font-medium">Imagem enviada</span>
-                      </div>)}
-                      {['DOCUMENT', 'TEXT_AND_DOCUMENT', 'DOCUMENT_AND_AUDIO'].includes(rule.replyType) && (<div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                        <FileText size={14}/>
-                        <span className="text-xs font-medium">Documento enviado</span>
-                      </div>)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-              <ToggleSwitch checked={rule.enabled} onChange={() => handleToggle(rule)}/>
-              <IconButton icon={<Pencil size={16}/>} onClick={() => setEditTarget(rule)} variant="default" size="md"/>
-              <IconButton icon={<Trash2 size={16}/>} onClick={() => setDeleteTarget(rule)} variant="danger" size="md"/>
-            </div>
-          </div>
-        </div>);
-      })}
+    {rows.length === 0 ? (<EmptyState
+      icon={<Reply size={20}/>}
+      title="Nenhuma automação configurada"
+      description="Crie regras para responder sozinho quando alguém mandar uma palavra-chave no direct ou comentar num post."
+      action={{ label: 'Criar primeira automação', icon: <Plus size={16}/>, onClick: () => setTypePickerOpen(true) }}
+    />) : visible.length === 0 ? (<p className="rounded-lg border border-dashed border-slate-200 py-8 text-center text-[13px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
+      Nenhuma automação com esses filtros.
+    </p>) : (<div className="grid gap-2 sm:gap-3">
+      {visible.map((row) => (
+        <AutomationCard
+          key={`${row.kind}-${row.id}`}
+          row={row}
+          channelName={channelNameById.get(row.channelId) ?? null}
+          onToggle={handleToggle}
+          onEdit={setEditTarget}
+          onDelete={setDeleteTarget}
+        />
+      ))}
     </div>)}
 
-    <CreateAutoReplyModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={() => {
-      fetchRules();
-      addToast('success', 'Auto-resposta criada com sucesso!');
-    }}/>
+    <AutomationTypeModal
+      isOpen={typePickerOpen}
+      onClose={() => setTypePickerOpen(false)}
+      onPick={(picked) => {
+        setTypePickerOpen(false);
+        setCreating(picked);
+      }}
+    />
 
-    {editTarget && (<EditAutoReplyModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} onSuccess={() => {
-      fetchRules();
-      addToast('success', 'Auto-resposta atualizada com sucesso!');
-    }} autoReply={editTarget}/>)}
+    {creating && (<AutomationModal
+      isOpen
+      kind={creating}
+      channels={channels}
+      channelsLoading={channelsLoading}
+      onClose={() => setCreating(null)}
+      onSuccess={() => {
+        setCreating(null);
+        afterSave('Automação criada com sucesso!');
+      }}
+    />)}
 
-    {deleteTarget && (<ConfirmDeleteModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} loading={deleting} title="Excluir Auto-Resposta" message={`Tem certeza que deseja excluir a auto-resposta para "${deleteTarget.keyword}"?`}/>)}
+    {editTarget && (<AutomationModal
+      isOpen
+      kind={editTarget.kind}
+      automation={editTarget}
+      channels={channels}
+      channelsLoading={channelsLoading}
+      onClose={() => setEditTarget(null)}
+      onSuccess={() => {
+        setEditTarget(null);
+        afterSave('Automação atualizada com sucesso!');
+      }}
+    />)}
+
+    {deleteTarget && (<ConfirmDeleteModal
+      isOpen
+      onClose={() => setDeleteTarget(null)}
+      onConfirm={handleDelete}
+      loading={deleting}
+      title="Excluir automação"
+      message={deleteTarget.kind === 'DM'
+        ? `Tem certeza que deseja excluir a auto-resposta para "${deleteTarget.rule.keyword}"?`
+        : `Tem certeza que deseja excluir a automação ${deleteTarget.rule.keyword ? `para "${deleteTarget.rule.keyword}"` : 'de qualquer comentário'}?`}
+    />)}
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

@@ -1,12 +1,9 @@
 'use client';
-import { BadgeCheck, Check, CheckCheck, Clock, FileText, Instagram, Mic, Paperclip, Reply, Search, Send, MessageCircle, Square, X } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, UserCheck, X } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
-import Badge from '@/components/Badge';
 import Button from '@/components/Button';
-import EmptyState from '@/components/EmptyState';
-import ToggleSwitch from '@/components/ToggleSwitch';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
 import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
@@ -17,6 +14,19 @@ import {
   pickAudioRecorderMimeType,
 } from '@/utils/AudioWav';
 
+import {
+  Avatar,
+  bodyForBubble,
+  channelBadge,
+  dayLabel,
+  formatConversationTime,
+  formatMessageTime,
+  getInitials,
+  InteractiveContent,
+  isSameDay,
+} from './components/ChatBits';
+import ChatSettingsMenu from './components/ChatSettingsMenu';
+import ConversationContextPanel from './components/ConversationContextPanel';
 import { messagePreview, useInbox } from './useInbox';
 
 /**
@@ -28,12 +38,19 @@ function chatEnabledCacheKey(workspaceId: string): string {
   return `inbox_chat_enabled:${workspaceId}`;
 }
 
+/** Preferência de painel aberto/minimizado, por workspace. */
+function detailsOpenCacheKey(workspaceId: string): string {
+  return `inbox_details_open:${workspaceId}`;
+}
+
 /**
  * Antes da pintura: lido em layout effect, o switch nunca chega a ser desenhado na
  * posição errada. Em useEffect comum sobraria um frame com o valor padrão.
  * No servidor não há layout effect — cai em useEffect só para não emitir warning.
  */
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+const PANEL = 'flex flex-col bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none overflow-hidden';
 
 function StatusTicks({ message }: { message: InboxMessage }) {
   if (message.direction !== 'OUT') return null;
@@ -101,126 +118,40 @@ function MediaContent({ message }: { message: InboxMessage }) {
   );
 }
 
-/** No balão sempre a hora: a data de cada bloco vive na badge de dia. */
-function formatMessageTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
-}
-
-/** Na listagem: hora no dia corrente, "Ontem" no anterior, data nos mais antigos. */
-function formatConversationTime(iso: string): string {
-  const date = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(date, today)) return formatMessageTime(iso);
-  if (isSameDay(date, yesterday)) return 'Ontem';
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-}
-
-function dayLabel(iso: string): string {
-  const date = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(date, today)) return 'Hoje';
-  if (isSameDay(date, yesterday)) return 'Ontem';
-  const sameYear = date.getFullYear() === today.getFullYear();
-  return date.toLocaleDateString('pt-BR', sameYear
-    ? { day: '2-digit', month: 'long' }
-    : { day: '2-digit', month: 'long', year: 'numeric' });
-}
-
-function channelBadge(type: InboxChannelType) {
-  if (type === 'INSTAGRAM') {
-    return <Badge type="instagram" text="Instagram" icon={Instagram} pill />;
-  }
-  // Mesma cor do WhatsApp (é o mesmo app para o contato), com selo e rótulo
-  // distinguindo a API Oficial da conexão via QR Code.
-  if (type === 'WHATSAPP_OFFICIAL') {
-    return <Badge type="whatsapp" text="API Oficial" icon={BadgeCheck} pill />;
-  }
-  return <Badge type="whatsapp" text="WhatsApp" icon={MessageCircle} pill />;
-}
-
-function getInitials(name?: string | null, fallback?: string | null): string {
-  const source = (name || fallback || '?').trim().replace(/^@/, '');
-  const parts = source.split(/\s+/).filter(Boolean);
-  const first = parts[0] ?? '';
-  if (!first) return '?';
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = parts[parts.length - 1] ?? '';
-  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase();
-}
-
-function Avatar({
-  name,
-  identifier,
-  avatarUrl,
-  size = 44,
-}: {
-  name?: string | null | undefined;
-  identifier?: string | null | undefined;
-  avatarUrl?: string | null | undefined;
-  size?: number;
-}) {
-  const [errored, setErrored] = useState(false);
-  const showImage = !!avatarUrl && !errored;
-  return (
-    <div
-      className="shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center"
-      style={{ width: size, height: size }}
-    >
-      {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element -- URLs de avatar de CDN dinâmico (IG/WhatsApp) não suportam next/image
-        <img
-          src={avatarUrl as string}
-          alt={name || 'Contato'}
-          className="h-full w-full object-cover"
-          onError={() => setErrored(true)}
-        />
-      ) : (
-        <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-          {getInitials(name, identifier)}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function ConversationRow({
   conversation,
   active,
   disabled = false,
+  currentUserId,
   onClick,
 }: {
   conversation: InboxConversation;
   active: boolean;
   disabled?: boolean;
+  currentUserId: string | null;
   onClick: () => void;
 }) {
+  const assignedTo = conversation.assignedTo ?? null;
+  const isMine = !!assignedTo && assignedTo === currentUserId;
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 dark:border-slate-700/60 ${disabled ? 'cursor-not-allowed' : active ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40'}`}
+      className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors border-b border-slate-100 dark:border-slate-700/60 ${disabled ? 'cursor-not-allowed' : active ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer'}`}
     >
+      {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-indigo-500" aria-hidden />}
       <Avatar
         name={conversation.contactName}
         identifier={conversation.contactIdentifier}
         avatarUrl={conversation.avatarUrl}
+        size={38}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+          <span className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
             {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
           </span>
-          <span className="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
+          <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
             {formatConversationTime(conversation.lastMessageAt)}
           </span>
         </div>
@@ -230,12 +161,31 @@ function ConversationRow({
             {conversation.lastMessagePreview || '—'}
           </span>
           {conversation.unreadCount > 0 && (
-            <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
+            <span className="shrink-0 min-w-4.5 h-4.5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
               {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
             </span>
           )}
         </div>
-        <div>{channelBadge(conversation.channelType)}</div>
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {channelBadge(
+            conversation.channelType,
+            conversation.channelName || conversation.channelIdentifier,
+          )}
+          {conversation.awaitingHuman && !assignedTo && (
+            <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+              aguardando
+            </span>
+          )}
+          {assignedTo && (
+            <span
+              title={isMine ? 'Atribuída a você' : `Atendida por ${conversation.assignedToName ?? 'outro atendente'}`}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${isMine ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+            >
+              <UserCheck size={11} />
+              {isMine ? 'você' : getInitials(conversation.assignedToName)}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
@@ -254,12 +204,17 @@ export default function InboxPage() {
     channelFilter,
     search,
     transcribingId,
+    agents,
+    assigning,
     setChannelFilter,
     setSearch,
     selectConversation,
     sendMessage,
     notifyTyping,
     transcribeMessage,
+    assignConversation,
+    unassignConversation,
+    resumeAi,
   } = useInbox();
 
   const [draft, setDraft] = useState('');
@@ -270,7 +225,12 @@ export default function InboxPage() {
   const [savingChatSetting, setSavingChatSetting] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [canToggleChat, setCanToggleChat] = useState(false);
+  const [hasFullAccess, setHasFullAccess] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  // Abaixo de lg só cabe um painel por vez: a lista ou a conversa.
+  const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -291,11 +251,16 @@ export default function InboxPage() {
     if (!workspaceId) return;
     const cached = localStorage.getItem(chatEnabledCacheKey(workspaceId));
     if (cached !== null) setChatEnabled(cached === 'true');
+    const cachedDetails = localStorage.getItem(detailsOpenCacheKey(workspaceId));
+    if (cachedDetails !== null) setDetailsOpen(cachedDetails === 'true');
   }, [workspaceId]);
 
   useEffect(() => {
-    const role = authService.getUser()?.role;
-    setCanToggleChat(role === 'owner' || role === 'admin');
+    const user = authService.getUser();
+    const fullAccess = user?.role === 'owner' || user?.role === 'admin';
+    setCanToggleChat(fullAccess);
+    setHasFullAccess(fullAccess);
+    setCurrentUserId(user?.id ?? null);
     inboxService.getSettings()
       .then((settings) => {
         setChatEnabled(settings.enabled);
@@ -414,298 +379,429 @@ export default function InboxPage() {
     }
   };
 
+  const toggleDetails = () => {
+    setDetailsOpen((previous) => {
+      const next = !previous;
+      if (workspaceId) localStorage.setItem(detailsOpenCacheKey(workspaceId), String(next));
+      return next;
+    });
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    selectConversation(conversationId);
+    setMobilePane('thread');
+  };
+
+  const handleAssign = (userId: string) => {
+    if (!selectedId) return;
+    assignConversation(selectedId, userId).catch(() => {});
+  };
+
+  const handleUnassign = () => {
+    if (!selectedId) return;
+    unassignConversation(selectedId).catch(() => {});
+  };
+
+  const handleResumeAi = () => {
+    if (!selectedId) return;
+    resumeAi(selectedId).catch(() => {});
+  };
+
   const filters: Array<{ id: InboxChannelType | 'ALL'; label: string }> = [
     { id: 'ALL', label: 'Todos' },
     { id: 'WHATSAPP', label: 'WhatsApp' },
-    { id: 'WHATSAPP_OFFICIAL', label: 'API Oficial' },
+    { id: 'WHATSAPP_OFFICIAL', label: 'Oficial' },
     { id: 'INSTAGRAM', label: 'Instagram' },
   ];
 
   return (
-    // Altura = viewport − header (4rem) − padding vertical do main (p-4/sm:p-6),
-    // com teto para o chat não se esticar de ponta a ponta em telas altas.
-    <div className="flex h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] max-h-176 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-      {/* Lista de conversas */}
-      <aside className="flex w-full max-w-sm shrink-0 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <div className="p-4 space-y-3 border-b border-slate-100 dark:border-slate-700">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Caixa de entrada</h1>
-            <div
-              className="flex shrink-0 items-center gap-2"
-              title={canToggleChat ? undefined : 'Somente o dono do workspace pode ativar o chat'}
-            >
-              <span className={`text-xs font-medium ${chatEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                {chatEnabled ? 'Ativado' : 'Desativado'}
+    // Altura = viewport − header (4rem) − padding vertical do main (p-3/sm:p-5).
+    <div className="flex h-[calc(100vh-6rem)] sm:h-[calc(100vh-7rem)] flex-col gap-3">
+      {/* Cabeçalho some no celular: a caixa de entrada usa a altura toda. */}
+      <div className="hidden sm:flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Chat multi-plataforma</h1>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
+            WhatsApp e Instagram na mesma caixa de entrada
+          </p>
+        </div>
+
+      </div>
+
+      <div className="flex min-h-0 flex-1 gap-2 sm:gap-3">
+        {/* Lista de conversas */}
+        <aside className={`${PANEL} w-full shrink-0 lg:w-80 ${mobilePane === 'thread' ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="space-y-2.5 border-b border-slate-100 dark:border-slate-700 p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <h1 className="text-sm font-semibold text-slate-900 dark:text-white">Caixa de entrada</h1>
+              <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                {conversations.length.toLocaleString('pt-BR')} conversa{conversations.length === 1 ? '' : 's'}
               </span>
-              <ToggleSwitch
-                checked={chatEnabled}
-                onChange={handleToggleChat}
-                disabled={!settingsLoaded || savingChatSetting || !canToggleChat}
+            </div>
+
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar conversa..."
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 pl-9 pr-3 text-[13px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
               />
             </div>
-          </div>
-          {settingsError && <p className="text-xs text-rose-500">{settingsError}</p>}
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar conversa..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
-            />
-          </div>
-          <div className="flex gap-2">
-            {filters.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setChannelFilter(f.id)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${channelFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {loadingConversations ? (
-            <p className="p-4 text-sm text-slate-400">Carregando conversas...</p>
-          ) : conversations.length === 0 ? (
-            <p className="p-6 text-center text-sm text-slate-400">Nenhuma conversa ainda.</p>
-          ) : (
-            conversations.map((c) => (
-              <ConversationRow
-                key={c.id}
-                conversation={c}
-                active={c.id === selectedId}
-                // Abrir a conversa marca como lida e dispara o recibo de leitura para o
-                // contato. Com o chat desligado o operador não viu nada, então não seleciona.
-                disabled={!chatEnabled}
-                onClick={() => selectConversation(c.id)}
-              />
-            ))
-          )}
-        </div>
-      </aside>
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-1">
+              {filters.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setChannelFilter(f.id)}
+                  className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${channelFilter === f.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs dark:shadow-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Thread */}
-      <section className="flex flex-1 flex-col bg-slate-50 dark:bg-slate-900">
-        {!chatEnabled ? (
-          <div className="flex h-full items-center justify-center">
-            <EmptyState
-              icon={<MessageCircle size={28} />}
-              title="Chat desativado"
-              description="Ative o chat no topo da lista para ver as mensagens e responder aos contatos."
-            />
-          </div>
-        ) : !selectedConversation ? (
-          <div className="flex h-full items-center justify-center">
-            <EmptyState
-              icon={<MessageCircle size={28} />}
-              title="Selecione uma conversa"
-              description="Escolha uma conversa à esquerda para ver as mensagens do WhatsApp e Instagram em tempo real."
-            />
-          </div>
-        ) : (
-          <>
-            <header className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar
-                  name={selectedConversation.contactName}
-                  identifier={selectedConversation.contactIdentifier}
-                  avatarUrl={selectedConversation.avatarUrl}
-                  size={40}
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                    {selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato sem nome'}
-                  </p>
-                  {contactTyping ? (
-                    <p className="truncate text-xs text-emerald-500">digitando…</p>
-                  ) : (
-                    selectedConversation.contactIdentifier && (
-                      <p className="truncate text-xs text-slate-400">{selectedConversation.contactIdentifier}</p>
-                    )
-                  )}
-                </div>
+          <div className="flex-1 overflow-y-auto">
+            {loadingConversations ? (
+              <div className="space-y-2 p-3 animate-pulse" aria-hidden>
+                <div className="h-14 rounded-lg bg-slate-100 dark:bg-slate-700/50" />
+                <div className="h-14 rounded-lg bg-slate-100 dark:bg-slate-700/50" />
+                <div className="h-14 rounded-lg bg-slate-100 dark:bg-slate-700/50" />
               </div>
-              {channelBadge(selectedConversation.channelType)}
-            </header>
+            ) : conversations.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 text-center">
+                <Inbox size={22} className="text-slate-300 dark:text-slate-600" />
+                <p className="text-[13px] text-slate-600 dark:text-slate-400">
+                  {search.trim() ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  {search.trim() ? 'Tente outro termo ou limpe a busca.' : 'As mensagens recebidas aparecem aqui.'}
+                </p>
+              </div>
+            ) : (
+              conversations.map((c) => (
+                <ConversationRow
+                  key={c.id}
+                  conversation={c}
+                  active={c.id === selectedId}
+                  currentUserId={currentUserId}
+                  // Abrir a conversa marca como lida e dispara o recibo de leitura para o
+                  // contato. Com o chat desligado o operador não viu nada, então não seleciona.
+                  disabled={!chatEnabled}
+                  onClick={() => handleSelectConversation(c.id)}
+                />
+              ))
+            )}
+          </div>
 
-            <div
-              ref={messagesBoxRef}
-              onScroll={(e) => {
-                const el = e.currentTarget;
-                stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-              }}
-              className="flex-1 overflow-y-auto px-5 py-4 space-y-2"
-            >
-              {loadingMessages ? (
-                <p className="text-sm text-slate-400">Carregando mensagens...</p>
-              ) : (
-                messages.map((m, index) => {
-                  const previous = index > 0 ? messages[index - 1] : undefined;
-                  // Sticky no container rolável: cada badge fica presa no topo até a do
-                  // dia seguinte empurrá-la para fora, marcando a virada de dia.
-                  const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
-                  const daySeparator = startsDay && (
-                    <div className="sticky top-0 z-10 flex justify-center py-1">
-                      <span className="rounded-full bg-slate-200/90 px-3 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm dark:bg-slate-700/90 dark:text-slate-300">
-                        {dayLabel(m.createdAt)}
-                      </span>
-                    </div>
-                  );
-                  const replyButton = !m.pending && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReplyTo(m);
-                        textareaRef.current?.focus();
-                      }}
-                      className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-                      title="Responder"
-                    >
-                      <Reply size={14} />
-                    </button>
-                  );
-                  return (
-                    <Fragment key={m.id}>
-                      {daySeparator}
-                      <div
-                        id={`msg-${m.id}`}
-                        className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {m.direction === 'OUT' && replyButton}
-                        <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
-                        >
-                          {m.replyToPreview && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!m.replyToMessageId) return;
-                                document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }}
-                              className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
-                            >
-                              <span className="block font-semibold">
-                                {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
-                              </span>
-                              <span className="block truncate">{m.replyToPreview}</span>
-                            </button>
-                          )}
-                          {m.mediaType && (
-                            <div className="mb-1">
-                              <MediaContent message={m} />
-                            </div>
-                          )}
-                          {m.body && <p>{m.body}</p>}
-                          {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
-                          {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
-                            revealedTranscriptions.has(m.id) && m.transcription ? (
-                              <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                                {m.transcription}
-                              </p>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleTranscribe(m)}
-                                disabled={transcribingId === m.id}
-                                className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                              >
-                                {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
-                              </button>
-                            )
-                          )}
-                          <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                            {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
-                            {formatMessageTime(m.createdAt)}
-                            <StatusTicks message={m} />
-                          </span>
-                        </div>
-                        {m.direction === 'IN' && replyButton}
-                      </div>
-                    </Fragment>
-                  );
-                })
-              )}
+          {/* Barra de status + configurações: o menu abre para cima. */}
+          <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 p-2.5">
+            {/* Quem não pode alternar não vê o controle — só a leitura do estado. */}
+            {canToggleChat && (
+              <ChatSettingsMenu
+                enabled={chatEnabled}
+                loaded={settingsLoaded}
+                saving={savingChatSetting}
+                canToggle={canToggleChat}
+                error={settingsError}
+                onToggle={handleToggleChat}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                <span className={`h-1.5 w-1.5 rounded-full ${chatEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden />
+                {chatEnabled ? 'Chat ativo' : 'Chat desativado'}
+              </p>
+
             </div>
+          </div>
+        </aside>
 
-            <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
-              {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
-              {replyTo && (
-                <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-indigo-500 bg-slate-50 dark:bg-slate-900 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                      Respondendo a {replyTo.direction === 'OUT' ? 'você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'contato')}
-                    </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{messagePreview(replyTo)}</p>
-                  </div>
+        {/* Thread */}
+        <section className={`${PANEL} min-w-0 flex-1 ${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'}`}>
+          {!chatEnabled ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500">
+                <MessageCircle size={22} />
+              </span>
+              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Chat desativado</p>
+              <p className="max-w-xs text-[11px] text-slate-400 dark:text-slate-500">
+                Abra as configurações no rodapé da lista para ligar o recebimento de mensagens.
+              </p>
+            </div>
+          ) : !selectedConversation ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500">
+                <MessageCircle size={22} />
+              </span>
+              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Selecione uma conversa</p>
+              <p className="max-w-xs text-[11px] text-slate-400 dark:text-slate-500">
+                WhatsApp e Instagram na mesma lista, em tempo real.
+              </p>
+            </div>
+          ) : (
+            <>
+              <header className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700 px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setReplyTo(null)}
-                    className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                    title="Cancelar resposta"
+                    onClick={() => setMobilePane('list')}
+                    aria-label="Voltar para a lista"
+                    className="lg:hidden shrink-0 -ml-1 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 cursor-pointer"
                   >
-                    <X size={14} />
+                    <ArrowLeft size={18} />
+                  </button>
+                  <Avatar
+                    name={selectedConversation.contactName}
+                    identifier={selectedConversation.contactIdentifier}
+                    avatarUrl={selectedConversation.avatarUrl}
+                    size={36}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
+                      {selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato sem nome'}
+                    </p>
+                    {contactTyping ? (
+                      <p className="truncate text-[11px] text-emerald-500">digitando…</p>
+                    ) : (
+                      selectedConversation.contactIdentifier && (
+                        <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">{selectedConversation.contactIdentifier}</p>
+                      )
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {selectedConversation.assignedTo && (
+                    <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                      <UserCheck size={11} />
+                      {selectedConversation.assignedTo === currentUserId ? 'Você' : selectedConversation.assignedToName}
+                    </span>
+                  )}
+                  {channelBadge(
+                    selectedConversation.channelType,
+                    selectedConversation.channelName || selectedConversation.channelIdentifier,
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleDetails}
+                    aria-label={detailsOpen ? 'Minimizar detalhes da conversa' : 'Mostrar detalhes da conversa'}
+                    title={detailsOpen ? 'Minimizar detalhes' : 'Mostrar detalhes'}
+                    className={`shrink-0 rounded-lg border p-1.5 transition-colors cursor-pointer ${detailsOpen
+                      ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                  >
+                    {detailsOpen ? <PanelRightClose size={16} /> : <PanelRight size={16} />}
                   </button>
                 </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending || recording}
-                  className="shrink-0 rounded-lg p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 disabled:opacity-50"
-                  title="Anexar arquivo"
-                >
-                  <Paperclip size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  disabled={sending}
-                  className={`shrink-0 rounded-lg p-2.5 disabled:opacity-50 ${recording ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'}`}
-                  title={recording ? 'Parar gravação' : 'Gravar áudio'}
-                >
-                  {recording ? <Square size={18} /> : <Mic size={18} />}
-                </button>
-                <textarea
-                  ref={textareaRef}
-                  value={draft}
-                  onChange={(e) => {
-                    setDraft(e.target.value);
-                    if (e.target.value.trim()) notifyTyping();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                    if (e.key === 'Escape' && replyTo) {
-                      setReplyTo(null);
-                    }
-                  }}
-                  rows={1}
-                  placeholder={recording ? 'Gravando áudio…' : 'Escreva uma mensagem...'}
-                  disabled={recording}
-                  className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none max-h-32 disabled:opacity-60"
-                />
-                <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />}>
-                  Enviar
-                </Button>
+              </header>
+
+              <div
+                ref={messagesBoxRef}
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                }}
+                className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/40 px-4 py-4 space-y-2"
+              >
+                {loadingMessages ? (
+                  <p className="text-sm text-slate-400">Carregando mensagens...</p>
+                ) : (
+                  messages.map((m, index) => {
+                    const previous = index > 0 ? messages[index - 1] : undefined;
+                    // Sticky no container rolável: cada badge fica presa no topo até a do
+                    // dia seguinte empurrá-la para fora, marcando a virada de dia.
+                    const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
+                    const daySeparator = startsDay && (
+                      <div className="sticky top-0 z-10 flex justify-center py-1">
+                        <span className="rounded-full bg-slate-200/90 px-3 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm dark:bg-slate-700/90 dark:text-slate-300">
+                          {dayLabel(m.createdAt)}
+                        </span>
+                      </div>
+                    );
+                    const replyButton = !m.pending && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyTo(m);
+                          textareaRef.current?.focus();
+                        }}
+                        className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                        title="Responder"
+                      >
+                        <Reply size={14} />
+                      </button>
+                    );
+                    return (
+                      <Fragment key={m.id}>
+                        {daySeparator}
+                        <div
+                          id={`msg-${m.id}`}
+                          className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          {m.direction === 'OUT' && replyButton}
+                          <div
+                            className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                          >
+                            {m.replyToPreview && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!m.replyToMessageId) return;
+                                  document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}
+                                className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+                              >
+                                <span className="block font-semibold">
+                                  {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
+                                </span>
+                                <span className="block truncate">{m.replyToPreview}</span>
+                              </button>
+                            )}
+                            {m.mediaType && (
+                              <div className="mb-1">
+                                <MediaContent message={m} />
+                              </div>
+                            )}
+                            {(() => {
+                              const text = bodyForBubble(m.body, m.interactive);
+                              return text ? <p>{text}</p> : null;
+                            })()}
+                            {m.interactive && m.interactive.buttons.length > 0 && (
+                              <InteractiveContent interactive={m.interactive} outgoing={m.direction === 'OUT'} />
+                            )}
+                            {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
+                            {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
+                              revealedTranscriptions.has(m.id) && m.transcription ? (
+                                <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                                  {m.transcription}
+                                </p>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleTranscribe(m)}
+                                  disabled={transcribingId === m.id}
+                                  className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                >
+                                  {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                                </button>
+                              )
+                            )}
+                            <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                              {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                              {formatMessageTime(m.createdAt)}
+                              <StatusTicks message={m} />
+                            </span>
+                          </div>
+                          {m.direction === 'IN' && replyButton}
+                        </div>
+                      </Fragment>
+                    );
+                  })
+                )}
               </div>
-            </footer>
+
+              <footer className="border-t border-slate-100 dark:border-slate-700 p-3">
+                {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
+                {replyTo && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-indigo-500 bg-slate-50 dark:bg-slate-900/60 px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        Respondendo a {replyTo.direction === 'OUT' ? 'você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'contato')}
+                      </p>
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">{messagePreview(replyTo)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTo(null)}
+                      className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      title="Cancelar resposta"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending || recording}
+                    className="shrink-0 rounded-lg p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 disabled:opacity-50"
+                    title="Anexar arquivo"
+                  >
+                    <Paperclip size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={sending}
+                    className={`shrink-0 rounded-lg p-2 sm:p-2.5 disabled:opacity-50 ${recording ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                    title={recording ? 'Parar gravação' : 'Gravar áudio'}
+                  >
+                    {recording ? <Square size={18} /> : <Mic size={18} />}
+                  </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={draft}
+                    onChange={(e) => {
+                      setDraft(e.target.value);
+                      if (e.target.value.trim()) notifyTyping();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                      if (e.key === 'Escape' && replyTo) {
+                        setReplyTo(null);
+                      }
+                    }}
+                    rows={1}
+                    placeholder={recording ? 'Gravando áudio…' : 'Escreva uma mensagem...'}
+                    disabled={recording}
+                    className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
+                  />
+                  {/* No celular o rótulo sai: o ícone basta e o campo ganha a largura. */}
+                  <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">
+                    <span className="hidden sm:inline">Enviar</span>
+                  </Button>
+                </div>
+              </footer>
+            </>
+          )}
+        </section>
+
+        {/* Contexto do atendimento: coluna a partir de xl, gaveta abaixo disso. */}
+        {chatEnabled && selectedConversation && detailsOpen && (
+          <>
+            <div
+              onClick={toggleDetails}
+              aria-hidden
+              className="fixed inset-0 z-30 bg-slate-900/40 xl:hidden"
+            />
+            <aside className={`${PANEL} fixed inset-y-0 right-0 z-40 flex w-80 max-w-[85vw] rounded-none xl:static xl:z-auto xl:w-72 xl:max-w-none xl:shrink-0 xl:rounded-lg`}>
+              <ConversationContextPanel
+                conversation={selectedConversation}
+                agents={agents}
+                currentUserId={currentUserId}
+                hasFullAccess={hasFullAccess}
+                assigning={assigning}
+                messageCount={messages.length}
+                onAssign={handleAssign}
+                onUnassign={handleUnassign}
+                onResumeAi={handleResumeAi}
+              />
+            </aside>
           </>
         )}
-      </section>
+      </div>
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function WhatsAppInstances() {
 
       {instances.map((inst) => (<ChannelInstanceCard key={inst.id} id={inst.id} icon={<div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
         <MessageCircle size={24}/>
-      </div>} title={inst.name} subtitle={inst.number || 'Não conectado'} status={inst.status === 'CONNECTED' ? 'connected' : 'disconnected'} colorClass="emerald" createdBy={inst.createdBy} ownerName={inst.ownerName} onRefresh={handleRefresh} onDelete={handleDeleteClick}/>))}
+      </div>} title={inst.name} subtitle={inst.number || 'Não conectado'} status={inst.status === 'CONNECTED' ? 'connected' : 'disconnected'} colorClass="emerald" createdBy={inst.createdBy} ownerName={inst.ownerName} canManage={inst.canManage} onRefresh={handleRefresh} onDelete={handleDeleteClick}/>))}
     </div>
 
     {showCreateModal && (<WhatsAppCreateModal isOpen={showCreateModal} onClose={() => {
