@@ -1,7 +1,7 @@
 'use client';
-import { Zap } from 'lucide-react';
 import Link from 'next/link';
 
+import BrandLogo from '@/components/BrandLogo';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 const LINKS = {
@@ -31,9 +31,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <Zap size={18} className="text-white" fill="white" />
-              </div>
+              <BrandLogo size={36} on="dark"/>
               <span className="font-bold text-lg text-white">Synq</span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs">

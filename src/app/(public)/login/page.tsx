@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 
 import Input from '@/components/Input';
+import { resolveLandingRoute } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
 
 import AuthShell from '../components/AuthShell';
-import { resolveLandingRoute } from '@/contexts/SidebarContext';
 
 export default function LoginPage() {
   const router = useRouter();
