@@ -110,7 +110,7 @@ export default function AiPlanGate() {
             </li>
             {ap.limits.maxProfiles > 1 && (<li className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={14} className="text-emerald-500 shrink-0"/>
-                  {ap.limits.maxProfiles} perfis de IA
+              {ap.limits.maxProfiles} perfis de IA
             </li>)}
           </ul>
           <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500 mb-4">
