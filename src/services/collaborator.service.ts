@@ -7,7 +7,14 @@ export interface Member {
     userId: string;
     name: string;
     email: string;
-    role: 'owner' | 'collaborator';
+    /** 'admin' é a conta de suporte do Synq — acesso total, igual ao dono. */
+    role: 'owner' | 'admin' | 'collaborator';
+    /** Papel com acesso total ao workspace (dono ou admin). Vem do servidor. */
+    fullAccess: boolean;
+    /** É o próprio usuário logado. */
+    isSelf: boolean;
+    /** Pode ter permissões editadas e ser removido por esta tela. */
+    manageable: boolean;
     permissions: Permission[];
     createdAt: string;
 }
@@ -58,6 +65,9 @@ class CollaboratorService {
       if (data?.reason === 'USER_ALREADY_MEMBER') {
         throw new Error('Este usuário já é membro do workspace.');
       }
+      if (data?.reason === 'EMAIL_ALREADY_REGISTERED') {
+        throw new Error('Este email já tem uma conta no Synq. O convite só pode criar uma conta nova — peça para a pessoa usar outro email.');
+      }
       if (data?.reason === 'INVITE_ALREADY_PENDING') {
         throw new Error('Já existe um convite pendente para este email.');
       }
@@ -83,6 +93,15 @@ class CollaboratorService {
             ok: boolean;
         }>(`/collaborators/members/${membershipId}`);
     if (!response.success) {
+      const data = response.data as {
+                reason?: string;
+            } | undefined;
+      if (data?.reason === 'CANNOT_REMOVE_OWNER') {
+        throw new Error('Contas de administrador não podem ser removidas por aqui.');
+      }
+      if (data?.reason === 'CANNOT_REMOVE_SELF') {
+        throw new Error('Você não pode remover a própria conta por aqui.');
+      }
       throw new Error('Não foi possível remover o membro.');
     }
   }
@@ -106,6 +125,9 @@ class CollaboratorService {
       if (data?.reason === 'INVITE_ALREADY_USED') {
         throw new Error('Este convite já foi utilizado.');
       }
+      if (data?.reason === 'EMAIL_ALREADY_REGISTERED') {
+        throw new Error('Este email já tem uma conta no Synq. Faça login normalmente ou peça um convite para outro email.');
+      }
       throw new Error('Convite inválido ou não encontrado.');
     }
     return response.data as InviteValidation;
@@ -121,6 +143,9 @@ class CollaboratorService {
       }
       if (data?.reason === 'USER_ALREADY_MEMBER') {
         throw new Error('Você já é membro deste workspace.');
+      }
+      if (data?.reason === 'EMAIL_ALREADY_REGISTERED') {
+        throw new Error('Este email já tem uma conta no Synq. Faça login normalmente em vez de aceitar o convite.');
       }
       throw new Error('Não foi possível aceitar o convite. Tente novamente.');
     }

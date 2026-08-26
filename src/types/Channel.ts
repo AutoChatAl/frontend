@@ -7,6 +7,8 @@ export type WhatsAppInstance = {
     workspaceId: string;
     createdBy?: string;
     ownerName?: string | null;
+    /** Direito de gerenciar este canal — resolvido no backend (criador ou dono/admin). */
+    canManage?: boolean;
     createdAt: string;
     whatsapp?: {
         id: string;
@@ -106,6 +108,8 @@ export type InstagramAccount = {
     workspaceId: string;
     createdBy?: string;
     ownerName?: string | null;
+    /** Direito de gerenciar este canal — resolvido no backend (criador ou dono/admin). */
+    canManage?: boolean;
     createdAt: string;
     instagram: {
         id: string;

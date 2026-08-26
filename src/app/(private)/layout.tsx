@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
@@ -10,7 +10,7 @@ import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
-import { SidebarProvider } from '@/contexts/SidebarContext';
+import { SidebarProvider, canAccessPathname, resolveLandingRoute } from '@/contexts/SidebarContext';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -20,8 +20,11 @@ export default function PrivateLayout({ children }: Readonly<{
     children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  // Só vira true quando o /me responde — o guard de rota abaixo depende disso.
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   useEffect(() => {
     const checkAuth = () => {
       if (!authService.isAuthenticated()) {
@@ -33,10 +36,27 @@ export default function PrivateLayout({ children }: Readonly<{
       if (cached) {
         setUser(cached);
       }
-      authService.fetchMe().then(setUser).catch(() => { });
+      authService.fetchMe()
+        .then((fresh) => {
+          setUser(fresh);
+          setPermissionsLoaded(true);
+        })
+        .catch(() => { });
     };
     checkAuth();
   }, [router]);
+  // A sidebar já esconde o que o colaborador não pode abrir, mas URL digitada à
+  // mão não passa por ela: sem esta guarda a pessoa cairia numa tela que só
+  // devolve 403. Redireciona para a primeira área liberada.
+  useEffect(() => {
+    // Espera o /me: o `auth_user` do localStorage pode estar defasado (por
+    // exemplo, logo após um deploy que criou permissões novas) e redirecionar
+    // por causa dele tiraria a pessoa de uma página que ela pode abrir.
+    if (!permissionsLoaded || !user || !pathname) return;
+    if (!canAccessPathname(user, pathname)) {
+      router.replace(resolveLandingRoute(user));
+    }
+  }, [permissionsLoaded, user, pathname, router]);
   if (!isAuthenticated) {
     return (<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
       <div className="text-center">

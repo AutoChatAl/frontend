@@ -1,7 +1,7 @@
 'use client';
 import type { ReactNode } from 'react';
 
-interface AISectionHeaderProps {
+interface SectionHeaderProps {
     title: string;
     hint?: string | undefined;
     /** Ação à direita do título — botão, contador, link. */
@@ -9,7 +9,7 @@ interface AISectionHeaderProps {
 }
 
 /** Cabeçalho de card das seções da IA. Mesma escala tipográfica de Agendamentos. */
-export default function AISectionHeader({ title, hint, action }: AISectionHeaderProps) {
+export default function SectionHeader({ title, hint, action }: SectionHeaderProps) {
   return (
     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">

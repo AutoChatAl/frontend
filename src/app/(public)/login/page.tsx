@@ -8,6 +8,7 @@ import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
 
 import AuthShell from '../components/AuthShell';
+import { resolveLandingRoute } from '@/contexts/SidebarContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function LoginPage() {
         setIsLoading(false);
         return;
       }
-      router.push('/dashboard');
+      router.push(resolveLandingRoute(authService.getUser()));
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');

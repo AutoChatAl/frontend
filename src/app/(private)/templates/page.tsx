@@ -42,7 +42,9 @@ export default function TemplatesPage() {
   const loadData = useCallback(async (channelId?: string) => {
     try {
       const [channelList, templateList] = await Promise.all([
-        whatsappOfficialService.getInstances(),
+        // Acessório: serve só o filtro por número. Quem tem `campaigns` sem
+        // `whatsapp-official` continua vendo a lista de templates.
+        whatsappOfficialService.getInstances().catch(() => []),
         templateService.list(channelId || undefined),
       ]);
       setChannels(channelList);

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import ToggleSwitch from '@/components/ToggleSwitch';
 
-interface AIToggleRowProps {
+interface ToggleRowProps {
     title: string;
     description: string;
     checked: boolean;
@@ -18,17 +18,18 @@ interface AIToggleRowProps {
 }
 
 /**
- * Linha de toggle de Gatilhos, Agendamento e Funil. Nasceu de três versões
+ * Linha de toggle rotulada com switch à direita. Nasceu de três versões
  * escritas à mão que divergiram no tamanho do switch e no espaçamento. Feita
  * para viver dentro de uma lista `divide-y`.
  */
-export default function AIToggleRow({ title, description, checked, onChange, disabled, lockReason, badge, children }: AIToggleRowProps) {
+export default function ToggleRow({ title, description, checked, onChange, disabled, lockReason, badge, children }: ToggleRowProps) {
   const locked = Boolean(lockReason);
   const isDisabled = Boolean(disabled) || locked;
   return (
     <div className={`py-3 first:pt-0 last:pb-0 ${disabled && !locked ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        {/* Trava a medida do texto: numa tela larga a descrição corria 1400px até o switch. */}
+        <div className="min-w-0 max-w-2xl">
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-[13px] font-semibold text-slate-900 dark:text-white">{title}</p>
             {locked && <Lock size={12} className="shrink-0 text-amber-500"/>}

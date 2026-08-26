@@ -19,7 +19,7 @@ import {
   type TourConfig,
   type TourStep,
 } from '@/components/onboarding/tours';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { canAccessMenuItem, useSidebar } from '@/contexts/SidebarContext';
 import { authService } from '@/services/auth.service';
 import { onboardingService, type OnboardingState } from '@/services/onboarding.service';
 
@@ -120,9 +120,7 @@ export function OnboardingProvider({ children, enabled }: OnboardingProviderProp
     // Permissão (colaboradores podem não ver alguns tours)
     if (tour.permission) {
       const user = authService.getUser();
-      const role = user?.role;
-      const perms = user?.permissions ?? [];
-      if (role && role !== 'owner' && !perms.includes(tour.permission)) {
+      if (!canAccessMenuItem(user, { permission: tour.permission })) {
         return null;
       }
     }

@@ -1,9 +1,8 @@
 'use client';
 
 import Card from '@/components/Card';
+import SectionHeader from '@/components/SectionHeader';
 import type { Product } from '@/types/AI';
-
-import AISectionHeader from './AISectionHeader';
 
 interface AIPromptPreviewProps {
     segment: string;
@@ -25,7 +24,7 @@ export default function AIPromptPreview({ segment, businessName, assistantName, 
     : 'Posso te ajudar com informações, dúvidas e próximos passos.';
   return (
     <Card className="border-dashed p-4">
-      <AISectionHeader
+      <SectionHeader
         title="Prévia da apresentação"
         hint="Atualiza conforme você edita os campos acima. É a abertura da conversa, não o prompt inteiro."
       />

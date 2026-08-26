@@ -247,8 +247,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       <div className="p-2.5 border-t border-slate-100 dark:border-slate-700">
         {!sidebarCollapsed && (<div onClick={() => router.push('/settings?tab=billing')} className="bg-slate-50 dark:bg-slate-700/40 p-2.5 rounded-md border border-slate-200 dark:border-slate-700 mb-2 cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500 transition-colors">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0"/>
-            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">{isCanceled ? 'Plano cancelado' : planName}</span>
+            
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">{isCanceled ? 'Plano cancelado' :`Plano ${planName}` }</span>
             {isTrialing && (<span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">
                     Teste
             </span>)}

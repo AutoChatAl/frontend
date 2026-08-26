@@ -9,17 +9,17 @@ const TONES: Record<NoteTone, string> = {
   success: 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300',
 };
 
-interface AINoteProps {
+interface CalloutProps {
     tone?: NoteTone;
     children: ReactNode;
     className?: string;
 }
 
 /** Aviso curto abaixo de um controle: consequência de ligar, bloqueio de plano, recomendação. */
-export default function AINote({ tone = 'info', children, className = '' }: AINoteProps) {
+export default function Callout({ tone = 'info', children, className = '' }: CalloutProps) {
   return (
-    <p className={`rounded-lg border px-2.5 py-1.5 text-xs leading-relaxed ${TONES[tone]} ${className}`}>
+    <div className={`rounded-lg border px-2.5 py-1.5 text-xs leading-relaxed ${TONES[tone]} ${className}`}>
       {children}
-    </p>
+    </div>
   );
 }

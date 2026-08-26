@@ -8,6 +8,7 @@ import { authService } from '@/services/auth.service';
 import { collaboratorService } from '@/services/collaborator.service';
 
 import AuthShell from '../components/AuthShell';
+import { resolveLandingRoute } from '@/contexts/SidebarContext';
 
 function InviteForm() {
   const router = useRouter();
@@ -49,7 +50,7 @@ function InviteForm() {
         if (result.user) {
           authService.saveUser(result.user);
         }
-        router.push('/dashboard');
+        router.push(resolveLandingRoute(authService.getUser()));
       }
     }
     catch (err) {

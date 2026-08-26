@@ -1,14 +1,13 @@
 'use client';
 
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
+import SectionHeader from '@/components/SectionHeader';
 import Textarea from '@/components/Textarea';
+import ToggleRow from '@/components/ToggleRow';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import type { AiTriggerSettings } from '@/types/AI';
 import { LOCKED_FEATURES } from '@lib/featureFlags';
-
-import AINote from './AINote';
-import AISectionHeader from './AISectionHeader';
-import AIToggleRow from './AIToggleRow';
 
 interface AIRulesSectionProps {
     customRules: string;
@@ -50,21 +49,21 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
   return (
     <div className="space-y-3">
       <Card className="p-4">
-        <AISectionHeader
+        <SectionHeader
           title="Gatilhos prontos"
           hint="Comportamentos comuns já escritos para você. Todos começam desligados."
         />
 
         {locked && (
-          <AINote tone="warning" className="mb-3">
+          <Callout tone="warning" className="mb-3">
             Os gatilhos prontos estão temporariamente indisponíveis enquanto ajustamos o comportamento deles. Use as regras
             personalizadas abaixo — elas continuam valendo normalmente.
-          </AINote>
+          </Callout>
         )}
 
         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
           {triggerOptions.map((trigger) => (
-            <AIToggleRow
+            <ToggleRow
               key={trigger.key}
               title={trigger.title}
               description={trigger.description}
@@ -77,7 +76,7 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
       </Card>
 
       <Card className="p-4">
-        <AISectionHeader
+        <SectionHeader
           title="Regras personalizadas"
           hint="Uma regra por linha. Entram no prompt exatamente como você escrever, então seja direto."
         />

@@ -1,6 +1,4 @@
 'use client';
-import { AlertTriangle } from 'lucide-react';
-
 import Card from '@/components/Card';
 
 interface DangerAction {
@@ -12,24 +10,42 @@ interface DangerAction {
 }
 interface DangerZoneProps {
     actions: DangerAction[];
+    className?: string;
 }
-export default function DangerZone({ actions }: DangerZoneProps) {
-  return (<Card className="p-4 sm:p-6 border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
-    <h3 className="text-base sm:text-lg font-bold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
-      <AlertTriangle size={20}/> Zona de Perigo
-    </h3>
-    <div className="space-y-4">
-      {actions.map((action, i) => (<div key={action.buttonLabel} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 py-3 ${i < actions.length - 1 ? 'border-b border-red-100 dark:border-red-900/30' : ''}`}>
-        <div>
-          <p className="text-sm font-medium text-slate-800 dark:text-white">{action.label}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
-        </div>
-        <button onClick={action.onClick} className={`shrink-0 self-start px-3 py-1.5 rounded-lg text-xs font-medium ${action.destructive
-          ? 'bg-red-600 text-white hover:bg-red-700'
-          : 'bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}>
-          {action.buttonLabel}
-        </button>
-      </div>))}
-    </div>
-  </Card>);
+
+/**
+ * Card comum por fora — o vermelho fica só nas ações. Passar `border-red-*` no
+ * className do Card não pintaria nada mesmo: no CSS gerado o `border-slate-200`
+ * dele vem depois e ganha.
+ */
+export default function DangerZone({ actions, className = '' }: DangerZoneProps) {
+  return (
+    <Card className={`p-4 ${className}`}>
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Zona de perigo</h3>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+            Ações irreversíveis. Não dá para desfazer depois de confirmar.
+        </p>
+      </div>
+      <div className="space-y-2">
+        {actions.map((action) => (
+          <div key={action.buttonLabel} className="flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-red-500/20 dark:bg-red-500/10">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">{action.label}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-red-600 dark:text-red-400">{action.description}</p>
+            </div>
+            <button
+              type="button"
+              onClick={action.onClick}
+              className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:py-1.5 ${action.destructive
+                ? 'bg-red-600 text-white shadow-sm shadow-red-200 hover:bg-red-700 dark:shadow-none'
+                : 'border border-red-200 bg-white text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-500/10'}`}
+            >
+              {action.buttonLabel}
+            </button>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 }

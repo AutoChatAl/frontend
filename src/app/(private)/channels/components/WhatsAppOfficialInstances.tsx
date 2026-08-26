@@ -53,7 +53,7 @@ export default function WhatsAppOfficialInstances() {
 
   useEffect(() => {
     const user = authService.getUser();
-    setIsOwner(!user?.role || user.role === 'owner' || user.role === 'admin' || (user.permissions ?? []).includes('channels'));
+    setIsOwner(!user?.role || user.role === 'owner' || user.role === 'admin' || (user.permissions ?? []).includes('whatsapp-official'));
     fetchInstances();
   }, [fetchInstances]);
 
@@ -262,6 +262,7 @@ export default function WhatsAppOfficialInstances() {
               colorClass="emerald"
               createdBy={instance.createdBy}
               ownerName={instance.ownerName}
+              canManage={instance.canManage}
               onRefresh={handleRefresh}
               onDelete={(id) => setDeleteTarget(String(id))}
             />

@@ -3,11 +3,11 @@ import Link from 'next/link';
 
 import Card from '@/components/Card';
 import CardEmptyState from '@/components/CardEmptyState';
+import SectionHeader from '@/components/SectionHeader';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import type { AIChannel } from '@/types/AI';
 
 import AIChannelCard from './AIChannelCard';
-import AISectionHeader from './AISectionHeader';
 
 interface AIChannelsListProps {
     channels: AIChannel[];
@@ -21,7 +21,7 @@ export default function AIChannelsList({ channels, onToggle }: AIChannelsListPro
   const limitReached = maxAiChannels > 0 && activeCount >= maxAiChannels;
   return (
     <Card className="p-4">
-      <AISectionHeader
+      <SectionHeader
         title="Canais atendidos pela IA"
         hint={maxAiChannels > 1
           ? `Escolha até ${maxAiChannels} canais onde a IA responde sozinha. Nos demais, as mensagens continuam só com você.`

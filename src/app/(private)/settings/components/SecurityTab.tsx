@@ -1,10 +1,12 @@
 'use client';
-import { Shield, Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Loader2, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import PasswordInput from '@/components/PasswordInput';
+import SectionHeader from '@/components/SectionHeader';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 
@@ -51,56 +53,52 @@ export default function SecurityTab() {
       setPasswordLoading(false);
     }
   };
-  return (<div className="space-y-6">
-    <Card className="p-4 sm:p-6">
-      <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-        <Shield size={20} className="text-indigo-600 dark:text-indigo-400"/>
-          Alterar Senha
-      </h3>
-
-      <div className="grid grid-cols-1 gap-4">
-        <PasswordInput label="Senha Atual" placeholder="Digite sua senha atual" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}/>
-        <PasswordInput label="Nova Senha" placeholder="Digite a nova senha" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}/>
+  return (<div className="space-y-3">
+    <Card className="p-4">
+      <SectionHeader title="Alterar senha" hint="Você continua logado nos outros aparelhos depois de trocar."/>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <PasswordInput label="Senha atual" placeholder="Digite sua senha atual" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}/>
+        <PasswordInput label="Nova senha" placeholder="Digite a nova senha" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}/>
       </div>
-
-      <div className="flex justify-end mt-4 sm:mt-6">
-        <Button onClick={handleChangePassword} loading={passwordLoading} loadingText="Alterando..." className="w-full sm:w-auto justify-center">
-            Atualizar Senha
+      <div className="mt-3 flex justify-end border-t border-slate-100 pt-3 dark:border-slate-700">
+        <Button onClick={handleChangePassword} loading={passwordLoading} loadingText="Alterando..." className="w-full justify-center sm:w-auto">
+            Atualizar senha
         </Button>
       </div>
     </Card>
 
-    <Card className="p-4 sm:p-6">
-      <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-        <ShieldCheck size={20} className="text-indigo-600 dark:text-indigo-400"/>
-          Autenticação de Dois Fatores (2FA)
-      </h3>
+    <Card className="p-4">
+      <SectionHeader
+        title="Autenticação de dois fatores"
+        hint="Além da senha, o login passa a pedir um código do seu aplicativo autenticador."
+        action={twoFactorEnabled
+          ? <Badge type="success" text="Ativado" icon={ShieldCheck} pill/>
+          : <Badge type="neutral" text="Desativado" pill/>}
+      />
 
-      {loading2FA ? (<div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 py-4">
-        <Loader2 size={16} className="animate-spin"/>
+      {loading2FA ? (
+        <div className="flex items-center gap-2 py-2 text-[13px] text-slate-500 dark:text-slate-400">
+          <Loader2 size={16} className="animate-spin"/>
             Carregando status do 2FA...
-      </div>) : (<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${twoFactorEnabled
-            ? 'bg-emerald-100 dark:bg-emerald-900/30'
-            : 'bg-slate-100 dark:bg-slate-800'}`}>
-            <ShieldCheck size={20} className={twoFactorEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}/>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-white">
-              {twoFactorEnabled ? '2FA Ativado' : '2FA Desativado'}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {twoFactorEnabled
-                ? 'Sua conta está protegida com autenticação de dois fatores.'
-                : 'Adicione uma camada extra de segurança à sua conta.'}
-            </p>
-          </div>
         </div>
-        <Button variant={twoFactorEnabled ? 'danger' : 'secondary'} onClick={() => setShow2FAModal(true)} icon={twoFactorEnabled ? <ShieldOff size={16}/> : <Shield size={16}/>}>
-          {twoFactorEnabled ? 'Desativar' : 'Configurar'}
-        </Button>
-      </div>)}
+      ) : (
+        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+          <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+            {twoFactorEnabled
+              ? 'Sua conta está protegida. Guarde os códigos de recuperação num lugar seguro — sem eles e sem o aplicativo, o acesso se perde.'
+              : 'Sem o segundo fator, quem descobrir sua senha entra direto na conta.'}
+          </p>
+          <Button
+            variant={twoFactorEnabled ? 'danger' : 'primary'}
+            size="sm"
+            onClick={() => setShow2FAModal(true)}
+            icon={twoFactorEnabled ? <ShieldOff size={14}/> : <Shield size={14}/>}
+            className="w-full shrink-0 justify-center py-2 sm:w-auto sm:py-1.5"
+          >
+            {twoFactorEnabled ? 'Desativar' : 'Configurar'}
+          </Button>
+        </div>
+      )}
     </Card>
 
     <TwoFactorModal isOpen={show2FAModal} enabled={twoFactorEnabled} onClose={() => setShow2FAModal(false)} onSuccess={(enabled) => {

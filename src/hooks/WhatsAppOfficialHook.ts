@@ -11,12 +11,23 @@ import { getErrorMessageFromCatch } from '@/utils/ErrorHandling';
  */
 export type WhatsAppOfficialConnectMode = 'new' | 'coexistence';
 
-export function useWhatsAppOfficialInstances() {
+/**
+ * @param options.enabled  `false` não busca nada e devolve lista vazia. Serve
+ *   para quem não tem a permissão `whatsapp-official`: sem isso a página
+ *   dispararia um 403 a cada carga só para descartar o resultado.
+ */
+export function useWhatsAppOfficialInstances(options: { enabled?: boolean } = {}) {
+  const { enabled = true } = options;
   const [instances, setInstances] = useState<WhatsAppOfficialInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   const fetchInstances = useCallback(async () => {
+    if (!enabled) {
+      setInstances([]);
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       const data = await whatsappOfficialService.getInstances();
@@ -30,7 +41,7 @@ export function useWhatsAppOfficialInstances() {
     finally {
       setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     fetchInstances();

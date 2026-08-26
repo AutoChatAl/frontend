@@ -3,8 +3,8 @@ import { Building2, UserRound } from 'lucide-react';
 
 import Card from '@/components/Card';
 import Input from '@/components/Input';
+import SectionHeader from '@/components/SectionHeader';
 
-import AISectionHeader from './AISectionHeader';
 import AISegmentSelector from './AISegmentSelector';
 import AIToneSelector from './AIToneSelector';
 
@@ -26,7 +26,7 @@ interface AIIdentitySectionProps {
 export default function AIIdentitySection({ segment, businessName, assistantName, tone, onSegmentChange, onBusinessNameChange, onAssistantNameChange, onToneChange }: AIIdentitySectionProps) {
   return (
     <Card className="p-4">
-      <AISectionHeader
+      <SectionHeader
         title="Identidade do assistente"
         hint="Quem a IA diz que é e em que contexto ela responde. Tudo aqui entra no prompt de cada conversa."
       />

@@ -16,20 +16,27 @@ interface ChannelInstanceCardProps {
     colorClass: 'emerald' | 'fuchsia';
     createdBy?: string | null | undefined;
     ownerName?: string | null | undefined;
+    /**
+     * Direito de gerenciar, vindo do backend. É a fonte confiável: o cálculo
+     * local abaixo é só fallback para chamadas que ainda não devolvem o campo.
+     */
+    canManage?: boolean | undefined;
     onRefresh?: (id: string | number) => void;
     onDelete?: (id: string | number) => void;
 }
-export default function ChannelInstanceCard({ id, icon, title, subtitle, status, statusLabel, colorClass, createdBy, ownerName, onRefresh, onDelete }: ChannelInstanceCardProps) {
+export default function ChannelInstanceCard({ id, icon, title, subtitle, status, statusLabel, colorClass, createdBy, ownerName, canManage: canManageProp, onRefresh, onDelete }: ChannelInstanceCardProps) {
   const refreshVariant = colorClass === 'emerald' ? 'success' : 'fuchsia';
   const [canManage, setCanManage] = useState(true);
-  const [isCollaboratorChannel, setIsCollaboratorChannel] = useState(false);
+  const [isOtherPersonChannel, setIsOtherPersonChannel] = useState(false);
   useEffect(() => {
     const user = authService.getUser();
-    const owner = !user?.role || user.role === 'owner';
+    const fullAccess = !user?.role || user.role === 'owner' || user.role === 'admin';
     const isOwnChannel = !createdBy || (!!user?.id && createdBy === user.id);
-    setCanManage(owner || isOwnChannel);
-    setIsCollaboratorChannel(owner && !!createdBy && !!user?.id && createdBy !== user.id);
-  }, [createdBy]);
+    setCanManage(canManageProp ?? (fullAccess || isOwnChannel));
+    // O rótulo "conectado por" aparece para qualquer um que veja um canal de
+    // outra pessoa — não só para o dono, agora que o time enxerga tudo.
+    setIsOtherPersonChannel(!!createdBy && !!user?.id && createdBy !== user.id);
+  }, [createdBy, canManageProp]);
   return (<Card className="p-6 relative overflow-hidden group h-full flex flex-col">
     <div className="flex justify-between items-start mb-4 pt-2">
       {icon}
@@ -41,10 +48,10 @@ export default function ChannelInstanceCard({ id, icon, title, subtitle, status,
     </div>
     <h3 className="font-bold text-slate-800 dark:text-white">{title}</h3>
     <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
-    {isCollaboratorChannel && ownerName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-3">
-          Colaborador: <span className="font-medium text-slate-500 dark:text-slate-400">{ownerName}</span>
+    {isOtherPersonChannel && ownerName && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-3">
+          Conectado por <span className="font-medium text-slate-500 dark:text-slate-400">{ownerName}</span>
     </p>)}
-    {(!isCollaboratorChannel || !ownerName) && <div className="mb-4"/>}
+    {(!isOtherPersonChannel || !ownerName) && <div className="mb-4"/>}
 
     <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-50 dark:border-slate-700 pt-4 mt-auto">
       <span className="flex items-center gap-1">

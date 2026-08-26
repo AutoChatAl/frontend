@@ -9,10 +9,11 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Modal from '@/components/Modal';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useChannelStatus } from '@/contexts/ChannelStatusContext';
+import { hasPermission } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useInstagramAccounts, useWhatsAppInstances } from '@/hooks/ChannelHook';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useWhatsAppOfficialInstances, useWhatsAppOfficialSignup } from '@/hooks/WhatsAppOfficialHook';
-import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
 import type { ChannelMessageStats } from '@/types/Channel';
 
@@ -72,6 +73,14 @@ function Stat({ label, value, hint, action }: StatProps) {
 }
 
 export default function ChannelsPage() {
+  // A página serve dois grupos de canais com permissões distintas: WhatsApp por
+  // QR Code e Instagram sob `channels`, API Oficial sob `whatsapp-official`.
+  // Quem tem só uma delas vê só os cards correspondentes, em vez de tomar 403.
+  // Resolvido antes dos hooks de dados porque eles usam isso para decidir se
+  // buscam — e via useAuthUser para acompanhar o /me, não um cache congelado.
+  const user = useAuthUser();
+  const canManage = hasPermission(user, 'channels');
+  const canSeeOfficial = hasPermission(user, 'whatsapp-official');
   const {
     instances,
     loading: loadingWhats,
@@ -83,7 +92,7 @@ export default function ChannelsPage() {
     getStatus,
     deleteInstance,
     refetch: refetchWhatsList,
-  } = useWhatsAppInstances();
+  } = useWhatsAppInstances({ enabled: canManage });
   const {
     instances: officialInstances,
     loading: loadingOfficial,
@@ -92,7 +101,7 @@ export default function ChannelsPage() {
     deleteInstance: deleteOfficial,
     renameInstance: renameOfficial,
     refreshHealth: refreshOfficialHealth,
-  } = useWhatsAppOfficialInstances();
+  } = useWhatsAppOfficialInstances({ enabled: canSeeOfficial });
   const {
     accounts,
     loading: loadingInstagram,
@@ -100,13 +109,12 @@ export default function ChannelsPage() {
     renameAccount,
     getOAuthUrl,
     refetch: refetchInstagramList,
-  } = useInstagramAccounts();
+  } = useInstagramAccounts({ enabled: canManage });
   const { refetchWhatsApp, refetchInstagram } = useChannelStatus();
-  const { isInactive, status } = useSubscription();
+  const { isInactive, status, usage } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [messageStats, setMessageStats] = useState<ChannelMessageStats | null>(null);
 
-  const [canManage, setCanManage] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [qrChannelId, setQrChannelId] = useState<string | null>(null);
   const [modeChooserOpen, setModeChooserOpen] = useState(false);
@@ -136,8 +144,6 @@ export default function ChannelsPage() {
   }, []);
 
   useEffect(() => {
-    const user = authService.getUser();
-    setCanManage(!user?.role || user.role === 'owner' || user.role === 'admin' || (user.permissions ?? []).includes('channels'));
     loadMessageStats();
   }, [loadMessageStats]);
 
@@ -149,6 +155,7 @@ export default function ChannelsPage() {
       : instance.number || 'Número ainda não pareado',
     connected: instance.status === 'CONNECTED',
     ownerName: instance.ownerName ?? null,
+    canManage: instance.canManage ?? true,
   })), [instances]);
 
   const officialRows = useMemo<ChannelRow[]>(() => officialInstances.map((instance) => {
@@ -160,6 +167,7 @@ export default function ChannelsPage() {
       subtitle: `${config.displayPhoneNumber || 'Número oficial'} · ${quality}`,
       connected: instance.status === 'CONNECTED',
       ownerName: instance.ownerName ?? null,
+      canManage: instance.canManage ?? true,
     };
   }), [officialInstances]);
 
@@ -171,11 +179,21 @@ export default function ChannelsPage() {
       subtitle: username ? `@${username}` : 'Perfil sem @ informado',
       connected: account.status === 'CONNECTED',
       ownerName: account.ownerName ?? null,
+      canManage: account.canManage ?? true,
     };
   }), [accounts]);
 
   const allRows = [...whatsappRows, ...officialRows, ...instagramRows];
-  const activeCount = allRows.filter((row) => row.connected).length;
+  // `maxTotalInstances` é a cota do workspace inteiro, somando os três tipos de
+  // canal. Como esta página agora mostra só os tipos que a pessoa tem permissão
+  // de ver, contar as linhas visíveis diria "1/5" num workspace lotado. O uso
+  // vem do backend (`usage.instances`), que enxerga tudo; as linhas visíveis
+  // servem só de fallback enquanto o resumo não carregou.
+  const seesEveryChannelType = canManage && canSeeOfficial;
+  const visibleConnectedCount = allRows.filter((row) => row.connected).length;
+  const activeCount = seesEveryChannelType
+    ? visibleConnectedCount
+    : (usage?.instances?.used ?? visibleConnectedCount);
   const channelLimit = status?.limits?.maxTotalInstances ?? 0;
   const statsHint = messageStats ? `últimos ${messageStats.days} dias` : 'carregando...';
 
@@ -391,23 +409,23 @@ export default function ChannelsPage() {
           {channelLimit > 0 ? `/${channelLimit.toLocaleString('pt-BR')}` : ''}
         </span>
       </>}/>
-      <Stat label="Envios pelo QR Code" hint={statsHint} value={formatStat(messageStats?.WHATSAPP)}/>
-      <Stat label="Envios pelo WhatsApp Oficial" hint={statsHint} value={formatStat(messageStats?.WHATSAPP_OFFICIAL)} action={<Link href="/whatsapp-official" title="Saúde do número, janela de 24h e consumo" className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+      {canManage && <Stat label="Envios pelo QR Code" hint={statsHint} value={formatStat(messageStats?.WHATSAPP)}/>}
+      {canSeeOfficial && <Stat label="Envios pelo WhatsApp Oficial" hint={statsHint} value={formatStat(messageStats?.WHATSAPP_OFFICIAL)} action={<Link href="/whatsapp-official" title="Saúde do número, janela de 24h e consumo" className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
         Relatório completo
         <ArrowUpRight size={11} className="shrink-0"/>
-      </Link>}/>
-      <Stat label="Envios pelo Instagram" hint={statsHint} value={formatStat(messageStats?.INSTAGRAM)}/>
+      </Link>}/>}
+      {canManage && <Stat label="Envios pelo Instagram" hint={statsHint} value={formatStat(messageStats?.INSTAGRAM)}/>}
       <div className="col-span-2 lg:col-span-2 min-w-0">
         <ExtraInstancesCard quantity={status?.subscription?.extraInstances ?? 0}/>
       </div>
     </div>
 
     <div data-tour="channels-cards" className="grid gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-3 items-start">
-      <ChannelTypeCard title="WhatsApp" description="Instâncias pareadas por QR Code" icon={<MessageCircle size={18}/>} accent="emerald" rows={whatsappRows} loading={loadingWhats} canManage={canManage} addLabel="Nova instância" addTourId="channels-add" emptyMessage="Nenhuma instância conectada ainda" onAdd={handleAddWhatsApp} onActivate={handleActivateWhatsApp} onDeactivate={handleDeactivateWhatsApp} onRename={openRename('whatsapp')} onDelete={openDelete('whatsapp')} busyId={busyId}/>
+      {canManage && <ChannelTypeCard title="WhatsApp" description="Instâncias pareadas por QR Code" icon={<MessageCircle size={18}/>} accent="emerald" rows={whatsappRows} loading={loadingWhats} canManage={canManage} addLabel="Nova instância" addTourId="channels-add" emptyMessage="Nenhuma instância conectada ainda" onAdd={handleAddWhatsApp} onActivate={handleActivateWhatsApp} onDeactivate={handleDeactivateWhatsApp} onRename={openRename('whatsapp')} onDelete={openDelete('whatsapp')} busyId={busyId}/>}
 
-      <ChannelTypeCard title="WhatsApp Oficial" description="Números verificados na API Oficial da Meta" icon={<BadgeCheck size={18}/>} accent="teal" rows={officialRows} loading={loadingOfficial} canManage={canManage} addLabel="Conectar número" adding={connectingOfficial} emptyMessage="Nenhum número oficial conectado" errorMessage={officialError} onAdd={handleAddOfficial} onRefresh={handleRefreshOfficial} onRename={openRename('whatsapp-official')} onDelete={openDelete('whatsapp-official')} busyId={busyId}/>
+      {canSeeOfficial && <ChannelTypeCard title="WhatsApp Oficial" description="Números verificados na API Oficial da Meta" icon={<BadgeCheck size={18}/>} accent="teal" rows={officialRows} loading={loadingOfficial} canManage={canSeeOfficial} addLabel="Conectar número" adding={connectingOfficial} emptyMessage="Nenhum número oficial conectado" errorMessage={officialError} onAdd={handleAddOfficial} onRefresh={handleRefreshOfficial} onRename={openRename('whatsapp-official')} onDelete={openDelete('whatsapp-official')} busyId={busyId}/>}
 
-      <ChannelTypeCard title="Instagram" description="Contas autorizadas pelo login da Meta" icon={<Instagram size={18}/>} accent="fuchsia" rows={instagramRows} loading={loadingInstagram} canManage={canManage} addLabel="Conectar conta" adding={connectingInstagram} emptyMessage="Nenhuma conta do Instagram conectada" onAdd={handleConnectInstagram} onActivate={handleConnectInstagram} onRename={openRename('instagram')} onDelete={openDelete('instagram')} busyId={busyId} renderAvatar={renderInstagramAvatar}/>
+      {canManage && <ChannelTypeCard title="Instagram" description="Contas autorizadas pelo login da Meta" icon={<Instagram size={18}/>} accent="fuchsia" rows={instagramRows} loading={loadingInstagram} canManage={canManage} addLabel="Conectar conta" adding={connectingInstagram} emptyMessage="Nenhuma conta do Instagram conectada" onAdd={handleConnectInstagram} onActivate={handleConnectInstagram} onRename={openRename('instagram')} onDelete={openDelete('instagram')} busyId={busyId} renderAvatar={renderInstagramAvatar}/>}
     </div>
 
     {showCreateModal && (<WhatsAppCreateModal isOpen={showCreateModal} onClose={() => {

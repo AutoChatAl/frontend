@@ -10,8 +10,15 @@ export interface ChannelRow {
     /** Linha secundária: número, @usuário ou o motivo de estar fora do ar. */
     subtitle: string;
     connected: boolean;
-    /** Preenchido só para o dono do workspace, quando o canal é de outro membro. */
+    /** Nome de quem conectou o canal, quando não foi quem está olhando. */
     ownerName?: string | null;
+    /**
+     * Direito de gerenciar ESTE canal (renomear, ligar/desligar, apagar).
+     * Todo mundo com a permissão `channels` VÊ os canais do workspace, mas só
+     * quem conectou — e o dono/admin — mexe neles. Resolvido no backend.
+     * `undefined` = a origem não informa; cai no `canManage` do card.
+     */
+    canManage?: boolean | undefined;
 }
 
 export type ChannelAccent = 'emerald' | 'teal' | 'fuchsia';
@@ -134,6 +141,7 @@ export default function ChannelTypeCard({
       </div>) : (<ul className="divide-y divide-slate-100 dark:divide-slate-700/60">
         {rows.map((row) => {
           const busy = busyId === row.id;
+          const rowCanManage = canManage && (row.canManage ?? true);
           return (<li key={row.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 min-w-0">
             <span className="relative shrink-0">
               {renderAvatar ? renderAvatar(row) : (<span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${palette.tile}`}>
@@ -156,7 +164,7 @@ export default function ChannelTypeCard({
               {row.connected ? 'Ativo' : 'Parado'}
             </span>
 
-            {canManage && (<div className="flex shrink-0 items-center gap-0.5">
+            {rowCanManage && (<div className="flex shrink-0 items-center gap-0.5">
               {busy ? (<span className="flex h-7 w-7 items-center justify-center text-slate-400 dark:text-slate-500">
                 <Loader2 size={14} className="animate-spin"/>
               </span>) : (<>

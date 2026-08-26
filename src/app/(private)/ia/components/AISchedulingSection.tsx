@@ -1,11 +1,10 @@
 'use client';
 import Link from 'next/link';
 
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
-
-import AINote from './AINote';
-import AISectionHeader from './AISectionHeader';
-import AIToggleRow from './AIToggleRow';
+import SectionHeader from '@/components/SectionHeader';
+import ToggleRow from '@/components/ToggleRow';
 
 interface AISchedulingSectionProps {
     schedulingQueryEnabled: boolean;
@@ -21,7 +20,7 @@ const BOOKING_LOCK = 'Seu plano de IA atual não inclui criação de agendamento
 export default function AISchedulingSection({ schedulingQueryEnabled, schedulingBookingEnabled, schedulingQueryAllowed, schedulingBookingAllowed, onToggleQuery, onToggleBooking }: AISchedulingSectionProps) {
   return (
     <Card className="p-4">
-      <AISectionHeader
+      <SectionHeader
         title="Agendamento pela IA"
         hint="Quanto a IA pode mexer na sua agenda durante a conversa. Ela usa os horários configurados em Agendamentos."
         action={
@@ -32,40 +31,40 @@ export default function AISchedulingSection({ schedulingQueryEnabled, scheduling
       />
 
       <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-        <AIToggleRow
+        <ToggleRow
           title="Consultar disponibilidade"
           description="A IA verifica os horários livres e informa ao cliente o que dá para marcar."
           checked={schedulingQueryEnabled}
           onChange={onToggleQuery}
           {...(schedulingQueryAllowed ? {} : { lockReason: QUERY_LOCK })}
         >
-          {!schedulingQueryAllowed && <AINote tone="warning">{QUERY_LOCK}</AINote>}
+          {!schedulingQueryAllowed && <Callout tone="warning">{QUERY_LOCK}</Callout>}
           {schedulingQueryAllowed && schedulingQueryEnabled && (
-            <AINote>
+            <Callout>
               A base são os horários de trabalho e as exceções da aba Agendamentos. Mudou lá, muda aqui.
-            </AINote>
+            </Callout>
           )}
-        </AIToggleRow>
+        </ToggleRow>
 
-        <AIToggleRow
+        <ToggleRow
           title="Criar agendamentos"
           description="Quando o cliente confirma um horário, a IA marca sozinha e vincula o contato da conversa."
           checked={schedulingBookingEnabled}
           onChange={onToggleBooking}
           {...(schedulingBookingAllowed ? {} : { lockReason: BOOKING_LOCK })}
         >
-          {!schedulingBookingAllowed && <AINote tone="warning">{BOOKING_LOCK}</AINote>}
+          {!schedulingBookingAllowed && <Callout tone="warning">{BOOKING_LOCK}</Callout>}
           {schedulingBookingAllowed && schedulingBookingEnabled && (
-            <AINote tone="success">
+            <Callout tone="success">
               O agendamento aparece na sua agenda com a marca &ldquo;Criado por IA&rdquo;, então dá para revisar depois.
-            </AINote>
+            </Callout>
           )}
           {schedulingBookingAllowed && schedulingBookingEnabled && !schedulingQueryEnabled && (
-            <AINote tone="warning">
+            <Callout tone="warning">
               Sem &ldquo;Consultar disponibilidade&rdquo; ligado, a IA marca sem checar a agenda antes — o risco de choque de horário sobe.
-            </AINote>
+            </Callout>
           )}
-        </AIToggleRow>
+        </ToggleRow>
       </div>
     </Card>
   );

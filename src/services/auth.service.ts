@@ -12,7 +12,25 @@ interface LoginData {
     password: string;
     totpCode?: string;
 }
-export type Permission = 'contacts' | 'groups' | 'scheduling' | 'ia' | 'channels' | 'campaigns' | 'auto-replies';
+// Espelha WORKSPACE_PERMISSIONS do backend (src/infra/config/permissions.ts).
+// Ao adicionar uma permissão lá, adicione aqui e no PERMISSION_OPTIONS da
+// aba de Equipe (settings/components/MembersTab.tsx).
+/** Disparado sempre que o usuário autenticado é (re)gravado no cache local. */
+export const AUTH_USER_UPDATED_EVENT = 'synq:auth-user-updated';
+
+export type Permission =
+    | 'dashboard'
+    | 'channels'
+    | 'whatsapp-official'
+    | 'inbox'
+    | 'contacts'
+    | 'funnel'
+    | 'groups'
+    | 'campaigns'
+    | 'cart-recovery'
+    | 'scheduling'
+    | 'auto-replies'
+    | 'ia';
 export interface AuthUser {
     id: string;
     email: string;
@@ -207,6 +225,11 @@ class AuthService {
   public saveUser(user: AuthUser): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_user', JSON.stringify(user));
+      // Quem decide o que renderizar a partir de `permissions` não pode ficar
+      // preso ao cache lido na montagem: o /me do layout costuma responder
+      // depois, e logo após um deploy que criou permissões novas o valor antigo
+      // esconderia áreas que a pessoa agora pode abrir.
+      window.dispatchEvent(new CustomEvent(AUTH_USER_UPDATED_EVENT));
     }
   }
   public getUser(): AuthUser | null {

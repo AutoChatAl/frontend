@@ -8,6 +8,8 @@ export type WhatsAppOfficialInstance = {
   workspaceId: string;
   createdBy?: string;
   ownerName?: string | null;
+  /** Direito de gerenciar este canal — resolvido no backend (criador ou dono/admin). */
+  canManage?: boolean;
   createdAt: string;
   whatsappOfficial: {
     wabaId: string;

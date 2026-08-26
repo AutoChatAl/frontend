@@ -3,12 +3,11 @@ import { AlertTriangle, Check } from 'lucide-react';
 import Link from 'next/link';
 
 import Badge from '@/components/Badge';
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
+import SectionHeader from '@/components/SectionHeader';
+import ToggleRow from '@/components/ToggleRow';
 import type { FunnelStageDefinition } from '@/types/Funnel';
-
-import AINote from './AINote';
-import AISectionHeader from './AISectionHeader';
-import AIToggleRow from './AIToggleRow';
 
 interface AIFunnelSectionProps {
     funnelAutoMoveEnabled: boolean;
@@ -20,23 +19,23 @@ export default function AIFunnelSection({ funnelAutoMoveEnabled, stages, onToggl
   return (
     <div className="space-y-3">
       <Card className="p-4">
-        <AISectionHeader
+        <SectionHeader
           title="Movimentação do funil pela IA"
           hint="A cada mensagem recebida, a IA lê a conversa e avança o lead para a etapa que bate com o critério da etapa."
         />
-        <AIToggleRow
+        <ToggleRow
           title="Mover leads automaticamente"
           description="O lead nunca volta para uma etapa anterior de forma automática — a IA só avança."
           checked={funnelAutoMoveEnabled}
           onChange={onToggle}
           badge={<Badge type="beta" text="BETA" pill/>}
         >
-        </AIToggleRow>
+        </ToggleRow>
       </Card>
 
       {stages.length > 0 && (
         <Card className="p-4">
-          <AISectionHeader
+          <SectionHeader
             title="Critérios por etapa"
             hint="É o critério que ensina a IA quando mover o lead. A edição fica na tela do funil."
             action={
@@ -47,11 +46,11 @@ export default function AIFunnelSection({ funnelAutoMoveEnabled, stages, onToggl
           />
 
           {withoutCriteria.length > 0 && (
-            <AINote tone="warning" className="mb-3">
+            <Callout tone="warning" className="mb-3">
               {withoutCriteria.length === 1
                 ? `A etapa "${withoutCriteria[0]?.name}" não tem critério definido. Sem ele, a IA adivinha pelo nome da etapa e a precisão cai.`
                 : `${withoutCriteria.length} etapas não têm critério definido. Sem ele, a IA adivinha pelo nome da etapa e a precisão cai.`}
-            </AINote>
+            </Callout>
           )}
 
           <ul className="divide-y divide-slate-100 dark:divide-slate-700/60">

@@ -4,11 +4,11 @@ import { useEffect, useRef } from 'react';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import SectionHeader from '@/components/SectionHeader';
+import ToggleRow from '@/components/ToggleRow';
 import type { InstagramProductLayout, Product, ProductPayload } from '@/types/AI';
 
 import AIProductsInput from './AIProductsInput';
-import AISectionHeader from './AISectionHeader';
-import AIToggleRow from './AIToggleRow';
 
 const LAYOUT_OPTIONS: Array<{ value: InstagramProductLayout; label: string; hint: string }> = [
   { value: 'QUICK_REPLY', label: 'Botões de resposta', hint: 'Sem foto e nome curto, mas tocar envia o texto do botão como mensagem do cliente.' },
@@ -56,7 +56,7 @@ export default function AICatalogSection({ products, productsTotal, maxProducts,
   return (
     <div className="space-y-3">
       <Card className="p-4">
-        <AISectionHeader
+        <SectionHeader
           title="Catálogo de produtos e serviços"
           hint="O que a IA pode citar, recomendar e enviar durante a conversa. Cada edição é salva na hora."
           action={<>
@@ -89,12 +89,12 @@ export default function AICatalogSection({ products, productsTotal, maxProducts,
       </Card>
 
       <Card className="p-4">
-        <AISectionHeader
+        <SectionHeader
           title="Como a IA oferece os itens"
           hint="Vale para as duas pontas: o que ela sugere por conta própria e o formato da lista enviada no chat."
         />
 
-        <AIToggleRow
+        <ToggleRow
           title="Sugerir itens complementares"
           description="Cross-sell: depois de recomendar um item, a IA propõe outro que costuma acompanhar."
           checked={crossSellEnabled}
