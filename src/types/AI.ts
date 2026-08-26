@@ -8,7 +8,23 @@ export interface AIChannel {
     identifier: string;
     createdBy?: string | null;
     ownerName?: string | null;
+    /** Perfil de IA que hoje responde por este canal — null quando a IA está desligada nele. */
+    aiProfileId?: string | null;
+    aiProfileName?: string | null;
 }
+/** Um canal só pode responder por um perfil, então cada perfil tem seus próprios canais. */
+export interface AiProfile {
+    id: string;
+    /** Rótulo pronto para exibir: nome dado pelo usuário ou "Perfil N". */
+    name: string;
+    /** Nome digitado pelo usuário, vazio quando ele nunca renomeou. */
+    customName: string;
+    order: number;
+    enabled: boolean;
+    activeChannelIds: string[];
+}
+/** Catálogo unificado entre os perfis ou um catálogo por perfil. */
+export type AiCatalogScope = 'shared' | 'profile';
 export interface AIRule {
     id: string;
     title: string;
@@ -44,6 +60,9 @@ export const tonesOptions = [
 export type InstagramProductLayout = 'QUICK_REPLY' | 'CAROUSEL';
 export interface AiConfig {
     id: string;
+    profileName: string;
+    profileOrder: number;
+    catalogScope: AiCatalogScope;
     enabled: boolean;
     activeChannelId: string | null;
     segment: string;

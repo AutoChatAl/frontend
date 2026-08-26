@@ -546,6 +546,7 @@ export default function BillingTab() {
               {ap.limits.schedulingBookingEnabled && <li>• Agendamento</li>}
               <li>• {ap.limits.maxProducts === -1 ? 'Produtos ilimitados' : `${ap.limits.maxProducts} produtos`}</li>
               <li>• Regras até {formatNumber(ap.limits.maxCustomRulesChars)} caracteres</li>
+              {ap.limits.maxProfiles > 1 && <li>• {ap.limits.maxProfiles} perfis de IA</li>}
             </ul>
             <p className="text-[10px] leading-relaxed text-slate-400 dark:text-slate-500 mb-3">
               <span className="text-violet-500">*</span> Mensagens de IA que excederem o limite mensal são cobradas como excedente: {formatPricePerMsg(ap.limits.extraAiMessagePriceCents)}/msg.

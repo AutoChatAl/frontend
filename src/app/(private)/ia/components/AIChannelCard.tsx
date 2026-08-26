@@ -12,8 +12,10 @@ interface AIChannelCardProps {
     /** Verdadeiro quando o plano já está no limite e este canal está desligado. */
     blocked?: boolean;
     blockedReason?: string | undefined;
+    /** Perfil que já atende este canal, quando não é o perfil aberto. */
+    heldByProfileName?: string;
 }
-export default function AIChannelCard({ channel, active, onToggle, blocked = false, blockedReason }: AIChannelCardProps) {
+export default function AIChannelCard({ channel, active, onToggle, blocked = false, blockedReason, heldByProfileName }: AIChannelCardProps) {
   const isOfficial = channel.type === 'whatsapp_official';
   const isWhatsApp = channel.type === 'whatsapp' || isOfficial;
   const Icon = isOfficial ? BadgeCheck : isWhatsApp ? MessageCircle : Instagram;
@@ -46,7 +48,9 @@ export default function AIChannelCard({ channel, active, onToggle, blocked = fal
             />
           </div>
           <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-            {meta || (active ? 'IA respondendo neste canal' : 'IA desligada neste canal')}
+            {heldByProfileName
+              ? `Atendido pelo ${heldByProfileName}`
+              : meta || (active ? 'IA respondendo neste canal' : 'IA desligada neste canal')}
           </p>
         </div>
       </div>

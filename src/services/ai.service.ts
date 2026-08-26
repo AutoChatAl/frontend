@@ -1,4 +1,4 @@
-import type { AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
+import type { AiCatalogScope, AiProfile, AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
@@ -6,6 +6,9 @@ import { apiClient } from '@/utils/ApiClient';
 const IMPORT_TIMEOUT_MS = 120000;
 export interface AiConfig {
     id: string;
+    profileName?: string;
+    profileOrder?: number;
+    catalogScope?: AiCatalogScope;
     enabled: boolean;
     activeChannelId: string | null;
     activeChannelIds?: string[];
@@ -44,15 +47,26 @@ export interface ProductListResult {
 }
 export interface AiConfigResponse {
     aiConfig: AiConfig;
+    profiles: AiProfile[];
+    activeProfileId: string;
+    maxProfiles: number;
+    catalogScope: AiCatalogScope;
     products: Product[];
     productsTotal: number;
     productsPageSize: number;
     maxProducts: number;
+    maxCustomRulesChars?: number;
     visibleTabs?: string[];
 }
+export interface AiProfilesResponse {
+    profiles: AiProfile[];
+    maxProfiles: number;
+    catalogScope: AiCatalogScope;
+}
 class AiService {
-  public async getConfig(): Promise<AiConfigResponse> {
-    const response = await apiClient.get<AiConfigResponse>('/ai/config');
+  public async getConfig(profileId?: string | null): Promise<AiConfigResponse> {
+    const query = profileId ? `?profileId=${encodeURIComponent(profileId)}` : '';
+    const response = await apiClient.get<AiConfigResponse>(`/ai/config${query}`);
     if (response.success && response.data) {
       return response.data as AiConfigResponse;
     }
@@ -73,28 +87,66 @@ class AiService {
         crossSellEnabled: false,
         instagramProductLayout: 'QUICK_REPLY',
       },
+      profiles: [],
+      activeProfileId: '',
+      maxProfiles: 1,
+      catalogScope: 'shared',
       products: [],
       productsTotal: 0,
       productsPageSize: 50,
       maxProducts: 0,
     };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'instagramProductLayout'>>): Promise<void> {
-    const response = await apiClient.put('/ai/config', data);
+  public async listProfiles(): Promise<AiProfilesResponse> {
+    const response = await apiClient.get<AiProfilesResponse>('/ai/profiles');
+    if (response.success && response.data) {
+      return response.data as AiProfilesResponse;
+    }
+    return { profiles: [], maxProfiles: 1, catalogScope: 'shared' };
+  }
+  public async createProfile(name?: string): Promise<AiProfile> {
+    const response = await apiClient.post<{ profile: AiProfile }>('/ai/profiles', name ? { name } : {});
+    if (!response.success || !response.data) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao criar o perfil de IA.');
+    }
+    return (response.data as { profile: AiProfile }).profile;
+  }
+  public async updateProfile(profileId: string, data: { name?: string; catalogScope?: AiCatalogScope }): Promise<AiProfilesResponse> {
+    const response = await apiClient.put<AiProfilesResponse>(`/ai/profiles/${profileId}`, data);
+    if (!response.success || !response.data) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao atualizar o perfil de IA.');
+    }
+    return response.data as AiProfilesResponse;
+  }
+  public async deleteProfile(profileId: string): Promise<{ profiles: AiProfile[]; activeProfileId: string | null }> {
+    const response = await apiClient.delete<{ profiles: AiProfile[]; activeProfileId: string | null }>(`/ai/profiles/${profileId}`);
+    if (!response.success || !response.data) {
+      const body = response.data as { reason?: string } | undefined;
+      throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao excluir o perfil de IA.');
+    }
+    return response.data as { profiles: AiProfile[]; activeProfileId: string | null };
+  }
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'instagramProductLayout'>>, profileId?: string | null): Promise<void> {
+    const response = await apiClient.put('/ai/config', profileId ? { ...data, profileId } : data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;
       throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao salvar configurações da IA.');
     }
   }
-  public async activateChannel(channelId: string): Promise<void> {
-    const response = await apiClient.post('/ai/config/activate', { channelId });
+  public async activateChannel(channelId: string, profileId?: string | null): Promise<void> {
+    const response = await apiClient.post('/ai/config/activate', profileId ? { channelId, profileId } : { channelId });
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;
       throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao ativar canal de IA.');
     }
   }
-  public async deactivateAi(channelId?: string): Promise<void> {
-    const response = await apiClient.post('/ai/config/deactivate', channelId ? { channelId } : {});
+  public async deactivateAi(channelId?: string, profileId?: string | null): Promise<void> {
+    const response = await apiClient.post('/ai/config/deactivate', {
+      ...(channelId ? { channelId } : {}),
+      ...(profileId ? { profileId } : {}),
+    });
     if (!response.success)
       throw new Error('Falha ao desativar IA.');
   }
@@ -107,6 +159,8 @@ class AiService {
         ownerName: string | null;
         ownerEmail: string | null;
         aiEnabled: boolean;
+        aiProfileId: string | null;
+        aiProfileName: string | null;
     }>> {
     const response = await apiClient.get<Array<{
             id: string;
@@ -117,6 +171,8 @@ class AiService {
             ownerName: string | null;
             ownerEmail: string | null;
             aiEnabled: boolean;
+            aiProfileId: string | null;
+            aiProfileName: string | null;
         }>>('/ai/channels');
     if (response.success && response.data) {
       return response.data as Array<{
@@ -128,14 +184,18 @@ class AiService {
                 ownerName: string | null;
                 ownerEmail: string | null;
                 aiEnabled: boolean;
+                aiProfileId: string | null;
+                aiProfileName: string | null;
             }>;
     }
     return [];
   }
-  public async listProducts(params: { search?: string; page?: number; pageSize?: number } = {}): Promise<ProductListResult> {
+  public async listProducts(params: { search?: string; page?: number; pageSize?: number; profileId?: string | null } = {}): Promise<ProductListResult> {
     const query = new URLSearchParams();
     if (params.search?.trim())
       query.set('search', params.search.trim());
+    if (params.profileId)
+      query.set('profileId', params.profileId);
     query.set('page', String(params.page ?? 1));
     query.set('pageSize', String(params.pageSize ?? 50));
     const response = await apiClient.get<ProductListResult>(`/ai/products?${query.toString()}`);
@@ -144,8 +204,8 @@ class AiService {
     }
     throw new Error('Falha ao carregar os produtos do catálogo.');
   }
-  public async createProduct(data: ProductPayload & { name: string }): Promise<Product> {
-    const response = await apiClient.post<Product>('/ai/products', data);
+  public async createProduct(data: ProductPayload & { name: string }, profileId?: string | null): Promise<Product> {
+    const response = await apiClient.post<Product>('/ai/products', profileId ? { ...data, profileId } : data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;
       throw new Error(body?.reason ? getErrorMessage(body.reason) : 'Falha ao adicionar produto.');
@@ -183,18 +243,19 @@ class AiService {
     if (!response.success)
       throw new Error('Falha ao remover produto.');
   }
-  public async deleteAllProducts(): Promise<number> {
-    const response = await apiClient.delete<{ deleted: number }>('/ai/products');
+  public async deleteAllProducts(profileId?: string | null): Promise<number> {
+    const response = await apiClient.delete<{ deleted: number }>(`/ai/products${profileId ? `?profileId=${encodeURIComponent(profileId)}` : ''}`);
     if (!response.success)
       throw new Error('Falha ao limpar o catálogo.');
     return (response.data as { deleted: number } | undefined)?.deleted ?? 0;
   }
-  public async importProducts(file: File, mode: ProductImportMode): Promise<ProductImportReport> {
+  public async importProducts(file: File, mode: ProductImportMode, profileId?: string | null): Promise<ProductImportReport> {
     const fileBase64 = await this.readFileAsBase64(file);
     const response = await apiClient.post<ProductImportReport>('/ai/products/import', {
       fileName: file.name,
       fileBase64,
       mode,
+      ...(profileId ? { profileId } : {}),
     }, { timeoutMs: IMPORT_TIMEOUT_MS });
     if (!response.success || !response.data) {
       const body = response.data as { reason?: string } | undefined;
