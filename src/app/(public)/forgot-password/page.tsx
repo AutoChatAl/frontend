@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDownRight, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import Link from 'next/link';
 import React, { useState } from 'react';
 
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
         </Link>
       </p>
       <Link href="/" className="mt-4 text-xs text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 w-full">
-        <ArrowDownRight size={12} className="rotate-180"/> Voltar para o início
+        Voltar para o início
       </Link>
     </div>
   </AuthShell>);

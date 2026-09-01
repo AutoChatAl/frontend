@@ -1,74 +1,77 @@
 'use client';
-import { motion } from 'framer-motion';
-import {
-  BarChart3,
-  Bot,
-  Calendar,
-  MessageSquare,
-  ShieldCheck,
-  Tag,
-  Users,
-  Zap,
-} from 'lucide-react';
-
-import { HIDDEN_FEATURES } from '@lib/featureFlags';
+import { motion, type Variants } from 'framer-motion';
 
 const FEATURES = [
   {
-    icon: Bot,
     title: 'IA treinável',
-    description: 'Cadastre produtos, regras e tom de voz. A IA aprende e responde como sua marca.',
-    color: 'from-indigo-500 to-violet-600',
+    description:
+      'Cadastre catálogo, regras e tom de voz. A IA responde como um vendedor da sua loja, 24h por dia.',
   },
   {
-    icon: MessageSquare,
-    title: 'Auto-resposta',
-    description: 'Regras por palavra-chave e horário para responder DM, comentários e mensagens.',
-    color: 'from-fuchsia-500 to-pink-600',
+    title: 'Caixa de entrada única',
+    description:
+      'WhatsApp e Instagram no mesmo lugar, com transferência entre a IA e a sua equipe a qualquer momento.',
   },
   {
-    icon: Zap,
-    title: 'Campanhas em massa',
-    description: 'Dispare mensagens segmentadas com controle de cadência anti-bloqueio.',
-    color: 'from-amber-500 to-orange-600',
+    title: 'Funil de vendas',
+    description:
+      'A IA qualifica o lead durante a conversa e move o card pelas etapas — do primeiro contato ao fechamento.',
   },
   {
-    icon: Users,
-    title: 'CRM integrado',
-    description: 'Contatos, tags, grupos e histórico unificado de cada cliente.',
-    color: 'from-blue-500 to-indigo-600',
+    title: 'Disparo em massa',
+    description:
+      'Agende campanhas a partir de um template aprovado e envie para toda a base no horário que você marcar.',
   },
   {
-    icon: Calendar,
-    title: 'Agendamento',
-    description: 'IA marca compromissos no calendário da equipe e envia lembretes automáticos.',
-    color: 'from-emerald-500 to-teal-600',
-  },
-  {
-    icon: BarChart3,
-    title: 'Dashboard em tempo real',
-    description: HIDDEN_FEATURES.cartRecovery
-      ? 'Mensagens, conversões e ROI em uma única visão.'
-      : 'Mensagens, conversões, recuperações e ROI em uma única visão.',
-    color: 'from-cyan-500 to-blue-600',
-  },
-  {
-    icon: Tag,
     title: 'Automação de comentários',
-    description: 'Responda comentários do Instagram com regras e direcione para a DM automaticamente.',
-    color: 'from-pink-500 to-rose-600',
+    description:
+      'Palavra-chave no comentário do Instagram vira conversa no direct, sem ninguém digitar nada.',
   },
   {
-    icon: ShieldCheck,
-    title: 'Conexão estável',
-    description: 'Integrações com Instagram via API Meta e WhatsApp com controle de cadência para operar com segurança.',
-    color: 'from-slate-700 to-slate-900',
+    title: 'Agendamento',
+    description:
+      'A IA marca o compromisso no Google Calendar da equipe e dispara os lembretes antes da hora.',
+  },
+  {
+    title: 'Contatos, tags e grupos',
+    description:
+      'Histórico unificado de cada cliente e segmentação pronta para escolher quem recebe cada campanha.',
+  },
+  {
+    title: 'Painel em tempo real',
+    description:
+      'Mensagens enviadas pela IA, por automações e pela equipe, com o consumo do plano numa visão só.',
   },
 ];
 
+// Colunas no maior breakpoint — define de que lado cada card entra.
+const COLUMNS = 4;
+
+function entersFromLeft(index: number): boolean {
+  return index % COLUMNS < COLUMNS / 2;
+}
+
+/** As pontas chegam primeiro e o grid fecha em direção ao meio. */
+function enterDelay(index: number): number {
+  const column = index % COLUMNS;
+  const stepsFromEdge = entersFromLeft(index) ? column : COLUMNS - 1 - column;
+  return Math.floor(index / COLUMNS) * 0.1 + stepsFromEdge * 0.12;
+}
+
+// O gatilho fica no container: sem isso cada card esperava a própria entrada na
+// viewport e a coreografia chegava picotada, em vez de uma onda só.
+const CARD_VARIANTS: Variants = {
+  hidden: (index: number) => ({ opacity: 0, x: entersFromLeft(index) ? -48 : 48 }),
+  show: (index: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { delay: enterDelay(index), duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
+
 export default function FeaturesGrid() {
   return (
-    <section className="py-24 bg-slate-50">
+    <section className="py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -88,30 +91,24 @@ export default function FeaturesGrid() {
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURES.map((feature, i) => {
-            const Icon = feature.icon;
-            return (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ delay: i * 0.05, duration: 0.4 }}
-                whileHover={{ y: -4 }}
-                className="group bg-white rounded-xl p-5 border border-slate-200 hover:border-indigo-200 hover:shadow-lg transition-all"
-              >
-                <div
-                  className={`inline-flex w-11 h-11 rounded-xl bg-gradient-to-br ${feature.color} items-center justify-center mb-4 shadow-md group-hover:scale-110 transition-transform`}
-                >
-                  <Icon size={20} className="text-white" />
-                </div>
-                <h3 className="text-base font-semibold text-slate-900 mb-1.5">{feature.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
-              </motion.div>
-            );
-          })}
-        </div>
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-80px' }}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {FEATURES.map((feature, i) => (
+            <motion.div
+              key={feature.title}
+              custom={i}
+              variants={CARD_VARIANTS}
+              className="rounded-xl border border-slate-200 bg-white p-5 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-indigo-200"
+            >
+              <h3 className="mb-1.5 text-base font-semibold text-slate-900">{feature.title}</h3>
+              <p className="text-sm leading-relaxed text-slate-600">{feature.description}</p>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );

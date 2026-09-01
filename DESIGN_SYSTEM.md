@@ -800,6 +800,46 @@ flex flex-col items-center justify-center py-12
 text-center space-y-3
 ```
 
+### 9.6 Landing — Superfícies e Transições de Seção
+
+Na landing (`app/(public)/`) as seções **não têm fundo próprio**. Existe uma única superfície
+contínua, declarada uma vez em `page.tsx`, que cobre todo o bloco claro de uma vez só:
+
+```tsx
+<div className="relative">
+  <div aria-hidden="true" className="pointer-events-none absolute inset-0
+    bg-[linear-gradient(to_bottom,#eef2ff_0%,#f4f6ff_8%,#ffffff_20%,#f8fafc_34%,#ffffff_48%,#f8fafc_62%,#ffffff_76%,#f8fafc_88%,#ffffff_100%)]" />
+  <div className="relative">{/* Hero … Faq, todas sem classe de fundo */}</div>
+</div>
+```
+
+> **Sem fundo por seção, não existe emenda.** O tom varia lentamente ao longo da página inteira,
+> nunca de um bloco para o outro. A ordem das seções pode mudar (feature flags) sem quebrar nada.
+
+**Regras:**
+
+- Seção clara: nenhuma classe `bg-*` no `<section>`. Só `py-24` (+ `relative`/`overflow-hidden`).
+- Decoração (orbe `blur-3xl`, wash radial) **nunca encosta na borda** da seção: o `overflow-hidden`
+  corta o blur em linha reta e esse corte aparece como emenda. Afaste da borda (`top-32`) ou apague
+  com máscara antes dela: `[mask-image:linear-gradient(to_bottom,black_30%,transparent_95%)]`.
+- Um wash usa **uma família de matiz só** (indigo no hero). Misturar indigo + fuchsia + emerald no
+  mesmo fundo deixa a superfície manchada.
+- Nunca separe seções com `border-t` — não há emenda para marcar.
+
+**Seções escuras** (`FinalCta`, `CartRecoverySection`) mantêm fundo próprio e ficam **fora** da
+superfície contínua, que termina em branco puro para encontrá-las. A passagem é o
+`SectionBlend` (`app/(public)/components/SectionBlend.tsx`), rampa oficial branco → noite:
+
+`#ffffff → #eef2ff (indigo-50) → #312e81 (indigo-900) → slate-950 transparente`, em `h-28 sm:h-36`.
+
+A rampa é tingida de indigo — cor primária do sistema — para "anoitecer" em vez de virar cinza sujo.
+O último stop é transparente de propósito: revela o fundo real da seção, então a mesma rampa serve
+para qualquer base escura. Renderize-a **depois** dos overlays decorativos e **antes** do conteúdo,
+com `edge="top"` e/ou `edge="bottom"` conforme a vizinhança.
+
+**Destaque de headline:** cor sólida do sistema (`text-indigo-600`). Texto em gradiente fica
+reservado a destaques sobre fundo escuro.
+
 ---
 
 ## 10. Ícones

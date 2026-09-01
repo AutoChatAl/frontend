@@ -14,46 +14,51 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'Preciso saber programar para usar a Synq?',
     answer:
-      'Nao. A plataforma e 100% no-code. Voce conecta seu WhatsApp e Instagram em poucos cliques, cadastra produtos e regras com formulario, e a IA ja entra em acao. Toda a configuracao leva menos de 10 minutos.',
+      'Não. A plataforma é 100% no-code. Você conecta o WhatsApp e o Instagram em poucos cliques, cadastra produtos e regras por formulário, e a IA já entra em ação. Toda a configuração leva menos de 10 minutos.',
   },
   {
-    question: 'Como funcionam as integracoes do WhatsApp e Instagram?',
+    question: 'Precisa conectar alguma API de IA?',
     answer:
-      'O Instagram conecta diretamente via API Meta com login OAuth. O WhatsApp e conectado por leitura de QR Code, com controle automatico de cadencia, intervalos randomizados e limites diarios para preservar a saude do numero. Voce mantem seu numero atual e seu historico de conversas.',
+      'Não. A inteligência artificial já vem incluída na Synq. Você não precisa criar conta em nenhum serviço externo nem colar chave de API: basta cadastrar o catálogo, as regras e o tom de voz. O consumo fica visível no painel, descontado da cota de mensagens de IA do seu plano.',
+  },
+  {
+    question: 'Como funcionam as integrações do WhatsApp e do Instagram?',
+    answer:
+      'Os dois canais são conectados pelas APIs oficiais da Meta, no seu próprio perfil comercial. Você mantém o número e o histórico de conversas, e a operação roda dentro das políticas da plataforma, sem o risco de bloqueio que existe nas ferramentas não oficiais.',
   },
   ...(HIDDEN_FEATURES.cartRecovery
     ? []
     : [
       {
-        question: 'Como funciona a recuperacao de carrinho abandonado?',
+        question: 'Como funciona a recuperação de carrinho abandonado?',
         answer:
-            'Conectamos sua plataforma de infoproduto (Hotmart, Kiwify, Eduzz, Monetizze, PerfectPay) ou webhook generico. Quando um cliente abandona o checkout, a Synq dispara automaticamente uma sequencia de mensagens no WhatsApp ou Instagram — com link de pagamento, cupom e tudo que precisa para reverter a venda.',
+            'Conectamos a sua plataforma de infoproduto (Hotmart, Kiwify, Eduzz, Monetizze, PerfectPay) ou um webhook genérico. Quando o cliente abandona o checkout, a Synq dispara uma sequência de mensagens no WhatsApp ou no Instagram, com link de pagamento e cupom, para reverter a venda.',
       },
     ]),
   {
-    question: 'Em quanto tempo a IA aprende meu negocio?',
+    question: 'Em quanto tempo a IA aprende o meu negócio?',
     answer:
-      'Imediatamente. Voce cadastra produtos, regras e tom de voz no painel — a IA usa esses dados como contexto em cada resposta. Voce pode editar e refinar a qualquer momento e ver na hora como ela responde com a nova configuracao.',
+      'Na hora. Você cadastra produtos, regras e tom de voz no painel, e a IA passa a usar esses dados como contexto em cada resposta. Dá para editar quando quiser e ver na mesma hora como ela responde com a nova configuração.',
   },
   {
     question: 'Posso cancelar quando quiser?',
     answer:
-      'Sim. Sem fidelidade, sem multa. Cancele direto no painel a qualquer momento — voce mantem o acesso ate o fim do periodo ja pago.',
+      'Sim, sem fidelidade e sem multa. O cancelamento é feito direto no painel e você mantém o acesso até o fim do período já pago.',
   },
   {
     question: 'O que acontece se eu passar do limite de mensagens?',
     answer:
-      'Voce nunca trava o atendimento. Nos planos pagos, mensagens excedentes sao cobradas por uso (a partir de R$ 0,015/msg no Dominio). No teste gratuito existe um limite que e restabelecido no upgrade.',
+      'O atendimento não trava. Nos planos pagos, as mensagens excedentes são cobradas por uso, a partir de R$ 0,015 por mensagem no plano Domínio. No teste gratuito existe um limite, liberado assim que você faz o upgrade.',
   },
   {
-    question: 'Posso usar com varios atendentes?',
+    question: 'Posso usar com vários atendentes?',
     answer:
-      'Sim. Os planos Crescimento (2 colaboradores) e Dominio (4 colaboradores) ja incluem multiplos atendentes. Voce tambem pode adicionar colaboradores extras como add-on em qualquer plano.',
+      'Sim. O plano Crescimento inclui 2 colaboradores e o Domínio inclui 4. Em qualquer plano você pode contratar colaboradores extras.',
   },
   {
-    question: 'Voces tem suporte em portugues?',
+    question: 'Vocês têm suporte em português?',
     answer:
-      'Sim, 100% em portugues brasileiro. Suporte padrao em horario comercial nos planos Impulso e Crescimento, e suporte VIP prioritario no plano Dominio.',
+      'Sim, 100% em português brasileiro. O suporte padrão atende em horário comercial nos planos Impulso e Crescimento, e o plano Domínio tem atendimento prioritário.',
   },
 ];
 
@@ -94,7 +99,7 @@ export default function FaqSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-24 bg-slate-50">
+    <section id="faq" className="py-24">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

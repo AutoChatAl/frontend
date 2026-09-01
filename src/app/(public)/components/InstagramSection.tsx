@@ -11,9 +11,9 @@ const FEATURES = [
 
 export default function InstagramSection() {
   return (
-    <section id="instagram" className="py-24 bg-slate-50 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-fuchsia-200/30 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-200/30 rounded-full blur-3xl" />
+    <section id="instagram" className="py-24 relative overflow-hidden">
+      <div className="absolute top-32 -right-16 w-96 h-96 bg-fuchsia-200/25 rounded-full blur-3xl" />
+      <div className="absolute bottom-32 -left-16 w-96 h-96 bg-pink-200/25 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <motion.div

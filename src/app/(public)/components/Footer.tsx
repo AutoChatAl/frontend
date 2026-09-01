@@ -7,8 +7,7 @@ import { HIDDEN_FEATURES } from '@lib/featureFlags';
 const LINKS = {
   produto: [
     { label: 'Funcionalidades', href: '#funcionalidades' },
-    { label: 'Instagram', href: '#instagram' },
-    { label: 'WhatsApp', href: '#whatsapp' },
+    { label: 'Funil de vendas', href: '#funil' },
     ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ label: 'Recuperação de carrinho', href: '#carrinho' }]),
     { label: 'Preços', href: '#precos' },
   ],
@@ -26,13 +25,13 @@ const LINKS = {
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-950 text-slate-400 pt-16 pb-10 border-t border-slate-800">
+    <footer className="border-t border-slate-200 pt-16 pb-10 text-slate-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <BrandLogo size={36} on="dark"/>
-              <span className="font-bold text-lg text-white">Synq</span>
+              <BrandLogo size={36} on="light"/>
+              <span className="font-bold text-lg text-slate-900">Synq</span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs">
               {HIDDEN_FEATURES.cartRecovery
@@ -42,11 +41,11 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4">Produto</h4>
+            <h4 className="text-slate-900 font-semibold text-sm mb-4">Produto</h4>
             <ul className="space-y-2.5 text-sm">
               {LINKS.produto.map((link) => (
                 <li key={link.href}>
-                  <a href={link.href} className="hover:text-white transition-colors">
+                  <a href={link.href} className="hover:text-indigo-600 transition-colors">
                     {link.label}
                   </a>
                 </li>
@@ -55,11 +54,11 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4">Conta</h4>
+            <h4 className="text-slate-900 font-semibold text-sm mb-4">Conta</h4>
             <ul className="space-y-2.5 text-sm">
               {LINKS.empresa.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="hover:text-white transition-colors">
+                  <Link href={link.href} className="hover:text-indigo-600 transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -68,11 +67,11 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4">Legal</h4>
+            <h4 className="text-slate-900 font-semibold text-sm mb-4">Legal</h4>
             <ul className="space-y-2.5 text-sm">
               {LINKS.legal.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="hover:text-white transition-colors">
+                  <Link href={link.href} className="hover:text-indigo-600 transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -81,9 +80,8 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between gap-4 text-xs text-slate-400">
           <p>&copy; {new Date().getFullYear()} Synq. Todos os direitos reservados.</p>
-          <p>Feito no Brasil 🇧🇷 · suporte@synq.com</p>
         </div>
       </div>
     </footer>
