@@ -70,9 +70,8 @@ export default function SupportChatWidget() {
   };
   return (<>
     {!isOpen && (<div className="fixed bottom-6 right-6 z-40">
-      <button type="button" onClick={() => setIsOpen(true)} className="relative flex items-center gap-3 rounded-full bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-700">
-        <MessageCircle size={18}/>
-            Falar com suporte
+      <button type="button" onClick={() => setIsOpen(true)} aria-label="Falar com suporte" title="Falar com suporte" className="relative flex h-13 w-13 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-700">
+        <MessageCircle size={22}/>
         {unreadBadge > 0 && (<span className="absolute -top-1 -right-1 min-w-6 h-6 rounded-full bg-rose-500 px-1.5 text-center text-xs font-bold text-white ring-2 ring-white dark:ring-slate-900 flex items-center justify-center">
           {unreadBadge > 9 ? '9+' : unreadBadge}
         </span>)}

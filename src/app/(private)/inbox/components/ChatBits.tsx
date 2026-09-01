@@ -190,6 +190,11 @@ export function formatCountdown(iso: string): string {
   const totalMinutes = Math.floor(diffMs / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days} d ${remainingHours} h` : `${days} d`;
+  }
   if (hours >= 1) return `${hours} h ${minutes} min`;
   return `${Math.max(totalMinutes, 1)} min`;
 }

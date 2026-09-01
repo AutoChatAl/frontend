@@ -1,12 +1,12 @@
 'use client';
-import { ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, UserCheck, X } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, Lock, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, UserCheck, X } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
-import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, MessageMediaType } from '@/types/Inbox';
+import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageMediaType } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
   AUDIO_WAV_MIME,
@@ -221,8 +221,11 @@ export default function InboxPage() {
   // Configuração do workspace, carregada da API. Assume desligado enquanto não responde,
   // que é o estado mais conservador: não mostra conversa antes de saber se pode.
   const [chatEnabled, setChatEnabled] = useState(false);
+  const [retentionDays, setRetentionDays] = useState<InboxRetentionDays>(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [savingChatSetting, setSavingChatSetting] = useState(false);
+  const [savingRetention, setSavingRetention] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [canToggleChat, setCanToggleChat] = useState(false);
   const [hasFullAccess, setHasFullAccess] = useState(false);
@@ -244,6 +247,8 @@ export default function InboxPage() {
   const replyToRef = useRef<InboxMessage | null>(null);
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+  const replyWindowExpiresAt = selectedConversation?.replyWindowExpiresAt ?? null;
+  const replyLocked = !!selectedConversation && (!replyWindowExpiresAt || new Date(replyWindowExpiresAt).getTime() <= now);
 
   const workspaceId = authService.getUser()?.workspace?.id ?? null;
 
@@ -264,6 +269,7 @@ export default function InboxPage() {
     inboxService.getSettings()
       .then((settings) => {
         setChatEnabled(settings.enabled);
+        setRetentionDays(settings.retentionDays);
         if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
       })
       .catch(() => setSettingsError('Não foi possível carregar a configuração do chat.'))
@@ -274,6 +280,15 @@ export default function InboxPage() {
     stickToBottomRef.current = true;
     setReplyTo(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (replyLocked) setReplyTo(null);
+  }, [replyLocked]);
 
   useEffect(() => {
     const el = messagesBoxRef.current;
@@ -289,8 +304,9 @@ export default function InboxPage() {
     setSavingChatSetting(true);
     setSettingsError(null);
     try {
-      const settings = await inboxService.updateSettings(next);
+      const settings = await inboxService.updateSettings({ enabled: next });
       setChatEnabled(settings.enabled);
+      setRetentionDays(settings.retentionDays);
       // Só grava o cache com a confirmação do servidor: um valor otimista que falhou
       // faria a próxima visita abrir na posição errada até a API responder.
       if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
@@ -302,9 +318,26 @@ export default function InboxPage() {
     }
   };
 
+  const handleRetentionChange = async (days: InboxRetentionDays) => {
+    const previous = retentionDays;
+    setRetentionDays(days);
+    setSavingRetention(true);
+    setSettingsError(null);
+    try {
+      const settings = await inboxService.updateSettings({ retentionDays: days });
+      setRetentionDays(settings.retentionDays);
+      setChatEnabled(settings.enabled);
+    } catch (e) {
+      setRetentionDays(previous);
+      setSettingsError(e instanceof Error ? e.message : 'Não foi possível salvar a duração do histórico.');
+    } finally {
+      setSavingRetention(false);
+    }
+  };
+
   const handleSend = async () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || replyLocked) return;
     try {
       stickToBottomRef.current = true;
       await sendMessage(body, undefined, replyTo);
@@ -318,7 +351,7 @@ export default function InboxPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || replyLocked) return;
     try {
       stickToBottomRef.current = true;
       const base64 = await fileToBase64(file);
@@ -501,11 +534,14 @@ export default function InboxPage() {
             {canToggleChat && (
               <ChatSettingsMenu
                 enabled={chatEnabled}
+                retentionDays={retentionDays}
                 loaded={settingsLoaded}
                 saving={savingChatSetting}
+                savingRetention={savingRetention}
                 canToggle={canToggleChat}
                 error={settingsError}
                 onToggle={handleToggleChat}
+                onRetentionChange={handleRetentionChange}
               />
             )}
             <div className="min-w-0 flex-1">
@@ -619,7 +655,7 @@ export default function InboxPage() {
                         </span>
                       </div>
                     );
-                    const replyButton = !m.pending && (
+                    const replyButton = !m.pending && !replyLocked && (
                       <button
                         type="button"
                         onClick={() => {
@@ -703,76 +739,90 @@ export default function InboxPage() {
 
               <footer className="border-t border-slate-100 dark:border-slate-700 p-3">
                 {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
-                {replyTo && (
-                  <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-indigo-500 bg-slate-50 dark:bg-slate-900/60 px-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                        Respondendo a {replyTo.direction === 'OUT' ? 'você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'contato')}
+                {replyLocked ? (
+                  <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 py-2.5">
+                    <Lock size={16} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Envio bloqueado</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        O contato não escreve há mais de 24h. Você poderá responder de novo assim que ele mandar uma nova mensagem.
                       </p>
-                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">{messagePreview(replyTo)}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setReplyTo(null)}
-                      className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                      title="Cancelar resposta"
-                    >
-                      <X size={14} />
-                    </button>
                   </div>
+                ) : (
+                  <>
+                    {replyTo && (
+                      <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-indigo-500 bg-slate-50 dark:bg-slate-900/60 px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            Respondendo a {replyTo.direction === 'OUT' ? 'você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'contato')}
+                          </p>
+                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{messagePreview(replyTo)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setReplyTo(null)}
+                          className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          title="Cancelar resposta"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                    <div className="flex items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={sending || recording}
+                        className="shrink-0 rounded-lg p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 disabled:opacity-50"
+                        title="Anexar arquivo"
+                      >
+                        <Paperclip size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleRecording}
+                        disabled={sending}
+                        className={`shrink-0 rounded-lg p-2 sm:p-2.5 disabled:opacity-50 ${recording ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                        title={recording ? 'Parar gravação' : 'Gravar áudio'}
+                      >
+                        {recording ? <Square size={18} /> : <Mic size={18} />}
+                      </button>
+                      <textarea
+                        ref={textareaRef}
+                        value={draft}
+                        onChange={(e) => {
+                          setDraft(e.target.value);
+                          if (e.target.value.trim()) notifyTyping();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                          if (e.key === 'Escape' && replyTo) {
+                            setReplyTo(null);
+                          }
+                        }}
+                        rows={1}
+                        placeholder={recording ? 'Gravando áudio…' : 'Escreva uma mensagem...'}
+                        disabled={recording}
+                        className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
+                      />
+                      {/* No celular o rótulo sai: o ícone basta e o campo ganha a largura. */}
+                      <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">
+                        <span className="hidden sm:inline">Enviar</span>
+                      </Button>
+                    </div>
+                  </>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <div className="flex items-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || recording}
-                    className="shrink-0 rounded-lg p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 disabled:opacity-50"
-                    title="Anexar arquivo"
-                  >
-                    <Paperclip size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={toggleRecording}
-                    disabled={sending}
-                    className={`shrink-0 rounded-lg p-2 sm:p-2.5 disabled:opacity-50 ${recording ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'}`}
-                    title={recording ? 'Parar gravação' : 'Gravar áudio'}
-                  >
-                    {recording ? <Square size={18} /> : <Mic size={18} />}
-                  </button>
-                  <textarea
-                    ref={textareaRef}
-                    value={draft}
-                    onChange={(e) => {
-                      setDraft(e.target.value);
-                      if (e.target.value.trim()) notifyTyping();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                      if (e.key === 'Escape' && replyTo) {
-                        setReplyTo(null);
-                      }
-                    }}
-                    rows={1}
-                    placeholder={recording ? 'Gravando áudio…' : 'Escreva uma mensagem...'}
-                    disabled={recording}
-                    className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
-                  />
-                  {/* No celular o rótulo sai: o ícone basta e o campo ganha a largura. */}
-                  <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">
-                    <span className="hidden sm:inline">Enviar</span>
-                  </Button>
-                </div>
               </footer>
             </>
           )}

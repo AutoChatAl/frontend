@@ -1,5 +1,5 @@
 'use client';
-import { CircleUser, Hand, Hourglass, Loader2, Play, Undo2, UserPlus } from 'lucide-react';
+import { CircleUser, Hand, Hourglass, Loader2, Lock, Play, Undo2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type { InboxAgent, InboxConversation } from '@/types/Inbox';
@@ -72,6 +72,8 @@ export default function ConversationContextPanel({
   const expiresAt = conversation.expiresAt ?? null;
   const msToExpiry = expiresAt ? new Date(expiresAt).getTime() - Date.now() : null;
   const expiringSoon = msToExpiry !== null && msToExpiry <= EXPIRY_WARNING_MS;
+  const replyWindowExpiresAt = conversation.replyWindowExpiresAt ?? null;
+  const replyLocked = !replyWindowExpiresAt || new Date(replyWindowExpiresAt).getTime() <= Date.now();
 
   return (<div className="flex h-full flex-col overflow-y-auto">
     <div className="flex flex-col items-center gap-2 border-b border-slate-100 dark:border-slate-700 p-4 text-center">
@@ -177,6 +179,10 @@ export default function ConversationContextPanel({
     <div className="space-y-1.5 border-b border-slate-100 dark:border-slate-700 p-4">
       <SectionTitle>Sinais</SectionTitle>
       <div className="flex flex-wrap gap-1.5">
+        {replyLocked && (<span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          <Lock size={11}/>
+            Envio bloqueado
+        </span>)}
         {conversation.awaitingHuman && (<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
           <Hand size={11}/>
             Pediu atendimento humano
@@ -207,8 +213,9 @@ export default function ConversationContextPanel({
         <Row label="Canal" value={CHANNEL_LABEL[conversation.channelType]}/>
         <Row label="Recebido em" value={conversation.channelName || conversation.channelIdentifier || '—'}/>
         <Row label="Última mensagem" value={relativeTime(conversation.lastMessageAt)}/>
+        <Row label="Janela de resposta" value={replyLocked || !replyWindowExpiresAt ? 'Encerrada' : `Fecha em ${formatCountdown(replyWindowExpiresAt)}`}/>
         <Row label="Conversa criada" value={new Date(conversation.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}/>
-        <Row label="Mensagens na janela" value={messageCount.toLocaleString('pt-BR')}/>
+        <Row label="Mensagens no histórico" value={messageCount.toLocaleString('pt-BR')}/>
         <Row label="Não lidas" value={conversation.unreadCount.toLocaleString('pt-BR')}/>
       </div>
     </div>

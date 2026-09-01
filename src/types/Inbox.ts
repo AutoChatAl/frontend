@@ -13,6 +13,7 @@ export interface InboxConversation {
   contactIdentifier?: string | null;
   avatarUrl?: string | null;
   lastMessageAt: string;
+  lastInboundAt?: string | null;
   lastMessagePreview: string;
   lastMessageDirection: InboxDirection;
   unreadCount: number;
@@ -31,8 +32,9 @@ export interface InboxConversation {
   /** Número/@ do canal que recebeu a mensagem — não o tipo do canal. */
   channelIdentifier?: string | null;
   channelName?: string | null;
-  /** Fim da janela de retenção (24h sobre a última mensagem), calculado no servidor. */
+  /** Fim da janela de retenção configurada no workspace, calculado no servidor. */
   expiresAt?: string;
+  replyWindowExpiresAt?: string | null;
 }
 
 /** Membro do workspace que pode receber uma transferência. */
@@ -105,7 +107,22 @@ export interface InboxListFilters {
   search?: string;
 }
 
+export type InboxRetentionDays = 1 | 7 | 15 | 30;
+
+export const INBOX_RETENTION_OPTIONS: ReadonlyArray<{ days: InboxRetentionDays; label: string }> = [
+  { days: 1, label: '24h' },
+  { days: 7, label: '7 dias' },
+  { days: 15, label: '15 dias' },
+  { days: 30, label: '30 dias' },
+];
+
 /** Interruptor do multichat no workspace: desligado, nada é gravado na inbox. */
 export interface InboxSettings {
   enabled: boolean;
+  retentionDays: InboxRetentionDays;
+}
+
+export interface UpdateInboxSettingsPayload {
+  enabled?: boolean;
+  retentionDays?: InboxRetentionDays;
 }

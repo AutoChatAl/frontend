@@ -85,6 +85,21 @@ export function useInbox(): UseInboxReturn {
   const loadConversationsRef = useRef(loadConversations);
   loadConversationsRef.current = loadConversations;
 
+  const loadMessages = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setLoadingMessages(true);
+    try {
+      const data = await inboxService.listMessages(conversationId);
+      setMessages(data);
+    } catch (e) {
+      if (!silent) setError(e instanceof Error ? e.message : 'Erro ao carregar mensagens.');
+    } finally {
+      if (!silent) setLoadingMessages(false);
+    }
+  }, []);
+
+  const loadMessagesRef = useRef(loadMessages);
+  loadMessagesRef.current = loadMessages;
+
   useEffect(() => {
     setLoadingConversations(true);
     loadConversations();
@@ -99,6 +114,11 @@ export function useInbox(): UseInboxReturn {
     let hadError = false;
 
     const onUpdate = () => { loadConversationsRef.current(); };
+    const onSettingsUpdate = () => {
+      loadConversationsRef.current();
+      const conversationId = selectedIdRef.current;
+      if (conversationId) loadMessagesRef.current(conversationId, true);
+    };
 
     const connect = () => {
       if (disposed) return;
@@ -112,6 +132,7 @@ export function useInbox(): UseInboxReturn {
         }
       };
       es.addEventListener('conversation.updated', onUpdate);
+      es.addEventListener('settings.updated', onSettingsUpdate);
       es.onerror = () => {
         hadError = true;
         // EventSource reconecta sozinho em erros transitórios; recria só quando fecha de vez.
@@ -167,18 +188,6 @@ export function useInbox(): UseInboxReturn {
   const resumeAi = useCallback(async (conversationId: string) => {
     await applyAssignment(() => inboxService.resumeAi(conversationId));
   }, [applyAssignment]);
-
-  const loadMessages = useCallback(async (conversationId: string, silent = false) => {
-    if (!silent) setLoadingMessages(true);
-    try {
-      const data = await inboxService.listMessages(conversationId);
-      setMessages(data);
-    } catch (e) {
-      if (!silent) setError(e instanceof Error ? e.message : 'Erro ao carregar mensagens.');
-    } finally {
-      if (!silent) setLoadingMessages(false);
-    }
-  }, []);
 
   const selectConversation = useCallback((conversationId: string) => {
     setSelectedId(conversationId);

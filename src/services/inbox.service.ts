@@ -1,5 +1,5 @@
 import { authService } from '@/services/auth.service';
-import type { InboxAgent, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings } from '@/types/Inbox';
+import type { InboxAgent, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings, UpdateInboxSettingsPayload } from '@/types/Inbox';
 import { apiClient } from '@/utils/ApiClient';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -13,8 +13,8 @@ class InboxService {
     return response.data;
   }
 
-  public async updateSettings(enabled: boolean): Promise<InboxSettings> {
-    const response = await apiClient.patch<InboxSettings>('/inbox/settings', { enabled });
+  public async updateSettings(payload: UpdateInboxSettingsPayload): Promise<InboxSettings> {
+    const response = await apiClient.patch<InboxSettings>('/inbox/settings', payload);
     if (!response.success || !response.data) {
       throw new Error('Não foi possível salvar a configuração do chat.');
     }
@@ -101,6 +101,9 @@ class InboxService {
       }
       if (reason === 'IG_MESSAGE_WINDOW_EXPIRED') {
         throw new Error('O Instagram só permite responder em até 24h após a última mensagem do contato.');
+      }
+      if (reason === 'REPLY_WINDOW_EXPIRED') {
+        throw new Error('O contato não escreve há mais de 24h. O envio volta a ser liberado quando ele mandar uma nova mensagem.');
       }
       if (reason === 'IG_HUMAN_AGENT_NOT_APPROVED') {
         throw new Error('Envio bloqueado pelo Instagram: recurso não aprovado para este app.');
