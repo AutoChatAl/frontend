@@ -11,7 +11,7 @@ const FEATURES = [
 
 export default function WhatsAppSection() {
   return (
-    <section id="whatsapp" className="py-24 bg-white relative overflow-hidden">
+    <section id="whatsapp" className="py-24 relative overflow-hidden">
       <div className="absolute top-1/4 -left-20 w-72 h-72 bg-emerald-200/40 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">

@@ -10,6 +10,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import SectionBlend from './SectionBlend';
+
 const STAGES = [
   {
     icon: ShoppingCart,
@@ -47,6 +49,8 @@ export default function CartRecoverySection() {
     >
       <div className="absolute inset-0 [background-image:radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.15),transparent_60%),radial-gradient(circle_at_70%_80%,rgba(217,70,239,0.12),transparent_60%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <SectionBlend edge="top" />
+      <SectionBlend edge="bottom" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div

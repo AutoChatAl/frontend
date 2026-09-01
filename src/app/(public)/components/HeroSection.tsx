@@ -1,102 +1,84 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle2, Instagram, MessageCircle, Sparkles, ShoppingCart } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
-const HERO_BUBBLES = [
-  {
-    id: 1,
-    side: 'left' as const,
-    delay: 0.6,
-    icon: Instagram,
-    iconColor: 'text-fuchsia-500',
-    title: 'Instagram',
-    message: 'Vi seu post! Tem desconto pra primeira compra? 🤩',
-  },
-  {
-    id: 2,
-    side: 'right' as const,
-    delay: 1.2,
-    icon: Sparkles,
-    iconColor: 'text-indigo-500',
-    title: 'Synq IA',
-    message: 'Oi! Sim, 10% no PIX. Quer que eu te envie o link? 💜',
-  },
-  ...(HIDDEN_FEATURES.cartRecovery
-    ? []
-    : [
-      {
-        id: 3,
-        side: 'left' as const,
-        delay: 1.8,
-        icon: ShoppingCart,
-        iconColor: 'text-amber-500',
-        title: 'Carrinho recuperado',
-        message: 'Tá ali esperando, finaliza? Frete grátis hoje! 🚀',
-      },
-    ]),
-];
-
 export default function HeroSection() {
   return (
-    <section className="relative pt-32 pb-24 overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50">
-      <div className="absolute inset-0 [background-image:radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.12),transparent_50%),radial-gradient(circle_at_80%_60%,rgba(217,70,239,0.12),transparent_50%)]" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/40 to-transparent" />
+    <section className="relative pt-32 pb-24 overflow-hidden">
+      {/*
+        Wash de profundidade do hero — só indigo, para não poluir a superfície com várias
+        matizes. A máscara vertical apaga o wash antes da borda inferior, então o corte do
+        `overflow-hidden` nunca vira uma linha visível (DESIGN_SYSTEM 9.6).
+      */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle_at_18%_15%,rgba(99,102,241,0.14),transparent_55%),radial-gradient(circle_at_82%_50%,rgba(129,140,248,0.12),transparent_55%)] [mask-image:linear-gradient(to_bottom,black_30%,transparent_95%)]"
+      />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-center lg:text-left"
+          className="mx-auto max-w-3xl text-center"
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 shadow-sm"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            Atendimento e vendas automatizadas com IA
-          </motion.div>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-[1.1] mb-6 tracking-tight">
-            Transforme cada{' '}
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-[1.15] mb-5 tracking-tight">
+            Transforme conversas em{' '}
             <span className="relative inline-block">
-              <span className="relative z-10 bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
-                conversa
-              </span>
-              <motion.span
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.8, duration: 0.6, ease: 'easeOut' }}
-                className="absolute -bottom-1 left-0 right-0 h-3 bg-fuchsia-200/60 -z-0 origin-left rounded"
-              />
+              <span className="relative z-10 text-indigo-600">vendas</span>
+              {/* Rabisco de marca-texto: duas passadas de traço irregular, desenhadas na entrada. */}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 200 22"
+                preserveAspectRatio="none"
+                fill="none"
+                className="absolute -left-[4%] top-full -mt-[0.14em] w-[108%] h-[0.28em] -rotate-[0.8deg] overflow-visible text-indigo-300"
+              >
+                <motion.path
+                  d="M4 15.2C24 5.4 52 2.1 86 3.4c17 .7 33 2.6 50 3.2 16 .6 33-.1 60-2.9"
+                  stroke="currentColor"
+                  strokeWidth={8}
+                  strokeLinecap="round"
+                  opacity={0.5}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.7, duration: 0.5, ease: 'easeOut' }}
+                />
+                <motion.path
+                  d="M16 19.4c28-4.8 58-6.6 92-5.4 19 .7 38 2.4 58 1.5"
+                  stroke="currentColor"
+                  strokeWidth={4.5}
+                  strokeLinecap="round"
+                  opacity={0.38}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.95, duration: 0.45, ease: 'easeOut' }}
+                />
+              </svg>
             </span>
             <br />
-            em uma venda no piloto automático
+            no piloto automático
           </h1>
 
-          <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600">
             {HIDDEN_FEATURES.cartRecovery ? (<>
-              A Synq centraliza <strong className="text-slate-900">WhatsApp e Instagram</strong> em uma só
-              plataforma — com IA treinada no seu negócio respondendo 24h por dia.
+              <strong className="text-slate-900">WhatsApp e Instagram</strong> num só lugar, com IA treinada
+              no seu negócio respondendo 24h por dia.
             </>) : (<>
-              A Synq centraliza <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
-              <strong className="text-slate-900">recuperação de carrinho</strong> em uma só plataforma — com
-              IA treinada no seu negócio respondendo 24h por dia.
+              <strong className="text-slate-900">WhatsApp, Instagram</strong> e{' '}
+              <strong className="text-slate-900">recuperação de carrinho</strong> num só lugar, com IA
+              treinada no seu negócio respondendo 24h por dia.
             </>)}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/register"
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl font-semibold text-base shadow-lg shadow-slate-900/20 hover:shadow-indigo-500/40 transition-all"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-base shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40 transition-all"
             >
               Começar 7 dias grátis
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -108,116 +90,39 @@ export default function HeroSection() {
               Ver como funciona
             </a>
           </div>
-
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-500" />
-              Sem cartão
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-500" />
-              Setup em 5 minutos
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 size={14} className="text-emerald-500" />
-              Cancele quando quiser
-            </div>
-          </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.7, ease: 'easeOut', delay: 0.2 }}
-          className="relative h-[520px] hidden lg:block"
+          className="relative mx-auto mt-14 w-full min-w-0 max-w-6xl"
         >
-          <motion.div
-            animate={{ y: [0, -12, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute -top-6 -right-2 w-72 h-72 bg-gradient-to-br from-indigo-300/30 to-fuchsia-300/30 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute -bottom-6 -left-2 w-72 h-72 bg-gradient-to-br from-emerald-300/30 to-indigo-300/30 rounded-full blur-3xl"
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-indigo-300/25 blur-3xl"
           />
 
-          <div className="absolute inset-0 flex flex-col justify-center gap-4 px-4">
-            {HERO_BUBBLES.map((bubble, i) => {
-              const Icon = bubble.icon;
-              return (
-                <motion.div
-                  key={bubble.id}
-                  initial={{ opacity: 0, x: bubble.side === 'left' ? -40 : 40, y: 10 }}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  transition={{ delay: bubble.delay, duration: 0.5, ease: 'easeOut' }}
-                  className={`flex ${bubble.side === 'right' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <motion.div
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{
-                      duration: 4 + i * 0.4,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                      delay: i * 0.3,
-                    }}
-                    className={`max-w-[78%] bg-white rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-100 p-4 ${
-                      bubble.side === 'right' ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`p-1.5 rounded-lg bg-slate-50 ${bubble.iconColor}`}>
-                        <Icon size={14} />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-900">{bubble.title}</span>
-                      <div className="ml-auto flex gap-0.5">
-                        <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="w-1 h-1 rounded-full bg-slate-300" />
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-700 leading-relaxed">{bubble.message}</p>
-                  </motion.div>
-                </motion.div>
-              );
-            })}
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.4, duration: 0.5 }}
-              className="flex justify-start"
-            >
-              <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-2xl rounded-tl-sm shadow-lg border border-slate-100">
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((dot) => (
-                    <motion.span
-                      key={dot}
-                      animate={{ y: [0, -3, 0] }}
-                      transition={{
-                        duration: 0.8,
-                        repeat: Infinity,
-                        delay: dot * 0.15,
-                      }}
-                      className="w-1.5 h-1.5 rounded-full bg-slate-400"
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-slate-500">IA digitando…</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 3, duration: 0.4 }}
-              className="absolute -bottom-2 right-4 flex items-center gap-2 bg-emerald-500 text-white px-3 py-2 rounded-full shadow-lg shadow-emerald-500/30"
-            >
-              <MessageCircle size={14} />
-              <span className="text-xs font-semibold">
-                {HIDDEN_FEATURES.cartRecovery ? '+R$ 1.247 em vendas hoje' : '+R$ 1.247 recuperados hoje'}
+          {/* Janela estilo macOS envolvendo o print do painel. */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
+            <div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3.5 py-2.5">
+              <span className="h-3 w-3 rounded-full bg-red-400" />
+              <span className="h-3 w-3 rounded-full bg-amber-400" />
+              <span className="h-3 w-3 rounded-full bg-emerald-400" />
+              <span className="mx-auto pr-12 text-[11px] font-medium text-slate-500">
+                app.synq.com.br
               </span>
-            </motion.div>
+            </div>
+
+            <Image
+              src="/image.png"
+              alt="Painel da Synq com as métricas de mensagens enviadas pela IA, manualmente e por automações"
+              width={2874}
+              height={1694}
+              priority
+              sizes="(min-width: 1024px) 80vw, 100vw"
+              className="h-auto w-full"
+            />
           </div>
         </motion.div>
       </div>

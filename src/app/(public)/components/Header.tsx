@@ -8,9 +8,10 @@ import BrandLogo from '@/components/BrandLogo';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 const NAV_LINKS = [
-  { href: '#funcionalidades', label: 'Funcionalidades' },
-  { href: '#instagram', label: 'Instagram' },
-  { href: '#whatsapp', label: 'WhatsApp' },
+  { href: '#funcionalidades', label: 'Como funciona' },
+  { href: '#campanhas', label: 'Campanhas' },
+  { href: '#funil', label: 'Funil' },
+  { href: '#atendimento', label: 'Atendimento' },
   ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ href: '#carrinho', label: 'Recuperação' }]),
   { href: '#precos', label: 'Preços' },
   { href: '#faq', label: 'FAQ' },
@@ -32,13 +33,15 @@ export default function Header() {
       initial={{ y: -40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm'
-          : 'bg-transparent border-b border-transparent'
-      }`}
+      className="fixed inset-x-0 top-0 z-50 px-4 pt-3 sm:px-6"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div
+        className={`mx-auto flex h-14 max-w-6xl items-center justify-between rounded-2xl px-4 transition-all duration-300 sm:px-5 ${
+          scrolled
+            ? 'border border-slate-200/70 bg-white/80 backdrop-blur-xl'
+            : 'border border-transparent'
+        }`}
+      >
         <Link href="/" className="flex items-center gap-2 group">
           <BrandLogo size={36} on="light" className="transition-transform group-hover:scale-105"/>
           <span className="font-bold text-lg text-slate-900">Synq</span>
@@ -65,7 +68,7 @@ export default function Header() {
           </Link>
           <Link
             href="/register"
-            className="group flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md hover:shadow-indigo-500/30"
+            className="group flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
           >
             Teste grátis
             <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -87,7 +90,7 @@ export default function Header() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="lg:hidden border-t border-slate-200 bg-white"
+          className="mx-auto mt-2 max-w-6xl overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 backdrop-blur-xl lg:hidden"
         >
           <div className="px-4 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
@@ -109,7 +112,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/register"
-                className="flex-1 text-center px-3 py-2 bg-slate-900 hover:bg-indigo-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
               >
                 Teste grátis
               </Link>
