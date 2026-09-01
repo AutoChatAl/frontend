@@ -479,7 +479,7 @@ export default function FunnelSection() {
               onDragCancel={() => setDraggingId(null)}
             >
               <div className="relative">
-                <div className="flex h-[27rem] gap-3 overflow-x-auto pb-1">
+                <div className="flex h-[22rem] gap-3 overflow-x-auto pb-1 lg:h-[27rem]">
                   {STAGES.map((stage) => (
                     <Column
                       key={stage.id}

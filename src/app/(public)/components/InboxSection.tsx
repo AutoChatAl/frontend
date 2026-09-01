@@ -271,10 +271,10 @@ export default function InboxSection() {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="grid h-[30rem] min-w-0 grid-cols-1 overflow-hidden rounded-3xl border border-slate-200/80 bg-white lg:col-start-1 lg:row-start-1 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]"
+          className="grid min-w-0 grid-cols-1 overflow-hidden rounded-3xl border border-slate-200/80 bg-white lg:col-start-1 lg:row-start-1 lg:h-[30rem] lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]"
         >
           {/* Caixa de entrada */}
-          <aside className="flex min-h-0 flex-col border-slate-200 lg:border-r">
+          <aside className="flex h-64 min-h-0 flex-col border-b border-slate-200 lg:h-auto lg:border-b-0 lg:border-r">
             <div className="space-y-2.5 border-b border-slate-100 p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-slate-900">Caixa de entrada</h3>
@@ -373,7 +373,7 @@ export default function InboxSection() {
           </aside>
 
           {/* Conversa aberta */}
-          <div className="flex min-h-0 flex-col">
+          <div className="flex h-96 min-h-0 flex-col lg:h-auto">
             <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500">
                 {initials(selected?.name ?? '')}

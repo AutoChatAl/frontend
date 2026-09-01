@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDownRight, Eye, EyeOff, Shield } from 'lucide-react';
+import { Eye, EyeOff, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -58,7 +58,7 @@ export default function LoginPage() {
                   Esqueceu a senha?
             </Link>
           </div>
-          <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="current-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
+          <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="current-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
             {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
           </button>}/>
         </div>
@@ -97,7 +97,7 @@ export default function LoginPage() {
         </Link>
       </p>
       <Link href="/" className="mt-4 text-xs text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 w-full">
-        <ArrowDownRight size={12} className="rotate-180"/> Voltar para o início
+         Voltar para o início
       </Link>
     </div>
   </AuthShell>);

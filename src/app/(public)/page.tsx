@@ -16,6 +16,7 @@ import HowItWorks from './components/HowItWorks';
 import InboxSection from './components/InboxSection';
 import OfficialApiSection from './components/OfficialApiSection';
 import PricingSection from './components/PricingSection';
+import SchedulingSection from './components/SchedulingSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 
@@ -43,6 +44,7 @@ export default function Home() {
           <FunnelSection />
           <InboxSection />
           <CommentAutomationSection />
+          <SchedulingSection />
           <TestimonialsSection />
           {!HIDDEN_FEATURES.cartRecovery && <CartRecoverySection />}
           <FeaturesGrid />

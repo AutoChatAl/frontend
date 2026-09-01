@@ -91,3 +91,35 @@
 @utility animate-dropdown {
   animation: synq-dropdown-in 150ms ease-out;
 }
+
+/* Balões de valor subindo da ilustração do chat nas telas de autenticação.
+   Em CSS puro de propósito: o AuthShell é server component e não vale enviar
+   JS de cliente por causa de um enfeite. */
+@keyframes synq-float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.96);
+  }
+}
+
+@utility animate-float-up {
+  animation: synq-float-up 4.8s ease-out infinite;
+}
+
+/* Enfeite em laço não deve rodar para quem pediu menos movimento. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-up {
+    animation: none;
+  }
+}
