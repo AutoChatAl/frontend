@@ -2,12 +2,13 @@
 import { motion } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '5533999865046';
+import { whatsappHref } from './whatsappContact';
+
 const WHATSAPP_MESSAGE =
   'Olá! Vim pelo site da Synq e gostaria de tirar uma dúvida sobre a plataforma. Pode me ajudar?';
 
 export default function WhatsAppFloatingButton() {
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+  const href = whatsappHref(WHATSAPP_MESSAGE);
 
   return (
     <motion.div

@@ -3,9 +3,13 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import BillingCycleSelector from '@/components/BillingCycleSelector';
 import { subscriptionService } from '@/services/subscription.service';
-import type { Plan, PlanSlug } from '@/types/Subscription';
+import type { BillingCycle, Plan, PlanSlug } from '@/types/Subscription';
+import { BILLING_CYCLES, DEFAULT_BILLING_CYCLE, cycleChargeSummary, planMonthlyEquivalentCents } from '@lib/billingCycles';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
+import { whatsappHref } from './whatsappContact';
 
 function formatBRL(cents: number): string {
   const value = cents / 100;
@@ -46,6 +50,7 @@ function buildFeatures(plan: Plan): string[] {
 
 export default function PricingSection() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_BILLING_CYCLE);
   useEffect(() => {
     subscriptionService
       .getPlans()
@@ -164,6 +169,14 @@ export default function PricingSection() {
           <p className="text-base text-slate-600">
             Preço acessível e que atende desde ao pequeno comércio à grandes operações.
           </p>
+          <div className="mt-7 flex flex-col items-center gap-2">
+            <BillingCycleSelector value={cycle} onChange={setCycle} theme="light" />
+            {BILLING_CYCLES[cycle].discountPercent > 0 && (
+              <p className="text-xs text-slate-500">
+                Economize {BILLING_CYCLES[cycle].discountPercent}% pagando {BILLING_CYCLES[cycle].label.toLowerCase()}
+              </p>
+            )}
+          </div>
         </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -196,10 +209,16 @@ export default function PricingSection() {
                   <div className="flex items-baseline gap-1">
                     <span className="text-sm text-slate-500">R$</span>
                     <span className="text-4xl font-bold text-slate-900">
-                      {formatBRL(plan.priceCents)}
+                      {formatBRL(planMonthlyEquivalentCents(plan, cycle))}
                     </span>
                     <span className="text-sm text-slate-500">/mês</span>
                   </div>
+                  {cycle !== 'monthly' && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      <span className="text-slate-400 line-through">R$ {formatBRL(plan.priceCents)}</span>{' '}
+                      · {cycleChargeSummary(plan, cycle)}
+                    </p>
+                  )}
                   {plan.limits.extraMessagePriceCents > 0 && (
                     <p className="mt-1 text-[11px] text-slate-400">
                       Excedente: R$ {(plan.limits.extraMessagePriceCents / 100).toFixed(3).replace('.', ',')} / mensagem
@@ -239,7 +258,14 @@ export default function PricingSection() {
         >
           <p className="text-sm text-slate-500">
             Precisa de algo customizado?{' '}
-            <a href="mailto:contato@synq.com" className="text-indigo-600 font-semibold hover:text-indigo-700">
+            <a
+              href={whatsappHref(
+                'Olá! Vim pelo site da Synq e queria falar sobre um plano customizado.',
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 font-semibold hover:text-indigo-700"
+            >
               Fale com nosso time
             </a>
           </p>

@@ -1,11 +1,12 @@
 import type { Coupon, CouponPreview, CouponRedemption, CreateCouponPayload } from '@/types/Coupon';
+import type { BillingCycle } from '@/types/Subscription';
 import { apiClient } from '@/utils/ApiClient';
 import { extractSubscriptionError } from '@/utils/ErrorHandling';
 
 class CouponService {
   /** Valida um cupom para o plano escolhido (usuário final, no checkout). */
-  public async validate(code: string, planSlug: string): Promise<CouponPreview> {
-    const res = await apiClient.post<{ coupon: CouponPreview }>('/subscription/coupons/validate', { code, planSlug });
+  public async validate(code: string, planSlug: string, billingCycle?: BillingCycle): Promise<CouponPreview> {
+    const res = await apiClient.post<{ coupon: CouponPreview }>('/subscription/coupons/validate', { code, planSlug, ...(billingCycle ? { billingCycle } : {}) });
     if (!res.success || !res.data) {
       throw new Error(extractSubscriptionError(res) || 'Cupom inválido.');
     }

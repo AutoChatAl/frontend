@@ -1,10 +1,16 @@
-import type { AiPlan, EffectiveLimits, Invoice, Plan, SubscriptionStatus_Full, UpcomingInvoice, UsageSummary } from '@/types/Subscription';
+import type { AiPlan, BillingCycle, EffectiveLimits, Invoice, Plan, SubscriptionStatus_Full, UpcomingInvoice, UsageSummary } from '@/types/Subscription';
 import { apiClient } from '@/utils/ApiClient';
 import { extractSubscriptionError } from '@/utils/ErrorHandling';
 
 export interface SubResult {
     success: boolean;
     error?: string;
+}
+export interface CancelResult extends SubResult {
+    /** true quando o encerramento foi agendado para o fim do período já pago. */
+    scheduled?: boolean;
+    /** Data até quando o acesso continua, quando agendado. */
+    accessUntil?: string;
 }
 interface PixIntentResponse {
     paymentIntentId: string;
@@ -93,11 +99,11 @@ class SubscriptionService {
     catch { }
     return null;
   }
-  public async createCheckoutSession(planSlug: string, successUrl: string, cancelUrl: string): Promise<string | null> {
+  public async createCheckoutSession(planSlug: string, successUrl: string, cancelUrl: string, billingCycle?: BillingCycle): Promise<string | null> {
     try {
       const res = await apiClient.post<{
                 url: string;
-            }>('/subscription/checkout', { planSlug, successUrl, cancelUrl });
+            }>('/subscription/checkout', { planSlug, successUrl, cancelUrl, ...(billingCycle ? { billingCycle } : {}) });
       if (res.success && res.data)
         return (res.data as {
                     url: string;
@@ -106,14 +112,27 @@ class SubscriptionService {
     catch { }
     return null;
   }
-  public async changePlan(planSlug: string): Promise<SubResult> {
-    const res = await apiClient.post('/subscription/change-plan', { planSlug });
+  public async changePlan(planSlug: string, billingCycle?: BillingCycle): Promise<SubResult> {
+    const res = await apiClient.post('/subscription/change-plan', { planSlug, ...(billingCycle ? { billingCycle } : {}) });
     if (res.success)
       return { success: true };
     return { success: false, error: extractSubscriptionError(res) };
   }
-  public async cancelSubscription(): Promise<SubResult> {
-    const res = await apiClient.post('/subscription/cancel-immediately', {});
+  /**
+   * Cancela pela regra do backend: agenda para o fim do período pago em ciclo
+   * trimestral/anual, encerra na hora no mensal.
+   */
+  public async cancelSubscription(): Promise<CancelResult> {
+    const res = await apiClient.post<{ scheduled?: boolean; accessUntil?: string }>('/subscription/cancel', {});
+    if (res.success) {
+      const data = (res.data ?? {}) as { scheduled?: boolean; accessUntil?: string };
+      return { success: true, ...(data.scheduled ? { scheduled: true } : {}), ...(data.accessUntil ? { accessUntil: data.accessUntil } : {}) };
+    }
+    return { success: false, error: extractSubscriptionError(res) };
+  }
+  /** Desfaz um cancelamento agendado, enquanto o período pago não terminou. */
+  public async reactivateSubscription(): Promise<SubResult> {
+    const res = await apiClient.post('/subscription/reactivate', {});
     if (res.success)
       return { success: true };
     return { success: false, error: extractSubscriptionError(res) };
@@ -177,7 +196,7 @@ class SubscriptionService {
         name?: string;
         cpf?: string;
         phone?: string;
-    }, couponCode?: string): Promise<{
+    }, couponCode?: string, billingCycle?: BillingCycle): Promise<{
         success: boolean;
         requiresAction?: boolean;
         clientSecret?: string;
@@ -188,7 +207,7 @@ class SubscriptionService {
                 success: boolean;
                 requiresAction?: boolean;
                 clientSecret?: string;
-            }>('/subscription/subscribe', { planSlug, paymentMethodId, ...personal, ...(couponCode ? { couponCode } : {}) });
+            }>('/subscription/subscribe', { planSlug, paymentMethodId, ...personal, ...(couponCode ? { couponCode } : {}), ...(billingCycle ? { billingCycle } : {}) });
       if (res.success && res.data)
         return res.data as {
                     success: boolean;
@@ -243,9 +262,9 @@ class SubscriptionService {
     catch { }
     return null;
   }
-  public async createPixIntent(planSlug: string): Promise<PixPlanIntentResponse | null> {
+  public async createPixIntent(planSlug: string, billingCycle?: BillingCycle): Promise<PixPlanIntentResponse | null> {
     try {
-      const res = await apiClient.post<PixPlanIntentResponse>('/subscription/pix-intent', { planSlug });
+      const res = await apiClient.post<PixPlanIntentResponse>('/subscription/pix-intent', { planSlug, ...(billingCycle ? { billingCycle } : {}) });
       if (res.success && res.data)
         return res.data as PixPlanIntentResponse;
     }

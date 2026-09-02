@@ -10,6 +10,7 @@ import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
 import type { AiPlan } from '@/types/Subscription';
+import { BILLING_CYCLES } from '@lib/billingCycles';
 
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -30,6 +31,10 @@ export default function AiPlanGate() {
   }, []);
   const sub = status?.subscription;
   const hasCard = !!sub?.stripePaymentMethodLast4;
+  // A IA não tem desconto por ciclo, mas entra na mesma fatura do plano base:
+  // em ciclo longo o valor mensal é cobrado de uma vez, junto com o período.
+  const baseCycle = sub?.stripeSubscriptionId?.trim() ? sub.billingCycle : 'monthly';
+  const cycleMonths = BILLING_CYCLES[baseCycle ?? 'monthly'].months;
   const handleConfirmAiPlan = async () => {
     if (!confirmAiPlan)
       return;
@@ -132,6 +137,9 @@ export default function AiPlanGate() {
               {confirmAiPlan.name} — {formatBRL(confirmAiPlan.priceCents)}/mês
             </p>
           </div>
+          {cycleMonths > 1 && (<p className="mt-1 text-right text-[11px] text-slate-500 dark:text-slate-400">
+            Cobrado junto com o plano base: {formatBRL(confirmAiPlan.priceCents * cycleMonths)} a cada {cycleMonths} meses
+          </p>)}
         </div>
 
         <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-xl">

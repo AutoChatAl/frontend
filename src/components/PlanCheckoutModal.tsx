@@ -7,7 +7,8 @@ import { useState } from 'react';
 import { couponService } from '@/services/coupon.service';
 import { subscriptionService } from '@/services/subscription.service';
 import type { CouponPreview } from '@/types/Coupon';
-import type { Plan } from '@/types/Subscription';
+import type { BillingCycle, Plan } from '@/types/Subscription';
+import { BILLING_CYCLES, cycleChargeSummary, planCycleTotalCents, planMonthlyEquivalentCents } from '@lib/billingCycles';
 
 import Button from './Button';
 import Modal from './Modal';
@@ -66,11 +67,12 @@ interface PersonalFormProps {
         phone: string;
     }) => void;
     plan: Plan;
+    billingCycle: BillingCycle;
     initialName?: string;
     initialCpf?: string;
     initialPhone?: string;
 }
-function PersonalForm({ onNext, plan, initialName = '', initialCpf = '', initialPhone = '' }: PersonalFormProps) {
+function PersonalForm({ onNext, plan, billingCycle, initialName = '', initialCpf = '', initialPhone = '' }: PersonalFormProps) {
   const [name, setName] = useState(initialName);
   const [cpf, setCpf] = useState(initialCpf ? formatCPF(initialCpf) : '');
   const [phone, setPhone] = useState(initialPhone ? formatPhone(initialPhone) : '');
@@ -99,11 +101,14 @@ function PersonalForm({ onNext, plan, initialName = '', initialCpf = '', initial
     <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg mb-2">
       <div>
         <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wide">Plano selecionado</p>
-        <p className="text-sm font-semibold text-slate-800 dark:text-white">{plan.name}</p>
+        <p className="text-sm font-semibold text-slate-800 dark:text-white">{plan.name} · {BILLING_CYCLES[billingCycle].label}</p>
       </div>
-      <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-        {formatBRL(plan.priceCents)}<span className="text-xs font-normal text-slate-500">/mês</span>
-      </span>
+      <div className="text-right">
+        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+          {formatBRL(planMonthlyEquivalentCents(plan, billingCycle))}<span className="text-xs font-normal text-slate-500">/mês</span>
+        </span>
+        {billingCycle !== 'monthly' && (<p className="text-[11px] text-slate-500 dark:text-slate-400">{cycleChargeSummary(plan, billingCycle)}</p>)}
+      </div>
     </div>
 
     <div>
@@ -137,6 +142,7 @@ function PersonalForm({ onNext, plan, initialName = '', initialCpf = '', initial
 }
 interface CardFormProps {
     plan: Plan;
+    billingCycle: BillingCycle;
     personal: {
         name: string;
         cpf: string;
@@ -145,7 +151,7 @@ interface CardFormProps {
     onSuccess: () => void;
     onBack: () => void;
 }
-function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
+function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -161,7 +167,7 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
     setCouponLoading(true);
     setCouponError('');
     try {
-      const preview = await couponService.validate(code, plan.slug);
+      const preview = await couponService.validate(code, plan.slug, billingCycle);
       setAppliedCoupon(preview);
       setCouponInput('');
     }
@@ -177,13 +183,18 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
     setAppliedCoupon(null);
     setCouponError('');
   };
+  // Em ciclos longos os valores são por cobrança (trimestre / ano), não por mês.
+  const cycleMeta = BILLING_CYCLES[billingCycle];
+  const isMonthly = billingCycle === 'monthly';
+  const perChargeSuffix = isMonthly ? '/mês' : ` a cada ${cycleMeta.months} meses`;
+  const firstChargeLabel = isMonthly ? 'no 1º mês' : 'na 1ª cobrança';
   const payLabel = appliedCoupon
     ? appliedCoupon.type === 'recurring'
-      ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}/mês`
+      ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}${perChargeSuffix}`
       : appliedCoupon.type === 'repeating' && (appliedCoupon.durationInMonths ?? 0) > 1
-        ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}/mês nos primeiros ${appliedCoupon.durationInMonths} meses`
-        : `Pagar ${formatBRL(appliedCoupon.discountedCents)} no 1º mês`
-    : `Pagar ${formatBRL(plan.priceCents)}/mês`;
+        ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}${perChargeSuffix} nos primeiros ${appliedCoupon.durationInMonths} meses`
+        : `Pagar ${formatBRL(appliedCoupon.discountedCents)} ${firstChargeLabel}`
+    : `Pagar ${formatBRL(planCycleTotalCents(plan, billingCycle))}${perChargeSuffix}`;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements)
@@ -211,7 +222,7 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
             error?: string;
         } | null = null;
     try {
-      result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal, appliedCoupon?.code);
+      result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal, appliedCoupon?.code, billingCycle);
     }
     catch (err: unknown) {
       addToast('error', err instanceof Error ? err.message : 'Pagamento recusado.');
@@ -298,10 +309,10 @@ function CardForm({ plan, personal, onSuccess, onBack }: CardFormProps) {
               <span className="line-through">{formatBRL(appliedCoupon.originalCents)}</span>{' '}
               <span className="font-semibold text-slate-700 dark:text-slate-200">{formatBRL(appliedCoupon.discountedCents)}</span>
               {appliedCoupon.type === 'recurring'
-                ? '/mês'
+                ? perChargeSuffix
                 : appliedCoupon.type === 'repeating' && (appliedCoupon.durationInMonths ?? 0) > 1
-                  ? `/mês nos primeiros ${appliedCoupon.durationInMonths} meses`
-                  : ' no 1º mês'}
+                  ? `${perChargeSuffix} nos primeiros ${appliedCoupon.durationInMonths} meses`
+                  : ` ${firstChargeLabel}`}
             </p>
           </div>
         </div>
@@ -330,6 +341,8 @@ interface PlanCheckoutModalProps {
     isOpen: boolean;
     onClose: () => void;
     plan: Plan;
+    /** Ciclo escolhido na seleção de planos. Padrão mensal. */
+    billingCycle?: BillingCycle;
     onSuccess: () => void | Promise<void>;
     initialPersonal?: {
         name?: string;
@@ -337,7 +350,7 @@ interface PlanCheckoutModalProps {
         phone?: string;
     };
 }
-export default function PlanCheckoutModal({ isOpen, onClose, plan, onSuccess, initialPersonal }: PlanCheckoutModalProps) {
+export default function PlanCheckoutModal({ isOpen, onClose, plan, billingCycle = 'monthly', onSuccess, initialPersonal }: PlanCheckoutModalProps) {
   const [step, setStep] = useState<Step>('personal');
   const [personal, setPersonal] = useState({
     name: initialPersonal?.name ?? '',
@@ -370,8 +383,8 @@ export default function PlanCheckoutModal({ isOpen, onClose, plan, onSuccess, in
       <p className="text-sm font-medium text-slate-700 dark:text-slate-300 text-center">
             Assinatura ativada com sucesso!
       </p>
-    </div>) : step === 'personal' ? (<PersonalForm plan={plan} initialName={personal.name} initialCpf={personal.cpf} initialPhone={personal.phone} onNext={(data) => { setPersonal(data); setStep('card'); }}/>) : (<Elements stripe={stripePromise}>
-      <CardForm plan={plan} personal={personal} onSuccess={handleSuccess} onBack={() => setStep('personal')}/>
+    </div>) : step === 'personal' ? (<PersonalForm plan={plan} billingCycle={billingCycle} initialName={personal.name} initialCpf={personal.cpf} initialPhone={personal.phone} onNext={(data) => { setPersonal(data); setStep('card'); }}/>) : (<Elements stripe={stripePromise}>
+      <CardForm plan={plan} billingCycle={billingCycle} personal={personal} onSuccess={handleSuccess} onBack={() => setStep('personal')}/>
     </Elements>)}
   </Modal>);
 }

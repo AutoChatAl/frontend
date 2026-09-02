@@ -8,6 +8,7 @@ import CommentAutomationSection from './components/CommentAutomationSection';
 import FaqSection from './components/FaqSection';
 import FeaturesGrid from './components/FeaturesGrid';
 import FinalCta from './components/FinalCta';
+import FlowBuilderSection from './components/FlowBuilderSection';
 import Footer from './components/Footer';
 import FunnelSection from './components/FunnelSection';
 import Header from './components/Header';
@@ -44,6 +45,7 @@ export default function Home() {
           <FunnelSection />
           <InboxSection />
           <CommentAutomationSection />
+          <FlowBuilderSection />
           <SchedulingSection />
           <TestimonialsSection />
           {!HIDDEN_FEATURES.cartRecovery && <CartRecoverySection />}

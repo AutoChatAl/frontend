@@ -1,4 +1,11 @@
 export type PlanSlug = 'impulso' | 'crescimento' | 'dominio';
+/** Ciclo de cobrança do plano base. Os planos de IA são sempre mensais. */
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
+/** Preço total cobrado a cada renovação do ciclo, já com o desconto aplicado. */
+export interface PlanCyclePrice {
+    priceCents: number;
+    stripePriceId: string;
+}
 export type AiPlanSlug = 'ai-nivel-1' | 'ai-nivel-2' | 'ai-nivel-3';
 export type SubscriptionStatus = 'active' | 'block' | 'failed_payment' | 'canceled';
 export interface PlanLimits {
@@ -23,8 +30,10 @@ export interface Plan {
     slug: PlanSlug;
     name: string;
     description: string;
+    /** Preço mensal — referência para os demais ciclos. */
     priceCents: number;
     stripePriceId: string;
+    cyclePrices?: Partial<Record<BillingCycle, PlanCyclePrice>>;
     limits: PlanLimits;
     aiIncluded: string | null;
     isActive: boolean;
@@ -55,6 +64,7 @@ export interface Subscription {
     id: string;
     workspaceId: string;
     planId: string;
+    billingCycle: BillingCycle;
     status: SubscriptionStatus;
     currentPeriodStart: string;
     currentPeriodEnd: string;

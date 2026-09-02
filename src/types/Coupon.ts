@@ -1,9 +1,15 @@
+import type { BillingCycle } from './Subscription';
+
 export type CouponType = 'recurring' | 'first_month' | 'repeating';
 export type CouponDiscountType = 'percent' | 'amount';
 
 /** Preview retornado pela validação no checkout. */
 export interface CouponPreview {
   code: string;
+  /** Ciclo sobre o qual o desconto foi calculado. */
+  billingCycle: BillingCycle;
+  /** Meses cobrados de uma vez nesse ciclo. */
+  months: number;
   type: CouponType;
   discountType: CouponDiscountType;
   value: number;

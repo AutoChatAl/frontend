@@ -2,6 +2,7 @@
 import { CheckCircle, Download, MessageSquare, Megaphone, Reply, MessageCircle, MonitorSmartphone, Users, Contact, Bot, Plus, Minus, Crown, AlertTriangle, CreditCard, BarChart2, Loader2, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import BillingCycleSelector from '@/components/BillingCycleSelector';
 import Button from '@/components/Button';
 import Callout from '@/components/Callout';
 import Card from '@/components/Card';
@@ -12,8 +13,9 @@ import SectionHeader from '@/components/SectionHeader';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
-import type { Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
+import type { BillingCycle, Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
 import { EXTRA_COLLABORATOR_PRICE_CENTS, EXTRA_INSTANCE_PRICE_CENTS, formatBRLFromCents } from '@/utils/billing';
+import { BILLING_CYCLES, DEFAULT_BILLING_CYCLE, cycleChargeSummary, planCycleTotalCents, planMonthlyEquivalentCents } from '@lib/billingCycles';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number) {
@@ -50,6 +52,18 @@ export default function BillingTab() {
     type: 'instance' | 'collaborator';
   } | null>(null);
   const [confirmPlanChange, setConfirmPlanChange] = useState<Plan | null>(null);
+  // Na troca de plano o ciclo começa no que o assinante já paga; sem assinatura paga,
+  // no ciclo sugerido (trimestral), igual às demais telas de escolha de plano.
+  const [planCycle, setPlanCycle] = useState<BillingCycle>(DEFAULT_BILLING_CYCLE);
+  // Trial expirado mantém planId mas fica sem assinatura no Stripe — só quem tem
+  // assinatura paga tem um ciclo vigente.
+  const hasPaidSubscription = !!status?.subscription?.stripeSubscriptionId?.trim();
+  const currentCycle: BillingCycle | undefined = hasPaidSubscription ? status?.subscription?.billingCycle : undefined;
+  // Todo ciclo é pré-pago: o período corrente já foi cobrado, então o cancelamento é agendado
+  // para o fim dele em vez de encerrar na hora. Só quem não tem assinatura no Stripe (trial)
+  // cai no corte imediato, porque não há período pago a preservar.
+  const cancelsAtPeriodEnd = hasPaidSubscription;
+  const cancelScheduled = !!status?.subscription?.cancelAtPeriodEnd && status?.subscription?.status !== 'canceled';
   const [confirmAiPlan, setConfirmAiPlan] = useState<AiPlan | null>(null);
   const [showCancelImmediatelyModal, setShowCancelImmediatelyModal] = useState(false);
   const [regularizingCard, setRegularizingCard] = useState(false);
@@ -79,6 +93,11 @@ export default function BillingTab() {
       refresh();
     }
   }, [showManageModal, refresh]);
+  useEffect(() => {
+    if (showPlanModal) {
+      setPlanCycle(currentCycle ?? DEFAULT_BILLING_CYCLE);
+    }
+  }, [showPlanModal, currentCycle]);
   const handleChangePlan = (selectedPlan: Plan) => {
     const hasActiveSub = !!(sub?.stripeSubscriptionId?.trim());
     if (hasActiveSub && !isTrialing && !isCanceled) {
@@ -96,7 +115,7 @@ export default function BillingTab() {
       return;
     setLoading(true);
     try {
-      const result = await subscriptionService.changePlan(confirmPlanChange.slug);
+      const result = await subscriptionService.changePlan(confirmPlanChange.slug, planCycle);
       if (result.success) {
         await refresh();
         await reloadBilling();
@@ -201,10 +220,25 @@ export default function BillingTab() {
       await reloadBilling();
       setShowManageModal(false);
       closeCancelModal();
-      addToast('success', 'Assinatura cancelada com efeito imediato.');
+      addToast('success', result.scheduled
+        ? `Cancelamento agendado. Você continua com acesso até ${result.accessUntil ? new Date(result.accessUntil).toLocaleDateString('pt-BR') : 'o fim do período pago'}.`
+        : 'Assinatura cancelada com efeito imediato.');
     }
     else {
       addToast('error', result.error ?? 'Erro ao cancelar assinatura.');
+    }
+    setLoading(false);
+  };
+  const handleReactivate = async () => {
+    setLoading(true);
+    const result = await subscriptionService.reactivateSubscription();
+    if (result.success) {
+      await refresh();
+      await reloadBilling();
+      addToast('success', 'Cancelamento desfeito. Sua assinatura segue ativa.');
+    }
+    else {
+      addToast('error', result.error ?? 'Erro ao reativar assinatura.');
     }
     setLoading(false);
   };
@@ -265,9 +299,29 @@ export default function BillingTab() {
           </h3>
         </div>
         {!isCanceled && (<span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-medium self-start">
-          {plan ? formatBRL(plan.priceCents) + '/mês' : 'Gratuito'}
+          {plan
+            ? `${formatBRL(planMonthlyEquivalentCents(plan, currentCycle ?? 'monthly'))}/mês${currentCycle && currentCycle !== 'monthly' ? ` · ${BILLING_CYCLES[currentCycle].label}` : ''}`
+            : 'Gratuito'}
         </span>)}
       </div>
+
+      {cancelScheduled && (
+        <Callout tone="warning" className="mb-3">
+          <p className="font-semibold">Cancelamento agendado</p>
+          <p className="mt-0.5">
+            Sua assinatura não será renovada e o acesso continua até {periodEnd ?? 'o fim do período pago'}.
+          </p>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="mt-2 justify-center"
+            onClick={handleReactivate}
+            disabled={loading}
+          >
+            Reativar assinatura
+          </Button>
+        </Callout>
+      )}
 
       {hasFailedPayment && (
         <Callout tone="warning" className="mb-3">
@@ -429,7 +483,9 @@ export default function BillingTab() {
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">Cancelar plano</p>
             <p className="mt-0.5 text-xs leading-relaxed text-red-600 dark:text-red-400">
-                O acesso ao plano e aos recursos pagos é encerrado imediatamente.
+              {cancelsAtPeriodEnd
+                ? `O plano não é renovado e o acesso continua até ${periodEnd ?? 'o fim do período pago'}.`
+                : 'O acesso ao plano e aos recursos pagos é encerrado imediatamente.'}
             </p>
           </div>
           <Button variant="danger" size="sm" className="w-full shrink-0 justify-center py-2 sm:w-auto sm:py-1.5" onClick={openCancelModal} disabled={loading}>
@@ -481,7 +537,9 @@ export default function BillingTab() {
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">Cancelar assinatura</p>
             <p className="mt-0.5 text-xs leading-relaxed text-red-600 dark:text-red-400">
-                Efeito imediato: o acesso aos recursos pagos é encerrado na hora.
+              {cancelsAtPeriodEnd
+                ? `Sem nova cobrança. O acesso continua até ${periodEnd ?? 'o fim do período pago'}.`
+                : 'Efeito imediato: o acesso aos recursos pagos é encerrado na hora.'}
             </p>
           </div>
           <Button variant="danger" size="sm" className="w-full shrink-0 justify-center py-2 sm:w-auto sm:py-1.5" onClick={() => {
@@ -495,18 +553,26 @@ export default function BillingTab() {
     </Modal>
 
     <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title="Escolher Plano" size="lg">
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <BillingCycleSelector value={planCycle} onChange={setPlanCycle} size="sm" />
+        {BILLING_CYCLES[planCycle].discountPercent > 0 && (<p className="text-xs text-slate-500 dark:text-slate-400">
+          {BILLING_CYCLES[planCycle].discountPercent}% de desconto no plano base — planos de IA e extras não mudam.
+        </p>)}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((p) => {
           // Só marca como "Plano Atual" quando existe assinatura Stripe real (paga).
           // Trial expirado mantém planId preenchido mas stripeSubscriptionId null —
           // nesse caso o usuário PRECISA conseguir assinar o mesmo plano (checkout).
-          const hasPaidSub = !!sub?.stripeSubscriptionId?.trim();
-          const isCurrent = hasPaidSub && !isTrialing && !isCanceled && p.id === sub?.planId;
+          const isCurrent = hasPaidSubscription && !isTrialing && !isCanceled && p.id === sub?.planId && planCycle === currentCycle;
           return (<div key={p.id} className={`border rounded-lg p-4 ${isCurrent ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' : 'border-slate-200 dark:border-slate-700'}`}>
             <h4 className="text-lg font-bold text-slate-800 dark:text-white">{p.name}</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
-            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">
-              {formatBRL(p.priceCents)}<span className="text-sm font-normal text-slate-500">/mês</span>
+            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">
+              {formatBRL(planMonthlyEquivalentCents(p, planCycle))}<span className="text-sm font-normal text-slate-500">/mês</span>
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-4 min-h-[15px]">
+              {planCycle !== 'monthly' ? cycleChargeSummary(p, planCycle) : 'cobrado todo mês'}
             </p>
             <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 mb-4">
               <li>• {p.limits.maxInstances} instâncias</li>
@@ -559,7 +625,7 @@ export default function BillingTab() {
       </div>
     </Modal>
 
-    {checkoutPlan && (<PlanCheckoutModal isOpen={showCheckoutModal} onClose={() => { setShowCheckoutModal(false); setCheckoutPlan(null); }} plan={checkoutPlan} initialPersonal={{
+    {checkoutPlan && (<PlanCheckoutModal isOpen={showCheckoutModal} onClose={() => { setShowCheckoutModal(false); setCheckoutPlan(null); }} plan={checkoutPlan} billingCycle={planCycle} initialPersonal={{
       name: sub?.customerName ?? '',
       cpf: sub?.customerCpf ?? '',
       phone: sub?.customerPhone ?? '',
@@ -581,6 +647,9 @@ export default function BillingTab() {
             {formatBRLFromCents(confirmExtra.type === 'instance' ? EXTRA_INSTANCE_PRICE_CENTS : EXTRA_COLLABORATOR_PRICE_CENTS)}
             <span className="text-sm font-normal text-slate-500">/mês</span>
           </p>
+          {currentCycle && currentCycle !== 'monthly' && (<p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            {formatBRLFromCents((confirmExtra.type === 'instance' ? EXTRA_INSTANCE_PRICE_CENTS : EXTRA_COLLABORATOR_PRICE_CENTS) * BILLING_CYCLES[currentCycle].months)} {BILLING_CYCLES[currentCycle].chargeLabel}, junto com o plano base
+          </p>)}
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
             Total após adição:{' '}
             <span className="font-medium text-slate-700 dark:text-slate-300">
@@ -647,9 +716,12 @@ export default function BillingTab() {
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">Novo plano</p>
             <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-              {confirmPlanChange.name} — {formatBRL(confirmPlanChange.priceCents)}/mês
+              {confirmPlanChange.name} — {formatBRL(planMonthlyEquivalentCents(confirmPlanChange, planCycle))}/mês
             </p>
           </div>
+          <p className="mt-1 text-right text-[11px] text-slate-500 dark:text-slate-400">
+            {BILLING_CYCLES[planCycle].label} · {formatBRL(planCycleTotalCents(confirmPlanChange, planCycle))} {BILLING_CYCLES[planCycle].chargeLabel}
+          </p>
         </div>
 
         <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -688,6 +760,9 @@ export default function BillingTab() {
               {confirmAiPlan.name} — {formatBRL(confirmAiPlan.priceCents)}/mês
             </p>
           </div>
+          {currentCycle && currentCycle !== 'monthly' && (<p className="mt-1 text-right text-[11px] text-slate-500 dark:text-slate-400">
+            Cobrado junto com o plano base: {formatBRL(confirmAiPlan.priceCents * BILLING_CYCLES[currentCycle].months)} {BILLING_CYCLES[currentCycle].chargeLabel}
+          </p>)}
         </div>
 
         <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -746,7 +821,9 @@ export default function BillingTab() {
     <Modal isOpen={showCancelImmediatelyModal && cancelStep === 1} onClose={closeCancelModal} title="Você está prestes a perder tudo isso" size="md">
       <div className="space-y-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você perde acesso imediato a:
+          {cancelsAtPeriodEnd
+            ? (<>Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você continua com acesso até <span className="font-semibold text-gray-700 dark:text-gray-200">{periodEnd}</span>. Depois dessa data, você perde:</>)
+            : (<>Ao cancelar seu plano <span className="font-semibold text-gray-700 dark:text-gray-200">{plan?.name}</span>, você perde acesso imediato a:</>)}
         </p>
         <div className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {[
@@ -769,11 +846,17 @@ export default function BillingTab() {
         <div className="flex items-start gap-2.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/70 dark:bg-red-900/15 px-3.5 py-3">
           <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
           <div className="text-xs text-red-700 dark:text-red-300 space-y-1">
-            <p className="font-semibold">Esta ação é irreversível.</p>
+            <p className="font-semibold">
+              {cancelsAtPeriodEnd ? 'Você pode desfazer enquanto o período pago não terminar.' : 'Esta ação é irreversível.'}
+            </p>
             <p>
-              Ao cancelar, o seu <span className="font-semibold">plano de IA também será cancelado</span> e
-              {' '}<span className="font-semibold">todos os colaboradores e instâncias (canais conectados) serão removidos</span> permanentemente.
-              Ao reassinar, será necessário reconvidar os colaboradores e reconectar os canais.
+              {cancelsAtPeriodEnd
+                ? (<>Em {periodEnd}, o seu <span className="font-semibold">plano de IA será cancelado</span> e{' '}
+                  <span className="font-semibold">todos os colaboradores e instâncias (canais conectados) serão removidos</span> permanentemente.
+                  Não há nova cobrança, e o valor do período já pago não é devolvido.</>)
+                : (<>Ao cancelar, o seu <span className="font-semibold">plano de IA também será cancelado</span> e{' '}
+                  <span className="font-semibold">todos os colaboradores e instâncias (canais conectados) serão removidos</span> permanentemente.
+                  Ao reassinar, será necessário reconvidar os colaboradores e reconectar os canais.</>)}
             </p>
           </div>
         </div>
@@ -794,10 +877,12 @@ export default function BillingTab() {
           <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
-              Cancelamento com efeito imediato
+              {cancelsAtPeriodEnd ? 'Cancelamento no fim do período pago' : 'Cancelamento com efeito imediato'}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400 opacity-80">
-              Seu acesso aos recursos pagos será encerrado assim que você confirmar.
+              {cancelsAtPeriodEnd
+                ? `Seu acesso continua até ${periodEnd ?? 'o fim do período pago'} e não haverá nova cobrança.`
+                : 'Seu acesso aos recursos pagos será encerrado assim que você confirmar.'}
             </p>
           </div>
         </div>

@@ -253,6 +253,10 @@ class AuthService {
     this.removeToken();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_user');
+      // Marcadores de sessão do aviso de teste: limpar aqui faz o convite para assinar
+      // voltar a aparecer no próximo login, e não uma única vez por aba do navegador.
+      sessionStorage.removeItem('trial_modal_seen');
+      sessionStorage.removeItem('trial_banner_dismissed');
     }
   }
 }

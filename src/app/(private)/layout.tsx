@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
+import TrialWelcomeModal from '@/components/TrialWelcomeModal';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { SidebarProvider, canAccessPathname, resolveLandingRoute } from '@/contexts/SidebarContext';
@@ -90,6 +91,7 @@ export default function PrivateLayout({ children }: Readonly<{
                   <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
                     <TrialBanner />
                     <SubscriptionBanner />
+                    <TrialWelcomeModal />
                     {children}
                   </main>
                 </div>

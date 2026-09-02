@@ -2,13 +2,15 @@
 import { Check, Crown, Sparkles, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import BillingCycleSelector from '@/components/BillingCycleSelector';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import PlanCheckoutModal from '@/components/PlanCheckoutModal';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { subscriptionService } from '@/services/subscription.service';
-import type { Plan } from '@/types/Subscription';
+import type { BillingCycle, Plan } from '@/types/Subscription';
+import { BILLING_CYCLES, DEFAULT_BILLING_CYCLE, cycleChargeSummary, planMonthlyEquivalentCents } from '@lib/billingCycles';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 function formatBRL(cents: number) {
@@ -37,6 +39,7 @@ export default function PlansPage() {
   const { status, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [cycle, setCycle] = useState<BillingCycle>(DEFAULT_BILLING_CYCLE);
   const [loading, setLoading] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -50,7 +53,7 @@ export default function PlansPage() {
       return;
     }
     setLoading(plan.slug);
-    const result = await subscriptionService.changePlan(plan.slug);
+    const result = await subscriptionService.changePlan(plan.slug, cycle);
     if (result.success) {
       await refresh();
     }
@@ -63,15 +66,24 @@ export default function PlansPage() {
   // nenhum plano é "atual" — todos ficam assináveis via checkout.
   const hasPaidSub = !!status?.subscription?.stripeSubscriptionId?.trim();
   const currentPlanId = isTrialing || isCanceled || !hasPaidSub ? undefined : status?.subscription?.planId;
+  const currentCycle = hasPaidSub ? status?.subscription?.billingCycle : undefined;
   return (<div className="max-w-5xl mx-auto">
     <div className="text-center mb-8">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Escolha seu plano</h1>
       <p className="text-slate-500 dark:text-slate-400 mt-2">Escale seu negócio com o plano ideal para você</p>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <BillingCycleSelector value={cycle} onChange={setCycle} />
+        {BILLING_CYCLES[cycle].discountPercent > 0 && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {BILLING_CYCLES[cycle].discountPercent}% de desconto no plano base — planos de IA e extras não mudam.
+          </p>
+        )}
+      </div>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {plans.map((plan) => {
-        const isCurrent = !isCanceled && plan.id === currentPlanId;
+        const isCurrent = !isCanceled && plan.id === currentPlanId && cycle === currentCycle;
         const isHighlighted = plan.slug === 'crescimento';
         const Icon = PLAN_ICONS[plan.slug] ?? Sparkles;
         const gradient = PLAN_COLORS[plan.slug] ?? 'from-indigo-500 to-violet-600';
@@ -88,8 +100,11 @@ export default function PlansPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.description}</p>
 
           <div className="mb-6">
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">{formatBRL(plan.priceCents)}</span>
+            <span className="text-3xl font-bold text-slate-900 dark:text-white">{formatBRL(planMonthlyEquivalentCents(plan, cycle))}</span>
             <span className="text-sm text-slate-500">/mês</span>
+            {cycle !== 'monthly' && (<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <span className="line-through text-slate-400 dark:text-slate-500">{formatBRL(plan.priceCents)}</span> · {cycleChargeSummary(plan, cycle)}
+            </p>)}
           </div>
 
           <ul className="space-y-2.5 mb-6 flex-1">
@@ -142,7 +157,7 @@ export default function PlansPage() {
       })}
     </div>
 
-    {selectedPlan && (<PlanCheckoutModal isOpen={showCheckoutModal} onClose={() => { setShowCheckoutModal(false); setSelectedPlan(null); }} plan={selectedPlan} initialPersonal={{
+    {selectedPlan && (<PlanCheckoutModal isOpen={showCheckoutModal} onClose={() => { setShowCheckoutModal(false); setSelectedPlan(null); }} plan={selectedPlan} billingCycle={cycle} initialPersonal={{
       name: status?.subscription?.customerName ?? '',
       cpf: status?.subscription?.customerCpf ?? '',
       phone: status?.subscription?.customerPhone ?? '',
