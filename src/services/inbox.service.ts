@@ -21,16 +21,20 @@ class InboxService {
     return response.data;
   }
 
-  public async listConversations(filters: InboxListFilters = {}): Promise<InboxConversation[]> {
+  public async listConversations(filters: InboxListFilters = {}): Promise<{ conversations: InboxConversation[]; archivedCount: number }> {
     const query = new URLSearchParams();
     if (filters.channelType) query.set('channelType', filters.channelType);
     if (filters.search?.trim()) query.set('search', filters.search.trim());
+    if (filters.archived) query.set('archived', 'true');
     const suffix = query.toString() ? `?${query.toString()}` : '';
-    const response = await apiClient.get<{ conversations: InboxConversation[] }>(`/inbox/conversations${suffix}`);
+    const response = await apiClient.get<{ conversations: InboxConversation[]; archivedCount?: number }>(`/inbox/conversations${suffix}`);
     if (!response.success || !response.data) {
       throw new Error('Não foi possível carregar as conversas.');
     }
-    return response.data.conversations;
+    return {
+      conversations: response.data.conversations,
+      archivedCount: response.data.archivedCount ?? 0,
+    };
   }
 
   public async listAgents(): Promise<InboxAgent[]> {
@@ -128,6 +132,25 @@ class InboxService {
       throw new Error('Não foi possível transcrever o áudio.');
     }
     return response.data.message;
+  }
+
+  /** Tira a conversa da caixa principal (ou devolve para ela) — reversível, não apaga nada. */
+  public async setArchived(conversationId: string, archived: boolean): Promise<InboxConversation> {
+    const response = await apiClient.post<{ conversation: InboxConversation }>(
+      `/inbox/conversations/${conversationId}/${archived ? 'archive' : 'unarchive'}`,
+    );
+    if (!response.success || !response.data) {
+      throw new Error(archived ? 'Não foi possível arquivar a conversa.' : 'Não foi possível desarquivar a conversa.');
+    }
+    return response.data.conversation;
+  }
+
+  /** Exclusão definitiva da conversa e do histórico dela. Só dono/admin do workspace. */
+  public async deleteConversation(conversationId: string): Promise<void> {
+    const response = await apiClient.delete<{ ok: boolean }>(`/inbox/conversations/${conversationId}`);
+    if (!response.success) {
+      throw new Error('Não foi possível excluir a conversa.');
+    }
   }
 
   public async markRead(conversationId: string): Promise<void> {

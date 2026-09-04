@@ -1,12 +1,13 @@
 'use client';
-import { ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, Lock, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, Lock, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
-import type { InboxChannelType, InboxConversation, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageMediaType } from '@/types/Inbox';
+import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageMediaType } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
   AUDIO_WAV_MIME,
@@ -118,76 +119,200 @@ function MediaContent({ message }: { message: InboxMessage }) {
   );
 }
 
+/** Largura de cada botão revelado pelo arrasto e a partir de quanto o painel fica aberto. */
+const SWIPE_ACTION_PX = 76;
+
 function ConversationRow({
   conversation,
   active,
   disabled = false,
   currentUserId,
+  canDelete = false,
+  busy = false,
+  open,
+  onOpenChange,
   onClick,
+  onArchive,
+  onRequestDelete,
 }: {
   conversation: InboxConversation;
   active: boolean;
   disabled?: boolean;
   currentUserId: string | null;
+  /** Excluir é só do administrador; arquivar fica disponível para qualquer atendente. */
+  canDelete?: boolean;
+  busy?: boolean;
+  /** Painel de ações aberto — controlado pela página para só uma linha ficar aberta por vez. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onClick: () => void;
+  onArchive: () => void;
+  onRequestDelete: () => void;
 }) {
   const assignedTo = conversation.assignedTo ?? null;
   const isMine = !!assignedTo && assignedTo === currentUserId;
+  const archived = !!conversation.archivedAt;
+  const swipeEnabled = !disabled;
+  const actionsWidth = SWIPE_ACTION_PX * (canDelete ? 2 : 1);
+  // Enquanto o dedo está na tela quem manda é o arrasto; fora dele, o estado aberto/fechado.
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const offset = dragOffset ?? (open ? -actionsWidth : 0);
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; base: number; horizontal: boolean } | null>(null);
+  // O clique do navegador vem logo depois do arrasto; sem esta marca o gesto abriria a conversa.
+  const swipedRef = useRef(false);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!swipeEnabled || event.button !== 0) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      base: open ? -actionsWidth : 0,
+      horizontal: false,
+    };
+    swipedRef.current = false;
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.horizontal) {
+      // Só assume o gesto quando ele é claramente horizontal: a rolagem vertical da lista continua livre.
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) <= Math.abs(dy)) {
+        dragRef.current = null;
+        return;
+      }
+      drag.horizontal = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    swipedRef.current = true;
+    setDragOffset(Math.max(-actionsWidth, Math.min(0, drag.base + dx)));
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const shouldOpen = drag.horizontal ? offset <= -actionsWidth / 2 : open;
+    dragRef.current = null;
+    setDragOffset(null);
+    if (shouldOpen !== open) onOpenChange(shouldOpen);
+  };
+
+  const cancelDrag = () => {
+    dragRef.current = null;
+    setDragOffset(null);
+  };
+
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors border-b border-slate-100 dark:border-slate-700/60 ${disabled ? 'cursor-not-allowed' : active ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer'}`}
-    >
-      {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-indigo-500" aria-hidden />}
-      <Avatar
-        name={conversation.contactName}
-        identifier={conversation.contactIdentifier}
-        avatarUrl={conversation.avatarUrl}
-        size={38}
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
-            {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
-          </span>
-          <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
-            {formatConversationTime(conversation.lastMessageAt)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-slate-500 dark:text-slate-400">
-            {conversation.lastMessageDirection === 'OUT' ? 'Você: ' : ''}
-            {conversation.lastMessagePreview || '—'}
-          </span>
-          {conversation.unreadCount > 0 && (
-            <span className="shrink-0 min-w-4.5 h-4.5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
-              {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          {channelBadge(
-            conversation.channelType,
-            conversation.channelName || conversation.channelIdentifier,
-          )}
-          {conversation.awaitingHuman && !assignedTo && (
-            <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-              aguardando
-            </span>
-          )}
-          {assignedTo && (
-            <span
-              title={isMine ? 'Atribuída a você' : `Atendida por ${conversation.assignedToName ?? 'outro atendente'}`}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${isMine ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+    <div className="relative overflow-hidden border-b border-slate-100 dark:border-slate-700/60">
+      {offset < 0 && (
+        <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
+          <button
+            onClick={onArchive}
+            disabled={busy}
+            className="flex flex-1 flex-col items-center justify-center gap-1 bg-slate-500 text-[11px] font-semibold text-white transition-colors hover:bg-slate-600 disabled:opacity-60"
+          >
+            {archived ? <ArchiveRestore size={17} /> : <Archive size={17} />}
+            {archived ? 'Desarquivar' : 'Arquivar'}
+          </button>
+          {canDelete && (
+            <button
+              onClick={onRequestDelete}
+              disabled={busy}
+              className="flex flex-1 flex-col items-center justify-center gap-1 bg-red-600 text-[11px] font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
             >
-              <UserCheck size={11} />
-              {isMine ? 'você' : getInitials(conversation.assignedToName)}
-            </span>
+              <Trash2 size={17} />
+              Excluir
+            </button>
           )}
         </div>
-      </div>
-    </button>
+      )}
+      <button
+        onClick={() => {
+          if (swipedRef.current) {
+            swipedRef.current = false;
+            return;
+          }
+          // Com o painel aberto, o toque na linha serve para fechá-lo, não para abrir a conversa.
+          if (open) {
+            onOpenChange(false);
+            return;
+          }
+          onClick();
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={cancelDrag}
+        disabled={disabled}
+        style={{
+          transform: `translateX(${offset}px)`,
+          // Inline e não por classe: `transition-transform` e `transition-colors` disputam a
+          // mesma propriedade CSS, e a ordem entre elas não é a da lista de classes.
+          transition: dragOffset !== null ? 'none' : 'transform 160ms ease-out, background-color 150ms ease-out',
+          touchAction: swipeEnabled ? 'pan-y' : undefined,
+        }}
+        className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left ${disabled ? 'cursor-not-allowed bg-white dark:bg-slate-800' : active ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer'}`}
+      >
+        {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-indigo-500" aria-hidden />}
+        <Avatar
+          name={conversation.contactName}
+          identifier={conversation.contactIdentifier}
+          avatarUrl={conversation.avatarUrl}
+          size={38}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
+              {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
+            </span>
+            <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+              {formatConversationTime(conversation.lastMessageAt)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+              {conversation.lastMessageDirection === 'OUT' ? 'Você: ' : ''}
+              {conversation.lastMessagePreview || '—'}
+            </span>
+            {conversation.unreadCount > 0 && (
+              <span className="shrink-0 min-w-4.5 h-4.5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
+                {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {channelBadge(
+              conversation.channelType,
+              conversation.channelName || conversation.channelIdentifier,
+            )}
+            {archived && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                <Archive size={11} />
+                arquivada
+              </span>
+            )}
+            {conversation.awaitingHuman && !assignedTo && (
+              <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                aguardando
+              </span>
+            )}
+            {assignedTo && (
+              <span
+                title={isMine ? 'Atribuída a você' : `Atendida por ${conversation.assignedToName ?? 'outro atendente'}`}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${isMine ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
+              >
+                <UserCheck size={11} />
+                {isMine ? 'você' : getInitials(conversation.assignedToName)}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    </div>
   );
 }
 
@@ -202,6 +327,9 @@ export default function InboxPage() {
     contactTyping,
     error,
     channelFilter,
+    viewingArchived,
+    setViewingArchived,
+    archivedCount,
     search,
     transcribingId,
     agents,
@@ -215,6 +343,10 @@ export default function InboxPage() {
     assignConversation,
     unassignConversation,
     resumeAi,
+    deletingId,
+    deleteConversation,
+    archivingId,
+    archiveConversation,
   } = useInbox();
 
   const [draft, setDraft] = useState('');
@@ -235,6 +367,10 @@ export default function InboxPage() {
   // Abaixo de lg só cabe um painel por vez: a lista ou a conversa.
   const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
   const [replyTo, setReplyTo] = useState<InboxMessage | null>(null);
+  // Conversa que o arrasto colocou na fila de exclusão — enquanto houver uma, o modal está aberto.
+  const [conversationToDelete, setConversationToDelete] = useState<InboxConversation | null>(null);
+  // Só uma linha por vez mostra o painel de ações — a anterior fecha ao abrir outra.
+  const [swipedRowId, setSwipedRowId] = useState<string | null>(null);
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -421,8 +557,15 @@ export default function InboxPage() {
   };
 
   const handleSelectConversation = (conversationId: string) => {
+    setSwipedRowId(null);
     selectConversation(conversationId);
     setMobilePane('thread');
+  };
+
+  const handleArchive = (conversation: InboxConversation) => {
+    if (archivingId) return;
+    setSwipedRowId(null);
+    archiveConversation(conversation.id, !conversation.archivedAt).catch(() => {});
   };
 
   const handleAssign = (userId: string) => {
@@ -440,12 +583,31 @@ export default function InboxPage() {
     resumeAi(selectedId).catch(() => {});
   };
 
-  const filters: Array<{ id: InboxChannelType | 'ALL'; label: string }> = [
+  const handleConfirmDelete = () => {
+    const target = conversationToDelete;
+    if (!target || deletingId) return;
+    deleteConversation(target.id)
+      .then(() => {
+        setConversationToDelete(null);
+        // Na largura em que só cabe um painel, sair da conversa apagada é voltar para a lista.
+        if (selectedId === target.id) setMobilePane('list');
+      })
+      // O erro já vai para a faixa de aviso da página; o modal fica aberto para nova tentativa.
+      .catch(() => {});
+  };
+
+  const filters: Array<{ id: InboxFilterId; label: string }> = [
     { id: 'ALL', label: 'Todos' },
     { id: 'WHATSAPP', label: 'WhatsApp' },
     { id: 'WHATSAPP_OFFICIAL', label: 'Oficial' },
     { id: 'INSTAGRAM', label: 'Instagram' },
   ];
+
+  const openArchived = (open: boolean) => {
+    setSwipedRowId(null);
+    setSearch('');
+    setViewingArchived(open);
+  };
 
   return (
     // Altura = viewport − header (4rem) − padding vertical do main (p-3/sm:p-5).
@@ -466,7 +628,17 @@ export default function InboxPage() {
         <aside className={`${PANEL} w-full shrink-0 lg:w-80 ${mobilePane === 'thread' ? 'hidden lg:flex' : 'flex'}`}>
           <div className="space-y-2.5 border-b border-slate-100 dark:border-slate-700 p-3">
             <div className="flex items-baseline justify-between gap-2">
-              <h1 className="text-sm font-semibold text-slate-900 dark:text-white">Caixa de entrada</h1>
+              {viewingArchived ? (
+                <button
+                  onClick={() => openArchived(false)}
+                  className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white"
+                >
+                  <ArrowLeft size={15} className="text-slate-400 dark:text-slate-500" />
+                  Arquivadas
+                </button>
+              ) : (
+                <h1 className="text-sm font-semibold text-slate-900 dark:text-white">Caixa de entrada</h1>
+              )}
               <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
                 {conversations.length.toLocaleString('pt-BR')} conversa{conversations.length === 1 ? '' : 's'}
               </span>
@@ -482,18 +654,39 @@ export default function InboxPage() {
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-1">
-              {filters.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setChannelFilter(f.id)}
-                  className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${channelFilter === f.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs dark:shadow-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            {/* Dentro do arquivo o recorte por canal não vale: ele mostra tudo que foi arquivado. */}
+            {!viewingArchived && (
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-1">
+                {filters.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      setSwipedRowId(null);
+                      setChannelFilter(f.id);
+                    }}
+                    className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${channelFilter === f.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs dark:shadow-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Atalho para o arquivo, acima da lista — como no WhatsApp. Some quando não há
+              nada arquivado: sem conversa lá dentro, a linha só ocuparia espaço. */}
+          {!viewingArchived && archivedCount > 0 && (
+            <button
+              onClick={() => openArchived(true)}
+              className="flex w-full cursor-pointer items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-slate-700/40"
+            >
+              <Archive size={16} className="shrink-0 text-slate-400 dark:text-slate-500" />
+              <span className="flex-1 text-[13px] font-medium text-slate-600 dark:text-slate-300">Arquivadas</span>
+              <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                {archivedCount.toLocaleString('pt-BR')}
+              </span>
+            </button>
+          )}
 
           <div className="flex-1 overflow-y-auto">
             {loadingConversations ? (
@@ -506,10 +699,16 @@ export default function InboxPage() {
               <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 text-center">
                 <Inbox size={22} className="text-slate-300 dark:text-slate-600" />
                 <p className="text-[13px] text-slate-600 dark:text-slate-400">
-                  {search.trim() ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
+                  {search.trim()
+                    ? 'Nenhuma conversa encontrada'
+                    : viewingArchived ? 'Nenhuma conversa arquivada' : 'Nenhuma conversa ainda'}
                 </p>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                  {search.trim() ? 'Tente outro termo ou limpe a busca.' : 'As mensagens recebidas aparecem aqui.'}
+                  {search.trim()
+                    ? 'Tente outro termo ou limpe a busca.'
+                    : viewingArchived
+                      ? 'Arraste uma conversa para o lado para arquivar.'
+                      : 'As mensagens recebidas aparecem aqui.'}
                 </p>
               </div>
             ) : (
@@ -522,7 +721,17 @@ export default function InboxPage() {
                   // Abrir a conversa marca como lida e dispara o recibo de leitura para o
                   // contato. Com o chat desligado o operador não viu nada, então não seleciona.
                   disabled={!chatEnabled}
+                  // Exclusão é irreversível e vale para o workspace inteiro: só dono/admin.
+                  canDelete={hasFullAccess}
+                  busy={archivingId === c.id || deletingId === c.id}
+                  open={swipedRowId === c.id}
+                  onOpenChange={(open) => setSwipedRowId(open ? c.id : null)}
                   onClick={() => handleSelectConversation(c.id)}
+                  onArchive={() => handleArchive(c)}
+                  onRequestDelete={() => {
+                    setSwipedRowId(null);
+                    setConversationToDelete(c);
+                  }}
                 />
               ))
             )}
@@ -852,6 +1061,16 @@ export default function InboxPage() {
           </>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={!!conversationToDelete}
+        onClose={() => setConversationToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        loading={!!deletingId}
+        title="Excluir conversa"
+        message={`A conversa com ${conversationToDelete?.contactName || conversationToDelete?.contactIdentifier || 'este contato'} e todo o histórico dela saem do chat para toda a equipe. Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir conversa"
+      />
     </div>
   );
 }

@@ -23,6 +23,8 @@ export function useAIConfig() {
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
   const [crossSellEnabled, setCrossSellEnabled] = useState(false);
+  const [followUpMinutes, setFollowUpMinutes] = useState(0);
+  const [followUpMessage, setFollowUpMessage] = useState('');
   const [instagramProductLayout, setInstagramProductLayout] = useState<InstagramProductLayout>('QUICK_REPLY');
   const [funnelStages, setFunnelStages] = useState<FunnelStageDefinition[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -111,6 +113,8 @@ export function useAIConfig() {
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
       setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
+      setFollowUpMinutes(aiConfig.followUpMinutes ?? 0);
+      setFollowUpMessage(aiConfig.followUpMessage ?? '');
       setInstagramProductLayout(aiConfig.instagramProductLayout ?? 'QUICK_REPLY');
       setEnabled(aiConfig.enabled);
       setActiveChannelId(aiConfig.activeChannelId);
@@ -142,6 +146,8 @@ export function useAIConfig() {
         tone,
         customRules,
         triggerSettings,
+        followUpMinutes,
+        followUpMessage,
         funnelAutoMoveEnabled,
       }, activeProfileRef.current);
       addToast('success', 'Configurações da IA salvas com sucesso!');
@@ -152,7 +158,7 @@ export function useAIConfig() {
     finally {
       setSaving(false);
     }
-  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, funnelAutoMoveEnabled, addToast]);
+  }, [segment, businessName, assistantName, tone, customRules, triggerSettings, followUpMinutes, followUpMessage, funnelAutoMoveEnabled, addToast]);
   const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
@@ -479,6 +485,10 @@ export function useAIConfig() {
     setCustomRules,
     triggerSettings,
     setTriggerSettings,
+    followUpMinutes,
+    setFollowUpMinutes,
+    followUpMessage,
+    setFollowUpMessage,
     schedulingQueryEnabled,
     setSchedulingQueryEnabled,
     schedulingBookingEnabled,

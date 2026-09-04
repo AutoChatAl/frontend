@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { inboxService } from '@/services/inbox.service';
-import type { InboxAgent, InboxChannelType, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
+import type { InboxAgent, InboxConversation, InboxFilterId, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
 
 const STATUS_RANK: Record<MessageDeliveryStatus, number> = { SENT: 1, DELIVERED: 2, READ: 3 };
 
@@ -30,12 +30,16 @@ interface UseInboxReturn {
   sending: boolean;
   contactTyping: boolean;
   error: string | null;
-  channelFilter: InboxChannelType | 'ALL';
+  channelFilter: InboxFilterId;
+  /** Lista mostrando o arquivo em vez da caixa principal. */
+  viewingArchived: boolean;
+  setViewingArchived: (value: boolean) => void;
+  archivedCount: number;
   search: string;
   transcribingId: string | null;
   agents: InboxAgent[];
   assigning: boolean;
-  setChannelFilter: (value: InboxChannelType | 'ALL') => void;
+  setChannelFilter: (value: InboxFilterId) => void;
   setSearch: (value: string) => void;
   selectConversation: (conversationId: string) => void;
   sendMessage: (body: string, media?: InboxOutgoingMedia, replyTo?: InboxMessage | null) => Promise<void>;
@@ -44,6 +48,10 @@ interface UseInboxReturn {
   assignConversation: (conversationId: string, userId: string) => Promise<void>;
   unassignConversation: (conversationId: string) => Promise<void>;
   resumeAi: (conversationId: string) => Promise<void>;
+  deletingId: string | null;
+  deleteConversation: (conversationId: string) => Promise<void>;
+  archivingId: string | null;
+  archiveConversation: (conversationId: string, archived: boolean) => Promise<void>;
 }
 
 export function useInbox(): UseInboxReturn {
@@ -55,11 +63,15 @@ export function useInbox(): UseInboxReturn {
   const [sending, setSending] = useState(false);
   const [transcribingId, setTranscribingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [channelFilter, setChannelFilter] = useState<InboxChannelType | 'ALL'>('ALL');
+  const [channelFilter, setChannelFilter] = useState<InboxFilterId>('ALL');
   const [search, setSearch] = useState('');
+  const [viewingArchived, setViewingArchived] = useState(false);
+  const [archivedCount, setArchivedCount] = useState(0);
   const [contactTyping, setContactTyping] = useState(false);
   const [agents, setAgents] = useState<InboxAgent[]>([]);
   const [assigning, setAssigning] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   const conversationsRef = useRef<InboxConversation[]>([]);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,16 +83,19 @@ export function useInbox(): UseInboxReturn {
   const loadConversations = useCallback(async () => {
     try {
       const filters: InboxListFilters = {};
-      if (channelFilter !== 'ALL') filters.channelType = channelFilter;
+      // O arquivo é uma vista à parte: mostra tudo que foi arquivado, sem recorte por canal.
+      if (viewingArchived) filters.archived = true;
+      else if (channelFilter !== 'ALL') filters.channelType = channelFilter;
       if (search.trim()) filters.search = search.trim();
-      const data = await inboxService.listConversations(filters);
+      const { conversations: data, archivedCount: count } = await inboxService.listConversations(filters);
       setConversations(data);
+      setArchivedCount(count);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar conversas.');
     } finally {
       setLoadingConversations(false);
     }
-  }, [channelFilter, search]);
+  }, [channelFilter, search, viewingArchived]);
 
   const loadConversationsRef = useRef(loadConversations);
   loadConversationsRef.current = loadConversations;
@@ -100,6 +115,19 @@ export function useInbox(): UseInboxReturn {
   const loadMessagesRef = useRef(loadMessages);
   loadMessagesRef.current = loadMessages;
 
+  /** Tira a conversa da lista e fecha a thread se era a que estava aberta. */
+  const dropConversation = useCallback((conversationId: string) => {
+    setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+    if (selectedIdRef.current === conversationId) {
+      setSelectedId(null);
+      setMessages([]);
+      setContactTyping(false);
+    }
+  }, []);
+
+  const dropConversationRef = useRef(dropConversation);
+  dropConversationRef.current = dropConversation;
+
   useEffect(() => {
     setLoadingConversations(true);
     loadConversations();
@@ -114,6 +142,15 @@ export function useInbox(): UseInboxReturn {
     let hadError = false;
 
     const onUpdate = () => { loadConversationsRef.current(); };
+    // Excluída por outro administrador: some da lista de todo mundo em tempo real.
+    const onDeleted = (event: Event) => {
+      try {
+        const { conversationId } = JSON.parse((event as MessageEvent).data) as { conversationId?: string };
+        if (conversationId) dropConversationRef.current(conversationId);
+      } catch {
+        loadConversationsRef.current();
+      }
+    };
     const onSettingsUpdate = () => {
       loadConversationsRef.current();
       const conversationId = selectedIdRef.current;
@@ -132,6 +169,7 @@ export function useInbox(): UseInboxReturn {
         }
       };
       es.addEventListener('conversation.updated', onUpdate);
+      es.addEventListener('conversation.deleted', onDeleted);
       es.addEventListener('settings.updated', onSettingsUpdate);
       es.onerror = () => {
         hadError = true;
@@ -188,6 +226,38 @@ export function useInbox(): UseInboxReturn {
   const resumeAi = useCallback(async (conversationId: string) => {
     await applyAssignment(() => inboxService.resumeAi(conversationId));
   }, [applyAssignment]);
+
+  /**
+   * Arquivar/desarquivar tira a conversa da vista atual nos dois sentidos: arquivada
+   * sai da caixa principal, desarquivada sai do filtro "Arquivadas".
+   */
+  const archiveConversation = useCallback(async (conversationId: string, archived: boolean) => {
+    setArchivingId(conversationId);
+    setError(null);
+    try {
+      await inboxService.setArchived(conversationId, archived);
+      dropConversation(conversationId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao arquivar a conversa.');
+      throw e;
+    } finally {
+      setArchivingId(null);
+    }
+  }, [dropConversation]);
+
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    setDeletingId(conversationId);
+    setError(null);
+    try {
+      await inboxService.deleteConversation(conversationId);
+      dropConversation(conversationId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao excluir a conversa.');
+      throw e;
+    } finally {
+      setDeletingId(null);
+    }
+  }, [dropConversation]);
 
   const selectConversation = useCallback((conversationId: string) => {
     setSelectedId(conversationId);
@@ -390,6 +460,9 @@ export function useInbox(): UseInboxReturn {
     contactTyping,
     error,
     channelFilter,
+    viewingArchived,
+    setViewingArchived,
+    archivedCount,
     search,
     transcribingId,
     agents,
@@ -403,5 +476,9 @@ export function useInbox(): UseInboxReturn {
     assignConversation,
     unassignConversation,
     resumeAi,
+    deletingId,
+    deleteConversation,
+    archivingId,
+    archiveConversation,
   };
 }

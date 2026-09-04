@@ -22,6 +22,10 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    /** Silêncio, em minutos, antes da retomada automática da IA. 0 = desligado. */
+    followUpMinutes?: number;
+    /** Texto da retomada. Vazio usa o padrão do backend. */
+    followUpMessage?: string;
     instagramProductLayout: InstagramProductLayout;
 }
 export interface Product {
@@ -85,6 +89,8 @@ class AiService {
         schedulingBookingEnabled: false,
         funnelAutoMoveEnabled: false,
         crossSellEnabled: false,
+        followUpMinutes: 0,
+        followUpMessage: '',
         instagramProductLayout: 'QUICK_REPLY',
       },
       profiles: [],
@@ -128,7 +134,7 @@ class AiService {
     }
     return response.data as { profiles: AiProfile[]; activeProfileId: string | null };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'instagramProductLayout'>>, profileId?: string | null): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'followUpMinutes' | 'followUpMessage' | 'instagramProductLayout'>>, profileId?: string | null): Promise<void> {
     const response = await apiClient.put('/ai/config', profileId ? { ...data, profileId } : data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;

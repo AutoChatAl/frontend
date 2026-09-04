@@ -50,6 +50,25 @@ export const defaultAiTriggerSettings: AiTriggerSettings = {
   recoveryAfterNoReply: false,
   detectUrgency: false,
 };
+/**
+ * Tempos de silêncio oferecidos no follow-up automático da IA — os mesmos do bloco
+ * "Aguardar resposta" dos fluxos, para as duas telas falarem a mesma língua.
+ */
+export const AI_FOLLOW_UP_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 0, label: 'Não enviar follow-up' },
+  { value: 10, label: '10 minutos' },
+  { value: 30, label: '30 minutos' },
+  { value: 60, label: '1 hora' },
+  { value: 240, label: '4 horas' },
+  { value: 480, label: '8 horas' },
+  { value: 1440, label: '24 horas' },
+];
+
+/** Espelha o padrão do backend (`infra/config/aiFollowUp`). Usado como placeholder. */
+export const DEFAULT_AI_FOLLOW_UP_MESSAGE = 'Ainda está por aí? Se preferir continuar depois, é só me chamar — vou encerrar este atendimento por enquanto.';
+
+export const AI_FOLLOW_UP_MESSAGE_MAX_CHARS = 500;
+
 export const tonesOptions = [
   { value: '', label: 'Selecione um tom...' },
   'Profissional e Formal',
@@ -77,6 +96,10 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    /** Silêncio, em minutos, antes da retomada automática. 0 = desligado. */
+    followUpMinutes: number;
+    /** Texto da retomada. Vazio usa o padrão do backend. */
+    followUpMessage: string;
     instagramProductLayout: InstagramProductLayout;
 }
 export interface Product {

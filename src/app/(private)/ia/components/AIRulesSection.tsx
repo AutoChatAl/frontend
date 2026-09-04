@@ -3,17 +3,22 @@
 import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
+import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import ToggleRow from '@/components/ToggleRow';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import type { AiTriggerSettings } from '@/types/AI';
+import { AI_FOLLOW_UP_MESSAGE_MAX_CHARS, AI_FOLLOW_UP_OPTIONS, DEFAULT_AI_FOLLOW_UP_MESSAGE, type AiTriggerSettings } from '@/types/AI';
 import { LOCKED_FEATURES } from '@lib/featureFlags';
 
 interface AIRulesSectionProps {
     customRules: string;
     triggerSettings: AiTriggerSettings;
+    followUpMinutes: number;
+    followUpMessage: string;
     onCustomRulesChange: (value: string) => void;
     onToggleTrigger: (triggerKey: keyof AiTriggerSettings) => void;
+    onFollowUpMinutesChange: (value: number) => void;
+    onFollowUpMessageChange: (value: string) => void;
     /** Limite vindo do GET /config. Tem prioridade sobre o da assinatura, que pode estar em cache. */
     maxChars?: number;
 }
@@ -43,7 +48,7 @@ const triggerOptions: Array<{
     description: 'Prioriza acolhimento e orientação direta em mensagens urgentes.',
   },
 ];
-export default function AIRulesSection({ customRules, triggerSettings, onCustomRulesChange, onToggleTrigger, maxChars: maxCharsProp }: AIRulesSectionProps) {
+export default function AIRulesSection({ customRules, triggerSettings, followUpMinutes, followUpMessage, onCustomRulesChange, onToggleTrigger, onFollowUpMinutesChange, onFollowUpMessageChange, maxChars: maxCharsProp }: AIRulesSectionProps) {
   const { status } = useSubscription();
   const maxChars = maxCharsProp && maxCharsProp > 0 ? maxCharsProp : (status?.limits?.maxCustomRulesChars ?? 0);
   const overLimit = maxChars > 0 && customRules.length > maxChars;
@@ -76,6 +81,37 @@ export default function AIRulesSection({ customRules, triggerSettings, onCustomR
             />
           ))}
         </div>
+      </Card>
+
+      <Card className="p-4">
+        <SectionHeader
+          title="Retomada automática"
+          hint="Se o cliente sumir depois da última resposta da IA, ela manda uma mensagem curta puxando o assunto de volta."
+        />
+        <Select
+          label="Enviar follow-up após"
+          value={String(followUpMinutes)}
+          onChange={(value) => onFollowUpMinutesChange(Number(value))}
+          options={AI_FOLLOW_UP_OPTIONS.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          hint="Só uma mensagem por silêncio, e nunca em conversa que já foi para atendimento humano. No Instagram e na API Oficial a Meta só permite mensagem livre por 24h após a fala do cliente — prazos que caem fora dessa janela não são agendados nesses canais."
+        />
+
+        {followUpMinutes > 0 && (
+          <div className="mt-3">
+            <Textarea
+              label="Mensagem enviada"
+              rows={3}
+              maxLength={AI_FOLLOW_UP_MESSAGE_MAX_CHARS}
+              value={followUpMessage}
+              onChange={(e) => onFollowUpMessageChange(e.target.value)}
+              placeholder={DEFAULT_AI_FOLLOW_UP_MESSAGE}
+              hint="Texto fixo, enviado como está — não passa pela IA e não consome créditos de IA. Em branco, usa o texto do exemplo."
+            />
+          </div>
+        )}
       </Card>
 
       <Card className="p-4">
