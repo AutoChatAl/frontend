@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import AudioPicker from '@/components/AudioPicker';
@@ -13,6 +13,7 @@ import type { WorkspaceChannel } from '@/hooks/WorkspaceChannelsHook';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { channelsService } from '@/services/channels.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
+import { liveAutomationService } from '@/services/live-automation.service';
 import type { InstagramMedia } from '@/types/Channel';
 import { AUDIO_UPLOAD, validateAudioFile, validateCommentAudioFile } from '@/utils/audio';
 import { stripWhatsAppFormatting } from '@/utils/whatsappFormat';
@@ -32,9 +33,11 @@ import {
 import {
   addKeywords,
   COMMENT_REPLY_MAX,
+  COMMENT_REPLY_OPTIONS_MAX,
   emptyDraft,
   draftFromAutoReply,
   draftFromCommentAutomation,
+  draftFromLiveAutomation,
   KEYWORDS_MAX,
   LINK_DESCRIPTION_MAX,
   LINK_LABEL_MAX,
@@ -43,11 +46,12 @@ import {
   replyTypeOptions,
   toAutoReplyInput,
   toCommentAutomationInput,
+  toLiveAutomationInput,
   validateDraft,
   type AutomationDraft,
   type KeywordLogic,
 } from './automationForm';
-import { hasAudio, hasDocument, hasImage, hasText, type AutomationKind, type AutomationRow } from './automationMeta';
+import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind, type AutomationRow } from './automationMeta';
 import AutomationPreview from './AutomationPreview';
 
 interface AutomationModalProps {
@@ -67,6 +71,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const TITLES: Record<AutomationKind, { create: string; edit: string }> = {
   DM: { create: 'Nova auto-resposta', edit: 'Editar auto-resposta' },
   COMMENT: { create: 'Nova automação de comentário', edit: 'Editar automação de comentário' },
+  LIVE: { create: 'Nova automação de live', edit: 'Editar automação de live' },
 };
 
 function readAsBase64(file: File, onDone: (base64: string) => void): void {
@@ -107,18 +112,19 @@ export default function AutomationModal({
     setPostsFor('');
     if (editing?.kind === 'DM') setDraft(draftFromAutoReply(editing.rule));
     else if (editing?.kind === 'COMMENT') setDraft(draftFromCommentAutomation(editing.rule));
+    else if (editing?.kind === 'LIVE') setDraft(draftFromLiveAutomation(editing.rule));
     else setDraft(emptyDraft(kind));
   }, [isOpen, editing, kind]);
 
   // Comentário só existe no Instagram — a lista nem deve oferecer o resto.
   const pickableChannels = useMemo(
-    () => (kind === 'COMMENT' ? channels.filter((channel) => channel.type === 'INSTAGRAM') : channels),
+    () => (isCommentLike(kind) ? channels.filter((channel) => channel.type === 'INSTAGRAM') : channels),
     [channels, kind],
   );
 
   const isInstagram = draft.channelType === 'INSTAGRAM';
   const messageMax = MESSAGE_MAX[kind];
-  const typeOptions = replyTypeOptions(draft.channelType);
+  const typeOptions = replyTypeOptions(draft.channelType, kind);
 
   // Publicações da conta, para o seletor de post. Só carrega quando a seção
   // aparece: é uma chamada à Graph API que a maioria das automações não precisa.
@@ -179,14 +185,14 @@ export default function AutomationModal({
 
   const handleImage = (file: File) => {
     const mime = (file.type || '').toLowerCase();
-    const acceptedMimes = kind === 'COMMENT'
+    const acceptedMimes = isCommentLike(kind)
       ? ['image/png', 'image/jpeg', 'image/jpg']
       : ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const acceptedExt = kind === 'COMMENT' ? /\.(png|jpe?g)$/i : /\.(png|jpe?g|webp)$/i;
+    const acceptedExt = isCommentLike(kind) ? /\.(png|jpe?g)$/i : /\.(png|jpe?g|webp)$/i;
     if (!acceptedMimes.includes(mime) && !acceptedExt.test(file.name)) {
       setErrors((prev) => ({
         ...prev,
-        image: kind === 'COMMENT' ? 'A imagem deve ser PNG ou JPEG.' : 'A imagem deve ser PNG, JPEG ou WEBP.',
+        image: isCommentLike(kind) ? 'A imagem deve ser PNG ou JPEG.' : 'A imagem deve ser PNG, JPEG ou WEBP.',
       }));
       return;
     }
@@ -227,6 +233,10 @@ export default function AutomationModal({
         const input = toAutoReplyInput(draft);
         if (editing) await autoReplyService.update(editing.id, input);
         else await autoReplyService.create(input);
+      } else if (kind === 'LIVE') {
+        const input = toLiveAutomationInput(draft);
+        if (editing) await liveAutomationService.update(editing.id, input);
+        else await liveAutomationService.create(input);
       } else {
         const input = toCommentAutomationInput(draft);
         if (editing) await commentAutomationService.update(editing.id, input);
@@ -242,11 +252,11 @@ export default function AutomationModal({
   };
 
   const matchMode = MATCH_MODE_OPTIONS.find((option) => option.value === draft.matchMode);
-  const needKeyword = !(kind === 'COMMENT' && draft.triggerOnAnyComment);
-  // Só a auto-resposta de DM aceita várias palavras hoje.
-  const multiKeyword = kind === 'DM';
+  const needKeyword = !(isCommentLike(kind) && draft.triggerOnAnyComment);
+  // A automação de comentário dispara por uma palavra só; DM e live aceitam a lista.
+  const multiKeyword = kind !== 'COMMENT';
   const lockedToContains = multiKeyword && draft.keywords.length > 1 && draft.keywordLogic === 'ALL';
-  const answerTitle = kind === 'COMMENT' ? 'Mensagem na DM' : 'Resposta';
+  const answerTitle = isCommentLike(kind) ? 'Mensagem na DM' : 'Resposta';
 
   return (
     <Modal
@@ -265,7 +275,7 @@ export default function AutomationModal({
 
         <FormSection
           title="Canal"
-          description={kind === 'COMMENT'
+          description={isCommentLike(kind)
             ? 'Automação de comentário funciona apenas em contas do Instagram.'
             : 'Onde a automação fica escutando as mensagens recebidas.'}
         >
@@ -274,7 +284,7 @@ export default function AutomationModal({
             loading={channelsLoading}
             value={draft.channelId}
             onChange={handleChannel}
-            emptyMessage={kind === 'COMMENT'
+            emptyMessage={isCommentLike(kind)
               ? 'Nenhuma conta do Instagram conectada.'
               : 'Nenhum canal disponível. Conecte um canal primeiro.'}
             error={errors.channelId}
@@ -282,7 +292,7 @@ export default function AutomationModal({
         </FormSection>
 
         <FormSection title="Gatilho" description="O que precisa acontecer para a automação disparar.">
-          {kind === 'COMMENT' && (
+          {isCommentLike(kind) && (
             <Checkbox
               checked={draft.triggerOnAnyComment}
               onChange={(checked) => {
@@ -312,7 +322,7 @@ export default function AutomationModal({
                     }));
                     clearError('keywords');
                   }}
-                  placeholder={kind === 'COMMENT' ? 'Ex.: quero' : 'Ex.: quero comprar'}
+                  placeholder={isCommentLike(kind) ? 'Ex.: quero' : 'Ex.: quero comprar'}
                   error={errors.keywords}
                 />
               </div>
@@ -361,8 +371,13 @@ export default function AutomationModal({
           )}
         </FormSection>
 
-        {kind === 'COMMENT' && (
-          <FormSection title="Resposta pública" description="O que a automação escreve embaixo do comentário, visível para todo mundo.">
+        {isCommentLike(kind) && (
+          <FormSection
+            title="Resposta pública"
+            description={kind === 'LIVE'
+              ? 'O que a automação escreve no chat da transmissão, visível para quem está assistindo.'
+              : 'O que a automação escreve embaixo do comentário, visível para todo mundo.'}
+          >
             <Checkbox
               checked={draft.commentReplyEnabled}
               onChange={(checked) => {
@@ -373,26 +388,73 @@ export default function AutomationModal({
             />
 
             {draft.commentReplyEnabled && (
-              <div>
-                <Textarea
-                  value={draft.commentReplyMessage}
-                  onChange={(event) => {
-                    patch({ commentReplyMessage: event.target.value });
-                    clearError('commentReplyMessage');
-                  }}
-                  placeholder="Ex.: Obrigado pelo comentário {{username}}! Já mandei tudo no seu direct."
-                  rows={3}
-                  maxLength={COMMENT_REPLY_MAX}
-                  error={errors.commentReplyMessage}
-                />
-                <div className="flex items-start justify-between gap-3">
-                  <UsernameInserter
-                    onInsert={() => patch({ commentReplyMessage: `${draft.commentReplyMessage}{{username}}` })}
-                  />
-                  <span className="mt-1.5 shrink-0">
-                    <CharCounter value={draft.commentReplyMessage.length} max={COMMENT_REPLY_MAX} />
-                  </span>
-                </div>
+              <div className="space-y-2">
+                {draft.commentReplyMessages.map((message, index) => (
+                  <div key={index}>
+                    <div className="flex items-start gap-2">
+                      <Textarea
+                        // O componente descarta `className` e estiliza o wrapper por
+                        // `wrapperClassName` — é ele que precisa esticar na linha.
+                        wrapperClassName="flex-1"
+                        value={message}
+                        onChange={(event) => {
+                          const next = [...draft.commentReplyMessages];
+                          next[index] = event.target.value;
+                          patch({ commentReplyMessages: next });
+                          clearError('commentReplyMessage');
+                        }}
+                        placeholder={index === 0
+                          ? 'Ex.: Obrigado pelo comentário {{username}}! Já mandei tudo no seu direct.'
+                          : 'Outra forma de dizer a mesma coisa'}
+                        rows={2}
+                        maxLength={COMMENT_REPLY_MAX}
+                        {...(index === 0 && errors.commentReplyMessage ? { error: errors.commentReplyMessage } : {})}
+                      />
+                      {draft.commentReplyMessages.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => patch({
+                            commentReplyMessages: draft.commentReplyMessages.filter((_, i) => i !== index),
+                          })}
+                          aria-label="Remover esta variação"
+                          className="mt-1 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <UsernameInserter
+                        onInsert={() => {
+                          const next = [...draft.commentReplyMessages];
+                          next[index] = `${message}{{username}}`;
+                          patch({ commentReplyMessages: next });
+                        }}
+                      />
+                      <span className="mt-1.5 shrink-0">
+                        <CharCounter value={message.length} max={COMMENT_REPLY_MAX} />
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {draft.commentReplyMessages.length < COMMENT_REPLY_OPTIONS_MAX && (
+                  <button
+                    type="button"
+                    onClick={() => patch({ commentReplyMessages: [...draft.commentReplyMessages, ''] })}
+                    className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                  >
+                    <Plus size={14} />
+                    Adicionar variação
+                  </button>
+                )}
+
+                {draft.commentReplyMessages.length > 1 && (
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                    A cada comentário o sistema sorteia uma das variações — assim o perfil não
+                    repete a mesma frase embaixo de todos.
+                  </p>
+                )}
               </div>
             )}
           </FormSection>
@@ -400,7 +462,7 @@ export default function AutomationModal({
 
         <FormSection
           title={answerTitle}
-          description={kind === 'COMMENT'
+          description={isCommentLike(kind)
             ? 'Enviada no direct de quem comentou.'
             : 'Enviada automaticamente para quem mandou a palavra-chave.'}
         >
@@ -414,7 +476,7 @@ export default function AutomationModal({
                 setErrors((prev) => ({ ...prev, message: '', audio: '', image: '', document: '' }));
               }}
             />
-            {kind === 'COMMENT' && !hasText(draft.replyType) && (
+            {isCommentLike(kind) && !hasText(draft.replyType) && (
               <p className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-300">
                 A mídia é entregue via <strong>Private Reply</strong> do Instagram, pelo ID do comentário: funciona mesmo
                 se a pessoa nunca te mandou DM nem te segue, desde que tenha comentado nos últimos 7 dias.
@@ -432,7 +494,7 @@ export default function AutomationModal({
                     patch({ message: event.target.value });
                     clearError('message');
                   }}
-                  placeholder={kind === 'COMMENT'
+                  placeholder={isCommentLike(kind)
                     ? 'Ex.: Oi {{username}}! Aqui está o link que você pediu.'
                     : 'Ex.: Aqui está o seu link: https://exemplo.com'}
                   rows={4}
@@ -453,7 +515,7 @@ export default function AutomationModal({
                 />
               )}
               <div className="flex items-start justify-between gap-3">
-                {kind === 'COMMENT'
+                {isCommentLike(kind)
                   ? <UsernameInserter onInsert={() => patch({ message: `${draft.message}{{username}}` })} />
                   : <span />}
                 <span className="mt-1.5 shrink-0">
@@ -476,9 +538,9 @@ export default function AutomationModal({
                 patch({ audioBase64: value.base64, audioMimeType: value.mimeType, audioFileName: value.fileName });
                 clearError('audio');
               }}
-              maxBytes={kind === 'COMMENT' ? AUDIO_UPLOAD.comment.maxBytes : AUDIO_UPLOAD.autoReply.maxBytes}
-              accept={kind === 'COMMENT' ? AUDIO_UPLOAD.comment.accept : AUDIO_UPLOAD.autoReply.accept}
-              validateUpload={kind === 'COMMENT' ? validateCommentAudioFile : validateAudioFile}
+              maxBytes={isCommentLike(kind) ? AUDIO_UPLOAD.comment.maxBytes : AUDIO_UPLOAD.autoReply.maxBytes}
+              accept={isCommentLike(kind) ? AUDIO_UPLOAD.comment.accept : AUDIO_UPLOAD.autoReply.accept}
+              validateUpload={isCommentLike(kind) ? validateCommentAudioFile : validateAudioFile}
               error={errors.audio}
             />
           )}

@@ -1,8 +1,9 @@
 import type { WorkspaceChannelType } from '@/hooks/WorkspaceChannelsHook';
 import type { AutoReply, CreateAutoReplyInput, ReplyType } from '@/types/AutoReply';
 import type { CommentAutomation, CreateCommentAutomationInput } from '@/types/CommentAutomation';
+import type { CreateLiveAutomationInput, LiveAutomation } from '@/types/LiveAutomation';
 
-import { hasAudio, hasDocument, hasImage, hasText, type AutomationKind } from './automationMeta';
+import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind } from './automationMeta';
 
 export type MatchMode = 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
 export type KeywordLogic = 'ANY' | 'ALL';
@@ -36,6 +37,8 @@ export interface AutomationDraft {
   /** Só comentário: resposta pública embaixo do comentário. */
   commentReplyEnabled: boolean;
   commentReplyMessage: string;
+  /** Só comentário e live: variações da resposta pública, sorteadas no envio. */
+  commentReplyMessages: string[];
   replyType: ReplyType;
   message: string;
   audioBase64: string;
@@ -59,22 +62,27 @@ export interface AutomationDraft {
 
 export const LINK_LABEL_MAX = 100;
 export const LINK_DESCRIPTION_MAX = 80;
-export const MESSAGE_MAX = { DM: 4000, COMMENT: 1000 } as const;
+export const MESSAGE_MAX: Record<AutomationKind, number> = { DM: 4000, COMMENT: 1000, LIVE: 1000 };
 export const COMMENT_REPLY_MAX = 300;
+/** Teto de variações da resposta pública. Acima disso a tela vira uma lista sem fim. */
+export const COMMENT_REPLY_OPTIONS_MAX = 5;
 
 export function emptyDraft(kind: AutomationKind): AutomationDraft {
   return {
     channelId: '',
     // Comentário só existe no Instagram; a DM começa no WhatsApp e muda com a
     // escolha do canal.
-    channelType: kind === 'COMMENT' ? 'INSTAGRAM' : 'WHATSAPP',
+    channelType: isCommentLike(kind) ? 'INSTAGRAM' : 'WHATSAPP',
     keywords: [],
     keywordLogic: 'ANY',
     matchMode: 'CONTAINS',
     caseSensitive: false,
     triggerOnAnyComment: false,
+    // A resposta pública nasce ligada no post e desligada na live: na transmissão o
+    // chat corre rápido e responder cada comentário polui a tela de quem assiste.
     commentReplyEnabled: kind === 'COMMENT',
     commentReplyMessage: '',
+    commentReplyMessages: [''],
     replyType: 'TEXT',
     message: '',
     audioBase64: '',
@@ -125,22 +133,55 @@ export function draftFromAutoReply(rule: AutoReply): AutomationDraft {
   };
 }
 
-export function draftFromCommentAutomation(rule: CommentAutomation): AutomationDraft {
+/** A regra de live tem os mesmos campos da de comentário, menos o filtro de post. */
+export function draftFromLiveAutomation(rule: LiveAutomation): AutomationDraft {
   return {
-    ...emptyDraft('COMMENT'),
+    ...emptyDraft('LIVE'),
     channelId: rule.channelId,
     channelType: 'INSTAGRAM',
-    keywords: rule.keyword ? [rule.keyword] : [],
+    keywords: rule.keywords?.length ? rule.keywords : (rule.keyword ? [rule.keyword] : []),
+    keywordLogic: rule.keywordLogic ?? 'ANY',
     matchMode: rule.matchMode,
     caseSensitive: rule.caseSensitive,
     triggerOnAnyComment: rule.triggerOnAnyComment,
     commentReplyEnabled: rule.commentReplyEnabled,
     commentReplyMessage: rule.commentReplyMessage ?? '',
+    commentReplyMessages: rule.commentReplyMessages?.length
+      ? rule.commentReplyMessages
+      : [rule.commentReplyMessage ?? ''],
     replyType: rule.dmReplyType,
     message: rule.dmMessage ?? '',
-    audioBase64: rule.dmAudioBase64 ?? '',
-    audioMimeType: rule.dmAudioMimeType ?? '',
-    audioFileName: rule.dmAudioBase64 ? 'Áudio salvo' : '',
+    imageBase64: rule.dmImageBase64 ?? '',
+    imageMimeType: rule.dmImageMimeType ?? '',
+    imageFileName: rule.dmImageBase64 ? 'Imagem salva' : '',
+    documentBase64: rule.dmDocumentBase64 ?? '',
+    documentMimeType: rule.dmDocumentMimeType ?? '',
+    documentName: rule.dmDocumentName ?? (rule.dmDocumentBase64 ? 'Documento salvo' : ''),
+    linkUrl: rule.dmLinkUrl ?? '',
+    linkLabel: rule.dmLinkLabel ?? '',
+    linkDescription: rule.dmLinkDescription ?? '',
+    oncePerUser: rule.oncePerUser,
+    enabled: rule.enabled,
+  };
+}
+
+export function draftFromCommentAutomation(rule: CommentAutomation): AutomationDraft {
+  return {
+    ...emptyDraft('COMMENT'),
+    channelId: rule.channelId,
+    channelType: 'INSTAGRAM',
+    keywords: rule.keywords?.length ? rule.keywords : (rule.keyword ? [rule.keyword] : []),
+    keywordLogic: rule.keywordLogic ?? 'ANY',
+    matchMode: rule.matchMode,
+    caseSensitive: rule.caseSensitive,
+    triggerOnAnyComment: rule.triggerOnAnyComment,
+    commentReplyEnabled: rule.commentReplyEnabled,
+    commentReplyMessage: rule.commentReplyMessage ?? '',
+    commentReplyMessages: rule.commentReplyMessages?.length
+      ? rule.commentReplyMessages
+      : [rule.commentReplyMessage ?? ''],
+    replyType: rule.dmReplyType,
+    message: rule.dmMessage ?? '',
     imageBase64: rule.dmImageBase64 ?? '',
     imageMimeType: rule.dmImageMimeType ?? '',
     imageFileName: rule.dmImageBase64 ? 'Imagem salva' : '',
@@ -196,15 +237,26 @@ export function toAutoReplyInput(draft: AutomationDraft): CreateAutoReplyInput {
   return input;
 }
 
+/** Mesmo payload da automação de comentário, sem o filtro de post. */
+export function toLiveAutomationInput(draft: AutomationDraft): CreateLiveAutomationInput {
+  const { postFilter: _postFilter, postIds: _postIds, ...rest } = toCommentAutomationInput(draft);
+  return rest;
+}
+
 export function toCommentAutomationInput(draft: AutomationDraft): CreateCommentAutomationInput {
   const input: CreateCommentAutomationInput = {
     channelId: draft.channelId,
+    // `keyword` continua indo como a primeira da lista: é o que as regras antigas e o
+    // log leem. A lista completa é quem manda no casamento.
     keyword: draft.keywords[0] ?? '',
+    keywords: draft.keywords,
+    keywordLogic: draft.keywordLogic,
     matchMode: draft.matchMode,
     caseSensitive: draft.caseSensitive,
     triggerOnAnyComment: draft.triggerOnAnyComment,
     commentReplyEnabled: draft.commentReplyEnabled,
-    commentReplyMessage: draft.commentReplyMessage,
+    commentReplyMessage: draft.commentReplyMessages[0]?.trim() ?? '',
+    commentReplyMessages: draft.commentReplyMessages.map((m) => m.trim()).filter(Boolean),
     dmReplyType: draft.replyType,
     dmMessage: draft.message,
     dmLinkUrl: draft.linkUrl.trim(),
@@ -215,10 +267,6 @@ export function toCommentAutomationInput(draft: AutomationDraft): CreateCommentA
     oncePerUser: draft.oncePerUser,
     enabled: draft.enabled,
   };
-  if (draft.audioBase64) {
-    input.dmAudioBase64 = draft.audioBase64;
-    input.dmAudioMimeType = draft.audioMimeType;
-  }
   if (draft.imageBase64) {
     input.dmImageBase64 = draft.imageBase64;
     input.dmImageMimeType = draft.imageMimeType;
@@ -235,17 +283,17 @@ export const MATCH_MODE_OPTIONS: { value: MatchMode; label: string; description:
   {
     value: 'CONTAINS',
     label: 'Contém',
-    description: { DM: 'A mensagem contém a palavra-chave', COMMENT: 'O comentário contém a palavra-chave' },
+    description: { DM: 'A mensagem contém a palavra-chave', COMMENT: 'O comentário contém a palavra-chave', LIVE: 'O comentário na live contém a palavra-chave' },
   },
   {
     value: 'EXACT',
     label: 'Exata',
-    description: { DM: 'A mensagem é exatamente a palavra-chave', COMMENT: 'O comentário é exatamente a palavra-chave' },
+    description: { DM: 'A mensagem é exatamente a palavra-chave', COMMENT: 'O comentário é exatamente a palavra-chave', LIVE: 'O comentário na live é exatamente a palavra-chave' },
   },
   {
     value: 'STARTS_WITH',
     label: 'Começa com',
-    description: { DM: 'A mensagem começa com a palavra-chave', COMMENT: 'O comentário começa com a palavra-chave' },
+    description: { DM: 'A mensagem começa com a palavra-chave', COMMENT: 'O comentário começa com a palavra-chave', LIVE: 'O comentário na live começa com a palavra-chave' },
   },
 ];
 
@@ -261,23 +309,32 @@ const ALL_REPLY_TYPES: { value: ReplyType; label: string }[] = [
   { value: 'DOCUMENT_AND_AUDIO', label: 'Documento + áudio' },
 ];
 
-/** O Instagram não entrega documento nem por DM nem por private reply. */
-export function replyTypeOptions(channelType: WorkspaceChannelType): { value: ReplyType; label: string }[] {
-  if (channelType !== 'INSTAGRAM') return ALL_REPLY_TYPES;
-  return ALL_REPLY_TYPES.filter((option) => !hasDocument(option.value));
+/**
+ * O Instagram não entrega documento nem por DM nem por private reply.
+ *
+ * E, no comentário e na live, também não entrega áudio: a DM sai por private reply
+ * para quem só comentou, e o Instagram recusa anexo de áudio para quem nunca abriu
+ * conversa. A opção existia e falhava no envio.
+ */
+export function replyTypeOptions(channelType: WorkspaceChannelType, kind: AutomationKind): { value: ReplyType; label: string }[] {
+  const allowed = isCommentLike(kind)
+    ? ALL_REPLY_TYPES.filter((option) => !hasAudio(option.value))
+    : ALL_REPLY_TYPES;
+  if (channelType !== 'INSTAGRAM') return allowed;
+  return allowed.filter((option) => !hasDocument(option.value));
 }
 
 export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Record<string, string> {
   const errors: Record<string, string> = {};
 
   if (!draft.channelId) {
-    errors.channelId = kind === 'COMMENT' ? 'Selecione uma conta do Instagram' : 'Selecione um canal';
+    errors.channelId = isCommentLike(kind) ? 'Selecione uma conta do Instagram' : 'Selecione um canal';
   }
 
-  if (kind === 'COMMENT' && draft.triggerOnAnyComment) {
+  if (isCommentLike(kind) && draft.triggerOnAnyComment) {
     // Sem palavra-chave por definição.
   } else if (draft.keywords.length === 0) {
-    errors.keywords = kind === 'COMMENT'
+    errors.keywords = isCommentLike(kind)
       ? 'Informe a palavra-chave ou ative "Qualquer comentário"'
       : 'Informe ao menos uma palavra-chave';
   }
@@ -288,14 +345,14 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Rec
     errors.postIds = 'Escolha ao menos um post ou volte para "Todos os posts"';
   }
 
-  if (kind === 'COMMENT' && draft.commentReplyEnabled && !draft.commentReplyMessage.trim()) {
-    errors.commentReplyMessage = 'Informe a resposta ao comentário';
+  if (isCommentLike(kind) && draft.commentReplyEnabled && !draft.commentReplyMessages.some((m) => m.trim())) {
+    errors.commentReplyMessage = 'Informe ao menos uma resposta ao comentário';
   }
 
   if (hasText(draft.replyType) && !draft.message.trim()) {
-    errors.message = kind === 'COMMENT' ? 'Informe a mensagem da DM' : 'Informe a mensagem de resposta';
+    errors.message = isCommentLike(kind) ? 'Informe a mensagem da DM' : 'Informe a mensagem de resposta';
   }
-  if (hasAudio(draft.replyType) && !draft.audioBase64) {
+  if (!isCommentLike(kind) && hasAudio(draft.replyType) && !draft.audioBase64) {
     errors.audio = 'Envie um arquivo de áudio';
   }
   if (hasImage(draft.replyType) && !draft.imageBase64) {

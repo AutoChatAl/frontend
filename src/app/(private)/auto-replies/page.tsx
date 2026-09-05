@@ -11,18 +11,21 @@ import { ToastContainer, useToast } from '@/components/Toast';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { autoReplyService } from '@/services/auto-reply.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
+import { liveAutomationService } from '@/services/live-automation.service';
 import type { AutoReply } from '@/types/AutoReply';
 import type { CommentAutomation } from '@/types/CommentAutomation';
+import type { LiveAutomation } from '@/types/LiveAutomation';
 
 import AutomationCard from './components/AutomationCard';
 import AutomationFilters, { type KindFilter } from './components/AutomationFilters';
-import { toCommentRow, toDmRow, type AutomationKind, type AutomationRow } from './components/automationMeta';
+import { toCommentRow, toDmRow, toLiveRow, type AutomationKind, type AutomationRow } from './components/automationMeta';
 import AutomationModal from './components/AutomationModal';
 import AutomationTypeModal from './components/AutomationTypeModal';
 
 /** `?tipo=` abre a tela já filtrada — é por onde a rota antiga de comentários chega. */
 function kindFromParam(value: string | null): KindFilter {
   if (value === 'comentario' || value === 'comment') return 'COMMENT';
+  if (value === 'live') return 'LIVE';
   if (value === 'dm' || value === 'mensagem') return 'DM';
   return 'ALL';
 }
@@ -51,16 +54,18 @@ export default function AutoRepliesPage() {
     setError(null);
     try {
       // Uma lista falhando não pode esconder a outra: cada serviço tem o seu catch.
-      const [dms, comments] = await Promise.all([
+      const [dms, comments, lives] = await Promise.all([
         autoReplyService.list().catch(() => null),
         commentAutomationService.list().catch(() => null),
+        liveAutomationService.list().catch(() => null),
       ]);
-      if (dms === null && comments === null) {
+      if (dms === null && comments === null && lives === null) {
         throw new Error('Erro ao carregar as automações');
       }
       const merged: AutomationRow[] = [
         ...(dms ?? []).map((rule: WithMongoId<AutoReply>) => toDmRow({ ...rule, id: rule.id || rule._id || '' })),
         ...(comments ?? []).map((rule: WithMongoId<CommentAutomation>) => toCommentRow({ ...rule, id: rule.id || rule._id || '' })),
+        ...(lives ?? []).map((rule: WithMongoId<LiveAutomation>) => toLiveRow({ ...rule, id: rule.id || rule._id || '' })),
       ];
       merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRows(merged);
@@ -90,6 +95,7 @@ export default function AutoRepliesPage() {
     ALL: byChannel.length,
     DM: byChannel.filter((row) => row.kind === 'DM').length,
     COMMENT: byChannel.filter((row) => row.kind === 'COMMENT').length,
+    LIVE: byChannel.filter((row) => row.kind === 'LIVE').length,
   }), [byChannel]);
   const visible = useMemo(
     () => (kind === 'ALL' ? byChannel : byChannel.filter((row) => row.kind === kind)),
@@ -99,6 +105,7 @@ export default function AutoRepliesPage() {
   const handleToggle = async (row: AutomationRow) => {
     try {
       if (row.kind === 'DM') await autoReplyService.toggle(row.id);
+      else if (row.kind === 'LIVE') await liveAutomationService.toggle(row.id);
       else await commentAutomationService.toggle(row.id);
       setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, enabled: !item.enabled } : item)));
       addToast('success', `Automação ${row.enabled ? 'desativada' : 'ativada'}`);
@@ -112,6 +119,7 @@ export default function AutoRepliesPage() {
     setDeleting(true);
     try {
       if (deleteTarget.kind === 'DM') await autoReplyService.delete(deleteTarget.id);
+      else if (deleteTarget.kind === 'LIVE') await liveAutomationService.delete(deleteTarget.id);
       else await commentAutomationService.delete(deleteTarget.id);
       setRows((prev) => prev.filter((item) => item.id !== deleteTarget.id));
       addToast('success', 'Automação excluída');
@@ -232,7 +240,7 @@ export default function AutoRepliesPage() {
       title="Excluir automação"
       message={deleteTarget.kind === 'DM'
         ? `Tem certeza que deseja excluir a auto-resposta para "${deleteTarget.rule.keyword}"?`
-        : `Tem certeza que deseja excluir a automação ${deleteTarget.rule.keyword ? `para "${deleteTarget.rule.keyword}"` : 'de qualquer comentário'}?`}
+        : `Tem certeza que deseja excluir a automação ${deleteTarget.kind === 'LIVE' ? 'de live ' : ''}${deleteTarget.rule.keyword ? `para "${deleteTarget.rule.keyword}"` : 'de qualquer comentário'}?`}
     />)}
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>

@@ -1,5 +1,7 @@
 export type InboxChannelType = 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
 export type InboxDirection = 'IN' | 'OUT';
+/** Opções da barra de filtros da lista. O arquivo não entra aqui: é uma vista à parte. */
+export type InboxFilterId = InboxChannelType | 'ALL';
 export type MessageDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
 export type MessageMediaType = 'image' | 'audio' | 'video' | 'document';
 
@@ -32,6 +34,8 @@ export interface InboxConversation {
   /** Número/@ do canal que recebeu a mensagem — não o tipo do canal. */
   channelIdentifier?: string | null;
   channelName?: string | null;
+  /** Preenchido = conversa arquivada, fora da caixa principal. */
+  archivedAt?: string | null;
   /** Fim da janela de retenção configurada no workspace, calculado no servidor. */
   expiresAt?: string;
   replyWindowExpiresAt?: string | null;
@@ -105,6 +109,8 @@ export interface InboxOutgoingMedia {
 export interface InboxListFilters {
   channelType?: InboxChannelType;
   search?: string;
+  /** `true` lista o arquivo em vez da caixa principal. */
+  archived?: boolean;
 }
 
 export type InboxRetentionDays = 1 | 7 | 15 | 30;
