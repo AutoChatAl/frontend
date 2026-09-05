@@ -1,5 +1,5 @@
 'use client';
-import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, Lock, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
@@ -7,17 +7,19 @@ import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
-import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageMediaType } from '@/types/Inbox';
+import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
   AUDIO_WAV_MIME,
   blobToWavBase64,
   pickAudioRecorderMimeType,
 } from '@/utils/AudioWav';
+import { mediaTypeFromMime, validateInboxMedia } from '@/utils/inboxMedia';
 
 import {
   Avatar,
   bodyForBubble,
+  isAlbumPlaceholder,
   channelBadge,
   dayLabel,
   formatConversationTime,
@@ -28,6 +30,8 @@ import {
 } from './components/ChatBits';
 import ChatSettingsMenu from './components/ChatSettingsMenu';
 import ConversationContextPanel from './components/ConversationContextPanel';
+import DocumentBubble from './components/DocumentBubble';
+import MediaLightbox, { type LightboxItem } from './components/MediaLightbox';
 import { messagePreview, useInbox } from './useInbox';
 
 /**
@@ -62,13 +66,6 @@ function StatusTicks({ message }: { message: InboxMessage }) {
   return <CheckCheck size={13} className="text-sky-300" />;
 }
 
-function mediaTypeFromMime(mime: string): MessageMediaType {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('audio/')) return 'audio';
-  if (mime.startsWith('video/')) return 'video';
-  return 'document';
-}
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -91,12 +88,34 @@ function mediaSrc(message: InboxMessage): string | null {
   return null;
 }
 
-function MediaContent({ message }: { message: InboxMessage }) {
+/**
+ * Miniatura no balão. Foto e vídeo abrem em tela cheia — o `onExpand` só chega
+ * preenchido quando a mídia entrou na galeria da conversa (mensagem confirmada,
+ * com conteúdo exibível).
+ */
+function MediaContent({ message, onExpand }: { message: InboxMessage; onExpand?: () => void }) {
   const src = mediaSrc(message);
   if (!message.mediaType || !src) return null;
   if (message.mediaType === 'image') {
-    // eslint-disable-next-line @next/next/no-img-element -- mídia de chat (CDN dinâmico / base64) não suporta next/image
-    return <img src={src} alt={message.mediaFileName || 'Imagem'} className="max-h-64 max-w-full rounded-lg object-cover" />;
+    const image = (
+      // eslint-disable-next-line @next/next/no-img-element -- mídia de chat (CDN dinâmico / base64) não suporta next/image
+      <img src={src} alt={message.mediaFileName || 'Imagem'} className="max-h-64 max-w-full rounded-lg object-cover" />
+    );
+    if (!onExpand) return image;
+    return (
+      <button
+        type="button"
+        onClick={onExpand}
+        title="Ampliar"
+        aria-label="Ampliar imagem"
+        className="group/media relative block cursor-zoom-in overflow-hidden rounded-lg"
+      >
+        {image}
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/media:bg-black/25 group-hover/media:opacity-100">
+          <Maximize2 size={20} className="text-white drop-shadow" />
+        </span>
+      </button>
+    );
   }
   if (message.mediaType === 'audio') {
     return (
@@ -109,13 +128,31 @@ function MediaContent({ message }: { message: InboxMessage }) {
     );
   }
   if (message.mediaType === 'video') {
-    return <video controls src={src} className="max-h-64 max-w-full rounded-lg" />;
+    return (
+      <div className="relative">
+        <video controls src={src} className="max-h-64 max-w-full rounded-lg" />
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            title="Ampliar"
+            aria-label="Ampliar vídeo"
+            className="absolute right-2 top-2 rounded-lg bg-black/55 p-1.5 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          >
+            <Maximize2 size={15} />
+          </button>
+        )}
+      </div>
+    );
   }
   return (
-    <a href={src} target="_blank" rel="noreferrer" download={message.mediaFileName || true} className="flex items-center gap-2 underline">
-      <FileText size={16} />
-      {message.mediaFileName || 'Documento'}
-    </a>
+    <DocumentBubble
+      src={src}
+      fileName={message.mediaFileName}
+      mimeType={message.mediaMimeType}
+      base64={message.mediaBase64}
+      outgoing={message.direction === 'OUT'}
+    />
   );
 }
 
@@ -372,6 +409,10 @@ export default function InboxPage() {
   // Só uma linha por vez mostra o painel de ações — a anterior fecha ao abrir outra.
   const [swipedRowId, setSwipedRowId] = useState<string | null>(null);
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
+  // Índice da mídia aberta em tela cheia dentro de `gallery`; null com o visualizador fechado.
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Anexo recusado antes do upload (tamanho/formato) — some no próximo envio.
+  const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -383,6 +424,31 @@ export default function InboxPage() {
   const replyToRef = useRef<InboxMessage | null>(null);
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+
+  // O marcador de álbum do WhatsApp não é mensagem: as fotos que ele anuncia vêm
+  // logo abaixo, uma por balão. O webhook já descarta os novos — aqui somem os
+  // que ficaram gravados antes.
+  const visibleMessages = messages.filter((m) => !isAlbumPlaceholder(m));
+
+  // Galeria da conversa: fotos e vídeos na ordem da thread. As setas do
+  // visualizador andam por ela, então mídia sem conteúdo exibível (mensagem
+  // otimista ainda subindo, anexo grande demais para guardar) fica de fora.
+  const gallery: LightboxItem[] = visibleMessages.flatMap((m) => {
+    if (m.mediaType !== 'image' && m.mediaType !== 'video') return [];
+    if (m.pending) return [];
+    const src = mediaSrc(m);
+    if (!src) return [];
+    const caption = bodyForBubble(m.body, m.interactive).trim();
+    return [{
+      messageId: m.id,
+      kind: m.mediaType,
+      src,
+      fileName: m.mediaFileName ?? null,
+      createdAt: m.createdAt,
+      ...(caption ? { caption } : {}),
+    }];
+  });
+
   const replyWindowExpiresAt = selectedConversation?.replyWindowExpiresAt ?? null;
   const replyLocked = !!selectedConversation && (!replyWindowExpiresAt || new Date(replyWindowExpiresAt).getTime() <= now);
 
@@ -415,6 +481,8 @@ export default function InboxPage() {
   useEffect(() => {
     stickToBottomRef.current = true;
     setReplyTo(null);
+    setLightboxIndex(null);
+    setAttachError(null);
   }, [selectedId]);
 
   useEffect(() => {
@@ -474,6 +542,7 @@ export default function InboxPage() {
   const handleSend = async () => {
     const body = draft.trim();
     if (!body || replyLocked) return;
+    setAttachError(null);
     try {
       stickToBottomRef.current = true;
       await sendMessage(body, undefined, replyTo);
@@ -487,12 +556,21 @@ export default function InboxPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || replyLocked) return;
+    setAttachError(null);
+    if (!file || replyLocked || !selectedConversation) return;
+    const mediaType = mediaTypeFromMime(file.type);
+    // Recusa aqui evita subir dezenas de MB para ouvir um 413 do outro lado — a
+    // checagem que vale continua sendo a do backend.
+    const invalid = validateInboxMedia(file, mediaType, selectedConversation.channelType);
+    if (invalid) {
+      setAttachError(invalid);
+      return;
+    }
     try {
       stickToBottomRef.current = true;
       const base64 = await fileToBase64(file);
       const media: InboxOutgoingMedia = {
-        mediaType: mediaTypeFromMime(file.type),
+        mediaType,
         base64,
         mimeType: file.type || 'application/octet-stream',
         fileName: file.name,
@@ -852,8 +930,8 @@ export default function InboxPage() {
                 {loadingMessages ? (
                   <p className="text-sm text-slate-400">Carregando mensagens...</p>
                 ) : (
-                  messages.map((m, index) => {
-                    const previous = index > 0 ? messages[index - 1] : undefined;
+                  visibleMessages.map((m, index) => {
+                    const previous = index > 0 ? visibleMessages[index - 1] : undefined;
                     // Sticky no container rolável: cada badge fica presa no topo até a do
                     // dia seguinte empurrá-la para fora, marcando a virada de dia.
                     const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
@@ -903,11 +981,17 @@ export default function InboxPage() {
                                 <span className="block truncate">{m.replyToPreview}</span>
                               </button>
                             )}
-                            {m.mediaType && (
-                              <div className="mb-1">
-                                <MediaContent message={m} />
-                              </div>
-                            )}
+                            {m.mediaType && (() => {
+                              const galleryIndex = gallery.findIndex((item) => item.messageId === m.id);
+                              return (
+                                <div className="mb-1">
+                                  <MediaContent
+                                    message={m}
+                                    {...(galleryIndex >= 0 ? { onExpand: () => setLightboxIndex(galleryIndex) } : {})}
+                                  />
+                                </div>
+                              );
+                            })()}
                             {(() => {
                               const text = bodyForBubble(m.body, m.interactive);
                               return text ? <p>{text}</p> : null;
@@ -947,7 +1031,7 @@ export default function InboxPage() {
               </div>
 
               <footer className="border-t border-slate-100 dark:border-slate-700 p-3">
-                {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
+                {(attachError || error) && <p className="mb-2 text-xs text-rose-500">{attachError || error}</p>}
                 {replyLocked ? (
                   <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 py-2.5">
                     <Lock size={16} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
@@ -1071,6 +1155,15 @@ export default function InboxPage() {
         message={`A conversa com ${conversationToDelete?.contactName || conversationToDelete?.contactIdentifier || 'este contato'} e todo o histórico dela saem do chat para toda a equipe. Esta ação não pode ser desfeita.`}
         confirmLabel="Excluir conversa"
       />
+
+      {lightboxIndex !== null && gallery[lightboxIndex] && (
+        <MediaLightbox
+          items={gallery}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   );
 }

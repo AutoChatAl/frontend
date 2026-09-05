@@ -17,6 +17,11 @@ const MEDIA_PREVIEW_LABEL: Record<NonNullable<InboxMessage['mediaType']>, string
 export function messagePreview(message: InboxMessage): string {
   const text = message.body?.trim();
   if (text) return text.slice(0, 140);
+  // Documento aparece pelo nome do arquivo, como no WhatsApp: numa lista de conversas
+  // "📄 contrato-assinado.pdf" diz muito mais do que "📄 Documento".
+  if (message.mediaType === 'document' && message.mediaFileName?.trim()) {
+    return `📄 ${message.mediaFileName.trim()}`.slice(0, 140);
+  }
   if (message.mediaType) return MEDIA_PREVIEW_LABEL[message.mediaType];
   return '';
 }
@@ -76,6 +81,11 @@ export function useInbox(): UseInboxReturn {
   const conversationsRef = useRef<InboxConversation[]>([]);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentRef = useRef<number>(0);
+  /**
+   * Quando a thread aberta foi atualizada pela última vez. Serve para o evento do
+   * workspace não repetir uma busca que o stream da conversa acabou de fazer.
+   */
+  const lastThreadSyncRef = useRef<number>(0);
 
   selectedIdRef.current = selectedId;
   conversationsRef.current = conversations;
@@ -104,7 +114,13 @@ export function useInbox(): UseInboxReturn {
     if (!silent) setLoadingMessages(true);
     try {
       const data = await inboxService.listMessages(conversationId);
-      setMessages(data);
+      lastThreadSyncRef.current = Date.now();
+      // A recarga silenciosa pode cair no meio de um envio: sem preservar as bolhas
+      // otimistas, a mensagem que o operador acabou de mandar sumiria e voltaria.
+      setMessages((prev) => {
+        const pending = prev.filter((m) => m.pending);
+        return pending.length > 0 ? [...data, ...pending] : data;
+      });
     } catch (e) {
       if (!silent) setError(e instanceof Error ? e.message : 'Erro ao carregar mensagens.');
     } finally {
@@ -141,7 +157,30 @@ export function useInbox(): UseInboxReturn {
     let disposed = false;
     let hadError = false;
 
-    const onUpdate = () => { loadConversationsRef.current(); };
+    /**
+     * Rede de segurança da thread aberta.
+     *
+     * O caminho normal da mensagem nova é o stream da própria conversa; este evento é
+     * do workspace inteiro e chega por outra conexão. Quando a do canal da conversa
+     * cai (proxy derrubando conexão ociosa, rede do operador oscilando), era o único
+     * sinal que continuava vivo — e a lista atualizava a prévia enquanto a thread
+     * ficava parada. Com o carimbo de `lastThreadSyncRef`, o stream saudável já tinha
+     * trazido a mensagem e esta busca extra nem acontece.
+     */
+    const THREAD_RESYNC_GRACE_MS = 1500;
+    const onUpdate = (event: Event) => {
+      loadConversationsRef.current();
+      const openId = selectedIdRef.current;
+      if (!openId) return;
+      try {
+        const { conversationId } = JSON.parse((event as MessageEvent).data) as { conversationId?: string };
+        if (conversationId && conversationId !== openId) return;
+      } catch {
+        // Payload ilegível: ressincroniza mesmo assim, é o caso em que menos se sabe.
+      }
+      if (Date.now() - lastThreadSyncRef.current < THREAD_RESYNC_GRACE_MS) return;
+      loadMessagesRef.current(openId, true);
+    };
     // Excluída por outro administrador: some da lista de todo mundo em tempo real.
     const onDeleted = (event: Event) => {
       try {
@@ -288,6 +327,9 @@ export function useInbox(): UseInboxReturn {
         const payload = JSON.parse((event as MessageEvent).data) as { message?: InboxMessage };
         if (!payload.message || payload.message.conversationId !== conversationId) return;
         const incoming = payload.message;
+        // Carimbo do caminho saudável: o evento do workspace que vem logo atrás vê a
+        // thread recém-atualizada e não dispara uma busca redundante.
+        lastThreadSyncRef.current = Date.now();
         setContactTyping(false);
         setMessages((prev) => {
           if (prev.some((m) => m.id === incoming.id)) return prev;
@@ -374,6 +416,34 @@ export function useInbox(): UseInboxReturn {
       source?.close();
     };
   }, [selectedId, loadMessages]);
+
+  /**
+   * Aba em segundo plano e máquina suspensa matam o EventSource sem aviso — o
+   * navegador só reconecta quando a aba volta. Ao reaparecer (ou ao a rede voltar),
+   * ressincroniza lista e thread em silêncio, para o operador nunca encontrar a
+   * conversa desatualizada ao voltar para ela.
+   */
+  useEffect(() => {
+    // `focus` e `visibilitychange` disparam juntos ao trocar de aba — sem a folga,
+    // cada volta custaria duas rodadas de busca.
+    let lastResync = 0;
+    const resync = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastResync < 3000) return;
+      lastResync = Date.now();
+      loadConversationsRef.current();
+      const conversationId = selectedIdRef.current;
+      if (conversationId) loadMessagesRef.current(conversationId, true);
+    };
+    document.addEventListener('visibilitychange', resync);
+    window.addEventListener('online', resync);
+    window.addEventListener('focus', resync);
+    return () => {
+      document.removeEventListener('visibilitychange', resync);
+      window.removeEventListener('online', resync);
+      window.removeEventListener('focus', resync);
+    };
+  }, []);
 
   const notifyTyping = useCallback(() => {
     const conversationId = selectedIdRef.current;

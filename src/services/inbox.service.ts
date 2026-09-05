@@ -112,6 +112,15 @@ class InboxService {
       if (reason === 'IG_HUMAN_AGENT_NOT_APPROVED') {
         throw new Error('Envio bloqueado pelo Instagram: recurso não aprovado para este app.');
       }
+      if (reason === 'MEDIA_TOO_LARGE') {
+        throw new Error('O arquivo é grande demais para este canal.');
+      }
+      if (reason === 'MEDIA_EMPTY') {
+        throw new Error('O arquivo está vazio.');
+      }
+      if (reason === 'MEDIA_TYPE_UNSUPPORTED') {
+        throw new Error('Este canal não aceita esse tipo de arquivo.');
+      }
       throw new Error('Não foi possível enviar a mensagem.');
     }
     return { conversation: response.data.conversation, message: response.data.message ?? null };

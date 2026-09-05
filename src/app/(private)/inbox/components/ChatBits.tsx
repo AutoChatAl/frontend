@@ -63,6 +63,22 @@ export function channelBadge(type: InboxChannelType, channelLabel?: string | nul
 }
 
 /**
+ * Marcador que o provider do WhatsApp manda ao anunciar um álbum: uma mensagem
+ * própria, sem mídia, com um texto em inglês do tipo "Album: 2 images". As fotos
+ * chegam logo depois, uma mensagem cada — exibir o marcador só repetiria em outro
+ * idioma o que o próprio balão seguinte mostra.
+ *
+ * O webhook já descarta os novos; esta checagem esconde os que ficaram gravados
+ * antes disso.
+ */
+const ALBUM_PLACEHOLDER = /^album:\s*\d+\s*(images?|photos?|videos?|items?|medias?)$/i;
+
+export function isAlbumPlaceholder(message: { body: string; mediaType?: string | null }): boolean {
+  if (message.mediaType) return false;
+  return ALBUM_PLACEHOLDER.test(message.body.trim());
+}
+
+/**
  * Com o card desenhado, o marcador textual que a automação grava no corpo
  * (`[Saber mais: https://…]`) vira ruído — o botão já mostra a mesma coisa.
  */
