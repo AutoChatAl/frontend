@@ -17,7 +17,7 @@ import {
 } from '@/types/Flow';
 import type { FunnelStageDefinition } from '@/types/Funnel';
 
-import { AI_INTENTS_MAX, AI_INTENT_LABEL_MAX, AI_MODE_LABEL, ATTENDANCE_LABEL, BRANCH_LABELS, DELAY_OPTIONS, KEYWORDS_MAX, MEDIA_KIND_LABEL, NATIVE_CHOICES_MAX, RANDOM_BRANCHES_MAX, balancedWeights, blockMeta } from './blocks';
+import { AI_INTENTS_MAX, AI_INTENT_LABEL_MAX, AI_MODE_LABEL, ATTENDANCE_LABEL, BRANCH_LABELS, CATCH_ALL_DEFAULT_COOLDOWN, COOLDOWN_OPTIONS, DELAY_OPTIONS, KEYWORDS_MAX, MEDIA_KIND_LABEL, NATIVE_CHOICES_MAX, RANDOM_BRANCHES_MAX, balancedWeights, blockMeta } from './blocks';
 
 interface NodeInspectorProps {
   node: FlowNode;
@@ -454,6 +454,26 @@ export default function NodeInspector({ node, stages, members, hasAiPlan, onChan
               : `A soma está em ${weightsTotal}%. Ajuste para fechar 100%.`}
           </p>
         </div>
+      )}
+
+      {node.kind === 'catch_all' && (
+        <>
+          <Select
+            label="Com que frequência pode disparar"
+            value={String(node.cooldownMinutes || CATCH_ALL_DEFAULT_COOLDOWN)}
+            onChange={(value) => onChange({ cooldownMinutes: Number(value) })}
+            options={COOLDOWN_OPTIONS.map((option) => ({
+              value: String(option.value),
+              label: option.label,
+            }))}
+            hint="Conta desde a última vez que este fluxo começou para o mesmo contato."
+          />
+          <p className="rounded-lg bg-slate-50 p-3 text-[13px] leading-relaxed text-slate-600 dark:bg-slate-900/60 dark:text-slate-400">
+            É o último recurso do canal: só entra quando nenhum outro gatilho pegou a
+            mensagem. Enquanto ele estiver rodando, a auto-resposta e a IA não respondem —
+            por isso vale terminar o fluxo passando para a IA ou para um atendente.
+          </p>
+        </>
       )}
 
       {node.kind === 'story_mention' && (

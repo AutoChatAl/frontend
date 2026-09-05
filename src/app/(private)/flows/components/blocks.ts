@@ -20,6 +20,9 @@ export const BLOCKS: BlockMeta[] = [
   { kind: 'welcome', label: 'Boas-vindas', hint: 'Começa o fluxo na primeira mensagem do contato', dot: 'bg-green-500', tint: 'text-green-600 dark:text-green-400' },
   { kind: 'story_reply', label: 'Reagiu ao story', hint: 'Começa o fluxo quando o contato reage a um story seu', dot: 'bg-pink-500', tint: 'text-pink-600 dark:text-pink-400' },
   { kind: 'story_mention', label: 'Mencionou no story', hint: 'Começa o fluxo quando o contato cita seu perfil no story dele', dot: 'bg-red-500', tint: 'text-red-600 dark:text-red-400' },
+  // Mesmo matiz do gatilho por palavra: os dois começam por mensagem recebida, e
+  // a paleta de matizes distintos já acabou (ver DESIGN_SYSTEM 13.1).
+  { kind: 'catch_all', label: 'Qualquer mensagem', hint: 'Último recurso: pega quem não caiu em nenhum outro gatilho', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400' },
   { kind: 'message', label: 'Enviar mensagem', hint: 'Manda um texto para o contato', dot: 'bg-slate-400', tint: 'text-slate-500 dark:text-slate-400' },
   { kind: 'link', label: 'Enviar link', hint: 'Card com um botão que abre uma página', dot: 'bg-sky-500', tint: 'text-sky-600 dark:text-sky-400' },
   { kind: 'media', label: 'Enviar mídia', hint: 'Manda uma imagem, vídeo ou áudio', dot: 'bg-lime-500', tint: 'text-lime-600 dark:text-lime-400' },
@@ -110,6 +113,8 @@ export function nodePreview(node: FlowNode): string {
     return 'Encaminhar para a caixa de entrada';
   case 'story_mention':
     return 'Quando o contato cita o perfil no story dele';
+  case 'catch_all':
+    return cooldownSummary(node.cooldownMinutes ?? CATCH_ALL_DEFAULT_COOLDOWN);
   case 'business_hours':
     return 'A mensagem chegou dentro do expediente?';
   case 'funnel_stage':
@@ -149,6 +154,16 @@ export const MEDIA_KIND_LABEL: Record<FlowMediaKind, string> = {
   audio: 'Áudio',
 };
 
+/** Prévia do curinga, com o mesmo texto que o seletor do painel mostra. */
+function cooldownSummary(minutes: number): string {
+  // Zero não é oferecido no painel, mas um fluxo criado pela API pode trazê-lo.
+  if (minutes <= 0) return 'Qualquer mensagem, sempre que o contato escrever';
+  const option = COOLDOWN_OPTIONS.find((entry) => entry.value === minutes);
+  return option
+    ? `Qualquer mensagem · ${option.label.toLowerCase()}`
+    : `Qualquer mensagem · no máximo 1 vez a cada ${formatDelay(minutes)}`;
+}
+
 /** Resume o bloco de IA na prévia: a entrega, ou as intenções que ele separa. */
 function aiSummary(node: FlowNode): string {
   if (node.aiMode === 'classify') {
@@ -178,6 +193,25 @@ export function keywordSummary(node: FlowNode): string {
       : 'Quando a mensagem';
   return `${prefix} ${mode} ${list}`;
 }
+
+/**
+ * Descanso do curinga quando o bloco não diz outro. O construtor não oferece
+ * "sem descanso": reiniciar o fluxo a cada frase transformaria uma conversa
+ * normal numa enxurrada de disparos.
+ */
+export const CATCH_ALL_DEFAULT_COOLDOWN = 1440;
+
+/**
+ * Descansos do gatilho curinga. Começam mais longos que os do bloco de espera:
+ * aqui a pergunta é "de quanto em quanto tempo esse contato pode cair no fluxo
+ * de novo", e não "quanto esperar antes do próximo passo".
+ */
+export const COOLDOWN_OPTIONS: { value: number; label: string }[] = [
+  { value: 60, label: 'No máximo 1 vez por hora' },
+  { value: 240, label: 'No máximo 1 vez a cada 4 horas' },
+  { value: 1440, label: 'No máximo 1 vez por dia' },
+  { value: 60 * 24 * 7, label: 'No máximo 1 vez por semana' },
+];
 
 /** Tempos oferecidos no bloco de espera, do follow-up curto ao do dia seguinte. */
 export const DELAY_OPTIONS: { value: number; label: string }[] = [
@@ -325,6 +359,8 @@ export function defaultNodeFields(kind: FlowNodeKind): Partial<FlowNode> {
     return { attendanceStatus: 'IN_PROGRESS' };
   case 'notify':
     return { text: '' };
+  case 'catch_all':
+    return { cooldownMinutes: CATCH_ALL_DEFAULT_COOLDOWN };
   case 'delay':
     return { delayMinutes: 60 };
   case 'tag':

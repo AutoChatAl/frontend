@@ -3,6 +3,7 @@ export const FLOW_NODE_KINDS = [
   'welcome',
   'story_reply',
   'story_mention',
+  'catch_all',
   'message',
   'link',
   'media',
@@ -92,6 +93,8 @@ export interface FlowNode {
   assigneeUserId?: string;
   /** attendance — situação em que o atendimento fica. */
   attendanceStatus?: FlowAttendanceStatus;
+  /** catch_all — descanso entre dois disparos para o mesmo contato. 0 = sem descanso. */
+  cooldownMinutes?: number;
 }
 
 /** `fromHandle` separa as saídas de um bloco que ramifica (sim/não, escolha N). */

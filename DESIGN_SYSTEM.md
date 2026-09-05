@@ -956,6 +956,7 @@ A cor aqui é só identificação — não carrega significado de status —, e 
 | Bloco | Token | Bloco | Token |
 |---|---|---|---|
 | Iniciar por palavra | `indigo` | Horário de atendimento | `orange` |
+| Qualquer mensagem | `indigo` | | |
 | Boas-vindas | `green` | Dividir aleatoriamente | `fuchsia` |
 | Reagiu ao story | `pink` | Aguardar tempo | `blue` |
 | Mencionou no story | `red` | Aplicar etiqueta | `emerald` |
@@ -973,10 +974,12 @@ Duas exceções, ambas deliberadas:
 - **`orange` no bloco de horário.** A reserva do `orange` protege a escala de temperatura
   de lead no quadro do Funil; o canvas de fluxos é outra tela, onde não há escala térmica
   com que confundir. Fora dessas duas telas o token continua proibido.
-- **`rose` repetido** em *Atribuir atendente* e *Passar para atendente*. A paleta padrão do
-  Tailwind tem 22 matizes e o construtor já tem 22 blocos, então uma repetição é inevitável
-  — e esses dois são o par certo para carregá-la: os dois entregam a conversa a uma pessoa,
-  e o rótulo ao lado do ponto é o que os separa.
+- **Matiz repetido em dois pares.** A paleta padrão do Tailwind tem 22 matizes e o
+  construtor já passou disso, então a repetição é inevitável — a regra é repetir no par
+  funcionalmente mais próximo, deixando o rótulo ao lado do ponto separar os dois:
+  `rose` em *Atribuir atendente* e *Passar para atendente* (ambos entregam a conversa a uma
+  pessoa) e `indigo` em *Iniciar por palavra* e *Qualquer mensagem* (ambos começam o fluxo
+  por mensagem recebida).
 
 Um bloco novo escolhe um matiz ainda não usado na tabela e o registra aqui antes de ir
 para o código; esgotada a paleta, repete o matiz do bloco funcionalmente mais próximo.
