@@ -4,7 +4,7 @@ import { FileText, Image as ImageIcon, Mic } from 'lucide-react';
 import { whatsAppToHtml } from '@/utils/whatsappFormat';
 
 import type { AutomationDraft } from './automationForm';
-import { hasAudio, hasDocument, hasImage, hasText, type AutomationKind } from './automationMeta';
+import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind } from './automationMeta';
 
 const BUBBLE = 'rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
 
@@ -62,7 +62,7 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
   const formatted = draft.channelType !== 'INSTAGRAM';
   const showText = hasText(draft.replyType) && draft.message.trim().length > 0;
   const showLink = draft.linkUrl.trim().length > 0;
-  const commentReply = kind === 'COMMENT' && draft.commentReplyEnabled && draft.commentReplyMessage.trim().length > 0;
+  const commentReply = isCommentLike(kind) && draft.commentReplyEnabled && draft.commentReplyMessage.trim().length > 0;
   // No Instagram com botão a mensagem vira o `title` do generic template, e o
   // Instagram renderiza esse campo em negrito por conta própria.
   const isInstagramCard = draft.channelType === 'INSTAGRAM' && showLink;
@@ -75,10 +75,12 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
 
   if (!hasAnything) return null;
 
-  const triggerLabel = kind === 'COMMENT'
-    ? (draft.triggerOnAnyComment ? 'Qualquer comentário' : 'Comentário')
+  const triggerLabel = isCommentLike(kind)
+    ? (draft.triggerOnAnyComment
+      ? (kind === 'LIVE' ? 'Qualquer comentário na live' : 'Qualquer comentário')
+      : (kind === 'LIVE' ? 'Comentário na live' : 'Comentário'))
     : 'Mensagem recebida';
-  const answerLabel = kind === 'COMMENT' ? 'DM enviada' : 'Resposta automática';
+  const answerLabel = isCommentLike(kind) ? 'DM enviada' : 'Resposta automática';
 
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">

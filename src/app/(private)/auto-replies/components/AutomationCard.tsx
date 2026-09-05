@@ -188,7 +188,7 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
               <ChannelIcon size={11} />
               {channelName ?? channel.label}
             </Chip>
-            {row.kind === 'COMMENT' && row.rule.triggerOnAnyComment
+            {row.kind !== 'DM' && row.rule.triggerOnAnyComment
               ? null
               : <Chip>{MATCH_MODE_LABELS[row.rule.matchMode] ?? row.rule.matchMode}</Chip>}
             {row.kind === 'DM' && row.rule.caseSensitive && (
@@ -201,7 +201,7 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
                 {row.rule.postIds?.length === 1 ? '1 post' : `${row.rule.postIds?.length ?? 0} posts`}
               </Chip>
             )}
-            {row.kind === 'COMMENT' && row.rule.oncePerUser && <Chip>1x por pessoa</Chip>}
+            {row.kind !== 'DM' && row.rule.oncePerUser && <Chip>1x por pessoa</Chip>}
           </div>
 
           {row.kind === 'DM' ? (
@@ -245,8 +245,10 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
                   link={linkOf(row.rule.dmLinkUrl, row.rule.dmLinkLabel, row.rule.dmLinkDescription)}
                   boldTitle
                 />
+                {/* Sem áudio: comentário e live não anexam áudio (o Instagram recusa
+                    para quem nunca abriu conversa). */}
                 <Attachments
-                  audio={!!row.rule.dmAudioBase64}
+                  audio={false}
                   image={!!row.rule.dmImageBase64}
                   document={!!row.rule.dmDocumentBase64}
                 />

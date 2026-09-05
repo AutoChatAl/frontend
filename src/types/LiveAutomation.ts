@@ -1,5 +1,14 @@
-export type DmReplyType = 'TEXT' | 'AUDIO' | 'TEXT_AND_AUDIO' | 'IMAGE' | 'TEXT_AND_IMAGE' | 'IMAGE_AND_AUDIO' | 'DOCUMENT' | 'TEXT_AND_DOCUMENT' | 'DOCUMENT_AND_AUDIO';
-export interface CommentAutomation {
+import type { DmReplyType } from './CommentAutomation';
+
+export type { DmReplyType };
+
+/**
+ * Regra de resposta automática para comentários de transmissão ao vivo.
+ *
+ * Espelha a automação de comentários sem o filtro de post: numa live não existe
+ * publicação para escolher.
+ */
+export interface LiveAutomation {
     id: string;
     workspaceId: string;
     channelId: string;
@@ -21,20 +30,16 @@ export interface CommentAutomation {
     dmDocumentBase64?: string;
     dmDocumentMimeType?: string;
     dmDocumentName?: string;
-    dmAudioAttachmentId?: string;
-    dmImageAttachmentId?: string;
-    dmDocumentAttachmentId?: string;
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
-    postFilter: 'ALL' | 'SPECIFIC';
-    postIds?: string[];
     oncePerUser: boolean;
     enabled: boolean;
     createdAt: string;
     updatedAt: string;
 }
-export interface CreateCommentAutomationInput {
+
+export interface CreateLiveAutomationInput {
     channelId: string;
     keyword?: string;
     keywords?: string[];
@@ -55,34 +60,8 @@ export interface CreateCommentAutomationInput {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
-    postFilter?: 'ALL' | 'SPECIFIC';
-    postIds?: string[];
     oncePerUser?: boolean;
     enabled?: boolean;
 }
-export interface UpdateCommentAutomationInput {
-    channelId?: string;
-    keyword?: string;
-    keywords?: string[];
-    keywordLogic?: 'ANY' | 'ALL';
-    matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
-    caseSensitive?: boolean;
-    triggerOnAnyComment?: boolean;
-    commentReplyEnabled?: boolean;
-    commentReplyMessage?: string;
-    commentReplyMessages?: string[];
-    dmReplyType?: DmReplyType;
-    dmMessage?: string;
-    dmImageBase64?: string;
-    dmImageMimeType?: string;
-    dmDocumentBase64?: string;
-    dmDocumentMimeType?: string;
-    dmDocumentName?: string;
-    dmLinkUrl?: string;
-    dmLinkLabel?: string;
-    dmLinkDescription?: string;
-    postFilter?: 'ALL' | 'SPECIFIC';
-    postIds?: string[];
-    oncePerUser?: boolean;
-    enabled?: boolean;
-}
+
+export type UpdateLiveAutomationInput = Partial<CreateLiveAutomationInput>;

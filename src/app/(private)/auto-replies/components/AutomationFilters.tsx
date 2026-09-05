@@ -27,6 +27,7 @@ const KIND_TABS: { value: KindFilter; label: string }[] = [
   { value: 'ALL', label: 'Todas' },
   { value: 'DM', label: KIND_META.DM.plural },
   { value: 'COMMENT', label: KIND_META.COMMENT.plural },
+  { value: 'LIVE', label: KIND_META.LIVE.plural },
 ];
 
 export default function AutomationFilters({

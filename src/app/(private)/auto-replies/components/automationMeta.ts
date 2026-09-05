@@ -1,15 +1,25 @@
-import { BadgeCheck, Instagram, MessageCircle, MessageSquare, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Instagram, MessageCircle, MessageSquare, Radio, type LucideIcon } from 'lucide-react';
 
 import type { WorkspaceChannelType } from '@/hooks/WorkspaceChannelsHook';
 import type { AutoReply } from '@/types/AutoReply';
 import type { CommentAutomation } from '@/types/CommentAutomation';
+import type { LiveAutomation } from '@/types/LiveAutomation';
 
 /**
  * As duas automações moram na mesma tela mas vêm de coleções e serviços
  * diferentes. Esta união é o mínimo que a listagem precisa saber para ordenar,
  * filtrar e decidir qual modal abrir — o resto fica dentro de `rule`.
  */
-export type AutomationKind = 'DM' | 'COMMENT';
+export type AutomationKind = 'DM' | 'COMMENT' | 'LIVE';
+
+/**
+ * Comentário de post e comentário de live disparam do mesmo jeito e respondem do
+ * mesmo jeito — a única diferença é que a live não tem publicação para filtrar.
+ * Onde o formulário trata os dois igual, a pergunta é esta, não o tipo exato.
+ */
+export function isCommentLike(kind: AutomationKind): boolean {
+  return kind === 'COMMENT' || kind === 'LIVE';
+}
 
 export type AutomationRow =
   | {
@@ -30,6 +40,16 @@ export type AutomationRow =
     enabled: boolean;
     createdAt: string;
     rule: CommentAutomation;
+  }
+  | {
+    kind: 'LIVE';
+    id: string;
+    channelId: string;
+    /** Comentário de transmissão também só existe no Instagram. */
+    channelType: 'INSTAGRAM';
+    enabled: boolean;
+    createdAt: string;
+    rule: LiveAutomation;
   };
 
 export const KIND_META: Record<AutomationKind, {
@@ -52,6 +72,13 @@ export const KIND_META: Record<AutomationKind, {
     icon: MessageSquare,
     chip: 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300',
     tile: 'text-fuchsia-600 dark:text-fuchsia-400',
+  },
+  LIVE: {
+    label: 'Live',
+    plural: 'Lives',
+    icon: Radio,
+    chip: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
+    tile: 'text-rose-600 dark:text-rose-400',
   },
 };
 
@@ -125,6 +152,18 @@ export function toDmRow(rule: AutoReply): AutomationRow {
 export function toCommentRow(rule: CommentAutomation): AutomationRow {
   return {
     kind: 'COMMENT',
+    id: rule.id,
+    channelId: rule.channelId,
+    channelType: 'INSTAGRAM',
+    enabled: rule.enabled,
+    createdAt: rule.createdAt,
+    rule,
+  };
+}
+
+export function toLiveRow(rule: LiveAutomation): AutomationRow {
+  return {
+    kind: 'LIVE',
     id: rule.id,
     channelId: rule.channelId,
     channelType: 'INSTAGRAM',

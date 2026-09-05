@@ -14,13 +14,18 @@ interface AutomationTypeModalProps {
 const OPTIONS: { kind: AutomationKind; description: string }[] = [
   { kind: 'DM', description: 'Responde quando alguém manda uma palavra-chave no WhatsApp ou no Instagram.' },
   { kind: 'COMMENT', description: 'Responde o comentário no post do Instagram e ainda manda um DM para quem comentou.' },
+  { kind: 'LIVE', description: 'Durante a transmissão ao vivo, responde no chat e manda um DM para quem comentou.' },
 ];
 
 /** Um passo antes do formulário: cada tipo abre o modal que já existia. */
 export default function AutomationTypeModal({ isOpen, onClose, onPick }: AutomationTypeModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nova automação" size="md">
-      <div className="grid gap-3 sm:grid-cols-2">
+    // `lg` em vez de `md`: com três opções, `max-w-2xl` deixaria cada card com ~200px
+    // e o texto quebraria demais.
+    <Modal isOpen={isOpen} onClose={onClose} title="Nova automação" size="lg">
+      {/* Os três lado a lado a partir de md. Abaixo disso não cabem sem espremer o
+          texto, então empilham — é o único ponto em que a linha se quebra. */}
+      <div className="grid gap-3 md:grid-cols-3">
         {OPTIONS.map((option) => {
           const meta = KIND_META[option.kind];
           const Icon = meta.icon;
