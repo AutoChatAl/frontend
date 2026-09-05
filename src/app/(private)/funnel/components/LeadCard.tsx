@@ -1,7 +1,7 @@
 'use client';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Clock, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Clock, Hand, ShoppingCart, TrendingUp } from 'lucide-react';
 import { type CSSProperties } from 'react';
 
 import type { FunnelLead } from '@/types/Funnel';
@@ -9,7 +9,13 @@ import type { FunnelLead } from '@/types/Funnel';
 import { CHANNEL_META, formatCurrency, formatIdentifier, formatRelative, formatWaiting, getInitials } from './meta';
 import ScoreRing from './ScoreRing';
 
-const SHELL_BASE = 'group relative rounded-lg border bg-white p-3 dark:bg-slate-800';
+const SHELL_BASE = 'group relative rounded-lg border p-3';
+const SHELL_SURFACE = 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800';
+/**
+ * Mesma leitura vermelha da tela de Contatos: quem está na fila precisa saltar
+ * da coluna sem que ninguém tenha que abrir o card para descobrir.
+ */
+const SHELL_WAITING = 'border-red-300 bg-red-50/40 dark:border-red-800 dark:bg-red-900/10';
 
 /**
  * O card carrega só o que decide um arrasto: quem é, quanto vale, quão provável
@@ -52,6 +58,25 @@ function CardBody({ lead }: { lead: FunnelLead }) {
           <p className="truncate font-mono text-[10px] leading-tight text-slate-400 dark:text-slate-500">{identifier}</p>
         )}
 
+        {/*
+          * Preso ao `awaitingHuman`, e não ao tempo: contato antigo pode estar na
+          * fila sem `awaitingHumanSince` gravado, e nesses casos o selo aparece
+          * do mesmo jeito, só sem a duração.
+          */}
+        {lead.awaitingHuman && (
+          <span
+            title={waiting ? `Aguardando atendimento há ${waiting}` : 'Aguardando atendimento'}
+            className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-red-700 dark:bg-red-900/40 dark:text-red-400"
+          >
+            <Hand size={9} className="shrink-0" />
+            {/* Rótulo curto: a coluna do kanban é estreita, e "Aguardando
+              * atendimento" por extenso quebrava em duas linhas. O texto
+              * completo fica no title. */}
+            <span className="truncate">Na fila</span>
+            {waiting && <span className="shrink-0 font-normal opacity-80">· {waiting}</span>}
+          </span>
+        )}
+
         <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <span
             className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400"
@@ -74,16 +99,11 @@ function CardBody({ lead }: { lead: FunnelLead }) {
               {formatCurrency(valueCents)}
             </span>
           )}
-          {waiting ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
-              {waiting} sem resposta
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
-              <Clock size={11} />
-              {formatRelative(lead.lastInteractionAt)}
-            </span>
-          )}
+          {/* O tempo de espera saiu daqui para o selo; aqui fica a última interação. */}
+          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
+            <Clock size={11} />
+            {formatRelative(lead.lastInteractionAt)}
+          </span>
         </div>
 
         {visibleTags.length > 0 && (
@@ -113,7 +133,7 @@ function CardBody({ lead }: { lead: FunnelLead }) {
 
 export function LeadCardOverlay({ lead }: { lead: FunnelLead }) {
   return (
-    <div className={`${SHELL_BASE} w-72 rotate-1 cursor-grabbing border-indigo-300 shadow-xl ring-2 ring-indigo-500/20 dark:border-indigo-500/40`}>
+    <div className={`${SHELL_BASE} w-72 rotate-1 cursor-grabbing border-indigo-300 bg-white shadow-xl ring-2 ring-indigo-500/20 dark:border-indigo-500/40 dark:bg-slate-800`}>
       <CardBody lead={lead} />
     </div>
   );
@@ -138,7 +158,9 @@ export default function SortableLeadCard({ lead, onOpen }: SortableLeadCardProps
       {...attributes}
       {...listeners}
       onClick={() => onOpen?.(lead)}
-      className={`${SHELL_BASE} cursor-grab touch-none border-slate-200 shadow-xs transition-shadow hover:shadow-md active:cursor-grabbing dark:border-slate-700 dark:shadow-none ${isDragging ? 'opacity-40' : ''}`}
+      className={`${SHELL_BASE} cursor-grab touch-none shadow-xs transition-shadow hover:shadow-md active:cursor-grabbing dark:shadow-none ${
+        lead.awaitingHuman ? SHELL_WAITING : SHELL_SURFACE
+      } ${isDragging ? 'opacity-40' : ''}`}
     >
       <CardBody lead={lead} />
     </div>
