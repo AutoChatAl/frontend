@@ -1,4 +1,4 @@
-import type { FlowNode, FlowNodeKind } from '@/types/Flow';
+import type { FlowAiMode, FlowAttendanceStatus, FlowMediaKind, FlowNode, FlowNodeKind } from '@/types/Flow';
 
 export interface BlockMeta {
   kind: FlowNodeKind;
@@ -7,6 +7,8 @@ export interface BlockMeta {
   /** Cor do ponto de conexão e do rótulo do tipo no card. */
   dot: string;
   tint: string;
+  /** Consome o modelo de linguagem: fica travado sem plano de IA contratado. */
+  requiresAi?: boolean;
 }
 
 /**
@@ -15,20 +17,36 @@ export interface BlockMeta {
  */
 export const BLOCKS: BlockMeta[] = [
   { kind: 'trigger', label: 'Iniciar por palavra', hint: 'Começa o fluxo quando o contato escreve algo', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400' },
+  { kind: 'welcome', label: 'Boas-vindas', hint: 'Começa o fluxo na primeira mensagem do contato', dot: 'bg-green-500', tint: 'text-green-600 dark:text-green-400' },
+  { kind: 'story_reply', label: 'Reagiu ao story', hint: 'Começa o fluxo quando o contato reage a um story seu', dot: 'bg-pink-500', tint: 'text-pink-600 dark:text-pink-400' },
+  { kind: 'story_mention', label: 'Mencionou no story', hint: 'Começa o fluxo quando o contato cita seu perfil no story dele', dot: 'bg-red-500', tint: 'text-red-600 dark:text-red-400' },
   { kind: 'message', label: 'Enviar mensagem', hint: 'Manda um texto para o contato', dot: 'bg-slate-400', tint: 'text-slate-500 dark:text-slate-400' },
   { kind: 'link', label: 'Enviar link', hint: 'Card com um botão que abre uma página', dot: 'bg-sky-500', tint: 'text-sky-600 dark:text-sky-400' },
+  { kind: 'media', label: 'Enviar mídia', hint: 'Manda uma imagem, vídeo ou áudio', dot: 'bg-lime-500', tint: 'text-lime-600 dark:text-lime-400' },
+  { kind: 'document', label: 'Enviar documento', hint: 'Manda um arquivo, como um PDF', dot: 'bg-stone-500', tint: 'text-stone-600 dark:text-stone-400' },
   { kind: 'question', label: 'Perguntar com opções', hint: 'Faz uma pergunta e abre um caminho por resposta', dot: 'bg-violet-500', tint: 'text-violet-600 dark:text-violet-400' },
+  { kind: 'ai', label: 'Inteligência artificial', hint: 'Entrega a conversa para a IA, ou separa caminhos pela intenção', dot: 'bg-yellow-500', tint: 'text-yellow-600 dark:text-yellow-400', requiresAi: true },
   { kind: 'wait_reply', label: 'Aguardar resposta', hint: 'Segura o fluxo até o contato falar qualquer coisa', dot: 'bg-purple-500', tint: 'text-purple-600 dark:text-purple-400' },
   { kind: 'condition', label: 'Desviar por palavra', hint: 'Separa quem respondeu com a palavra de quem não', dot: 'bg-amber-500', tint: 'text-amber-600 dark:text-amber-400' },
+  { kind: 'business_hours', label: 'Horário de atendimento', hint: 'Separa quem chega no expediente de quem chega fora dele', dot: 'bg-orange-500', tint: 'text-orange-600 dark:text-orange-400' },
   { kind: 'randomizer', label: 'Dividir aleatoriamente', hint: 'Sorteia entre caminhos, para testar versões', dot: 'bg-fuchsia-500', tint: 'text-fuchsia-600 dark:text-fuchsia-400' },
   { kind: 'delay', label: 'Aguardar tempo', hint: 'Segura o fluxo antes do próximo passo', dot: 'bg-blue-500', tint: 'text-blue-600 dark:text-blue-400' },
   { kind: 'tag', label: 'Aplicar etiqueta', hint: 'Marca o contato para segmentar depois', dot: 'bg-emerald-500', tint: 'text-emerald-600 dark:text-emerald-400' },
   { kind: 'untag', label: 'Remover etiqueta', hint: 'Tira uma marcação do contato', dot: 'bg-teal-500', tint: 'text-teal-600 dark:text-teal-400' },
   { kind: 'has_tag', label: 'Verificar etiqueta', hint: 'Separa quem tem a etiqueta de quem não tem', dot: 'bg-cyan-500', tint: 'text-cyan-600 dark:text-cyan-400' },
+  { kind: 'funnel_stage', label: 'Mover no funil', hint: 'Leva o contato para outra etapa do funil', dot: 'bg-zinc-500', tint: 'text-zinc-600 dark:text-zinc-400' },
+  { kind: 'assign', label: 'Atribuir atendente', hint: 'Entrega a conversa a uma pessoa da equipe', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400' },
+  { kind: 'attendance', label: 'Situação do atendimento', hint: 'Marca a conversa como em andamento, aguardando ou resolvida', dot: 'bg-gray-500', tint: 'text-gray-600 dark:text-gray-400' },
+  { kind: 'notify', label: 'Notificar equipe', hint: 'Manda um aviso para o painel do workspace', dot: 'bg-neutral-500', tint: 'text-neutral-600 dark:text-neutral-400' },
   { kind: 'handoff', label: 'Passar para atendente', hint: 'Tira da automação e chama uma pessoa', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400' },
 ];
 
 const BY_KIND = new Map(BLOCKS.map((block) => [block.kind, block]));
+
+/** Se o bloco depende do plano de IA. Fonte única do cadeado no construtor. */
+export function requiresAiPlan(kind: FlowNodeKind): boolean {
+  return BY_KIND.get(kind)?.requiresAi === true;
+}
 
 export function blockMeta(kind: FlowNodeKind): BlockMeta {
   return BY_KIND.get(kind) ?? BLOCKS[1]!;
@@ -62,11 +80,20 @@ export function nodePreview(node: FlowNode): string {
   case 'trigger':
   case 'condition':
     return keywordSummary(node);
+  case 'story_reply':
+    // Sem filtro a regra inteira cabe no rótulo do bloco; com filtro, o resumo
+    // é o que diz quais reações entram.
+    return keywordSummary(node) || 'Qualquer reação ou resposta a um story';
+  case 'welcome':
   case 'message':
   case 'question':
     return node.text ?? '';
   case 'link':
     return node.linkUrl ? `${node.text ?? ''} → ${node.buttonLabel || 'Abrir'}`.trim() : '';
+  case 'media':
+    return node.mediaUrl ? `Enviar ${MEDIA_KIND_LABEL[node.mediaKind ?? 'image'].toLowerCase()}` : '';
+  case 'document':
+    return node.mediaUrl ? `Enviar ${node.fileName?.trim() || 'documento'}` : '';
   case 'delay':
     return node.delayMinutes ? `Aguardar ${formatDelay(node.delayMinutes)}` : '';
   case 'tag':
@@ -81,9 +108,54 @@ export function nodePreview(node: FlowNode): string {
       : 'Esperar o contato responder';
   case 'handoff':
     return 'Encaminhar para a caixa de entrada';
+  case 'story_mention':
+    return 'Quando o contato cita o perfil no story dele';
+  case 'business_hours':
+    return 'A mensagem chegou dentro do expediente?';
+  case 'funnel_stage':
+    return node.funnelStageId ? 'Mover o contato de etapa' : '';
+  case 'assign':
+    return node.assigneeUserId ? 'Entregar a conversa a um atendente' : '';
+  case 'attendance':
+    return node.attendanceStatus ? `Marcar como “${ATTENDANCE_LABEL[node.attendanceStatus]}”` : '';
+  case 'notify':
+    return node.text ?? '';
+  case 'ai':
+    return aiSummary(node);
   default:
     return '';
   }
+}
+
+export const ATTENDANCE_LABEL: Record<FlowAttendanceStatus, string> = {
+  OPEN: 'Em aberto',
+  IN_PROGRESS: 'Em atendimento',
+  WAITING: 'Aguardando o cliente',
+  RESOLVED: 'Resolvido',
+};
+
+export const AI_MODE_LABEL: Record<FlowAiMode, string> = {
+  handover: 'Assumir a conversa',
+  classify: 'Separar por intenção',
+};
+
+/** Teto de intenções do bloco de IA — o mesmo do schema no servidor. */
+export const AI_INTENTS_MAX = 5;
+export const AI_INTENT_LABEL_MAX = 60;
+
+export const MEDIA_KIND_LABEL: Record<FlowMediaKind, string> = {
+  image: 'Imagem',
+  video: 'Vídeo',
+  audio: 'Áudio',
+};
+
+/** Resume o bloco de IA na prévia: a entrega, ou as intenções que ele separa. */
+function aiSummary(node: FlowNode): string {
+  if (node.aiMode === 'classify') {
+    const intents = (node.aiIntents ?? []).filter(Boolean);
+    return intents.length ? `Separar por: ${intents.join(', ')}` : '';
+  }
+  return 'A IA assume a conversa daqui em diante';
 }
 
 export const MATCH_MODE_LABEL: Record<NonNullable<FlowNode['matchMode']>, string> = {
@@ -99,7 +171,11 @@ export function keywordSummary(node: FlowNode): string {
   const mode = MATCH_MODE_LABEL[node.matchMode ?? 'CONTAINS'];
   const joiner = node.keywordLogic === 'ALL' ? ' e ' : ' ou ';
   const list = keywords.map((keyword) => `“${keyword}”`).join(joiner);
-  const prefix = node.kind === 'trigger' ? 'Quando a mensagem' : 'Se a resposta';
+  const prefix = node.kind === 'condition'
+    ? 'Se a resposta'
+    : node.kind === 'story_reply'
+      ? 'Quando a reação'
+      : 'Quando a mensagem';
   return `${prefix} ${mode} ${list}`;
 }
 
@@ -135,6 +211,9 @@ export function formatDelay(minutes: number): string {
  */
 export function outputHandles(node: Pick<FlowNode, 'kind'> & Partial<FlowNode>): { id: string; label: string }[] {
   if (node.kind === 'handoff') return [];
+  // Entregar para a IA encerra o fluxo, igual ao repasse para atendente: o que
+  // vem depois é a IA conversando, não mais o desenho do canvas.
+  if (node.kind === 'ai' && node.aiMode !== 'classify') return [];
 
   if (node.kind === 'condition') {
     return [
@@ -148,6 +227,26 @@ export function outputHandles(node: Pick<FlowNode, 'kind'> & Partial<FlowNode>):
     return node.replyTimeoutMinutes
       ? [...answered, { id: 'timeout', label: 'Não respondeu' }]
       : answered;
+  }
+
+  if (node.kind === 'business_hours') {
+    return [
+      { id: 'open', label: 'Dentro do horário' },
+      { id: 'closed', label: 'Fora do horário' },
+    ];
+  }
+
+  if (node.kind === 'ai' && node.aiMode === 'classify') {
+    const intents = (node.aiIntents ?? []).filter(Boolean);
+    // Sem intenção nenhuma o bloco não tem o que separar; a saída única evita
+    // um card sem ponto de conexão enquanto o usuário ainda está preenchendo.
+    if (intents.length === 0) return [{ id: 'other', label: 'Nenhuma' }];
+    return [
+      ...intents.map((intent, i) => ({ id: `intent-${i}`, label: intent })),
+      // A IA precisa poder dizer "não é nada disso": sem esta saída ela seria
+      // forçada a escolher uma intenção qualquer para o fluxo continuar.
+      { id: 'other', label: 'Nenhuma' },
+    ];
   }
 
   if (node.kind === 'has_tag') {
@@ -197,16 +296,35 @@ export function defaultNodeFields(kind: FlowNodeKind): Partial<FlowNode> {
   switch (kind) {
   case 'trigger':
     return { keywords: [''], matchMode: 'CONTAINS', keywordLogic: 'ANY', caseSensitive: false };
+  case 'welcome':
   case 'message':
     return { text: '' };
   case 'link':
     return { text: '', buttonLabel: 'Abrir', linkUrl: '' };
+  case 'media':
+    return { mediaKind: 'image', mediaUrl: '' };
+  case 'document':
+    return { mediaUrl: '', fileName: '' };
   case 'question':
     return { text: '', choices: ['Opção 1', 'Opção 2'], choicesAsButtons: true };
   case 'condition':
     return { keywords: [''], matchMode: 'CONTAINS', keywordLogic: 'ANY', caseSensitive: false };
+  case 'story_reply':
+    // Sem palavra nenhuma: o evento já é o gatilho, e o filtro é o que se
+    // adiciona depois para separar um emoji de outro.
+    return { keywords: [], matchMode: 'CONTAINS', keywordLogic: 'ANY', caseSensitive: false };
   case 'randomizer':
     return { randomWeights: [50, 50] };
+  case 'ai':
+    return { aiMode: 'handover', aiIntents: [] };
+  case 'funnel_stage':
+    return { funnelStageId: '' };
+  case 'assign':
+    return { assigneeUserId: '' };
+  case 'attendance':
+    return { attendanceStatus: 'IN_PROGRESS' };
+  case 'notify':
+    return { text: '' };
   case 'delay':
     return { delayMinutes: 60 };
   case 'tag':

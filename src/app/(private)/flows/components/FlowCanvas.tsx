@@ -1,4 +1,5 @@
 'use client';
+import { Lock } from 'lucide-react';
 import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 import type { FlowEdge, FlowNode, FlowNodeKind } from '@/types/Flow';
@@ -29,6 +30,8 @@ interface FlowCanvasProps {
   onRemoveEdge: (edgeId: string) => void;
   scale: number;
   onScaleChange: (scale: number) => void;
+  /** Falso deixa o card que depende de IA marcado como inativo. */
+  hasAiPlan: boolean;
 }
 
 export const ZOOM_MIN = 0.4;
@@ -64,6 +67,7 @@ export default function FlowCanvas({
   onRemoveEdge,
   scale,
   onScaleChange,
+  hasAiPlan,
 }: FlowCanvasProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -187,6 +191,9 @@ export default function FlowCanvas({
 
             {nodes.map((node) => {
               const meta = blockMeta(node.kind);
+              // Fluxo montado com plano de IA que depois caiu: o card avisa por
+              // que o desenho parou de funcionar, em vez de falhar em silêncio.
+              const aiLocked = meta.requiresAi === true && !hasAiPlan;
               const handles = outputHandles(node);
               const preview = nodePreview(node);
               const isSelected = node.id === selectedId;
@@ -206,7 +213,9 @@ export default function FlowCanvas({
                       ? 'border-indigo-400 ring-2 ring-indigo-500/20'
                       : isLinkTarget
                         ? 'cursor-pointer border-indigo-300 ring-2 ring-indigo-500/10'
-                        : 'border-slate-200 dark:border-slate-700'
+                        : aiLocked
+                          ? 'border-dashed border-slate-300 dark:border-slate-600'
+                          : 'border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   <div
@@ -216,8 +225,15 @@ export default function FlowCanvas({
                       draggingId === node.id ? 'cursor-grabbing' : 'cursor-grab'
                     }`}
                   >
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${meta.tint}`}>
+                    <span className={`flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide ${meta.tint}`}>
                       {meta.label}
+                      {aiLocked && (
+                        <Lock
+                          size={11}
+                          className="shrink-0 text-slate-400 dark:text-slate-500"
+                          aria-label="Requer plano de IA"
+                        />
+                      )}
                     </span>
                     <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
                       {node.label}
