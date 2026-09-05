@@ -1,6 +1,6 @@
 'use client';
 import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
@@ -429,6 +429,25 @@ export default function InboxPage() {
   // logo abaixo, uma por balão. O webhook já descarta os novos — aqui somem os
   // que ficaram gravados antes.
   const visibleMessages = messages.filter((m) => !isAlbumPlaceholder(m));
+
+  /**
+   * Mensagens agrupadas por dia.
+   *
+   * O agrupamento não é enfeite: a badge do dia é `sticky`, e `position: sticky` é
+   * limitada pelo bloco que a contém. Numa lista plana, o bloco de todas elas era a
+   * thread inteira — então cada badge grudava no topo e elas se empilhavam umas sobre
+   * as outras. Dentro de uma seção por dia, cada badge só existe enquanto as
+   * mensagens daquele dia estão na tela, e a do dia seguinte a empurra para fora.
+   */
+  const dayGroups = visibleMessages.reduce<Array<{ key: string; items: InboxMessage[] }>>((groups, message) => {
+    const last = groups[groups.length - 1];
+    if (last && isSameDay(new Date(last.items[0]!.createdAt), new Date(message.createdAt))) {
+      last.items.push(message);
+      return groups;
+    }
+    groups.push({ key: message.id, items: [message] });
+    return groups;
+  }, []);
 
   // Galeria da conversa: fotos e vídeos na ordem da thread. As setas do
   // visualizador andam por ela, então mídia sem conteúdo exibível (mensagem
@@ -930,103 +949,99 @@ export default function InboxPage() {
                 {loadingMessages ? (
                   <p className="text-sm text-slate-400">Carregando mensagens...</p>
                 ) : (
-                  visibleMessages.map((m, index) => {
-                    const previous = index > 0 ? visibleMessages[index - 1] : undefined;
-                    // Sticky no container rolável: cada badge fica presa no topo até a do
-                    // dia seguinte empurrá-la para fora, marcando a virada de dia.
-                    const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
-                    const daySeparator = startsDay && (
+                  dayGroups.map((group) => (
+                    <section key={group.key} className="space-y-2">
                       <div className="sticky top-0 z-10 flex justify-center py-1">
                         <span className="rounded-full bg-slate-200/90 px-3 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm dark:bg-slate-700/90 dark:text-slate-300">
-                          {dayLabel(m.createdAt)}
+                          {dayLabel(group.items[0]!.createdAt)}
                         </span>
                       </div>
-                    );
-                    const replyButton = !m.pending && !replyLocked && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplyTo(m);
-                          textareaRef.current?.focus();
-                        }}
-                        className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-                        title="Responder"
-                      >
-                        <Reply size={14} />
-                      </button>
-                    );
-                    return (
-                      <Fragment key={m.id}>
-                        {daySeparator}
-                        <div
-                          id={`msg-${m.id}`}
-                          className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {m.direction === 'OUT' && replyButton}
-                          <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                      {group.items.map((m) => {
+                        const replyButton = !m.pending && !replyLocked && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyTo(m);
+                              textareaRef.current?.focus();
+                            }}
+                            className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                            title="Responder"
                           >
-                            {m.replyToPreview && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!m.replyToMessageId) return;
-                                  document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }}
-                                className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
-                              >
-                                <span className="block font-semibold">
-                                  {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
-                                </span>
-                                <span className="block truncate">{m.replyToPreview}</span>
-                              </button>
-                            )}
-                            {m.mediaType && (() => {
-                              const galleryIndex = gallery.findIndex((item) => item.messageId === m.id);
-                              return (
-                                <div className="mb-1">
-                                  <MediaContent
-                                    message={m}
-                                    {...(galleryIndex >= 0 ? { onExpand: () => setLightboxIndex(galleryIndex) } : {})}
-                                  />
-                                </div>
-                              );
-                            })()}
-                            {(() => {
-                              const text = bodyForBubble(m.body, m.interactive);
-                              return text ? <p>{text}</p> : null;
-                            })()}
-                            {m.interactive && m.interactive.buttons.length > 0 && (
-                              <InteractiveContent interactive={m.interactive} outgoing={m.direction === 'OUT'} />
-                            )}
-                            {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
-                            {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
-                              revealedTranscriptions.has(m.id) && m.transcription ? (
-                                <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                                  {m.transcription}
-                                </p>
-                              ) : (
+                            <Reply size={14} />
+                          </button>
+                        );
+                        return (
+                          <div
+                            key={m.id}
+                            id={`msg-${m.id}`}
+                            className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {m.direction === 'OUT' && replyButton}
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                            >
+                              {m.replyToPreview && (
                                 <button
                                   type="button"
-                                  onClick={() => handleTranscribe(m)}
-                                  disabled={transcribingId === m.id}
-                                  className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                  onClick={() => {
+                                    if (!m.replyToMessageId) return;
+                                    document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  }}
+                                  className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
                                 >
-                                  {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                                  <span className="block font-semibold">
+                                    {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
+                                  </span>
+                                  <span className="block truncate">{m.replyToPreview}</span>
                                 </button>
-                              )
-                            )}
-                            <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                              {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
-                              {formatMessageTime(m.createdAt)}
-                              <StatusTicks message={m} />
-                            </span>
+                              )}
+                              {m.mediaType && (() => {
+                                const galleryIndex = gallery.findIndex((item) => item.messageId === m.id);
+                                return (
+                                  <div className="mb-1">
+                                    <MediaContent
+                                      message={m}
+                                      {...(galleryIndex >= 0 ? { onExpand: () => setLightboxIndex(galleryIndex) } : {})}
+                                    />
+                                  </div>
+                                );
+                              })()}
+                              {(() => {
+                                const text = bodyForBubble(m.body, m.interactive);
+                                return text ? <p>{text}</p> : null;
+                              })()}
+                              {m.interactive && m.interactive.buttons.length > 0 && (
+                                <InteractiveContent interactive={m.interactive} outgoing={m.direction === 'OUT'} />
+                              )}
+                              {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
+                              {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
+                                revealedTranscriptions.has(m.id) && m.transcription ? (
+                                  <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                                    {m.transcription}
+                                  </p>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTranscribe(m)}
+                                    disabled={transcribingId === m.id}
+                                    className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                  >
+                                    {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                                  </button>
+                                )
+                              )}
+                              <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                                {formatMessageTime(m.createdAt)}
+                                <StatusTicks message={m} />
+                              </span>
+                            </div>
+                            {m.direction === 'IN' && replyButton}
                           </div>
-                          {m.direction === 'IN' && replyButton}
-                        </div>
-                      </Fragment>
-                    );
-                  })
+                        );
+                      })}
+                    </section>
+                  ))
                 )}
               </div>
 

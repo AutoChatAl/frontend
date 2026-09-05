@@ -8,7 +8,9 @@ import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/cont
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
+import { inboxService } from '@/services/inbox.service';
 import { supportChatService } from '@/services/support-chat.service';
+import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 interface SidebarItemProps {
     icon: React.ComponentType<{
@@ -139,12 +141,20 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       }
     };
     loadQueueSummary();
-    const timer = setInterval(loadQueueSummary, 30000);
     const onDecrement = () => setHumanQueueCount((c) => Math.max(0, c - 1));
     window.addEventListener('human-queue-decrement', onDecrement);
+
+    // Contador por evento, não por relógio: buscar de 30 em 30 s deixava o contato
+    // esperando até meio minuto por um atendente que ainda não sabia do pedido, e
+    // consultava o servidor o dia inteiro para quase sempre receber o mesmo número.
+    // Vai pela conexão que as outras telas já usam — nenhuma conexão a mais.
+    const unsubscribe = authService.getToken()
+      ? subscribeToEvents(inboxService.getInboxEventsUrl(), { 'queue.updated': loadQueueSummary })
+      : () => {};
+
     return () => {
       mounted = false;
-      clearInterval(timer);
+      unsubscribe();
       window.removeEventListener('human-queue-decrement', onDecrement);
     };
   }, []);

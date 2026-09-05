@@ -12,11 +12,14 @@ import MetricCard, { type MetricTrend } from '@/components/MetricCard';
 import PageLoader from '@/components/PageLoader';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { authService } from '@/services/auth.service';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService, type ContactsStats } from '@/services/contact.service';
+import { inboxService } from '@/services/inbox.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 import { columns } from './components/ContactColumns';
 import ContactsGrowthChart, { type ContactsGrowthPoint } from './components/ContactsGrowthChart';
@@ -237,18 +240,44 @@ export default function ContactsPage() {
       setWhatsappChannels(waChannels);
     });
   }, []);
+  /**
+   * Atualização por evento, não por relógio.
+   *
+   * Antes eram duas requisições a cada 15 s, para sempre, com a aba aberta ou não —
+   * e o que muda esta tela (contato novo, alguém entrando na fila de atendimento)
+   * acontece quando chega mensagem, que é justamente o que o stream anuncia. A
+   * rajada é agrupada porque uma única mensagem gera mais de um evento.
+   */
   useEffect(() => {
+    let coalesce: ReturnType<typeof setTimeout> | null = null;
+
     const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
       fetchContacts(query, 0, false);
       fetchStats();
     };
-    const timer = setInterval(refresh, 15000);
+    const scheduleRefresh = () => {
+      if (coalesce) return;
+      coalesce = setTimeout(() => { coalesce = null; refresh(); }, 500);
+    };
+
+    const unsubscribe = authService.getToken()
+      ? subscribeToEvents(inboxService.getInboxEventsUrl(), {
+        'conversation.updated': scheduleRefresh,
+        'conversation.deleted': scheduleRefresh,
+        // Pedido de atendimento humano: a linha do contato muda de estado na hora.
+        'queue.updated': scheduleRefresh,
+      })
+      : () => {};
+
     window.addEventListener('focus', refresh);
     return () => {
-      clearInterval(timer);
+      if (coalesce) clearTimeout(coalesce);
+      unsubscribe();
       window.removeEventListener('focus', refresh);
     };
   }, [fetchContacts, fetchStats, query]);
+
   const growth30 = useMemo(() => (stats ? fillLastDays(stats.daily, 30) : []), [stats]);
   const newLast30 = useMemo(() => growth30.reduce((sum, d) => sum + d.count, 0), [growth30]);
   // Variação de novos contatos: últimos 7 dias vs os 7 anteriores.

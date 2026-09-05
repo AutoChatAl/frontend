@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { inboxService } from '@/services/inbox.service';
 import type { InboxAgent, InboxConversation, InboxFilterId, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
+import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 const STATUS_RANK: Record<MessageDeliveryStatus, number> = { SENT: 1, DELIVERED: 2, READ: 3 };
 
@@ -90,6 +91,28 @@ export function useInbox(): UseInboxReturn {
   selectedIdRef.current = selectedId;
   conversationsRef.current = conversations;
 
+  /**
+   * Marca a conversa como lida no servidor e espelha na lista.
+   *
+   * Ponto único de propósito: a marcação precisa acontecer por todo caminho que
+   * traz mensagem para a thread aberta — o stream da conversa, a rede de segurança
+   * do canal do workspace e a seleção da conversa. Estando em um só lugar, nenhum
+   * caminho novo esquece de zerar o contador.
+   */
+  const markConversationRead = useCallback((conversationId: string) => {
+    // O markRead emite `conversation.updated` no backend. Chamar sem ter o que zerar
+    // devolveria o evento que provocou a chamada, e os dois ficariam se alimentando —
+    // uma rodada de requisições a cada ida e volta. Com a guarda, a segunda passada
+    // vê o contador já zerado e para.
+    const conversation = conversationsRef.current.find((c) => c.id === conversationId);
+    if (conversation && conversation.unreadCount === 0) return;
+    inboxService.markRead(conversationId)
+      .then(() => {
+        setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+      })
+      .catch(() => {});
+  }, []);
+
   const loadConversations = useCallback(async () => {
     try {
       const filters: InboxListFilters = {};
@@ -107,8 +130,30 @@ export function useInbox(): UseInboxReturn {
     }
   }, [channelFilter, search, viewingArchived]);
 
+  const markConversationReadRef = useRef(markConversationRead);
+  markConversationReadRef.current = markConversationRead;
+
   const loadConversationsRef = useRef(loadConversations);
   loadConversationsRef.current = loadConversations;
+
+  /**
+   * Recarga da lista com as rajadas agrupadas.
+   *
+   * Uma única mensagem recebida gera vários `conversation.updated` — a gravação, o
+   * markRead, a foto do contato chegando depois. Recarregando a cada evento, a lista
+   * era buscada três ou quatro vezes seguidas para mostrar o mesmo resultado.
+   */
+  const RELOAD_COALESCE_MS = 400;
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleConversationsReload = useCallback(() => {
+    if (reloadTimerRef.current) return;
+    reloadTimerRef.current = setTimeout(() => {
+      reloadTimerRef.current = null;
+      loadConversationsRef.current();
+    }, RELOAD_COALESCE_MS);
+  }, []);
+  const scheduleConversationsReloadRef = useRef(scheduleConversationsReload);
+  scheduleConversationsReloadRef.current = scheduleConversationsReload;
 
   const loadMessages = useCallback(async (conversationId: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
@@ -149,84 +194,47 @@ export function useInbox(): UseInboxReturn {
     loadConversations();
   }, [loadConversations]);
 
-  // SSE da lista do workspace — recarrega ao chegar/atualizar qualquer conversa.
-  // Usa ref para a conexão sobreviver a mudanças de filtro/busca e reconecta em caso de queda.
+  /**
+   * Stream do workspace: lista de conversas e avisos. Vai pela conexão compartilhada,
+   * então a página de contatos e o sino de notificações não abrem outra igual.
+   */
   useEffect(() => {
-    let source: EventSource | null = null;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    let disposed = false;
-    let hadError = false;
-
-    /**
-     * Rede de segurança da thread aberta.
-     *
-     * O caminho normal da mensagem nova é o stream da própria conversa; este evento é
-     * do workspace inteiro e chega por outra conexão. Quando a do canal da conversa
-     * cai (proxy derrubando conexão ociosa, rede do operador oscilando), era o único
-     * sinal que continuava vivo — e a lista atualizava a prévia enquanto a thread
-     * ficava parada. Com o carimbo de `lastThreadSyncRef`, o stream saudável já tinha
-     * trazido a mensagem e esta busca extra nem acontece.
-     */
-    const THREAD_RESYNC_GRACE_MS = 1500;
-    const onUpdate = (event: Event) => {
-      loadConversationsRef.current();
+    const onUpdate = (event: MessageEvent) => {
+      scheduleConversationsReloadRef.current();
       const openId = selectedIdRef.current;
       if (!openId) return;
       try {
-        const { conversationId } = JSON.parse((event as MessageEvent).data) as { conversationId?: string };
+        const { conversationId } = JSON.parse(event.data) as { conversationId?: string };
         if (conversationId && conversationId !== openId) return;
       } catch {
         // Payload ilegível: ressincroniza mesmo assim, é o caso em que menos se sabe.
       }
-      if (Date.now() - lastThreadSyncRef.current < THREAD_RESYNC_GRACE_MS) return;
+      // O stream da conversa é o caminho normal da mensagem nova; este é a rede de
+      // segurança para quando aquele cai. O carimbo evita a busca repetida.
+      if (Date.now() - lastThreadSyncRef.current < 1500) return;
       loadMessagesRef.current(openId, true);
-    };
-    // Excluída por outro administrador: some da lista de todo mundo em tempo real.
-    const onDeleted = (event: Event) => {
-      try {
-        const { conversationId } = JSON.parse((event as MessageEvent).data) as { conversationId?: string };
-        if (conversationId) dropConversationRef.current(conversationId);
-      } catch {
-        loadConversationsRef.current();
-      }
-    };
-    const onSettingsUpdate = () => {
-      loadConversationsRef.current();
-      const conversationId = selectedIdRef.current;
-      if (conversationId) loadMessagesRef.current(conversationId, true);
+      markConversationReadRef.current(openId);
     };
 
-    const connect = () => {
-      if (disposed) return;
-      const es = new EventSource(inboxService.getInboxEventsUrl());
-      source = es;
-      es.onopen = () => {
-        // Ressincroniza o que chegou enquanto o stream esteve fora.
-        if (hadError) {
-          hadError = false;
-          loadConversationsRef.current();
+    return subscribeToEvents(inboxService.getInboxEventsUrl(), {
+      'conversation.updated': onUpdate,
+      'conversation.deleted': (event) => {
+        try {
+          const { conversationId } = JSON.parse(event.data) as { conversationId?: string };
+          if (conversationId) dropConversationRef.current(conversationId);
+        } catch {
+          scheduleConversationsReloadRef.current();
         }
-      };
-      es.addEventListener('conversation.updated', onUpdate);
-      es.addEventListener('conversation.deleted', onDeleted);
-      es.addEventListener('settings.updated', onSettingsUpdate);
-      es.onerror = () => {
-        hadError = true;
-        // EventSource reconecta sozinho em erros transitórios; recria só quando fecha de vez.
-        if (es.readyState === EventSource.CLOSED) {
-          es.close();
-          if (retryTimer) clearTimeout(retryTimer);
-          retryTimer = setTimeout(connect, 4000);
-        }
-      };
-    };
-
-    connect();
-    return () => {
-      disposed = true;
-      if (retryTimer) clearTimeout(retryTimer);
-      source?.close();
-    };
+      },
+      'settings.updated': () => {
+        scheduleConversationsReloadRef.current();
+        const conversationId = selectedIdRef.current;
+        if (conversationId) loadMessagesRef.current(conversationId, true);
+      },
+      'message.created': (event) => { onConversationMessageRef.current(event); },
+      'message.status': (event) => { onConversationStatusRef.current(event); },
+      typing: (event) => { onConversationTypingRef.current(event); },
+    });
   }, []);
 
   useEffect(() => {
@@ -303,119 +311,104 @@ export function useInbox(): UseInboxReturn {
     setMessages([]);
     setContactTyping(false);
     loadMessages(conversationId);
-    inboxService.markRead(conversationId)
-      .then(() => {
-        setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-      })
-      .catch(() => {});
+    markConversationRead(conversationId);
   }, [loadMessages]);
 
-  // SSE da conversa aberta — mensagens novas, status de entrega e "digitando".
-  // Reconecta em caso de queda e ressincroniza as mensagens ao voltar.
+  /**
+   * Handlers da conversa aberta. Ficam em refs porque a assinatura do stream é feita
+   * uma vez só, com deps vazias, e precisa enxergar sempre a conversa atual.
+   */
+  const onConversationMessage = useCallback((event: MessageEvent) => {
+    const conversationId = selectedIdRef.current;
+    if (!conversationId) return;
+    try {
+      const payload = JSON.parse(event.data) as { message?: InboxMessage };
+      if (!payload.message || payload.message.conversationId !== conversationId) return;
+      const incoming = payload.message;
+      lastThreadSyncRef.current = Date.now();
+      setContactTyping(false);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incoming.id)) return prev;
+        // Envio próprio ecoado pelo SSE: substitui a bolha otimista equivalente em vez de duplicar.
+        let base = prev;
+        if (incoming.direction === 'OUT') {
+          const tempIdx = prev.findIndex((m) => m.pending && m.body === incoming.body && (m.mediaType ?? null) === (incoming.mediaType ?? null));
+          if (tempIdx >= 0) base = prev.filter((_, i) => i !== tempIdx);
+        }
+        return [...base, incoming];
+      });
+      // Só marca como lida (e espelha o tique azul para o contato) quando a mensagem é recebida.
+      if (incoming.direction === 'IN') markConversationReadRef.current(conversationId);
+    } catch {
+      loadMessagesRef.current(conversationId, true);
+    }
+  }, []);
+  const onConversationMessageRef = useRef(onConversationMessage);
+  onConversationMessageRef.current = onConversationMessage;
+
+  const onConversationStatus = useCallback((event: MessageEvent) => {
+    try {
+      const { status, until } = JSON.parse(event.data) as {
+        status?: MessageDeliveryStatus;
+        until?: string | null;
+      };
+      if (!status) return;
+      const untilTime = until ? new Date(until).getTime() : null;
+      setMessages((prev) => prev.map((m) => {
+        if (m.direction !== 'OUT') return m;
+        // Recibo escopado: não promove mensagens enviadas depois da mensagem referenciada.
+        if (untilTime !== null && new Date(m.createdAt).getTime() > untilTime) return m;
+        const current = STATUS_RANK[m.deliveryStatus ?? 'SENT'];
+        return current < STATUS_RANK[status] ? { ...m, deliveryStatus: status } : m;
+      }));
+    } catch {
+      // ignora payload malformado
+    }
+  }, []);
+  const onConversationStatusRef = useRef(onConversationStatus);
+  onConversationStatusRef.current = onConversationStatus;
+
+  const onConversationTyping = useCallback((event: MessageEvent) => {
+    try {
+      const payload = JSON.parse(event.data) as { isTyping?: boolean };
+      setContactTyping(!!payload.isTyping);
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+      if (payload.isTyping) {
+        typingClearRef.current = setTimeout(() => setContactTyping(false), 6000);
+      }
+    } catch {
+      // ignora payload malformado
+    }
+  }, []);
+  const onConversationTypingRef = useRef(onConversationTyping);
+  onConversationTypingRef.current = onConversationTyping;
+
+  /**
+   * Aponta a conexão já aberta para a conversa selecionada. É uma chamada curta, sem
+   * reabrir stream nenhum — trocar de conversa não custa mais uma conexão.
+   */
   useEffect(() => {
     if (!selectedId) return undefined;
-    const conversationId = selectedId;
     setContactTyping(false);
+    let cancelled = false;
 
-    let source: EventSource | null = null;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    let disposed = false;
-    let hadError = false;
-
-    const onMessage = (event: Event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as { message?: InboxMessage };
-        if (!payload.message || payload.message.conversationId !== conversationId) return;
-        const incoming = payload.message;
-        // Carimbo do caminho saudável: o evento do workspace que vem logo atrás vê a
-        // thread recém-atualizada e não dispara uma busca redundante.
-        lastThreadSyncRef.current = Date.now();
-        setContactTyping(false);
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === incoming.id)) return prev;
-          // Envio próprio ecoado pelo SSE: substitui a bolha otimista equivalente em vez de duplicar.
-          let base = prev;
-          if (incoming.direction === 'OUT') {
-            const tempIdx = prev.findIndex((m) => m.pending && m.body === incoming.body && (m.mediaType ?? null) === (incoming.mediaType ?? null));
-            if (tempIdx >= 0) base = prev.filter((_, i) => i !== tempIdx);
-          }
-          return [...base, incoming];
-        });
-        // Só marca como lida (e espelha o tique azul para o contato) quando a mensagem é recebida.
-        if (incoming.direction === 'IN') {
-          inboxService.markRead(conversationId).catch(() => {});
-        }
-      } catch {
-        loadMessages(conversationId, true);
+    const watch = async (attempt = 0) => {
+      if (cancelled) return;
+      const attached = await inboxService.watchConversation(inboxService.getStreamId(), selectedId).catch(() => false);
+      // `attached: false` = o servidor não conhece este stream (conexão ainda subindo
+      // ou caiu). Tenta de novo em vez de deixar a thread sem acompanhar a conversa.
+      if (!attached && attempt < 5 && !cancelled) {
+        setTimeout(() => watch(attempt + 1), 1000 * (attempt + 1));
       }
     };
+    watch();
 
-    const onStatus = (event: Event) => {
-      try {
-        const { status, until } = JSON.parse((event as MessageEvent).data) as {
-          status?: MessageDeliveryStatus;
-          until?: string | null;
-        };
-        if (!status) return;
-        const untilTime = until ? new Date(until).getTime() : null;
-        setMessages((prev) => prev.map((m) => {
-          if (m.direction !== 'OUT') return m;
-          // Recibo escopado: não promove mensagens enviadas depois da mensagem referenciada.
-          if (untilTime !== null && new Date(m.createdAt).getTime() > untilTime) return m;
-          const current = STATUS_RANK[m.deliveryStatus ?? 'SENT'];
-          return current < STATUS_RANK[status] ? { ...m, deliveryStatus: status } : m;
-        }));
-      } catch {
-        // ignora payload malformado
-      }
-    };
-
-    const onTyping = (event: Event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as { isTyping?: boolean };
-        setContactTyping(!!payload.isTyping);
-        if (typingClearRef.current) clearTimeout(typingClearRef.current);
-        if (payload.isTyping) {
-          typingClearRef.current = setTimeout(() => setContactTyping(false), 6000);
-        }
-      } catch {
-        // ignora payload malformado
-      }
-    };
-
-    const connect = () => {
-      if (disposed) return;
-      const es = new EventSource(inboxService.getConversationEventsUrl(conversationId));
-      source = es;
-      es.onopen = () => {
-        // Ressincroniza mensagens e status perdidos enquanto o stream esteve fora.
-        if (hadError) {
-          hadError = false;
-          loadMessages(conversationId, true);
-        }
-      };
-      es.addEventListener('message.created', onMessage);
-      es.addEventListener('message.status', onStatus);
-      es.addEventListener('typing', onTyping);
-      es.onerror = () => {
-        hadError = true;
-        // EventSource reconecta sozinho em erros transitórios; recria só quando fecha de vez.
-        if (es.readyState === EventSource.CLOSED) {
-          es.close();
-          if (retryTimer) clearTimeout(retryTimer);
-          retryTimer = setTimeout(connect, 4000);
-        }
-      };
-    };
-
-    connect();
     return () => {
-      disposed = true;
+      cancelled = true;
       if (typingClearRef.current) clearTimeout(typingClearRef.current);
-      if (retryTimer) clearTimeout(retryTimer);
-      source?.close();
+      inboxService.watchConversation(inboxService.getStreamId(), null).catch(() => {});
     };
-  }, [selectedId, loadMessages]);
+  }, [selectedId]);
 
   /**
    * Aba em segundo plano e máquina suspensa matam o EventSource sem aviso — o
@@ -485,6 +478,21 @@ export function useInbox(): UseInboxReturn {
     setSending(true);
     setError(null);
     setMessages((prev) => [...prev, optimistic]);
+    // A prévia da lista também é otimista.
+    //
+    // Ela dependia inteiramente de o servidor devolver `conversation.updated` e a
+    // lista ser rebuscada — então a mensagem já estava no balão e a linha da conversa
+    // continuava mostrando a anterior. Sendo conteúdo que o próprio cliente acabou de
+    // escrever, não há motivo para esperar a ida e volta.
+    setConversations((prev) => prev.map((c) => (c.id === conversationId
+      ? {
+        ...c,
+        lastMessagePreview: messagePreview(optimistic),
+        lastMessageDirection: 'OUT' as const,
+        lastMessageAt: optimistic.createdAt,
+        unreadCount: 0,
+      }
+      : c)));
     try {
       const { message } = await inboxService.sendMessage(conversationId, body, media, replyTo?.id);
       setMessages((prev) => {
