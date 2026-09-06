@@ -4,16 +4,12 @@ import { useState } from 'react';
 
 import Badge from '@/components/Badge';
 import type { InboxChannelType, InboxMessageInteractive } from '@/types/Inbox';
+import { getInitials } from '@/utils/displayName';
 
-export function getInitials(name?: string | null, fallback?: string | null): string {
-  const source = (name || fallback || '?').trim().replace(/^@/, '');
-  const parts = source.split(/\s+/).filter(Boolean);
-  const first = parts[0] ?? '';
-  if (!first) return '?';
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = parts[parts.length - 1] ?? '';
-  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase();
-}
+// Vem do utilitário compartilhado: a versão que vivia aqui indexava por unidade
+// UTF-16 e cortava emoji e letra decorativa no meio. Reexportado porque a inbox
+// inteira já importa estes nomes daqui.
+export { getInitials, normalizeDisplayName } from '@/utils/displayName';
 
 export function Avatar({
   name,

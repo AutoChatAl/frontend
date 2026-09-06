@@ -10,7 +10,7 @@ import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonCards, SkeletonPage, SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 import { couponService } from '@/services/coupon.service';
@@ -162,7 +162,7 @@ function RedemptionsModal({ coupon, onClose }: RedemptionsModalProps) {
       .finally(() => setLoading(false));
   }, [coupon]);
   return (<Modal isOpen={!!coupon} onClose={onClose} title={`Usos do cupom ${coupon?.code ?? ''}`} size="md">
-    {loading ? (<p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Carregando...</p>)
+    {loading ? (<div className="animate-pulse py-2" aria-busy="true"><SkeletonRows count={3} avatar={false}/></div>)
       : redemptions.length === 0 ? (<p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Ninguém usou este cupom ainda.</p>)
         : (<div className="space-y-2 max-h-96 overflow-y-auto">
           {redemptions.map((r) => (<div key={r.id} className="flex items-center justify-between gap-3 p-3 border border-slate-100 dark:border-slate-700 rounded-xl">
@@ -244,7 +244,7 @@ export default function CouponsPage() {
     }
   };
   if (isRoleChecking) {
-    return <PageLoader message="Carregando..."/>;
+    return <SkeletonPage><SkeletonCards count={4}/></SkeletonPage>;
   }
   if (!isAdmin) {
     notFound();
@@ -260,7 +260,7 @@ export default function CouponsPage() {
       <Button onClick={() => setIsCreateOpen(true)} icon={<Plus size={16}/>}>Novo Cupom</Button>
     </div>
 
-    {loading ? (<PageLoader message="Carregando cupons..."/>)
+    {loading ? (<SkeletonCards count={4}/>)
       : coupons.length === 0 ? (<EmptyState icon={<TicketPercent size={22}/>} title="Nenhum cupom criado ainda" description="Crie um cupom de desconto e compartilhe o código com seus clientes." action={{
         label: 'Criar primeiro cupom',
         icon: <Plus size={16}/>,

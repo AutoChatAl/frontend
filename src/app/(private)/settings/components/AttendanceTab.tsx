@@ -1,5 +1,5 @@
 'use client';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
@@ -7,6 +7,7 @@ import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
 import Select from '@/components/Select';
+import { SkeletonForm } from '@/components/Skeleton';
 import Textarea from '@/components/Textarea';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
@@ -68,9 +69,7 @@ export default function AttendanceTab() {
   if (loading) {
     return (
       <Card className="p-4">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 size={20} className="animate-spin text-slate-400"/>
-        </div>
+        <div className="animate-pulse" aria-busy="true"><SkeletonForm fields={3}/></div>
       </Card>
     );
   }

@@ -1,10 +1,11 @@
 'use client';
-import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Link2, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import Skeleton from '@/components/Skeleton';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
 import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays } from '@/types/Inbox';
@@ -14,6 +15,7 @@ import {
   blobToWavBase64,
   pickAudioRecorderMimeType,
 } from '@/utils/AudioWav';
+import { normalizeDisplayName } from '@/utils/displayName';
 import { mediaTypeFromMime, validateInboxMedia } from '@/utils/inboxMedia';
 
 import {
@@ -166,6 +168,8 @@ function ConversationRow({
   currentUserId,
   canDelete = false,
   busy = false,
+  groupedWithPrevious = false,
+  groupedWithNext = false,
   open,
   onOpenChange,
   onClick,
@@ -179,6 +183,13 @@ function ConversationRow({
   /** Excluir é só do administrador; arquivar fica disponível para qualquer atendente. */
   canDelete?: boolean;
   busy?: boolean;
+  /**
+   * Vizinhas que são a mesma pessoa em outro canal. O backend já devolve as
+   * vinculadas adjacentes; estas duas marcas desenham a linha que liga um card
+   * ao outro — metade sai de cada lado e elas se encontram na borda.
+   */
+  groupedWithPrevious?: boolean;
+  groupedWithNext?: boolean;
   /** Painel de ações aberto — controlado pela página para só uma linha ficar aberta por vez. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -188,6 +199,7 @@ function ConversationRow({
 }) {
   const assignedTo = conversation.assignedTo ?? null;
   const isMine = !!assignedTo && assignedTo === currentUserId;
+  const grouped = groupedWithPrevious || groupedWithNext;
   const archived = !!conversation.archivedAt;
   const swipeEnabled = !disabled;
   const actionsWidth = SWIPE_ACTION_PX * (canDelete ? 2 : 1);
@@ -244,7 +256,18 @@ function ConversationRow({
   };
 
   return (
-    <div className="relative overflow-hidden border-b border-slate-100 dark:border-slate-700/60">
+    <div
+      className={`relative overflow-hidden ${
+        grouped
+          // O grupo é um cartão só: recuado dos dois lados para se destacar das
+          // linhas soltas, arredondado apenas nas pontas e sem divisória interna
+          // cheia — é isso que faz duas conversas lerem como uma pessoa.
+          ? `mx-2 border-slate-100 bg-indigo-50/60 dark:border-slate-700/60 dark:bg-indigo-500/[0.07] ${
+            groupedWithNext ? '' : 'mb-1 rounded-b-xl border-b'
+          }`
+          : 'border-b border-slate-100 dark:border-slate-700/60'
+      }`}
+    >
       {offset < 0 && (
         <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
           <button
@@ -292,9 +315,22 @@ function ConversationRow({
           transition: dragOffset !== null ? 'none' : 'transform 160ms ease-out, background-color 150ms ease-out',
           touchAction: swipeEnabled ? 'pan-y' : undefined,
         }}
-        className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left ${disabled ? 'cursor-not-allowed bg-white dark:bg-slate-800' : active ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer'}`}
+        className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left ${
+          // Dentro do grupo o fundo é o do cartão: pintar branco aqui recortaria
+          // o tingido e as duas linhas voltariam a parecer soltas.
+          grouped ? 'bg-transparent' : ''
+        } ${disabled
+          ? `cursor-not-allowed ${grouped ? '' : 'bg-white dark:bg-slate-800'}`
+          : active
+            ? 'bg-indigo-100/70 dark:bg-indigo-500/20'
+            : `cursor-pointer hover:bg-slate-500/5 dark:hover:bg-white/5 ${grouped ? '' : 'bg-white dark:bg-slate-800'}`}`}
       >
         {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-indigo-500" aria-hidden />}
+        {/* Divisória interna do grupo: recuada nos dois lados para separar as
+            conversas sem cortar o cartão que as contém. */}
+        {groupedWithPrevious && (
+          <span className="absolute inset-x-3 top-0 h-px bg-indigo-200/70 dark:bg-indigo-400/15" aria-hidden />
+        )}
         <Avatar
           name={conversation.contactName}
           identifier={conversation.contactIdentifier}
@@ -304,7 +340,7 @@ function ConversationRow({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
-              {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
+              {normalizeDisplayName(conversation.contactName) || conversation.contactIdentifier || 'Contato sem nome'}
             </span>
             <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
               {formatConversationTime(conversation.lastMessageAt)}
@@ -379,6 +415,9 @@ export default function InboxPage() {
     transcribeMessage,
     assignConversation,
     unassignConversation,
+    renameContact,
+    linkConversation,
+    unlinkConversation,
     resumeAi,
     deletingId,
     deleteConversation,
@@ -809,28 +848,55 @@ export default function InboxPage() {
                 </p>
               </div>
             ) : (
-              conversations.map((c) => (
-                <ConversationRow
-                  key={c.id}
-                  conversation={c}
-                  active={c.id === selectedId}
-                  currentUserId={currentUserId}
-                  // Abrir a conversa marca como lida e dispara o recibo de leitura para o
-                  // contato. Com o chat desligado o operador não viu nada, então não seleciona.
-                  disabled={!chatEnabled}
-                  // Exclusão é irreversível e vale para o workspace inteiro: só dono/admin.
-                  canDelete={hasFullAccess}
-                  busy={archivingId === c.id || deletingId === c.id}
-                  open={swipedRowId === c.id}
-                  onOpenChange={(open) => setSwipedRowId(open ? c.id : null)}
-                  onClick={() => handleSelectConversation(c.id)}
-                  onArchive={() => handleArchive(c)}
-                  onRequestDelete={() => {
-                    setSwipedRowId(null);
-                    setConversationToDelete(c);
-                  }}
-                />
-              ))
+              conversations.map((c, index) => {
+                const startsGroup = !!c.linkGroupId && c.linkGroupId !== conversations[index - 1]?.linkGroupId
+                  && c.linkGroupId === conversations[index + 1]?.linkGroupId;
+                const groupSize = c.linkGroupId
+                  ? conversations.filter((other) => other.linkGroupId === c.linkGroupId).length
+                  : 0;
+                return (<Fragment key={c.id}>
+                  {/* Cabeçalho do cartão de grupo. Uma linha fina sozinha mostra que
+                      há relação mas não diz qual; o rótulo tira a adivinhação, e só
+                      aparece quando existe grupo — nenhuma conversa solta paga por ele. */}
+                  {startsGroup && (
+                    <div className="mx-2 flex items-center gap-1.5 rounded-t-xl bg-indigo-50/60 px-3 pb-1 pt-2 dark:bg-indigo-500/[0.07]">
+                      <Link2 size={12} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">
+                        Mesma pessoa
+                      </span>
+                      <span className="text-[11px] text-indigo-400/80 dark:text-indigo-400/60">
+                        · {groupSize} canais
+                      </span>
+                    </div>
+                  )}
+                  <ConversationRow
+                    key={c.id}
+                    conversation={c}
+                    active={c.id === selectedId}
+                    currentUserId={currentUserId}
+                    groupedWithPrevious={
+                      !!c.linkGroupId && c.linkGroupId === conversations[index - 1]?.linkGroupId
+                    }
+                    groupedWithNext={
+                      !!c.linkGroupId && c.linkGroupId === conversations[index + 1]?.linkGroupId
+                    }
+                    // Abrir a conversa marca como lida e dispara o recibo de leitura para o
+                    // contato. Com o chat desligado o operador não viu nada, então não seleciona.
+                    disabled={!chatEnabled}
+                    // Exclusão é irreversível e vale para o workspace inteiro: só dono/admin.
+                    canDelete={hasFullAccess}
+                    busy={archivingId === c.id || deletingId === c.id}
+                    open={swipedRowId === c.id}
+                    onOpenChange={(open) => setSwipedRowId(open ? c.id : null)}
+                    onClick={() => handleSelectConversation(c.id)}
+                    onArchive={() => handleArchive(c)}
+                    onRequestDelete={() => {
+                      setSwipedRowId(null);
+                      setConversationToDelete(c);
+                    }}
+                  />
+                </Fragment>);
+              })
             )}
           </div>
 
@@ -947,7 +1013,13 @@ export default function InboxPage() {
                 className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/40 px-4 py-4 space-y-2"
               >
                 {loadingMessages ? (
-                  <p className="text-sm text-slate-400">Carregando mensagens...</p>
+                  <div className="animate-pulse space-y-3" aria-busy="true" aria-label="Carregando mensagens">
+                    {['w-2/3', 'w-1/2', 'w-4/5', 'w-2/5', 'w-3/5'].map((width, index) => (
+                      <div key={width} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                        <Skeleton className={`h-10 ${width} ${index % 2 === 0 ? 'rounded-bl-sm' : 'rounded-br-sm'}`} />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   dayGroups.map((group) => (
                     <section key={group.key} className="space-y-2">
@@ -1152,9 +1224,13 @@ export default function InboxPage() {
                 hasFullAccess={hasFullAccess}
                 assigning={assigning}
                 messageCount={messages.length}
+                conversations={conversations}
                 onAssign={handleAssign}
                 onUnassign={handleUnassign}
                 onResumeAi={handleResumeAi}
+                onLink={(targetId) => { void linkConversation(selectedConversation.id, targetId); }}
+                onUnlink={() => { void unlinkConversation(selectedConversation.id); }}
+                onRenameContact={(name) => { void renameContact(selectedConversation.id, name); }}
               />
             </aside>
           </>

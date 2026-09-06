@@ -1,5 +1,5 @@
 'use client';
-import { FlaskConical, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
+import { FlaskConical, Plus, ShieldCheck, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -8,6 +8,7 @@ import Card from '@/components/Card';
 import Input from '@/components/Input';
 import SectionHeader from '@/components/SectionHeader';
 import Select from '@/components/Select';
+import { SkeletonForm } from '@/components/Skeleton';
 import Textarea from '@/components/Textarea';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
@@ -185,9 +186,7 @@ export default function AIGuardrailsSection() {
   if (loading) {
     return (
       <Card className="p-4">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 size={20} className="animate-spin text-slate-400"/>
-        </div>
+        <div className="animate-pulse" aria-busy="true"><SkeletonForm fields={3}/></div>
       </Card>
     );
   }

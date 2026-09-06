@@ -22,6 +22,8 @@ import type {
   SourceChannelType,
   StageColor,
 } from '@/types/Funnel';
+// Reexportado: a versão que vivia aqui cortava emoji e letra decorativa no meio.
+export { getInitials } from '@/utils/displayName';
 import { formatPhoneNumber } from '@/utils/phone';
 
 export interface TemperatureMeta {
@@ -165,17 +167,6 @@ export const STAGE_COLOR_OPTIONS: StageColor[] = ['indigo', 'violet', 'blue', 'e
 
 export function stageColorMeta(color: StageColor): StageColorMeta {
   return STAGE_COLOR_META[color] ?? STAGE_COLOR_META.indigo;
-}
-
-export function getInitials(name: string | null): string {
-  if (!name) return '?';
-  const initials = name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
-  return initials || '?';
 }
 
 export function formatRelative(iso: string | null): string {

@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { SkeletonRows, SkeletonText } from '@/components/Skeleton';
+
 import ConfirmDeleteModal from '../../../components/ConfirmDeleteModal';
 import IconButton from '../../../components/IconButton';
 import { authService } from '../../../services/auth.service';
@@ -350,7 +352,7 @@ export default function SupportPage() {
         </div>
 
         <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-          {loading ? (<div className="flex items-center justify-center py-10 text-sm text-slate-500"><Loader2 size={18} className="mr-2 animate-spin"/>Carregando conversas...</div>) : conversations.length === 0 ? (<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          {loading ? (<div className="animate-pulse" aria-busy="true"><SkeletonRows count={4} avatar={false}/></div>) : conversations.length === 0 ? (<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 Nenhuma conversa encontrada.
           </div>) : (conversations.map((conversation) => (<button key={conversation.id} type="button" onClick={() => setSelectedConversationId(conversation.id)} className={`w-full rounded-2xl border px-4 py-3 text-left transition ${selectedConversationId === conversation.id ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/30' : conversation.unreadByAdminCount > 0 ? 'border-amber-200 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/20' : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700'}`}>
             <div className="flex items-start justify-between gap-3">
@@ -400,7 +402,7 @@ export default function SupportPage() {
           </div>
 
           <div ref={threadRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 px-6 py-5 dark:bg-slate-900/50">
-            {threadLoading ? (<div className="flex items-center justify-center py-10 text-sm text-slate-500"><Loader2 size={18} className="mr-2 animate-spin"/>Carregando conversa...</div>) : (<>
+            {threadLoading ? (<div className="animate-pulse space-y-3 py-4" aria-busy="true"><SkeletonText lines={6}/></div>) : (<>
               {messages.map((message) => {
                 const isAdminMessage = message.senderType === 'ADMIN';
                 return (<div key={message.id} className={`flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>

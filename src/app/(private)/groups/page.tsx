@@ -6,7 +6,7 @@ import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
 import MetricCard from '@/components/MetricCard';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { groupService } from '@/services/group.service';
 import type { Group } from '@/types/Group';
@@ -93,7 +93,7 @@ export default function GroupsPage() {
     }
   };
   if (loading) {
-    return <PageLoader message="Carregando grupos..."/>;
+    return <SkeletonPage><SkeletonRows count={5}/></SkeletonPage>;
   }
 
   return (<div className="w-full max-w-full space-y-3">

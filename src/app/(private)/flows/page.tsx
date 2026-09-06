@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
@@ -253,7 +253,7 @@ export default function FlowsPage() {
     setDirty(true);
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
 
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-3 sm:h-[calc(100vh-7rem)]">

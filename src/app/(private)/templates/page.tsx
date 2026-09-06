@@ -12,7 +12,7 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonTable } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
@@ -124,7 +124,7 @@ export default function TemplatesPage() {
   };
 
   if (loading && templates.length === 0 && channels.length === 0) {
-    return <PageLoader message="Carregando templates..." />;
+    return <SkeletonPage><SkeletonTable rows={6} columns={4}/></SkeletonPage>;
   }
 
   return (

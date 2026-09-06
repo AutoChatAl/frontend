@@ -3,7 +3,7 @@ import { CalendarDays } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
 import Button from '@/components/Button';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonRows, SkeletonStats } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
@@ -181,7 +181,7 @@ export default function SchedulingPage() {
     }
   };
   if (loading) {
-    return <PageLoader message="Carregando agendamentos"/>;
+    return <SkeletonPage><SkeletonStats count={3}/><SkeletonRows count={5}/></SkeletonPage>;
   }
   return (<div className="w-full max-w-full space-y-3">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

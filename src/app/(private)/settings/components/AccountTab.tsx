@@ -1,5 +1,4 @@
 'use client';
-import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -9,6 +8,7 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import DangerZone from '@/components/DangerZone';
 import Input from '@/components/Input';
 import SectionHeader from '@/components/SectionHeader';
+import { SkeletonForm } from '@/components/Skeleton';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { authService } from '@/services/auth.service';
@@ -94,8 +94,8 @@ export default function AccountTab() {
     }
   }
   if (loading) {
-    return (<div className="flex items-center justify-center py-20">
-      <Loader2 size={24} className="animate-spin text-indigo-600 dark:text-indigo-400"/>
+    return (<div className="animate-pulse space-y-3" aria-busy="true">
+      <SkeletonForm fields={4}/>
     </div>);
   }
   return (<div className="space-y-3">

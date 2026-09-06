@@ -9,6 +9,7 @@ import { groupService } from '@/services/group.service';
 import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
+import { getInitials } from '@/utils/displayName';
 
 type RawContact = Contact & {
     _id?: string;
@@ -184,7 +185,7 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
                 ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
                 : 'hover:bg-white dark:hover:bg-slate-700'}`}>
               <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
-                {getContactDisplay(contact).charAt(0).toUpperCase()}
+                {getInitials(getContactDisplay(contact))}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-slate-800 dark:text-white truncate">{getContactDisplay(contact)}</p>
@@ -218,7 +219,7 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
           const channels = getContactChannels(contact);
           return (<div key={contact.id} className="flex items-center gap-3 py-3 group/row">
             <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-300">
-              {getContactDisplay(contact).charAt(0).toUpperCase()}
+              {getInitials(getContactDisplay(contact))}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-800 dark:text-white truncate">

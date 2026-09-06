@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import { contactService } from '@/services/contact.service';
 import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
+import { getInitials } from '@/utils/displayName';
 
 type RawContact = Contact & {
     _id?: string;
@@ -123,7 +124,7 @@ export default function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGr
               ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
               : 'border border-transparent hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
               <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
-                {getContactDisplay(contact).charAt(0).toUpperCase()}
+                {getInitials(getContactDisplay(contact))}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-slate-800 dark:text-white truncate">{getContactDisplay(contact)}</p>

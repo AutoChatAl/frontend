@@ -13,6 +13,7 @@ import IconButton from '@/components/IconButton';
 import Input from '@/components/Input';
 import MetricCard from '@/components/MetricCard';
 import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonRows, SkeletonStats } from '@/components/Skeleton';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { campaignService } from '@/services/campaign.service';
@@ -242,7 +243,7 @@ function CampaignsPageContent() {
   }, [campaigns]);
   const hasActiveFilters = nameFilter.trim() !== '' || channelFilter !== 'ALL';
   if (loading) {
-    return <PageLoader message="Carregando campanhas..."/>;
+    return <SkeletonPage><SkeletonStats count={4}/><SkeletonRows count={5}/></SkeletonPage>;
   }
   if (error) {
     return (<div className="flex items-center justify-center h-64">

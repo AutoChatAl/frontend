@@ -53,6 +53,10 @@ interface UseInboxReturn {
   transcribeMessage: (message: InboxMessage) => Promise<void>;
   assignConversation: (conversationId: string, userId: string) => Promise<void>;
   unassignConversation: (conversationId: string) => Promise<void>;
+  /** Marca duas conversas como a mesma pessoa. Só muda a lista, nunca o envio. */
+  renameContact: (conversationId: string, displayName: string) => Promise<void>;
+  linkConversation: (conversationId: string, targetConversationId: string) => Promise<void>;
+  unlinkConversation: (conversationId: string) => Promise<void>;
   resumeAi: (conversationId: string) => Promise<void>;
   deletingId: string | null;
   deleteConversation: (conversationId: string) => Promise<void>;
@@ -265,6 +269,43 @@ export function useInbox(): UseInboxReturn {
   const assignConversation = useCallback(async (conversationId: string, userId: string) => {
     await applyAssignment(() => inboxService.assign(conversationId, userId));
   }, [applyAssignment]);
+
+  /**
+   * Vincular e desvincular mudam a ORDEM da lista, e não só a linha tocada — as
+   * irmãs passam a viajar juntas. Por isso recarrega tudo em vez de remendar o
+   * estado local, que não teria como saber a nova posição do grupo.
+   */
+  const renameContact = useCallback(async (conversationId: string, displayName: string) => {
+    await applyAssignment(() => inboxService.renameContact(conversationId, displayName));
+  }, [applyAssignment]);
+
+  const linkConversation = useCallback(async (conversationId: string, targetConversationId: string) => {
+    setAssigning(true);
+    setError(null);
+    try {
+      await inboxService.link(conversationId, targetConversationId);
+      loadConversationsRef.current();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao vincular as conversas.');
+      throw e;
+    } finally {
+      setAssigning(false);
+    }
+  }, []);
+
+  const unlinkConversation = useCallback(async (conversationId: string) => {
+    setAssigning(true);
+    setError(null);
+    try {
+      await inboxService.unlink(conversationId);
+      loadConversationsRef.current();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao desfazer o vínculo.');
+      throw e;
+    } finally {
+      setAssigning(false);
+    }
+  }, []);
 
   const unassignConversation = useCallback(async (conversationId: string) => {
     await applyAssignment(() => inboxService.unassign(conversationId));
@@ -553,6 +594,9 @@ export function useInbox(): UseInboxReturn {
     transcribeMessage,
     assignConversation,
     unassignConversation,
+    renameContact,
+    linkConversation,
+    unlinkConversation,
     resumeAi,
     deletingId,
     deleteConversation,

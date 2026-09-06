@@ -1,5 +1,5 @@
 'use client';
-import { FlaskConical, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { FlaskConical, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -7,6 +7,7 @@ import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import Input from '@/components/Input';
 import SectionHeader from '@/components/SectionHeader';
+import { SkeletonRows } from '@/components/Skeleton';
 import Textarea from '@/components/Textarea';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
@@ -234,9 +235,7 @@ export default function AIKnowledgeSection({ knowledgeEnabled, onToggleKnowledge
         />
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={20} className="animate-spin text-slate-400"/>
-          </div>
+          <div className="animate-pulse" aria-busy="true"><SkeletonRows count={4} avatar={false}/></div>
         ) : entries.length === 0 ? (
           <p className="py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">
             {search

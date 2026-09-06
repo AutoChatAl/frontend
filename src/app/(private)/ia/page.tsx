@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonForm, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
@@ -59,7 +59,7 @@ export default function IAPage() {
     }
   }, [tabIds, activeTab]);
   if (subLoading || loading) {
-    return <PageLoader message="Carregando configurações de IA"/>;
+    return <SkeletonPage><SkeletonForm fields={5}/></SkeletonPage>;
   }
   if (!hasAiPlan) {
     // Contratar plano é ação de cobrança, do dono. Mostrar a vitrine de planos a

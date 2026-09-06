@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import EmptyState from '@/components/EmptyState';
 import Modal from '@/components/Modal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonStats, SkeletonTable } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { aiSpendService } from '@/services/ai-spend.service';
 import { authService } from '@/services/auth.service';
@@ -142,13 +142,13 @@ export default function AiSpendsPage() {
   ), [rows]);
 
   if (isRoleChecking) {
-    return <PageLoader message="Verificando permissões" />;
+    return <SkeletonPage><SkeletonStats count={3}/><SkeletonTable rows={6} columns={4}/></SkeletonPage>;
   }
   if (!isAdmin) {
     notFound();
   }
   if (loading) {
-    return <PageLoader message="Carregando gastos com IA" />;
+    return <SkeletonPage><SkeletonStats count={3}/><SkeletonTable rows={6} columns={4}/></SkeletonPage>;
   }
 
   return (

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { autoReplyService } from '@/services/auto-reply.service';
@@ -137,7 +137,7 @@ export default function AutoRepliesPage() {
   };
 
   if (loading) {
-    return <PageLoader message="Carregando automações..."/>;
+    return <SkeletonPage><SkeletonRows count={5}/></SkeletonPage>;
   }
 
   if (error && rows.length === 0) {

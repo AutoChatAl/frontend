@@ -1,6 +1,7 @@
 'use client';
 import { Check, ExternalLink } from 'lucide-react';
 
+import { getInitials } from '@/utils/displayName';
 import { whatsAppToHtml } from '@/utils/whatsappFormat';
 
 interface WhatsAppPreviewProps {
@@ -15,7 +16,7 @@ export default function WhatsAppPreview({ message, senderName = 'Synq', linkUrl,
   return (<div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
     <div className="bg-[#075E54] dark:bg-[#1F2C34] px-4 py-3 flex items-center gap-3">
       <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center text-white text-xs font-bold">
-        {senderName.charAt(0).toUpperCase()}
+        {getInitials(senderName)}
       </div>
       <div>
         <p className="text-white text-sm font-medium">{senderName}</p>

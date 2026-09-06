@@ -69,6 +69,36 @@ class InboxService {
     return response.data.conversation;
   }
 
+  /** Dá nome ao contato quando o provedor não mandou o nome do WhatsApp. */
+  public async renameContact(conversationId: string, displayName: string): Promise<InboxConversation> {
+    const response = await apiClient.patch<InboxConversation>(
+      `/inbox/conversations/${conversationId}/contact`,
+      { displayName },
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível salvar o nome do contato.');
+    }
+    return response.data;
+  }
+
+  /** Marca duas conversas como sendo da mesma pessoa. Não muda nada no envio. */
+  public async link(conversationId: string, targetConversationId: string): Promise<void> {
+    const response = await apiClient.post(`/inbox/conversations/${conversationId}/link`, { targetConversationId });
+    if (!response.success) {
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      throw new Error(reason === 'SAME_CONTACT'
+        ? 'Essa já é a mesma pessoa.'
+        : 'Não foi possível vincular as conversas.');
+    }
+  }
+
+  public async unlink(conversationId: string): Promise<void> {
+    const response = await apiClient.post(`/inbox/conversations/${conversationId}/unlink`);
+    if (!response.success) {
+      throw new Error('Não foi possível desfazer o vínculo.');
+    }
+  }
+
   public async resumeAi(conversationId: string): Promise<InboxConversation> {
     const response = await apiClient.post<{ conversation: InboxConversation }>(
       `/inbox/conversations/${conversationId}/ai/resume`,
