@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { authService } from '@/services/auth.service';
 
 import AccountTab from './components/AccountTab';
+import AttendanceTab from './components/AttendanceTab';
 import BillingTab from './components/BillingTab';
 import MembersTab from './components/MembersTab';
 import NotificationsTab from './components/NotificationsTab';
@@ -17,6 +18,7 @@ const TABS: Record<string, React.ReactNode> = {
   security: <SecurityTab />,
   billing: <BillingTab />,
   members: <MembersTab />,
+  attendance: <AttendanceTab />,
 };
 const SettingsPage = () => {
   const searchParams = useSearchParams();

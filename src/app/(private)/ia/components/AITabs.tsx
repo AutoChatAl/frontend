@@ -1,5 +1,5 @@
 'use client';
-import { CalendarDays, Settings, Share2, ShoppingBag, Trello, Zap } from 'lucide-react';
+import { BookOpen, CalendarDays, Settings, Share2, ShieldCheck, ShoppingBag, Trello, Zap } from 'lucide-react';
 
 import type { AITab } from '@/types/AI';
 
@@ -11,8 +11,10 @@ import type { AITab } from '@/types/AI';
 const ALL_TABS: AITab[] = [
   { id: 'general', label: 'Geral', icon: Settings },
   { id: 'catalog', label: 'Catálogo', icon: ShoppingBag },
+  { id: 'knowledge', label: 'Conhecimento', icon: BookOpen },
   { id: 'channels', label: 'Canais', icon: Share2 },
   { id: 'triggers', label: 'Gatilhos', icon: Zap },
+  { id: 'guardrails', label: 'Limites', icon: ShieldCheck },
   { id: 'scheduling', label: 'Agendamento', icon: CalendarDays },
   { id: 'funnel', label: 'Funil', icon: Trello },
 ];
@@ -25,6 +27,10 @@ export function resolveAiTabs(visibleTabs?: string[]): AITab[] {
   const allowed = new Set(visibleTabs);
   if (allowed.has('general')) {
     allowed.add('catalog');
+    // Como "Catálogo", a base de conhecimento não existe no backend como aba e
+    // herda a visibilidade de "Geral".
+    allowed.add('knowledge');
+    allowed.add('guardrails');
   }
   return ALL_TABS.filter((tab) => allowed.has(tab.id));
 }

@@ -22,6 +22,8 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    /** Se este perfil consulta a base de conhecimento do workspace. */
+    knowledgeEnabled: boolean;
     /** Silêncio, em minutos, antes da retomada automática da IA. 0 = desligado. */
     followUpMinutes?: number;
     /** Texto da retomada. Vazio usa o padrão do backend. */
@@ -89,6 +91,9 @@ class AiService {
         schedulingBookingEnabled: false,
         funnelAutoMoveEnabled: false,
         crossSellEnabled: false,
+        // Ligado no fallback pelo mesmo motivo do backend: com a base vazia,
+        // ligado não faz nada, e desligado esconderia a feature de quem cadastrar.
+        knowledgeEnabled: true,
         followUpMinutes: 0,
         followUpMessage: '',
         instagramProductLayout: 'QUICK_REPLY',
@@ -134,7 +139,7 @@ class AiService {
     }
     return response.data as { profiles: AiProfile[]; activeProfileId: string | null };
   }
-  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'followUpMinutes' | 'followUpMessage' | 'instagramProductLayout'>>, profileId?: string | null): Promise<void> {
+  public async updateConfig(data: Partial<Pick<AiConfig, 'segment' | 'businessName' | 'assistantName' | 'tone' | 'customRules' | 'triggerSettings' | 'schedulingQueryEnabled' | 'schedulingBookingEnabled' | 'funnelAutoMoveEnabled' | 'crossSellEnabled' | 'knowledgeEnabled' | 'followUpMinutes' | 'followUpMessage' | 'instagramProductLayout'>>, profileId?: string | null): Promise<void> {
     const response = await apiClient.put('/ai/config', profileId ? { ...data, profileId } : data);
     if (!response.success) {
       const body = response.data as { reason?: string } | undefined;

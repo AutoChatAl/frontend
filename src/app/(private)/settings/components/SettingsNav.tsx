@@ -1,5 +1,5 @@
 'use client';
-import { Bell, CreditCard, Shield, User, Users, type LucideIcon } from 'lucide-react';
+import { Bell, CreditCard, Headset, Shield, User, Users, type LucideIcon } from 'lucide-react';
 
 interface SettingsNavItem {
     id: string;
@@ -13,6 +13,7 @@ const ALL_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'security', label: 'Segurança', icon: Shield, ownerOnly: false },
   { id: 'billing', label: 'Faturamento', icon: CreditCard, ownerOnly: true },
   { id: 'members', label: 'Membros', icon: Users, ownerOnly: true },
+  { id: 'attendance', label: 'Atendimento', icon: Headset, ownerOnly: true },
 ];
 
 /** Seções liberadas para o papel, na ordem do menu. Serve também para validar o `?tab=` da URL. */

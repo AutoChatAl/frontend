@@ -96,6 +96,8 @@ export interface AiConfig {
     schedulingBookingEnabled: boolean;
     funnelAutoMoveEnabled: boolean;
     crossSellEnabled: boolean;
+    /** Se este perfil consulta a base de conhecimento do workspace. */
+    knowledgeEnabled: boolean;
     /** Silêncio, em minutos, antes da retomada automática. 0 = desligado. */
     followUpMinutes: number;
     /** Texto da retomada. Vazio usa o padrão do backend. */
