@@ -1,11 +1,13 @@
 'use client';
 import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Link2, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Skeleton from '@/components/Skeleton';
+import { useAttendantAlerts } from '@/contexts/AttendantAlertsContext';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
 import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays } from '@/types/Inbox';
@@ -18,6 +20,7 @@ import {
 import { normalizeDisplayName } from '@/utils/displayName';
 import { mediaTypeFromMime, validateInboxMedia } from '@/utils/inboxMedia';
 
+import AlertsQuickMenu from './components/AlertsQuickMenu';
 import {
   Avatar,
   bodyForBubble,
@@ -463,6 +466,85 @@ export default function InboxPage() {
   const replyToRef = useRef<InboxMessage | null>(null);
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+  const router = useRouter();
+  const {
+    setOpenConversationId,
+    pendingConversationId,
+    requestOpenConversation,
+    consumePendingConversation,
+  } = useAttendantAlerts();
+
+  /**
+   * Avisa o motor de alertas qual conversa está na tela: mensagem nela, com a aba
+   * visível, não vira som nem cartão — a pessoa já está lendo.
+   */
+  useEffect(() => {
+    setOpenConversationId(selectedId);
+    return () => setOpenConversationId(null);
+  }, [selectedId, setOpenConversationId]);
+
+  /**
+   * Link direto (`/inbox?conversation=<id>`) entra pelo mesmo caminho do clique no
+   * alerta, e a URL é limpa para um F5 não reabrir a mesma conversa. Lido de
+   * `window.location` em vez de `useSearchParams` de propósito — esse hook exige um
+   * limite de Suspense na página, que a caixa de entrada não tem.
+   */
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('conversation');
+    if (!requested) return;
+    requestOpenConversation(requested);
+    router.replace('/inbox', { scroll: false });
+  }, [requestOpenConversation, router]);
+
+  // Quantas cargas da lista já começaram — serve para saber se a lista foi
+  // recarregada depois de um reset de filtros, e não só re-renderizada.
+  const loadCycleRef = useRef(0);
+  const resetAtCycleRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (loadingConversations) loadCycleRef.current += 1;
+  }, [loadingConversations]);
+
+  /**
+   * Abre a conversa pedida por um alerta assim que a lista carrega. Se ela não
+   * está na lista por causa de um filtro (canal, busca, arquivo), limpa os filtros
+   * uma vez e espera a recarga; se mesmo assim não vier, desiste em silêncio — a
+   * pessoa já está na caixa de entrada e encontra a conversa pela busca.
+   */
+  useEffect(() => {
+    if (!pendingConversationId || loadingConversations) return;
+    if (conversations.some((c) => c.id === pendingConversationId)) {
+      resetAtCycleRef.current = null;
+      consumePendingConversation();
+      setSwipedRowId(null);
+      selectConversation(pendingConversationId);
+      setMobilePane('thread');
+      return;
+    }
+    const filtered = channelFilter !== 'ALL' || viewingArchived || search.trim() !== '';
+    if (filtered && resetAtCycleRef.current === null) {
+      resetAtCycleRef.current = loadCycleRef.current;
+      setChannelFilter('ALL');
+      setViewingArchived(false);
+      setSearch('');
+      return;
+    }
+    // Filtros já limpos: só desiste depois que a lista recarregou de fato.
+    if (resetAtCycleRef.current !== null && loadCycleRef.current === resetAtCycleRef.current) return;
+    resetAtCycleRef.current = null;
+    consumePendingConversation();
+  }, [
+    pendingConversationId,
+    conversations,
+    loadingConversations,
+    channelFilter,
+    viewingArchived,
+    search,
+    selectConversation,
+    consumePendingConversation,
+    setChannelFilter,
+    setViewingArchived,
+    setSearch,
+  ]);
 
   // O marcador de álbum do WhatsApp não é mensagem: as fotos que ele anuncia vêm
   // logo abaixo, uma por balão. O webhook já descarta os novos — aqui somem os
@@ -902,6 +984,8 @@ export default function InboxPage() {
 
           {/* Barra de status + configurações: o menu abre para cima. */}
           <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 p-2.5">
+            {/* Alertas são de cada atendente: o atalho aparece para todo mundo. */}
+            <AlertsQuickMenu />
             {/* Quem não pode alternar não vê o controle — só a leitura do estado. */}
             {canToggleChat && (
               <ChatSettingsMenu

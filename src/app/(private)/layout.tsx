@@ -10,6 +10,7 @@ import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
 import TrialWelcomeModal from '@/components/TrialWelcomeModal';
+import { AttendantAlertsProvider } from '@/contexts/AttendantAlertsContext';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { SidebarProvider, canAccessPathname, resolveLandingRoute } from '@/contexts/SidebarContext';
@@ -99,20 +100,23 @@ export default function PrivateLayout({ children }: Readonly<{
         <ChannelStatusProvider>
           <SupportChatProvider>
             <OnboardingProvider enabled={onboardingEnabled}>
-              <div className="flex h-screen overflow-hidden">
-                <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <Header />
-                  <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
-                    <TrialBanner />
-                    <SubscriptionBanner />
-                    <TrialWelcomeModal />
-                    {children}
-                  </main>
+              {/* Envolve toda tela privada: o atendente é avisado de conversa nova em qualquer página. */}
+              <AttendantAlertsProvider>
+                <div className="flex h-screen overflow-hidden">
+                  <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
+                      <TrialBanner />
+                      <SubscriptionBanner />
+                      <TrialWelcomeModal />
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
-              {!isAdmin && <SupportChatWidget />}
-              {onboardingEnabled && <OnboardingTour />}
+                {!isAdmin && <SupportChatWidget />}
+                {onboardingEnabled && <OnboardingTour />}
+              </AttendantAlertsProvider>
             </OnboardingProvider>
           </SupportChatProvider>
         </ChannelStatusProvider>

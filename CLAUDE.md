@@ -89,7 +89,8 @@ src/
 │   ├── SidebarContext.tsx
 │   ├── ChannelStatusContext.tsx
 │   ├── SupportChatContext.tsx
-│   └── SubscriptionContext.tsx
+│   ├── SubscriptionContext.tsx
+│   └── AttendantAlertsContext.tsx  # Alertas de conversa nova (som, toast, notificação do navegador)
 │
 ├── hooks/                        # Custom React hooks globais
 │   ├── SearchHook.ts
@@ -237,6 +238,7 @@ Hooks encapsulam lógica de estado e efeitos reutilizáveis. Componentes devem s
 | `usePlanLimitCheck(resource)` | `SubscriptionContext` | Verificar uso de limites de plano |
 | `useSidebar()` | `SidebarContext` | Estado de expansão da sidebar |
 | `useChannelStatus()` | `ChannelStatusContext` | Status de conexão dos canais |
+| `useAttendantAlerts()` | `AttendantAlertsContext` | Preferências de alerta do atendente (som, tipo, escopo) e abertura de conversa vinda de um alerta. Ver `backend/docs/ALERTAS_ATENDIMENTO.md` |
 
 ### Convenções
 

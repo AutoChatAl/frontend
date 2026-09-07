@@ -9,7 +9,9 @@ interface SettingsNavItem {
 }
 const ALL_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'account', label: 'Conta', icon: User, ownerOnly: false },
-  { id: 'notifications', label: 'Notificações', icon: Bell, ownerOnly: true },
+  // Liberada para todo papel: os alertas de atendimento são de cada pessoa. Os avisos
+  // do workspace continuam só para o dono, escondidos dentro da própria aba.
+  { id: 'notifications', label: 'Notificações', icon: Bell, ownerOnly: false },
   { id: 'security', label: 'Segurança', icon: Shield, ownerOnly: false },
   { id: 'billing', label: 'Faturamento', icon: CreditCard, ownerOnly: true },
   { id: 'members', label: 'Membros', icon: Users, ownerOnly: true },

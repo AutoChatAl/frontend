@@ -40,6 +40,18 @@ class InboxService {
     };
   }
 
+  /**
+   * Uma conversa, com os dados de atendimento, já filtrada pela visibilidade de
+   * quem pede. É como o alerta do atendente descobre nome e prévia: o stream do
+   * workspace só entrega o id. Devolve null quando a conversa não existe ou não
+   * é visível para este usuário — nos dois casos não há o que avisar.
+   */
+  public async getConversation(conversationId: string): Promise<InboxConversation | null> {
+    const response = await apiClient.get<{ conversation: InboxConversation }>(`/inbox/conversations/${conversationId}`);
+    if (!response.success || !response.data) return null;
+    return response.data.conversation;
+  }
+
   public async listAgents(): Promise<InboxAgent[]> {
     const response = await apiClient.get<{ agents: InboxAgent[] }>('/inbox/agents');
     if (!response.success || !response.data) {
