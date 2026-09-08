@@ -4,7 +4,7 @@ import { ShoppingCart, Plug, RefreshCw } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonRows, SkeletonStats } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import { channelsService } from '@/services/channels.service';
@@ -128,7 +128,7 @@ export default function CartRecoveryPage() {
   );
 
   if (loading) {
-    return <PageLoader message="Carregando recuperação..." />;
+    return <SkeletonPage><SkeletonStats count={4}/><SkeletonRows count={4}/></SkeletonPage>;
   }
 
   return (

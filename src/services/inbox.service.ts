@@ -4,6 +4,9 @@ import { apiClient } from '@/utils/ApiClient';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+/** Um id por aba, criado no carregamento e estável enquanto a aba viver. */
+const SESSION_STREAM_ID = `s-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+
 class InboxService {
   public async getSettings(): Promise<InboxSettings> {
     const response = await apiClient.get<InboxSettings>('/inbox/settings');
@@ -37,6 +40,18 @@ class InboxService {
     };
   }
 
+  /**
+   * Uma conversa, com os dados de atendimento, já filtrada pela visibilidade de
+   * quem pede. É como o alerta do atendente descobre nome e prévia: o stream do
+   * workspace só entrega o id. Devolve null quando a conversa não existe ou não
+   * é visível para este usuário — nos dois casos não há o que avisar.
+   */
+  public async getConversation(conversationId: string): Promise<InboxConversation | null> {
+    const response = await apiClient.get<{ conversation: InboxConversation }>(`/inbox/conversations/${conversationId}`);
+    if (!response.success || !response.data) return null;
+    return response.data.conversation;
+  }
+
   public async listAgents(): Promise<InboxAgent[]> {
     const response = await apiClient.get<{ agents: InboxAgent[] }>('/inbox/agents');
     if (!response.success || !response.data) {
@@ -64,6 +79,36 @@ class InboxService {
       throw new Error('Não foi possível devolver a conversa para a fila.');
     }
     return response.data.conversation;
+  }
+
+  /** Dá nome ao contato quando o provedor não mandou o nome do WhatsApp. */
+  public async renameContact(conversationId: string, displayName: string): Promise<InboxConversation> {
+    const response = await apiClient.patch<InboxConversation>(
+      `/inbox/conversations/${conversationId}/contact`,
+      { displayName },
+    );
+    if (!response.success || !response.data) {
+      throw new Error('Não foi possível salvar o nome do contato.');
+    }
+    return response.data;
+  }
+
+  /** Marca duas conversas como sendo da mesma pessoa. Não muda nada no envio. */
+  public async link(conversationId: string, targetConversationId: string): Promise<void> {
+    const response = await apiClient.post(`/inbox/conversations/${conversationId}/link`, { targetConversationId });
+    if (!response.success) {
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      throw new Error(reason === 'SAME_CONTACT'
+        ? 'Essa já é a mesma pessoa.'
+        : 'Não foi possível vincular as conversas.');
+    }
+  }
+
+  public async unlink(conversationId: string): Promise<void> {
+    const response = await apiClient.post(`/inbox/conversations/${conversationId}/unlink`);
+    if (!response.success) {
+      throw new Error('Não foi possível desfazer o vínculo.');
+    }
   }
 
   public async resumeAi(conversationId: string): Promise<InboxConversation> {
@@ -111,6 +156,15 @@ class InboxService {
       }
       if (reason === 'IG_HUMAN_AGENT_NOT_APPROVED') {
         throw new Error('Envio bloqueado pelo Instagram: recurso não aprovado para este app.');
+      }
+      if (reason === 'MEDIA_TOO_LARGE') {
+        throw new Error('O arquivo é grande demais para este canal.');
+      }
+      if (reason === 'MEDIA_EMPTY') {
+        throw new Error('O arquivo está vazio.');
+      }
+      if (reason === 'MEDIA_TYPE_UNSUPPORTED') {
+        throw new Error('Este canal não aceita esse tipo de arquivo.');
       }
       throw new Error('Não foi possível enviar a mensagem.');
     }
@@ -169,15 +223,35 @@ class InboxService {
     return response.data;
   }
 
+  /**
+   * URL do stream do workspace — sempre a mesma nesta aba.
+   *
+   * Precisa ser idêntica para todos os consumidores (lista de conversas, sino,
+   * contatos): o `SharedEventSource` agrupa por URL, e uma diferença de um único
+   * parâmetro faria cada tela abrir a sua própria conexão.
+   */
   public getInboxEventsUrl(): string {
     const token = authService.getToken();
-    return `${API_URL}/inbox/events?token=${encodeURIComponent(token || '')}`;
+    return `${API_URL}/inbox/events?token=${encodeURIComponent(token || '')}&streamId=${SESSION_STREAM_ID}`;
   }
 
-  public getConversationEventsUrl(conversationId: string): string {
-    const token = authService.getToken();
-    return `${API_URL}/inbox/conversations/${conversationId}/events?token=${encodeURIComponent(token || '')}`;
+  /** Id desta conexão, usado para dizer ao servidor qual conversa acompanhar. */
+  public getStreamId(): string {
+    return SESSION_STREAM_ID;
   }
+
+  /**
+   * Diz ao servidor qual conversa esta conexão passa a acompanhar, sem reabrir o
+   * stream. Devolve false quando a conexão já morreu e precisa ser reaberta.
+   */
+  public async watchConversation(streamId: string, conversationId: string | null): Promise<boolean> {
+    const response = await apiClient.post<{ ok: boolean; attached: boolean }>(
+      `/inbox/events/${streamId}/watch`,
+      { conversationId },
+    );
+    return !!response.data?.attached;
+  }
+
 }
 
 export const inboxService = new InboxService();

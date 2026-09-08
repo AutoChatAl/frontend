@@ -1,21 +1,13 @@
 'use client';
-import { MessageCircle, Smartphone, CheckCircle2, ShoppingCart } from 'lucide-react';
-import Link from 'next/link';
+import { MessageCircle, Smartphone } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
 import type { Contact } from '@/types/Contact';
 import { isUnlinkedContact } from '@/types/Contact';
+import { getInitials, normalizeDisplayName } from '@/utils/displayName';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? '')
-    .join('');
-}
 function formatDate(iso?: string | null): string {
   if (!iso)
     return '—';
@@ -38,10 +30,10 @@ const ALL_COLUMNS = [
       const name = row.displayName || 'Sem nome';
       return (<div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-xs shrink-0">
-          {getInitials(name) || '?'}
+          {getInitials(name)}
         </div>
         <div className="flex flex-col items-start gap-1">
-          <span className="font-medium text-slate-900 dark:text-white">{name}</span>
+          <span className="font-medium text-slate-900 dark:text-white">{normalizeDisplayName(name)}</span>
           {row.awaitingHuman && (<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-[10px] font-semibold text-red-700 dark:text-red-400">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400"/>
                 Aguardando atendimento
@@ -100,48 +92,6 @@ const ALL_COLUMNS = [
       return (<div className="flex flex-wrap gap-1">
         {tags.length > 0 ? (tags.map((t) => t.tag.name === 'Aguardando atendimento' ? (<Badge key={t.tagId} type="error" text={t.tag.name}/>) : (<Badge key={t.tagId} type="tag" text={t.tag.name}/>))) : (<span className="text-slate-400 text-xs italic">Sem tags</span>)}
       </div>);
-    },
-  },
-  {
-    header: 'Vendas',
-    accessor: 'salesCount' as keyof Contact,
-    render: (_value: unknown, row: Contact) => {
-      const count = row.salesCount ?? 0;
-      const value = row.salesValueCents ?? 0;
-      if (count === 0) {
-        return <span className="text-xs text-slate-400 italic">—</span>;
-      }
-      return (
-        <Link
-          href={`/cart-recovery?contactId=${row.id}&status=RECOVERED`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
-          title={`${count} venda(s) — ${(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
-        >
-          <CheckCircle2 size={12} />
-          {count} · {(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Link>
-      );
-    },
-  },
-  {
-    header: 'Carrinhos',
-    accessor: 'abandonedCount' as keyof Contact,
-    render: (_value: unknown, row: Contact) => {
-      const count = row.abandonedCount ?? 0;
-      const value = row.abandonedValueCents ?? 0;
-      if (count === 0) {
-        return <span className="text-xs text-slate-400 italic">—</span>;
-      }
-      return (
-        <Link
-          href={`/cart-recovery?contactId=${row.id}&status=ABANDONED`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
-          title={`${count} abandono(s) — ${(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}
-        >
-          <ShoppingCart size={12} />
-          {count} · {(value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Link>
-      );
     },
   },
   {

@@ -2,7 +2,10 @@
 import { Bell, Loader2, X } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import { authService } from '@/services/auth.service';
+import { inboxService } from '@/services/inbox.service';
 import { notificationService, type Notification, type NotificationType } from '@/services/notification.service';
+import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 function getTypeLabel(type?: NotificationType): string {
   if (type === 'maintenance')
@@ -43,6 +46,9 @@ export default function NotificationDropdown() {
   const [loading, setLoading] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Espelho de `isOpen` para o handler do SSE, que é registrado uma vez só.
+  const openRef = useRef(false);
+  openRef.current = isOpen;
   const loadNotifications = useCallback(async (): Promise<Notification[]> => {
     setLoading(true);
     try {
@@ -55,15 +61,6 @@ export default function NotificationDropdown() {
     }
     finally {
       setLoading(false);
-    }
-  }, []);
-  const loadReadState = useCallback(async () => {
-    try {
-      const ids = await notificationService.getReadState();
-      setReadIds(ids);
-    }
-    catch {
-      setReadIds([]);
     }
   }, []);
   const markAllAsRead = useCallback(async (items: Notification[]) => {
@@ -81,18 +78,69 @@ export default function NotificationDropdown() {
   const unreadCount = notifications.reduce((total, notification) => {
     return readIds.includes(notification.id) ? total : total + 1;
   }, 0);
+  /**
+   * Carga inicial do sino.
+   *
+   * Os dois pedidos vão juntos de propósito: resolvidos em separado, a lista chegava
+   * antes do estado de leitura e o badge piscava com o total inteiro antes de se
+   * corrigir — parecia contador errado aparecendo sozinho.
+   *
+   * E, na primeira vez, o histórico entra como já lido. O badge nunca chegou a
+   * funcionar antes (a lista só era buscada ao abrir o sino, então a contagem vivia
+   * em zero), então tudo que é anterior a agora nunca foi "não lido" para o usuário —
+   * mostrar meses de avisos de uma vez seria ruído, não informação.
+   */
   useEffect(() => {
-    loadReadState();
-  }, [loadReadState]);
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+    let cancelled = false;
+    (async () => {
+      const [items, ids] = await Promise.all([
+        notificationService.list().catch(() => [] as Notification[]),
+        notificationService.getReadState().catch(() => [] as string[]),
+      ]);
+      if (cancelled) return;
+      setNotifications(items);
+      if (ids.length === 0 && items.length > 0) {
+        const baseline = items.map((n) => n.id);
+        setReadIds(baseline);
+        notificationService.saveReadState(baseline).catch(() => {});
+        return;
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+      setReadIds(ids);
+    })();
+    return () => { cancelled = true; };
   }, []);
+
+  /**
+   * Aviso novo chega pelo stream do workspace — a mesma conexão que a lista de
+   * conversas usa, e não uma só para o sino: cada stream extra rouba um dos 6
+   * slots de conexão do navegador e põe as chamadas normais da API na fila.
+   *
+   * Boa parte dos avisos nasce em rotina do worker (token do Instagram vencendo,
+   * sincronização do WhatsApp Oficial), então o evento só atravessa até aqui por
+   * causa do barramento no backend.
+   */
+  useEffect(() => {
+    if (!authService.getToken()) return undefined;
+    return subscribeToEvents(inboxService.getInboxEventsUrl(), {
+      'notification.created': (event) => {
+        try {
+          const { notification } = JSON.parse(event.data) as { notification?: Notification };
+          if (!notification) return;
+          setNotifications((prev) => (prev.some((n) => n.id === notification.id)
+            ? prev
+            : [notification, ...prev]));
+          // Chegou com o painel aberto: o usuário está olhando, então já nasce lido —
+          // senão o badge apareceria por cima da lista que ele acabou de ler.
+          if (openRef.current) {
+            setReadIds((prev) => (prev.includes(notification.id) ? prev : [...prev, notification.id]));
+          }
+        } catch {
+          notificationService.list().then(setNotifications).catch(() => {});
+        }
+      },
+    });
+  }, []);
+
   const handleToggle = () => {
     if (!isOpen) {
       setLoading(true);

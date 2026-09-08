@@ -1,5 +1,5 @@
 'use client';
-import { Loader2, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
@@ -7,6 +7,7 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import PasswordInput from '@/components/PasswordInput';
 import SectionHeader from '@/components/SectionHeader';
+import Skeleton from '@/components/Skeleton';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 
@@ -77,9 +78,8 @@ export default function SecurityTab() {
       />
 
       {loading2FA ? (
-        <div className="flex items-center gap-2 py-2 text-[13px] text-slate-500 dark:text-slate-400">
-          <Loader2 size={16} className="animate-spin"/>
-            Carregando status do 2FA...
+        <div className="animate-pulse" aria-busy="true">
+          <Skeleton className="h-16 w-full"/>
         </div>
       ) : (
         <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">

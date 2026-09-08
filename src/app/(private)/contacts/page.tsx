@@ -9,14 +9,17 @@ import Card from '@/components/Card';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
 import MetricCard, { type MetricTrend } from '@/components/MetricCard';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonPage, SkeletonStats, SkeletonTable } from '@/components/Skeleton';
 import Table from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
-import { cartRecoveryService } from '@/services/cart-recovery.service';
+import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService, type ContactsStats } from '@/services/contact.service';
+import { inboxService } from '@/services/inbox.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+import { getInitials, normalizeDisplayName } from '@/utils/displayName';
+import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 import { columns } from './components/ContactColumns';
 import ContactsGrowthChart, { type ContactsGrowthPoint } from './components/ContactsGrowthChart';
@@ -35,14 +38,6 @@ function fillLastDays(rows: ContactsStats['daily'], n: number): ContactsGrowthPo
     filled.push({ date: key, count: byDate.get(key) ?? 0 });
   }
   return filled;
-}
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? '')
-    .join('');
 }
 function formatRelativeDate(iso?: string | null): string {
   if (!iso)
@@ -166,7 +161,15 @@ export default function ContactsPage() {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<ContactsStats | null>(null);
   const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
+  /**
+   * Carga inicial da página inteira, e não só da lista.
+   *
+   * O `loading` acima pertence à busca de contatos e é desligado no `finally`
+   * dela — as estatísticas e os canais ainda estariam a caminho, e o esqueleto
+   * sairia com os cards do topo vazios. Este só desliga quando tudo chegou.
+   */
+  const [booting, setBooting] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -193,22 +196,7 @@ export default function ContactsPage() {
         skip,
         limit: PAGE_SIZE,
       });
-      const ids = result.data.map((c) => c.id);
-      const stats = await cartRecoveryService.getContactsStats(ids).catch(() => []);
-      const statsMap = new Map(stats.map((s) => [s.contactId, s]));
-
-      const enriched = result.data.map((c) => {
-        const s = statsMap.get(c.id);
-        return {
-          ...c,
-          salesCount: s?.salesCount ?? 0,
-          salesValueCents: s?.salesValueCents ?? 0,
-          abandonedCount: s?.abandonedCount ?? 0,
-          abandonedValueCents: s?.abandonedValueCents ?? 0,
-        };
-      });
-
-      setContacts((prev) => (append ? [...prev, ...enriched] : enriched));
+      setContacts((prev) => (append ? [...prev, ...result.data] : result.data));
       setTotal(result.total);
     }
     catch (err) {
@@ -235,20 +223,46 @@ export default function ContactsPage() {
       channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
     ]).then(([, , waChannels]) => {
       setWhatsappChannels(waChannels);
-    });
+    }).finally(() => setBooting(false));
   }, []);
+  /**
+   * Atualização por evento, não por relógio.
+   *
+   * Antes eram duas requisições a cada 15 s, para sempre, com a aba aberta ou não —
+   * e o que muda esta tela (contato novo, alguém entrando na fila de atendimento)
+   * acontece quando chega mensagem, que é justamente o que o stream anuncia. A
+   * rajada é agrupada porque uma única mensagem gera mais de um evento.
+   */
   useEffect(() => {
+    let coalesce: ReturnType<typeof setTimeout> | null = null;
+
     const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
       fetchContacts(query, 0, false);
       fetchStats();
     };
-    const timer = setInterval(refresh, 15000);
+    const scheduleRefresh = () => {
+      if (coalesce) return;
+      coalesce = setTimeout(() => { coalesce = null; refresh(); }, 500);
+    };
+
+    const unsubscribe = authService.getToken()
+      ? subscribeToEvents(inboxService.getInboxEventsUrl(), {
+        'conversation.updated': scheduleRefresh,
+        'conversation.deleted': scheduleRefresh,
+        // Pedido de atendimento humano: a linha do contato muda de estado na hora.
+        'queue.updated': scheduleRefresh,
+      })
+      : () => {};
+
     window.addEventListener('focus', refresh);
     return () => {
-      clearInterval(timer);
+      if (coalesce) clearTimeout(coalesce);
+      unsubscribe();
       window.removeEventListener('focus', refresh);
     };
   }, [fetchContacts, fetchStats, query]);
+
   const growth30 = useMemo(() => (stats ? fillLastDays(stats.daily, 30) : []), [stats]);
   const newLast30 = useMemo(() => growth30.reduce((sum, d) => sum + d.count, 0), [growth30]);
   // Variação de novos contatos: últimos 7 dias vs os 7 anteriores.
@@ -315,8 +329,9 @@ export default function ContactsPage() {
     }
   };
   const hasMore = contacts.length < total;
-  if (loading) {
-    return <PageLoader message="Carregando contatos..."/>;
+  // `booting`, e não `loading`: a lista pode ter chegado antes das estatísticas.
+  if (booting) {
+    return <SkeletonPage><SkeletonStats count={4}/><SkeletonTable rows={8} columns={5}/></SkeletonPage>;
   }
   if (error && contacts.length === 0) {
     return (<div className="flex items-center justify-center h-64">
@@ -397,11 +412,11 @@ export default function ContactsPage() {
       return (<Card className={`p-4 ${row.awaitingHuman ? 'ring-1 ring-red-300 dark:ring-red-800 bg-red-50/40 dark:bg-red-900/10' : ''}`}>
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-sm shrink-0">
-            {getInitials(name) || '?'}
+            {getInitials(name)}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-medium text-slate-900 dark:text-white truncate">{name}</p>
+              <p className="font-medium text-slate-900 dark:text-white truncate">{normalizeDisplayName(name)}</p>
               {row.awaitingHuman && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"/>}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">{identifier}</p>

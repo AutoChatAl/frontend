@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { funnelService } from '@/services/funnel.service';
 import type { ChannelType, FunnelLead, FunnelStage, LeadOrigin, LeadTemperature, StageColor } from '@/types/Funnel';
@@ -202,7 +202,7 @@ export default function FunnelPage() {
   }, [deletingStage, loadBoard, addToast]);
 
   if (loading) {
-    return <PageLoader message="Carregando o funil..." />;
+    return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
   }
 
   if (error && stages.length === 0) {

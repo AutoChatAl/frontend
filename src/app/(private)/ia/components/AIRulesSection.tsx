@@ -96,7 +96,7 @@ export default function AIRulesSection({ customRules, triggerSettings, followUpM
             value: String(option.value),
             label: option.label,
           }))}
-          hint="Só uma mensagem por silêncio, e nunca em conversa que já foi para atendimento humano. No Instagram e na API Oficial a Meta só permite mensagem livre por 24h após a fala do cliente — prazos que caem fora dessa janela não são agendados nesses canais."
+          hint="Só uma mensagem por silêncio, com trava de 2h antes da próxima. Nunca em conversa que já foi para atendimento humano, que terminou com agendamento fechado ou com despedida do cliente. No Instagram e na API Oficial a Meta só permite mensagem livre por 24h após a fala do cliente — prazos que caem fora dessa janela não são agendados nesses canais."
         />
 
         {followUpMinutes > 0 && (

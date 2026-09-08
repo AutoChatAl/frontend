@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import Card from '@/components/Card';
+import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
 import Sparkline from '@/components/Sparkline';
 import { useTheme } from '@/contexts/ThemeContext';
 import { dashboardService, type DashboardMetrics, type BillingMetrics } from '@/services/dashboard.service';
@@ -93,12 +94,14 @@ export default function DashboardPage() {
     }
   }
   if (loading) {
-    return (<div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mx-auto"/>
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Carregando métricas...</p>
+    return (<SkeletonPage>
+      <SkeletonStats count={4}/>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Skeleton className="h-64"/>
+        <Skeleton className="h-64"/>
       </div>
-    </div>);
+      <SkeletonCards count={3}/>
+    </SkeletonPage>);
   }
   if (error || !metrics) {
     return (<div className="flex items-center justify-center h-64">

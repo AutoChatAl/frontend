@@ -1,14 +1,17 @@
 'use client';
-import { Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
 import Badge from '@/components/Badge';
 import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
+import { SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { apiClient } from '@/utils/ApiClient';
+
+import AttendantAlertsCard from './AttendantAlertsCard';
 
 interface WorkspaceNotifications {
     emailCampaignDispatch: boolean;
@@ -25,6 +28,10 @@ const UPCOMING_ITEMS = [
   { title: 'Novidades e dicas', desc: 'Como melhorar suas conversões com IA.' },
 ];
 export default function NotificationsTab() {
+  // Os avisos do workspace (e-mail de campanha, lembrete) são decisão do dono; a
+  // rota que os salva exige esse papel. O colaborador vê só os alertas dele.
+  const user = useAuthUser();
+  const canManageWorkspace = user?.role === 'owner' || user?.role === 'admin';
   const [notifications, setNotifications] = useState<WorkspaceNotifications>({
     emailCampaignDispatch: false,
     schedulingReminder: false,
@@ -33,6 +40,10 @@ export default function NotificationsTab() {
   const [saving, setSaving] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const loadNotifications = useCallback(async () => {
+    if (!canManageWorkspace) {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await apiClient.get<WorkspaceNotifications>('/auth/workspace/notifications');
       if (response.success && response.data) {
@@ -48,7 +59,7 @@ export default function NotificationsTab() {
     finally {
       setLoading(false);
     }
-  }, []);
+  }, [canManageWorkspace]);
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
@@ -91,15 +102,14 @@ export default function NotificationsTab() {
     checked ? 'Lembrete de agendamento ativado.' : 'Lembrete de agendamento desativado.',
     'Erro ao atualizar lembrete de agendamento.',
   );
-  if (loading) {
-    return (<Card className="p-4">
-      <div className="flex items-center justify-center py-8">
-        <Loader2 size={20} className="animate-spin text-slate-400"/>
-      </div>
-    </Card>);
-  }
   return (<div className="space-y-3">
-    <Card className="p-4">
+    <AttendantAlertsCard onFeedback={addToast}/>
+
+    {canManageWorkspace && loading && (<Card className="p-4">
+      <div className="animate-pulse" aria-busy="true"><SkeletonRows count={3} avatar={false}/></div>
+    </Card>)}
+
+    {canManageWorkspace && !loading && (<Card className="p-4">
       <SectionHeader
         title="Avisos automáticos"
         hint="O que o sistema envia sozinho, e para quem. Cada mudança é salva na hora."
@@ -120,9 +130,9 @@ export default function NotificationsTab() {
           disabled={saving}
         />
       </div>
-    </Card>
+    </Card>)}
 
-    <Card className="p-4">
+    {canManageWorkspace && !loading && (<Card className="p-4">
       <SectionHeader title="Em breve" hint="Ainda não estão ativos — nenhum e-mail destes é enviado por enquanto."/>
       <Callout tone="warning" className="mb-3">
         Estes avisos aparecem aqui como roadmap. Enquanto o controle não existir de verdade, os interruptores ficam
@@ -141,7 +151,7 @@ export default function NotificationsTab() {
           />
         ))}
       </div>
-    </Card>
+    </Card>)}
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

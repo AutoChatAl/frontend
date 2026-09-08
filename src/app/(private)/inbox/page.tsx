@@ -1,23 +1,30 @@
 'use client';
-import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, FileText, Inbox, Lock, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Link2, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AudioPlayer from '@/components/AudioPlayer';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import Skeleton from '@/components/Skeleton';
+import { useAttendantAlerts } from '@/contexts/AttendantAlertsContext';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
-import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageMediaType } from '@/types/Inbox';
+import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
   AUDIO_WAV_MIME,
   blobToWavBase64,
   pickAudioRecorderMimeType,
 } from '@/utils/AudioWav';
+import { normalizeDisplayName } from '@/utils/displayName';
+import { mediaTypeFromMime, validateInboxMedia } from '@/utils/inboxMedia';
 
+import AlertsQuickMenu from './components/AlertsQuickMenu';
 import {
   Avatar,
   bodyForBubble,
+  isAlbumPlaceholder,
   channelBadge,
   dayLabel,
   formatConversationTime,
@@ -28,6 +35,8 @@ import {
 } from './components/ChatBits';
 import ChatSettingsMenu from './components/ChatSettingsMenu';
 import ConversationContextPanel from './components/ConversationContextPanel';
+import DocumentBubble from './components/DocumentBubble';
+import MediaLightbox, { type LightboxItem } from './components/MediaLightbox';
 import { messagePreview, useInbox } from './useInbox';
 
 /**
@@ -62,13 +71,6 @@ function StatusTicks({ message }: { message: InboxMessage }) {
   return <CheckCheck size={13} className="text-sky-300" />;
 }
 
-function mediaTypeFromMime(mime: string): MessageMediaType {
-  if (mime.startsWith('image/')) return 'image';
-  if (mime.startsWith('audio/')) return 'audio';
-  if (mime.startsWith('video/')) return 'video';
-  return 'document';
-}
-
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -91,12 +93,34 @@ function mediaSrc(message: InboxMessage): string | null {
   return null;
 }
 
-function MediaContent({ message }: { message: InboxMessage }) {
+/**
+ * Miniatura no balão. Foto e vídeo abrem em tela cheia — o `onExpand` só chega
+ * preenchido quando a mídia entrou na galeria da conversa (mensagem confirmada,
+ * com conteúdo exibível).
+ */
+function MediaContent({ message, onExpand }: { message: InboxMessage; onExpand?: () => void }) {
   const src = mediaSrc(message);
   if (!message.mediaType || !src) return null;
   if (message.mediaType === 'image') {
-    // eslint-disable-next-line @next/next/no-img-element -- mídia de chat (CDN dinâmico / base64) não suporta next/image
-    return <img src={src} alt={message.mediaFileName || 'Imagem'} className="max-h-64 max-w-full rounded-lg object-cover" />;
+    const image = (
+      // eslint-disable-next-line @next/next/no-img-element -- mídia de chat (CDN dinâmico / base64) não suporta next/image
+      <img src={src} alt={message.mediaFileName || 'Imagem'} className="max-h-64 max-w-full rounded-lg object-cover" />
+    );
+    if (!onExpand) return image;
+    return (
+      <button
+        type="button"
+        onClick={onExpand}
+        title="Ampliar"
+        aria-label="Ampliar imagem"
+        className="group/media relative block cursor-zoom-in overflow-hidden rounded-lg"
+      >
+        {image}
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/media:bg-black/25 group-hover/media:opacity-100">
+          <Maximize2 size={20} className="text-white drop-shadow" />
+        </span>
+      </button>
+    );
   }
   if (message.mediaType === 'audio') {
     return (
@@ -109,13 +133,31 @@ function MediaContent({ message }: { message: InboxMessage }) {
     );
   }
   if (message.mediaType === 'video') {
-    return <video controls src={src} className="max-h-64 max-w-full rounded-lg" />;
+    return (
+      <div className="relative">
+        <video controls src={src} className="max-h-64 max-w-full rounded-lg" />
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            title="Ampliar"
+            aria-label="Ampliar vídeo"
+            className="absolute right-2 top-2 rounded-lg bg-black/55 p-1.5 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+          >
+            <Maximize2 size={15} />
+          </button>
+        )}
+      </div>
+    );
   }
   return (
-    <a href={src} target="_blank" rel="noreferrer" download={message.mediaFileName || true} className="flex items-center gap-2 underline">
-      <FileText size={16} />
-      {message.mediaFileName || 'Documento'}
-    </a>
+    <DocumentBubble
+      src={src}
+      fileName={message.mediaFileName}
+      mimeType={message.mediaMimeType}
+      base64={message.mediaBase64}
+      outgoing={message.direction === 'OUT'}
+    />
   );
 }
 
@@ -129,6 +171,8 @@ function ConversationRow({
   currentUserId,
   canDelete = false,
   busy = false,
+  groupedWithPrevious = false,
+  groupedWithNext = false,
   open,
   onOpenChange,
   onClick,
@@ -142,6 +186,13 @@ function ConversationRow({
   /** Excluir é só do administrador; arquivar fica disponível para qualquer atendente. */
   canDelete?: boolean;
   busy?: boolean;
+  /**
+   * Vizinhas que são a mesma pessoa em outro canal. O backend já devolve as
+   * vinculadas adjacentes; estas duas marcas desenham a linha que liga um card
+   * ao outro — metade sai de cada lado e elas se encontram na borda.
+   */
+  groupedWithPrevious?: boolean;
+  groupedWithNext?: boolean;
   /** Painel de ações aberto — controlado pela página para só uma linha ficar aberta por vez. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -151,6 +202,7 @@ function ConversationRow({
 }) {
   const assignedTo = conversation.assignedTo ?? null;
   const isMine = !!assignedTo && assignedTo === currentUserId;
+  const grouped = groupedWithPrevious || groupedWithNext;
   const archived = !!conversation.archivedAt;
   const swipeEnabled = !disabled;
   const actionsWidth = SWIPE_ACTION_PX * (canDelete ? 2 : 1);
@@ -207,7 +259,18 @@ function ConversationRow({
   };
 
   return (
-    <div className="relative overflow-hidden border-b border-slate-100 dark:border-slate-700/60">
+    <div
+      className={`relative overflow-hidden ${
+        grouped
+          // O grupo é um cartão só: recuado dos dois lados para se destacar das
+          // linhas soltas, arredondado apenas nas pontas e sem divisória interna
+          // cheia — é isso que faz duas conversas lerem como uma pessoa.
+          ? `mx-2 border-slate-100 bg-indigo-50/60 dark:border-slate-700/60 dark:bg-indigo-500/[0.07] ${
+            groupedWithNext ? '' : 'mb-1 rounded-b-xl border-b'
+          }`
+          : 'border-b border-slate-100 dark:border-slate-700/60'
+      }`}
+    >
       {offset < 0 && (
         <div className="absolute inset-y-0 right-0 flex" style={{ width: actionsWidth }}>
           <button
@@ -255,9 +318,22 @@ function ConversationRow({
           transition: dragOffset !== null ? 'none' : 'transform 160ms ease-out, background-color 150ms ease-out',
           touchAction: swipeEnabled ? 'pan-y' : undefined,
         }}
-        className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left ${disabled ? 'cursor-not-allowed bg-white dark:bg-slate-800' : active ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer'}`}
+        className={`relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left ${
+          // Dentro do grupo o fundo é o do cartão: pintar branco aqui recortaria
+          // o tingido e as duas linhas voltariam a parecer soltas.
+          grouped ? 'bg-transparent' : ''
+        } ${disabled
+          ? `cursor-not-allowed ${grouped ? '' : 'bg-white dark:bg-slate-800'}`
+          : active
+            ? 'bg-indigo-100/70 dark:bg-indigo-500/20'
+            : `cursor-pointer hover:bg-slate-500/5 dark:hover:bg-white/5 ${grouped ? '' : 'bg-white dark:bg-slate-800'}`}`}
       >
         {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-indigo-500" aria-hidden />}
+        {/* Divisória interna do grupo: recuada nos dois lados para separar as
+            conversas sem cortar o cartão que as contém. */}
+        {groupedWithPrevious && (
+          <span className="absolute inset-x-3 top-0 h-px bg-indigo-200/70 dark:bg-indigo-400/15" aria-hidden />
+        )}
         <Avatar
           name={conversation.contactName}
           identifier={conversation.contactIdentifier}
@@ -267,7 +343,7 @@ function ConversationRow({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">
-              {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
+              {normalizeDisplayName(conversation.contactName) || conversation.contactIdentifier || 'Contato sem nome'}
             </span>
             <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
               {formatConversationTime(conversation.lastMessageAt)}
@@ -342,6 +418,9 @@ export default function InboxPage() {
     transcribeMessage,
     assignConversation,
     unassignConversation,
+    renameContact,
+    linkConversation,
+    unlinkConversation,
     resumeAi,
     deletingId,
     deleteConversation,
@@ -372,6 +451,10 @@ export default function InboxPage() {
   // Só uma linha por vez mostra o painel de ações — a anterior fecha ao abrir outra.
   const [swipedRowId, setSwipedRowId] = useState<string | null>(null);
   const [revealedTranscriptions, setRevealedTranscriptions] = useState<Set<string>>(new Set());
+  // Índice da mídia aberta em tela cheia dentro de `gallery`; null com o visualizador fechado.
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Anexo recusado antes do upload (tamanho/formato) — some no próximo envio.
+  const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -383,6 +466,129 @@ export default function InboxPage() {
   const replyToRef = useRef<InboxMessage | null>(null);
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+  const router = useRouter();
+  const {
+    setOpenConversationId,
+    pendingConversationId,
+    requestOpenConversation,
+    consumePendingConversation,
+  } = useAttendantAlerts();
+
+  /**
+   * Avisa o motor de alertas qual conversa está na tela: mensagem nela, com a aba
+   * visível, não vira som nem cartão — a pessoa já está lendo.
+   */
+  useEffect(() => {
+    setOpenConversationId(selectedId);
+    return () => setOpenConversationId(null);
+  }, [selectedId, setOpenConversationId]);
+
+  /**
+   * Link direto (`/inbox?conversation=<id>`) entra pelo mesmo caminho do clique no
+   * alerta, e a URL é limpa para um F5 não reabrir a mesma conversa. Lido de
+   * `window.location` em vez de `useSearchParams` de propósito — esse hook exige um
+   * limite de Suspense na página, que a caixa de entrada não tem.
+   */
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('conversation');
+    if (!requested) return;
+    requestOpenConversation(requested);
+    router.replace('/inbox', { scroll: false });
+  }, [requestOpenConversation, router]);
+
+  // Quantas cargas da lista já começaram — serve para saber se a lista foi
+  // recarregada depois de um reset de filtros, e não só re-renderizada.
+  const loadCycleRef = useRef(0);
+  const resetAtCycleRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (loadingConversations) loadCycleRef.current += 1;
+  }, [loadingConversations]);
+
+  /**
+   * Abre a conversa pedida por um alerta assim que a lista carrega. Se ela não
+   * está na lista por causa de um filtro (canal, busca, arquivo), limpa os filtros
+   * uma vez e espera a recarga; se mesmo assim não vier, desiste em silêncio — a
+   * pessoa já está na caixa de entrada e encontra a conversa pela busca.
+   */
+  useEffect(() => {
+    if (!pendingConversationId || loadingConversations) return;
+    if (conversations.some((c) => c.id === pendingConversationId)) {
+      resetAtCycleRef.current = null;
+      consumePendingConversation();
+      setSwipedRowId(null);
+      selectConversation(pendingConversationId);
+      setMobilePane('thread');
+      return;
+    }
+    const filtered = channelFilter !== 'ALL' || viewingArchived || search.trim() !== '';
+    if (filtered && resetAtCycleRef.current === null) {
+      resetAtCycleRef.current = loadCycleRef.current;
+      setChannelFilter('ALL');
+      setViewingArchived(false);
+      setSearch('');
+      return;
+    }
+    // Filtros já limpos: só desiste depois que a lista recarregou de fato.
+    if (resetAtCycleRef.current !== null && loadCycleRef.current === resetAtCycleRef.current) return;
+    resetAtCycleRef.current = null;
+    consumePendingConversation();
+  }, [
+    pendingConversationId,
+    conversations,
+    loadingConversations,
+    channelFilter,
+    viewingArchived,
+    search,
+    selectConversation,
+    consumePendingConversation,
+    setChannelFilter,
+    setViewingArchived,
+    setSearch,
+  ]);
+
+  // O marcador de álbum do WhatsApp não é mensagem: as fotos que ele anuncia vêm
+  // logo abaixo, uma por balão. O webhook já descarta os novos — aqui somem os
+  // que ficaram gravados antes.
+  const visibleMessages = messages.filter((m) => !isAlbumPlaceholder(m));
+
+  /**
+   * Mensagens agrupadas por dia.
+   *
+   * O agrupamento não é enfeite: a badge do dia é `sticky`, e `position: sticky` é
+   * limitada pelo bloco que a contém. Numa lista plana, o bloco de todas elas era a
+   * thread inteira — então cada badge grudava no topo e elas se empilhavam umas sobre
+   * as outras. Dentro de uma seção por dia, cada badge só existe enquanto as
+   * mensagens daquele dia estão na tela, e a do dia seguinte a empurra para fora.
+   */
+  const dayGroups = visibleMessages.reduce<Array<{ key: string; items: InboxMessage[] }>>((groups, message) => {
+    const last = groups[groups.length - 1];
+    if (last && isSameDay(new Date(last.items[0]!.createdAt), new Date(message.createdAt))) {
+      last.items.push(message);
+      return groups;
+    }
+    groups.push({ key: message.id, items: [message] });
+    return groups;
+  }, []);
+
+  // Galeria da conversa: fotos e vídeos na ordem da thread. As setas do
+  // visualizador andam por ela, então mídia sem conteúdo exibível (mensagem
+  // otimista ainda subindo, anexo grande demais para guardar) fica de fora.
+  const gallery: LightboxItem[] = visibleMessages.flatMap((m) => {
+    if (m.mediaType !== 'image' && m.mediaType !== 'video') return [];
+    if (m.pending) return [];
+    const src = mediaSrc(m);
+    if (!src) return [];
+    const caption = bodyForBubble(m.body, m.interactive).trim();
+    return [{
+      messageId: m.id,
+      kind: m.mediaType,
+      src,
+      fileName: m.mediaFileName ?? null,
+      createdAt: m.createdAt,
+      ...(caption ? { caption } : {}),
+    }];
+  });
+
   const replyWindowExpiresAt = selectedConversation?.replyWindowExpiresAt ?? null;
   const replyLocked = !!selectedConversation && (!replyWindowExpiresAt || new Date(replyWindowExpiresAt).getTime() <= now);
 
@@ -415,6 +621,8 @@ export default function InboxPage() {
   useEffect(() => {
     stickToBottomRef.current = true;
     setReplyTo(null);
+    setLightboxIndex(null);
+    setAttachError(null);
   }, [selectedId]);
 
   useEffect(() => {
@@ -474,6 +682,7 @@ export default function InboxPage() {
   const handleSend = async () => {
     const body = draft.trim();
     if (!body || replyLocked) return;
+    setAttachError(null);
     try {
       stickToBottomRef.current = true;
       await sendMessage(body, undefined, replyTo);
@@ -487,12 +696,21 @@ export default function InboxPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file || replyLocked) return;
+    setAttachError(null);
+    if (!file || replyLocked || !selectedConversation) return;
+    const mediaType = mediaTypeFromMime(file.type);
+    // Recusa aqui evita subir dezenas de MB para ouvir um 413 do outro lado — a
+    // checagem que vale continua sendo a do backend.
+    const invalid = validateInboxMedia(file, mediaType, selectedConversation.channelType);
+    if (invalid) {
+      setAttachError(invalid);
+      return;
+    }
     try {
       stickToBottomRef.current = true;
       const base64 = await fileToBase64(file);
       const media: InboxOutgoingMedia = {
-        mediaType: mediaTypeFromMime(file.type),
+        mediaType,
         base64,
         mimeType: file.type || 'application/octet-stream',
         fileName: file.name,
@@ -712,33 +930,62 @@ export default function InboxPage() {
                 </p>
               </div>
             ) : (
-              conversations.map((c) => (
-                <ConversationRow
-                  key={c.id}
-                  conversation={c}
-                  active={c.id === selectedId}
-                  currentUserId={currentUserId}
-                  // Abrir a conversa marca como lida e dispara o recibo de leitura para o
-                  // contato. Com o chat desligado o operador não viu nada, então não seleciona.
-                  disabled={!chatEnabled}
-                  // Exclusão é irreversível e vale para o workspace inteiro: só dono/admin.
-                  canDelete={hasFullAccess}
-                  busy={archivingId === c.id || deletingId === c.id}
-                  open={swipedRowId === c.id}
-                  onOpenChange={(open) => setSwipedRowId(open ? c.id : null)}
-                  onClick={() => handleSelectConversation(c.id)}
-                  onArchive={() => handleArchive(c)}
-                  onRequestDelete={() => {
-                    setSwipedRowId(null);
-                    setConversationToDelete(c);
-                  }}
-                />
-              ))
+              conversations.map((c, index) => {
+                const startsGroup = !!c.linkGroupId && c.linkGroupId !== conversations[index - 1]?.linkGroupId
+                  && c.linkGroupId === conversations[index + 1]?.linkGroupId;
+                const groupSize = c.linkGroupId
+                  ? conversations.filter((other) => other.linkGroupId === c.linkGroupId).length
+                  : 0;
+                return (<Fragment key={c.id}>
+                  {/* Cabeçalho do cartão de grupo. Uma linha fina sozinha mostra que
+                      há relação mas não diz qual; o rótulo tira a adivinhação, e só
+                      aparece quando existe grupo — nenhuma conversa solta paga por ele. */}
+                  {startsGroup && (
+                    <div className="mx-2 flex items-center gap-1.5 rounded-t-xl bg-indigo-50/60 px-3 pb-1 pt-2 dark:bg-indigo-500/[0.07]">
+                      <Link2 size={12} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">
+                        Mesma pessoa
+                      </span>
+                      <span className="text-[11px] text-indigo-400/80 dark:text-indigo-400/60">
+                        · {groupSize} canais
+                      </span>
+                    </div>
+                  )}
+                  <ConversationRow
+                    key={c.id}
+                    conversation={c}
+                    active={c.id === selectedId}
+                    currentUserId={currentUserId}
+                    groupedWithPrevious={
+                      !!c.linkGroupId && c.linkGroupId === conversations[index - 1]?.linkGroupId
+                    }
+                    groupedWithNext={
+                      !!c.linkGroupId && c.linkGroupId === conversations[index + 1]?.linkGroupId
+                    }
+                    // Abrir a conversa marca como lida e dispara o recibo de leitura para o
+                    // contato. Com o chat desligado o operador não viu nada, então não seleciona.
+                    disabled={!chatEnabled}
+                    // Exclusão é irreversível e vale para o workspace inteiro: só dono/admin.
+                    canDelete={hasFullAccess}
+                    busy={archivingId === c.id || deletingId === c.id}
+                    open={swipedRowId === c.id}
+                    onOpenChange={(open) => setSwipedRowId(open ? c.id : null)}
+                    onClick={() => handleSelectConversation(c.id)}
+                    onArchive={() => handleArchive(c)}
+                    onRequestDelete={() => {
+                      setSwipedRowId(null);
+                      setConversationToDelete(c);
+                    }}
+                  />
+                </Fragment>);
+              })
             )}
           </div>
 
           {/* Barra de status + configurações: o menu abre para cima. */}
           <div className="flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 p-2.5">
+            {/* Alertas são de cada atendente: o atalho aparece para todo mundo. */}
+            <AlertsQuickMenu />
             {/* Quem não pode alternar não vê o controle — só a leitura do estado. */}
             {canToggleChat && (
               <ChatSettingsMenu
@@ -850,104 +1097,112 @@ export default function InboxPage() {
                 className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/40 px-4 py-4 space-y-2"
               >
                 {loadingMessages ? (
-                  <p className="text-sm text-slate-400">Carregando mensagens...</p>
+                  <div className="animate-pulse space-y-3" aria-busy="true" aria-label="Carregando mensagens">
+                    {['w-2/3', 'w-1/2', 'w-4/5', 'w-2/5', 'w-3/5'].map((width, index) => (
+                      <div key={width} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                        <Skeleton className={`h-10 ${width} ${index % 2 === 0 ? 'rounded-bl-sm' : 'rounded-br-sm'}`} />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  messages.map((m, index) => {
-                    const previous = index > 0 ? messages[index - 1] : undefined;
-                    // Sticky no container rolável: cada badge fica presa no topo até a do
-                    // dia seguinte empurrá-la para fora, marcando a virada de dia.
-                    const startsDay = !previous || !isSameDay(new Date(previous.createdAt), new Date(m.createdAt));
-                    const daySeparator = startsDay && (
+                  dayGroups.map((group) => (
+                    <section key={group.key} className="space-y-2">
                       <div className="sticky top-0 z-10 flex justify-center py-1">
                         <span className="rounded-full bg-slate-200/90 px-3 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm dark:bg-slate-700/90 dark:text-slate-300">
-                          {dayLabel(m.createdAt)}
+                          {dayLabel(group.items[0]!.createdAt)}
                         </span>
                       </div>
-                    );
-                    const replyButton = !m.pending && !replyLocked && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplyTo(m);
-                          textareaRef.current?.focus();
-                        }}
-                        className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
-                        title="Responder"
-                      >
-                        <Reply size={14} />
-                      </button>
-                    );
-                    return (
-                      <Fragment key={m.id}>
-                        {daySeparator}
-                        <div
-                          id={`msg-${m.id}`}
-                          className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {m.direction === 'OUT' && replyButton}
-                          <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                      {group.items.map((m) => {
+                        const replyButton = !m.pending && !replyLocked && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyTo(m);
+                              textareaRef.current?.focus();
+                            }}
+                            className="shrink-0 rounded-lg p-1.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+                            title="Responder"
                           >
-                            {m.replyToPreview && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!m.replyToMessageId) return;
-                                  document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }}
-                                className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
-                              >
-                                <span className="block font-semibold">
-                                  {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
-                                </span>
-                                <span className="block truncate">{m.replyToPreview}</span>
-                              </button>
-                            )}
-                            {m.mediaType && (
-                              <div className="mb-1">
-                                <MediaContent message={m} />
-                              </div>
-                            )}
-                            {(() => {
-                              const text = bodyForBubble(m.body, m.interactive);
-                              return text ? <p>{text}</p> : null;
-                            })()}
-                            {m.interactive && m.interactive.buttons.length > 0 && (
-                              <InteractiveContent interactive={m.interactive} outgoing={m.direction === 'OUT'} />
-                            )}
-                            {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
-                            {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
-                              revealedTranscriptions.has(m.id) && m.transcription ? (
-                                <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                                  {m.transcription}
-                                </p>
-                              ) : (
+                            <Reply size={14} />
+                          </button>
+                        );
+                        return (
+                          <div
+                            key={m.id}
+                            id={`msg-${m.id}`}
+                            className={`group flex items-center gap-1 ${m.direction === 'OUT' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {m.direction === 'OUT' && replyButton}
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words transition-opacity duration-300 ${m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-sm'} ${m.pending ? 'opacity-60' : 'opacity-100'}`}
+                            >
+                              {m.replyToPreview && (
                                 <button
                                   type="button"
-                                  onClick={() => handleTranscribe(m)}
-                                  disabled={transcribingId === m.id}
-                                  className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                  onClick={() => {
+                                    if (!m.replyToMessageId) return;
+                                    document.getElementById(`msg-${m.replyToMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  }}
+                                  className={`mb-1 block w-full rounded-lg border-l-2 px-2 py-1 text-left text-xs ${m.direction === 'OUT' ? 'border-indigo-300 bg-indigo-500/60 text-indigo-100' : 'border-indigo-400 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}
                                 >
-                                  {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                                  <span className="block font-semibold">
+                                    {m.replyToDirection === 'OUT' ? 'Você' : (selectedConversation.contactName || selectedConversation.contactIdentifier || 'Contato')}
+                                  </span>
+                                  <span className="block truncate">{m.replyToPreview}</span>
                                 </button>
-                              )
-                            )}
-                            <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                              {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
-                              {formatMessageTime(m.createdAt)}
-                              <StatusTicks message={m} />
-                            </span>
+                              )}
+                              {m.mediaType && (() => {
+                                const galleryIndex = gallery.findIndex((item) => item.messageId === m.id);
+                                return (
+                                  <div className="mb-1">
+                                    <MediaContent
+                                      message={m}
+                                      {...(galleryIndex >= 0 ? { onExpand: () => setLightboxIndex(galleryIndex) } : {})}
+                                    />
+                                  </div>
+                                );
+                              })()}
+                              {(() => {
+                                const text = bodyForBubble(m.body, m.interactive);
+                                return text ? <p>{text}</p> : null;
+                              })()}
+                              {m.interactive && m.interactive.buttons.length > 0 && (
+                                <InteractiveContent interactive={m.interactive} outgoing={m.direction === 'OUT'} />
+                              )}
+                              {/* Só áudio recebido: não faz sentido transcrever o que o próprio operador gravou. */}
+                              {m.mediaType === 'audio' && m.direction === 'IN' && !m.pending && (
+                                revealedTranscriptions.has(m.id) && m.transcription ? (
+                                  <p className="mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                                    {m.transcription}
+                                  </p>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTranscribe(m)}
+                                    disabled={transcribingId === m.id}
+                                    className="mt-1 text-xs underline underline-offset-2 disabled:opacity-60 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                  >
+                                    {transcribingId === m.id ? 'Transcrevendo...' : 'Transcrever'}
+                                  </button>
+                                )
+                              )}
+                              <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                                {formatMessageTime(m.createdAt)}
+                                <StatusTicks message={m} />
+                              </span>
+                            </div>
+                            {m.direction === 'IN' && replyButton}
                           </div>
-                          {m.direction === 'IN' && replyButton}
-                        </div>
-                      </Fragment>
-                    );
-                  })
+                        );
+                      })}
+                    </section>
+                  ))
                 )}
               </div>
 
               <footer className="border-t border-slate-100 dark:border-slate-700 p-3">
-                {error && <p className="mb-2 text-xs text-rose-500">{error}</p>}
+                {(attachError || error) && <p className="mb-2 text-xs text-rose-500">{attachError || error}</p>}
                 {replyLocked ? (
                   <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 py-2.5">
                     <Lock size={16} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
@@ -1053,9 +1308,13 @@ export default function InboxPage() {
                 hasFullAccess={hasFullAccess}
                 assigning={assigning}
                 messageCount={messages.length}
+                conversations={conversations}
                 onAssign={handleAssign}
                 onUnassign={handleUnassign}
                 onResumeAi={handleResumeAi}
+                onLink={(targetId) => { void linkConversation(selectedConversation.id, targetId); }}
+                onUnlink={() => { void unlinkConversation(selectedConversation.id); }}
+                onRenameContact={(name) => { void renameContact(selectedConversation.id, name); }}
               />
             </aside>
           </>
@@ -1071,6 +1330,15 @@ export default function InboxPage() {
         message={`A conversa com ${conversationToDelete?.contactName || conversationToDelete?.contactIdentifier || 'este contato'} e todo o histórico dela saem do chat para toda a equipe. Esta ação não pode ser desfeita.`}
         confirmLabel="Excluir conversa"
       />
+
+      {lightboxIndex !== null && gallery[lightboxIndex] && (
+        <MediaLightbox
+          items={gallery}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   );
 }

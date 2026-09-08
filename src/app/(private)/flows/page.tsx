@@ -1,15 +1,21 @@
 'use client';
+import { Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
+import { collaboratorService, type Member } from '@/services/collaborator.service';
 import { flowService } from '@/services/flow.service';
+import { funnelService } from '@/services/funnel.service';
 import type { Flow, FlowEdge, FlowNode, FlowNodeKind } from '@/types/Flow';
+import type { FunnelStageDefinition } from '@/types/Funnel';
 
-import { BLOCKS, blockMeta, defaultNodeFields, outputHandles } from './components/blocks';
+import { BLOCKS, blockMeta, defaultNodeFields, outputHandles, requiresAiPlan } from './components/blocks';
 import FlowCanvas from './components/FlowCanvas';
 import NodeInspector from './components/NodeInspector';
 
@@ -37,6 +43,12 @@ export default function FlowsPage() {
   const [channelsOpen, setChannelsOpen] = useState(false);
   const channelsRef = useRef<HTMLDivElement>(null);
   const { channels } = useWorkspaceChannels();
+  const { hasAiPlan } = useSubscription();
+  const router = useRouter();
+  // Alimentam os blocos de funil e de atribuição. Falha aqui não impede montar o
+  // fluxo: os outros blocos seguem editáveis e só esses dois ficam sem opção.
+  const [stages, setStages] = useState<FunnelStageDefinition[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [scale, setScale] = useState(1);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -81,6 +93,11 @@ export default function FlowsPage() {
       .catch(() => addToast('error', 'Não foi possível carregar os fluxos.'))
       .finally(() => setLoading(false));
   }, [addToast, openFlow]);
+
+  useEffect(() => {
+    void funnelService.listStages().then(setStages).catch(() => setStages([]));
+    void collaboratorService.getMembers().then(setMembers).catch(() => setMembers([]));
+  }, []);
 
   const handleCreateFlow = async () => {
     try {
@@ -138,8 +155,14 @@ export default function FlowsPage() {
       setDirty(false);
       addToast('success', updated.enabled ? 'Fluxo ativado.' : 'Fluxo desativado.');
     } catch {
-      // O servidor recusa ativar fluxo sem gatilho — é o erro mais provável aqui.
-      addToast('error', 'Para ativar, o fluxo precisa de um bloco de gatilho e de ao menos um canal.');
+      // O servidor recusa ativar fluxo sem bloco inicial, sem canal, ou com bloco
+      // de IA sem plano contratado.
+      addToast(
+        'error',
+        nodes.some((node) => requiresAiPlan(node.kind)) && !hasAiPlan
+          ? 'Este fluxo usa o bloco de IA, que precisa de um plano de IA ativo.'
+          : 'Para ativar, o fluxo precisa de um bloco de início (gatilho ou boas-vindas) e de ao menos um canal.',
+      );
     }
   };
 
@@ -165,6 +188,13 @@ export default function FlowsPage() {
   };
 
   const handleDropBlock = (kind: FlowNodeKind, x: number, y: number) => {
+    // O card travado não é arrastável, mas o dado do drag pode vir de outro lugar
+    // — e o servidor recusa ativar o fluxo depois. Barrar aqui evita montar um
+    // desenho que nunca poderia rodar.
+    if (requiresAiPlan(kind) && !hasAiPlan) {
+      addToast('error', 'O bloco de IA precisa de um plano de IA ativo.');
+      return;
+    }
     const meta = blockMeta(kind);
     const node: FlowNode = {
       id: createId(),
@@ -223,7 +253,7 @@ export default function FlowsPage() {
     setDirty(true);
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
 
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-3 sm:h-[calc(100vh-7rem)]">
@@ -407,22 +437,32 @@ export default function FlowsPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Blocos
             </p>
-            {BLOCKS.map((block) => (
-              <div
-                key={block.kind}
-                draggable
-                onDragStart={(event) => event.dataTransfer.setData('application/synq-block', block.kind)}
-                className="cursor-grab rounded-lg border border-slate-200 p-2.5 transition-colors hover:border-indigo-300 active:cursor-grabbing dark:border-slate-700 dark:hover:border-indigo-500/40"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${block.dot}`} />
-                  <p className="text-[13px] font-medium text-slate-900 dark:text-white">{block.label}</p>
+            {BLOCKS.map((block) => {
+              const locked = block.requiresAi === true && !hasAiPlan;
+              return (
+                <div
+                  key={block.kind}
+                  draggable={!locked}
+                  onDragStart={(event) => event.dataTransfer.setData('application/synq-block', block.kind)}
+                  onClick={locked ? () => router.push('/plans') : undefined}
+                  title={locked ? 'Disponível com um plano de IA ativo' : undefined}
+                  className={
+                    locked
+                      ? 'cursor-pointer rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 transition-colors hover:border-indigo-300 hover:opacity-100 dark:border-slate-700 dark:hover:border-indigo-500/40'
+                      : 'cursor-grab rounded-lg border border-slate-200 p-2.5 transition-colors hover:border-indigo-300 active:cursor-grabbing dark:border-slate-700 dark:hover:border-indigo-500/40'
+                  }
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${block.dot}`} />
+                    <p className="text-[13px] font-medium text-slate-900 dark:text-white">{block.label}</p>
+                    {locked && <Lock size={12} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500" />}
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
+                    {locked ? 'Requer um plano de IA. Toque para ver os planos.' : block.hint}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
-                  {block.hint}
-                </p>
-              </div>
-            ))}
+              );
+            })}
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
               Clique numa saída e depois no bloco de destino para ligar. Clique numa linha para removê-la.
             </p>
@@ -451,11 +491,15 @@ export default function FlowsPage() {
             }}
             scale={scale}
             onScaleChange={setScale}
+            hasAiPlan={hasAiPlan}
           />
 
           {selected && (
             <NodeInspector
               node={selected}
+              stages={stages}
+              members={members}
+              hasAiPlan={hasAiPlan}
               onChange={handlePatchNode}
               onRemove={handleRemoveNode}
               onClose={() => setSelectedId(null)}

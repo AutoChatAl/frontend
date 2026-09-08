@@ -23,6 +23,8 @@ export function useAIConfig() {
   const [schedulingBookingEnabled, setSchedulingBookingEnabled] = useState(false);
   const [funnelAutoMoveEnabled, setFunnelAutoMoveEnabled] = useState(false);
   const [crossSellEnabled, setCrossSellEnabled] = useState(false);
+  // Perfil antigo não tem o campo: ausente conta como ligado, igual ao backend.
+  const [knowledgeEnabled, setKnowledgeEnabled] = useState(true);
   const [followUpMinutes, setFollowUpMinutes] = useState(0);
   const [followUpMessage, setFollowUpMessage] = useState('');
   const [instagramProductLayout, setInstagramProductLayout] = useState<InstagramProductLayout>('QUICK_REPLY');
@@ -113,6 +115,7 @@ export function useAIConfig() {
       setSchedulingBookingEnabled(aiConfig.schedulingBookingEnabled);
       setFunnelAutoMoveEnabled(aiConfig.funnelAutoMoveEnabled);
       setCrossSellEnabled(aiConfig.crossSellEnabled ?? false);
+      setKnowledgeEnabled(aiConfig.knowledgeEnabled !== false);
       setFollowUpMinutes(aiConfig.followUpMinutes ?? 0);
       setFollowUpMessage(aiConfig.followUpMessage ?? '');
       setInstagramProductLayout(aiConfig.instagramProductLayout ?? 'QUICK_REPLY');
@@ -199,6 +202,23 @@ export function useAIConfig() {
     catch (err) {
       setFunnelAutoMoveEnabled(!enabled);
       addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar configuração do funil.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
+  const toggleKnowledge = useCallback(async (enabled: boolean) => {
+    setKnowledgeEnabled(enabled);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ knowledgeEnabled: enabled }, activeProfileRef.current);
+      addToast('success', enabled
+        ? 'A IA voltará a consultar a base de conhecimento.'
+        : 'A IA deixará de consultar a base de conhecimento.');
+    }
+    catch (err) {
+      setKnowledgeEnabled(!enabled);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar a base de conhecimento.');
     }
     finally {
       setSaving(false);
@@ -495,6 +515,7 @@ export function useAIConfig() {
     setSchedulingBookingEnabled,
     funnelAutoMoveEnabled,
     crossSellEnabled,
+    knowledgeEnabled,
     funnelStages,
     products,
     productsTotal,
@@ -535,6 +556,7 @@ export function useAIConfig() {
     toggleSchedulingBooking,
     toggleFunnelAutoMove,
     toggleCrossSell,
+    toggleKnowledge,
     instagramProductLayout,
     changeProductLayout,
     uploadProductImage,

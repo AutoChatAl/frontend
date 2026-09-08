@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonForm, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
@@ -15,7 +15,9 @@ import { useAuthUser } from '@/hooks/useAuthUser';
 import AICatalogSection from './components/AICatalogSection';
 import AIChannelsList from './components/AIChannelsList';
 import AIFunnelSection from './components/AIFunnelSection';
+import AIGuardrailsSection from './components/AIGuardrailsSection';
 import AIIdentitySection from './components/AIIdentitySection';
+import AIKnowledgeSection from './components/AIKnowledgeSection';
 import AiPlanGate from './components/AiPlanGate';
 import AIProductsImportModal from './components/AIProductsImportModal';
 import AIProfileSwitcher from './components/AIProfileSwitcher';
@@ -38,7 +40,7 @@ export default function IAPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
+  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, triggerSettings, setTriggerSettings, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, knowledgeEnabled, toggleKnowledge, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
   const customRulesLimit = maxCustomRulesChars > 0 ? maxCustomRulesChars : (status?.limits?.maxCustomRulesChars ?? 0);
   // Passar do limite é erro 422 garantido no backend — o botão trava antes de gastar a ida.
   const customRulesOverLimit = customRulesLimit > 0 && customRules.length > customRulesLimit;
@@ -57,7 +59,7 @@ export default function IAPage() {
     }
   }, [tabIds, activeTab]);
   if (subLoading || loading) {
-    return <PageLoader message="Carregando configurações de IA"/>;
+    return <SkeletonPage><SkeletonForm fields={5}/></SkeletonPage>;
   }
   if (!hasAiPlan) {
     // Contratar plano é ação de cobrança, do dono. Mostrar a vitrine de planos a
@@ -111,11 +113,15 @@ export default function IAPage() {
 
         {activeTab === 'catalog' && (<AICatalogSection products={products} productsTotal={productsTotal} maxProducts={maxProducts} productsLoading={productsLoading} productSearch={productSearch} productPage={productPage} productsPageSize={productsPageSize} onProductSearchChange={setProductSearch} onProductPageChange={goToProductPage} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onOpenImport={() => setImportOpen(true)} onClearCatalog={() => setClearCatalogOpen(true)} crossSellEnabled={crossSellEnabled} onToggleCrossSell={toggleCrossSell} productLayout={instagramProductLayout} onProductLayoutChange={changeProductLayout} onUploadProductImage={uploadProductImage} onRemoveProductImage={removeProductImage} profileCount={profiles.length} catalogScope={catalogScope} onCatalogScopeChange={changeCatalogScope}/>)}
 
+        {activeTab === 'knowledge' && (<AIKnowledgeSection knowledgeEnabled={knowledgeEnabled} onToggleKnowledge={toggleKnowledge}/>)}
+
         {activeTab === 'channels' && (<div data-tour="ia-channels">
           <AIChannelsList channels={channels} onToggle={toggleChannel} activeProfileId={activeProfileId}/>
         </div>)}
 
         {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} triggerSettings={triggerSettings} followUpMinutes={followUpMinutes} followUpMessage={followUpMessage} maxChars={customRulesLimit} onCustomRulesChange={setCustomRules} onToggleTrigger={(triggerKey) => setTriggerSettings((prev) => ({ ...prev, [triggerKey]: !prev[triggerKey] }))} onFollowUpMinutesChange={setFollowUpMinutes} onFollowUpMessageChange={setFollowUpMessage}/>)}
+
+        {activeTab === 'guardrails' && (<AIGuardrailsSection/>)}
 
         {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
 

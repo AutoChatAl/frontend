@@ -1,0 +1,20 @@
+import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
+
+/**
+ * Mostrado pelo Suspense do App Router enquanto o chunk da rota carrega.
+ *
+ * Sem este arquivo a navegação fica bloqueada: o clique não muda nada na tela
+ * até o JavaScript da página chegar e renderizar. É o mesmo esqueleto que a
+ * página desenha depois, de propósito — assim a troca é contínua e não há salto
+ * entre um esqueleto e outro.
+ */
+export default function Loading() {
+  return (<SkeletonPage>
+    <SkeletonStats count={4}/>
+    <div className="grid gap-3 lg:grid-cols-2">
+      <Skeleton className="h-64"/>
+      <Skeleton className="h-64"/>
+    </div>
+    <SkeletonCards count={3}/>
+  </SkeletonPage>);
+}

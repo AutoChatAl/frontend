@@ -5,10 +5,12 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import Sidebar from '@/components/Sidebar';
+import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
 import TrialWelcomeModal from '@/components/TrialWelcomeModal';
+import { AttendantAlertsProvider } from '@/contexts/AttendantAlertsContext';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { SidebarProvider, canAccessPathname, resolveLandingRoute } from '@/contexts/SidebarContext';
@@ -16,6 +18,7 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { authService, type AuthUser } from '@/services/auth.service';
+import { getInitials } from '@/utils/displayName';
 
 export default function PrivateLayout({ children }: Readonly<{
     children: React.ReactNode;
@@ -59,21 +62,34 @@ export default function PrivateLayout({ children }: Readonly<{
     }
   }, [permissionsLoaded, user, pathname, router]);
   if (!isAuthenticated) {
-    return (<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-        <p className="mt-4 text-slate-600 dark:text-slate-400">Verificando autenticação...</p>
+    /**
+     * A checagem de sessão é síncrona (lê o token do localStorage), mas roda num
+     * efeito — ou seja, só depois do primeiro render. Um spinner de tela cheia
+     * aqui pisca um visual completamente diferente do app entre o login e a
+     * página, e era o que fazia a entrada parecer lenta. O esqueleto da casca
+     * mostra a mesma forma que vem a seguir, então a troca não salta.
+     */
+    return (<div className="flex h-screen animate-pulse overflow-hidden bg-gray-50 dark:bg-slate-900" aria-busy="true" aria-label="Carregando">
+      <div className="hidden w-56 shrink-0 border-r border-slate-100 p-3 dark:border-slate-700/60 lg:block">
+        <Skeleton className="h-8 w-32"/>
+        <div className="mt-6 space-y-2">
+          {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-8 w-full"/>)}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-700/60">
+          <Skeleton className="h-6 w-40"/>
+          <Skeleton className="h-8 w-8 rounded-full"/>
+        </div>
+        <div className="flex-1 p-3 sm:p-5">
+          <SkeletonPage><SkeletonStats count={4}/><SkeletonCards count={3}/></SkeletonPage>
+        </div>
       </div>
     </div>);
   }
   const userName = user?.name || user?.email || '';
   const userRole = user?.role;
-  const userInitials = userName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w.charAt(0).toUpperCase())
-    .join('');
+  const userInitials = getInitials(userName);
   const isAdmin = user?.role === 'admin';
 
   const onboardingEnabled = isAuthenticated && !isAdmin;
@@ -84,20 +100,23 @@ export default function PrivateLayout({ children }: Readonly<{
         <ChannelStatusProvider>
           <SupportChatProvider>
             <OnboardingProvider enabled={onboardingEnabled}>
-              <div className="flex h-screen overflow-hidden">
-                <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
-                <div className="flex flex-col flex-1 min-w-0">
-                  <Header />
-                  <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
-                    <TrialBanner />
-                    <SubscriptionBanner />
-                    <TrialWelcomeModal />
-                    {children}
-                  </main>
+              {/* Envolve toda tela privada: o atendente é avisado de conversa nova em qualquer página. */}
+              <AttendantAlertsProvider>
+                <div className="flex h-screen overflow-hidden">
+                  <Sidebar userName={userName} userInitials={userInitials} {...(userRole !== undefined && { userRole })}/>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <Header />
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 bg-gray-50 dark:bg-slate-900">
+                      <TrialBanner />
+                      <SubscriptionBanner />
+                      <TrialWelcomeModal />
+                      {children}
+                    </main>
+                  </div>
                 </div>
-              </div>
-              {!isAdmin && <SupportChatWidget />}
-              {onboardingEnabled && <OnboardingTour />}
+                {!isAdmin && <SupportChatWidget />}
+                {onboardingEnabled && <OnboardingTour />}
+              </AttendantAlertsProvider>
             </OnboardingProvider>
           </SupportChatProvider>
         </ChannelStatusProvider>

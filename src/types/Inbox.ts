@@ -37,6 +37,11 @@ export interface InboxConversation {
   /** Preenchido = conversa arquivada, fora da caixa principal. */
   archivedAt?: string | null;
   /** Fim da janela de retenção configurada no workspace, calculado no servidor. */
+  /**
+   * Conversas com o mesmo valor são a mesma pessoa em canais diferentes. O
+   * vínculo é só visual: o envio e a IA continuam presos ao canal da conversa.
+   */
+  linkGroupId?: string | null;
   expiresAt?: string;
   replyWindowExpiresAt?: string | null;
 }

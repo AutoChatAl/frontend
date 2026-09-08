@@ -4,16 +4,12 @@ import { useState } from 'react';
 
 import Badge from '@/components/Badge';
 import type { InboxChannelType, InboxMessageInteractive } from '@/types/Inbox';
+import { getInitials } from '@/utils/displayName';
 
-export function getInitials(name?: string | null, fallback?: string | null): string {
-  const source = (name || fallback || '?').trim().replace(/^@/, '');
-  const parts = source.split(/\s+/).filter(Boolean);
-  const first = parts[0] ?? '';
-  if (!first) return '?';
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = parts[parts.length - 1] ?? '';
-  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase();
-}
+// Vem do utilitário compartilhado: a versão que vivia aqui indexava por unidade
+// UTF-16 e cortava emoji e letra decorativa no meio. Reexportado porque a inbox
+// inteira já importa estes nomes daqui.
+export { getInitials, normalizeDisplayName } from '@/utils/displayName';
 
 export function Avatar({
   name,
@@ -60,6 +56,22 @@ export function channelBadge(type: InboxChannelType, channelLabel?: string | nul
     return <Badge type="whatsapp" text={label} icon={BadgeCheck} pill/>;
   }
   return <Badge type="whatsapp" text={label} icon={MessageCircle} pill/>;
+}
+
+/**
+ * Marcador que o provider do WhatsApp manda ao anunciar um álbum: uma mensagem
+ * própria, sem mídia, com um texto em inglês do tipo "Album: 2 images". As fotos
+ * chegam logo depois, uma mensagem cada — exibir o marcador só repetiria em outro
+ * idioma o que o próprio balão seguinte mostra.
+ *
+ * O webhook já descarta os novos; esta checagem esconde os que ficaram gravados
+ * antes disso.
+ */
+const ALBUM_PLACEHOLDER = /^album:\s*\d+\s*(images?|photos?|videos?|items?|medias?)$/i;
+
+export function isAlbumPlaceholder(message: { body: string; mediaType?: string | null }): boolean {
+  if (message.mediaType) return false;
+  return ALBUM_PLACEHOLDER.test(message.body.trim());
 }
 
 /**

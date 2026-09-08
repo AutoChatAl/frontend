@@ -299,13 +299,13 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   {
     id: 'settings-notifications',
     label: 'Ajustar Notificações',
-    description: 'O que você recebe por e-mail e no painel',
+    description: 'Alertas de conversa nova (som, navegador) e avisos por e-mail',
     href: '/settings?tab=notifications',
     icon: Bell,
     section: 'Sistema',
     menuId: 'settings',
-    ownerOnly: true,
-    keywords: ['notificacao', 'alertas', 'email', 'avisos', 'sino'],
+    // Liberado para todo papel: os alertas de atendimento são de cada pessoa.
+    keywords: ['notificacao', 'alertas', 'email', 'avisos', 'sino', 'som', 'toque', 'conversa nova', 'atendimento'],
   },
   {
     id: 'settings-billing',

@@ -1,10 +1,12 @@
 'use client';
-import { CircleUser, Hand, Hourglass, Loader2, Lock, Play, Undo2, UserPlus } from 'lucide-react';
+import { Check, CircleUser, Hand, Hourglass, Link2, Link2Off, Loader2, Lock, Pencil, Play, Undo2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import Input from '@/components/Input';
+import Select from '@/components/Select';
 import type { InboxAgent, InboxConversation } from '@/types/Inbox';
 
-import { Avatar, CHANNEL_LABEL, channelBadge, formatCountdown, getInitials, relativeTime } from './ChatBits';
+import { Avatar, CHANNEL_LABEL, channelBadge, formatCountdown, getInitials, normalizeDisplayName, relativeTime } from './ChatBits';
 import PopoverMenu from './PopoverMenu';
 
 const ATTENDANCE_LABEL: Record<string, string> = {
@@ -25,9 +27,14 @@ interface ConversationContextPanelProps {
     hasFullAccess: boolean;
     assigning: boolean;
     messageCount: number;
+    /** Demais conversas da caixa — destinos possíveis de um vínculo. */
+    conversations: InboxConversation[];
     onAssign: (userId: string) => void;
     onUnassign: () => void;
     onResumeAi: () => void;
+    onLink: (targetConversationId: string) => void;
+    onUnlink: () => void;
+    onRenameContact: (displayName: string) => void;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -50,10 +57,26 @@ export default function ConversationContextPanel({
   hasFullAccess,
   assigning,
   messageCount,
+  conversations,
   onAssign,
   onUnassign,
   onResumeAi,
+  onLink,
+  onUnlink,
+  onRenameContact,
 }: ConversationContextPanelProps) {
+  // Irmãs já vinculadas e candidatas a vínculo saem da mesma lista que a caixa
+  // já carregou — não vale uma busca própria para escolher entre o que está à vista.
+  const linked = conversation.linkGroupId
+    ? conversations.filter((other) => other.id !== conversation.id && other.linkGroupId === conversation.linkGroupId)
+    : [];
+  const linkCandidates = conversations.filter(
+    (other) => other.id !== conversation.id
+      && (!other.linkGroupId || other.linkGroupId !== conversation.linkGroupId),
+  );
+  // Nome em edição. O provedor manda o nome do WhatsApp quando o contato
+  // permite; quando não manda, é por aqui que a conversa deixa de ser um número.
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
   // Só serve para redesenhar a contagem regressiva a cada minuto.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -79,9 +102,46 @@ export default function ConversationContextPanel({
     <div className="flex flex-col items-center gap-2 border-b border-slate-100 dark:border-slate-700 p-4 text-center">
       <Avatar name={conversation.contactName} identifier={conversation.contactIdentifier} avatarUrl={conversation.avatarUrl} size={56}/>
       <div className="min-w-0 w-full">
-        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-          {conversation.contactName || conversation.contactIdentifier || 'Contato sem nome'}
-        </p>
+        {nameDraft === null ? (
+          <button
+            type="button"
+            onClick={() => setNameDraft(conversation.contactName ?? '')}
+            title="Dar um nome a este contato"
+            className="group mx-auto flex max-w-full cursor-pointer items-center justify-center gap-1.5"
+          >
+            <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+              {normalizeDisplayName(conversation.contactName) || conversation.contactIdentifier || 'Contato sem nome'}
+            </span>
+            <Pencil size={12} className="shrink-0 text-slate-300 transition-colors group-hover:text-indigo-500 dark:text-slate-600"/>
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={nameDraft}
+              autoFocus
+              maxLength={120}
+              placeholder="Nome do contato"
+              onChange={(event) => setNameDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setNameDraft(null);
+                if (event.key === 'Enter' && nameDraft.trim()) {
+                  onRenameContact(nameDraft.trim());
+                  setNameDraft(null);
+                }
+              }}
+              wrapperClassName="flex-1"
+            />
+            <button
+              type="button"
+              aria-label="Salvar nome"
+              disabled={!nameDraft.trim()}
+              onClick={() => { onRenameContact(nameDraft.trim()); setNameDraft(null); }}
+              className="shrink-0 cursor-pointer rounded-lg p-1.5 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-40 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+            >
+              <Check size={16}/>
+            </button>
+          </div>
+        )}
         {conversation.contactIdentifier && (<p className="truncate text-xs text-slate-400 dark:text-slate-500">
           {conversation.contactIdentifier}
         </p>)}
@@ -204,6 +264,46 @@ export default function ConversationContextPanel({
           {assigning ? <Loader2 size={13} className="animate-spin"/> : <Play size={13}/>}
             Reativar IA agora
         </button>)}
+      </div>)}
+    </div>
+
+    {/* Vínculo entre canais. Só junta o que a lista mostra: o envio continua
+        preso ao canal desta conversa, e a IA daqui não enxerga a outra. */}
+    <div className="border-t border-slate-100 p-4 dark:border-slate-700/60">
+      <SectionTitle>Mesma pessoa</SectionTitle>
+      {linked.length > 0 ? (<div className="mt-1.5 space-y-1.5">
+        {linked.map((sibling) => (<div key={sibling.id} className="flex items-center gap-1.5 text-[13px] text-slate-700 dark:text-slate-300">
+          <Link2 size={13} className="shrink-0 text-indigo-500"/>
+          <span className="truncate">{sibling.contactName || sibling.contactIdentifier || 'Sem nome'}</span>
+          <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{CHANNEL_LABEL[sibling.channelType]}</span>
+        </div>))}
+        <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+          As conversas continuam separadas: cada uma responde pelo próprio canal.
+        </p>
+        <button type="button" onClick={onUnlink} disabled={assigning} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/50 cursor-pointer">
+          {assigning ? <Loader2 size={13} className="animate-spin"/> : <Link2Off size={13}/>}
+          Desfazer vínculo
+        </button>
+      </div>) : (<div className="mt-1.5 space-y-1.5">
+        <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+          Se este contato também fala com você por outro canal, vincule as conversas para elas aparecerem juntas na lista.
+        </p>
+        {linkCandidates.length === 0 ? (
+          <p className="text-xs text-slate-400 dark:text-slate-500">Nenhuma outra conversa aberta para vincular.</p>
+        ) : (<Select
+          placeholder="Vincular a outra conversa..."
+          value=""
+          disabled={assigning}
+          // Acima de dez conversas achar a pessoa na lista vira o trabalho; o
+          // próprio Select liga a busca a partir do limiar dele.
+          searchable
+          options={linkCandidates.map((candidate) => ({
+            value: candidate.id,
+            label: candidate.contactName || candidate.contactIdentifier || 'Sem nome',
+            description: CHANNEL_LABEL[candidate.channelType],
+          }))}
+          onChange={(value) => { if (value) onLink(value); }}
+        />)}
       </div>)}
     </div>
 

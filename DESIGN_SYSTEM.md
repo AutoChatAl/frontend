@@ -943,6 +943,49 @@ No dark mode use a notação `color/opacity` (ex: `dark:bg-blue-500/10 dark:text
 
 ---
 
+## 13.1 Blocos do Construtor de Fluxos
+
+**Arquivo:** `src/app/(private)/flows/components/blocks.ts`
+
+Cada tipo de bloco do canvas tem um matiz próprio, usado no ponto da paleta
+(`bg-{cor}-500`) e no rótulo do tipo dentro do card (`text-{cor}-600 dark:text-{cor}-400`).
+A cor aqui é só identificação — não carrega significado de status —, e por isso este é o
+único contexto em que `green`, `pink`, `lime`, `stone`, `yellow`, `red`, `zinc`, `gray` e
+`neutral` são permitidos.
+
+| Bloco | Token | Bloco | Token |
+|---|---|---|---|
+| Iniciar por palavra | `indigo` | Horário de atendimento | `orange` |
+| Qualquer mensagem | `indigo` | | |
+| Boas-vindas | `green` | Dividir aleatoriamente | `fuchsia` |
+| Reagiu ao story | `pink` | Aguardar tempo | `blue` |
+| Mencionou no story | `red` | Aplicar etiqueta | `emerald` |
+| Enviar mensagem | `slate` | Remover etiqueta | `teal` |
+| Enviar link | `sky` | Verificar etiqueta | `cyan` |
+| Enviar mídia | `lime` | Mover no funil | `zinc` |
+| Enviar documento | `stone` | Situação do atendimento | `gray` |
+| Perguntar com opções | `violet` | Notificar equipe | `neutral` |
+| Inteligência artificial | `yellow` | Atribuir atendente | `rose` |
+| Aguardar resposta | `purple` | Passar para atendente | `rose` |
+| Desviar por palavra | `amber` | | |
+
+Duas exceções, ambas deliberadas:
+
+- **`orange` no bloco de horário.** A reserva do `orange` protege a escala de temperatura
+  de lead no quadro do Funil; o canvas de fluxos é outra tela, onde não há escala térmica
+  com que confundir. Fora dessas duas telas o token continua proibido.
+- **Matiz repetido em dois pares.** A paleta padrão do Tailwind tem 22 matizes e o
+  construtor já passou disso, então a repetição é inevitável — a regra é repetir no par
+  funcionalmente mais próximo, deixando o rótulo ao lado do ponto separar os dois:
+  `rose` em *Atribuir atendente* e *Passar para atendente* (ambos entregam a conversa a uma
+  pessoa) e `indigo` em *Iniciar por palavra* e *Qualquer mensagem* (ambos começam o fluxo
+  por mensagem recebida).
+
+Um bloco novo escolhe um matiz ainda não usado na tabela e o registra aqui antes de ir
+para o código; esgotada a paleta, repete o matiz do bloco funcionalmente mais próximo.
+
+---
+
 ## 14. Gráficos (Dashboard)
 
 Gráficos são SVG feitos à mão (sem biblioteca), largura sempre 100% do card

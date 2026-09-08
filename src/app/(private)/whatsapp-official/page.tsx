@@ -12,7 +12,7 @@ import CardEmptyState from '@/components/CardEmptyState';
 import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import MetricCard, { type MetricTrend } from '@/components/MetricCard';
-import PageLoader from '@/components/PageLoader';
+import { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
@@ -177,7 +177,7 @@ export default function WhatsAppOfficialDashboardPage() {
   }, [metaBilled]);
 
   if (loading && !overview) {
-    return <PageLoader message="Carregando painel da API Oficial..." />;
+    return <SkeletonPage><SkeletonStats count={4}/><SkeletonCards count={3}/></SkeletonPage>;
   }
 
   const channels = overview?.channels ?? [];

@@ -1,5 +1,5 @@
 'use client';
-import { Check, Clock, Edit3, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Check, Clock, Edit3, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
@@ -10,10 +10,12 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import SectionHeader from '@/components/SectionHeader';
+import { SkeletonRows } from '@/components/Skeleton';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService, type AuthUser, type Permission } from '@/services/auth.service';
 import { collaboratorService, type Member, type Invite } from '@/services/collaborator.service';
+import { getInitials } from '@/utils/displayName';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
 interface PermissionOption {
@@ -218,18 +220,8 @@ export default function MembersTab() {
       setDeleteLoading(false);
     }
   }
-  function getInitials(name: string) {
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w.charAt(0).toUpperCase())
-      .join('') || 'U';
-  }
   if (loading) {
-    return (<div className="flex items-center justify-center py-8">
-      <Loader2 size={20} className="animate-spin text-slate-400"/>
-    </div>);
+    return (<div className="animate-pulse" aria-busy="true"><SkeletonRows count={4}/></div>);
   }
   return (<div className="space-y-3">
     <Card className="p-4">
