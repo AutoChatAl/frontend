@@ -85,6 +85,9 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 function mediaSrc(message: InboxMessage): string | null {
+  // O arquivo vive no servidor e o link já vem assinado: é o caminho de toda mídia nova.
+  // `mediaUrl` (CDN do provedor) e `mediaBase64` só aparecem em mensagens antigas.
+  if (message.mediaPath) return inboxService.mediaUrl(message.mediaPath);
   if (message.mediaUrl) return message.mediaUrl;
   if (message.mediaBase64) {
     if (message.mediaBase64.startsWith('data:')) return message.mediaBase64;

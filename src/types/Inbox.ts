@@ -85,7 +85,10 @@ export interface InboxMessage {
   body: string;
   mediaType?: MessageMediaType | null;
   mediaUrl?: string | null;
+  /** Só em mensagens antigas — hoje o arquivo vem por `mediaPath`. */
   mediaBase64?: string | null;
+  /** Caminho assinado da mídia na API, com validade própria. Relativo à base da API. */
+  mediaPath?: string | null;
   mediaMimeType?: string | null;
   mediaFileName?: string | null;
   sentByAi?: boolean;

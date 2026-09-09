@@ -8,6 +8,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const SESSION_STREAM_ID = `s-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 
 class InboxService {
+  /** URL absoluta do arquivo de mídia — o backend manda só o caminho assinado. */
+  public mediaUrl(path: string): string {
+    return `${API_URL}${path}`;
+  }
+
+
   public async getSettings(): Promise<InboxSettings> {
     const response = await apiClient.get<InboxSettings>('/inbox/settings');
     if (!response.success || !response.data) {
