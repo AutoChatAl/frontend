@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade — Synq',
-  description: 'Política de Privacidade da plataforma Synq, operada por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01). Como coletamos, usamos e protegemos seus dados, inclusive dados obtidos via Meta Platforms (Instagram, Facebook e WhatsApp).',
+  description: 'Política de Privacidade da plataforma Synq, operada por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01). Como coletamos, usamos e protegemos seus dados, inclusive dados obtidos via Meta Platforms (Instagram, Facebook e WhatsApp) e via Google (Google Agenda / Google Calendar).',
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://www.synq.app.br/privacidade' },
 };
@@ -20,9 +20,9 @@ export default function PrivacidadePage() {
           Política de Privacidade
       </h1>
       <p className="text-sm text-slate-500 mb-10">
-          Última atualização: 23 de abril de 2026
+          Última atualização: 15 de setembro de 2026
         <br />
-          Vigência: a partir de 23 de abril de 2026
+          Vigência: a partir de 15 de setembro de 2026
       </p>
 
       <section className="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
@@ -47,7 +47,7 @@ export default function PrivacidadePage() {
           <li>
             <strong>Site oficial:</strong>{' '}
             <a href="https://www.synq.app.br" className="text-indigo-600 hover:text-indigo-700">
-                https:
+                https://www.synq.app.br
             </a>
           </li>
           <li>
@@ -68,7 +68,8 @@ export default function PrivacidadePage() {
           <strong>Termos da Plataforma da Meta (seção 4.a e 5)</strong>, com as
             políticas do <strong>Meta App Review</strong>, da{' '}
           <strong>Instagram Graph API</strong> e da{' '}
-          <strong>WhatsApp Business Platform</strong>.
+          <strong>WhatsApp Business Platform</strong>, e com a{' '}
+          <strong>Política de Dados do Usuário dos Serviços de API do Google</strong>.
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
@@ -87,6 +88,13 @@ export default function PrivacidadePage() {
             Inc. (Facebook, Instagram e WhatsApp). O uso dessas APIs é feito
             exclusivamente em nome do usuário que conecta sua própria conta
             comercial, mediante autorização expressa via OAuth.
+        </p>
+        <p>
+            Opcionalmente, você pode conectar sua conta Google para sincronizar
+            os agendamentos criados no Synq com o{' '}
+          <strong>Google Agenda (Google Calendar)</strong>. Essa integração é
+            independente das integrações com a Meta, só é ativada por ação
+            explícita sua e pode ser desconectada a qualquer momento.
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
@@ -152,8 +160,40 @@ export default function PrivacidadePage() {
         <ul className="list-disc pl-6 space-y-1">
           <li>Endereço IP, tipo de navegador, sistema operacional e dispositivo.</li>
           <li>Logs de acesso, data e hora, e páginas visitadas.</li>
-          <li>Cookies e identificadores semelhantes (ver seção 10).</li>
+          <li>Cookies e identificadores semelhantes (ver seção 11).</li>
         </ul>
+
+        <h3 className="text-xl font-semibold text-slate-900 mt-6 mb-2">
+            3.4. Dados obtidos via Google (Google Agenda / Google Calendar)
+        </h3>
+        <p>
+            Ao conectar sua conta Google ao Synq — pelo fluxo OAuth oficial do
+            Google, com consentimento expresso — coletamos apenas:
+        </p>
+        <ul className="list-disc pl-6 space-y-1">
+          <li>
+            <strong>Identificação básica da conta Google</strong> (endereço de
+              e-mail e identificador da conta), usada somente para exibir qual
+              conta está conectada e vincular a integração ao seu usuário no
+              Synq.
+          </li>
+          <li>
+            <strong>Eventos do calendário conectado</strong> — título,
+              descrição, data e hora de início e fim, status e identificadores
+              técnicos do evento — estritamente para manter os agendamentos do
+              Synq e do Google Agenda sincronizados nos dois sentidos.
+          </li>
+          <li>
+            <strong>Tokens de acesso e de atualização (refresh token)</strong>{' '}
+              OAuth do Google, usados exclusivamente para realizar essa
+              sincronização em seu nome.
+          </li>
+        </ul>
+        <p>
+          <strong>Não acessamos</strong> outros calendários além do
+            conectado, nem contatos, e-mails, arquivos ou qualquer outro dado
+            da sua conta Google fora do escopo autorizado.
+        </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
             4. Uso específico das permissões da Meta
@@ -198,7 +238,64 @@ export default function PrivacidadePage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            5. Como usamos os dados
+            5. Uso das permissões do Google (Google Calendar API) e Uso Limitado
+        </h2>
+        <p>
+            Para a integração com o Google Agenda, o Synq solicita os seguintes
+            escopos OAuth do Google, com justificativa individualizada:
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>
+            <strong>https://www.googleapis.com/auth/calendar.events</strong> —
+              usado para criar, ler, atualizar e excluir eventos no calendário
+              conectado, de forma que um agendamento feito no Synq (pelo
+              atendente ou pela IA) apareça no Google Agenda e um evento criado
+              no Google Agenda bloqueie o mesmo horário no Synq, evitando
+              agendamentos duplicados.
+          </li>
+          <li>
+            <strong>openid</strong> e <strong>email</strong> — usados apenas
+              para identificar a conta Google conectada.
+          </li>
+        </ul>
+        <p>
+            Os dados recebidos das APIs do Google são usados{' '}
+          <strong>exclusivamente</strong> para fornecer e melhorar a
+            funcionalidade de sincronização de agenda visível a você. Não os
+            utilizamos para publicidade, não os vendemos, não os transferimos
+            a terceiros (exceto quando necessário para prestar essa
+            funcionalidade, para cumprir a lei ou em reestruturação societária
+            com aviso prévio) e não os usamos para treinar modelos de
+            inteligência artificial generalistas. Nenhuma pessoa lê esses
+            dados, salvo com seu consentimento expresso, por razões de
+            segurança, para cumprir obrigações legais ou de forma agregada e
+            anonimizada para operação interna.
+        </p>
+        <p>
+            O uso e a transferência, pelo Synq, de informações recebidas das
+            APIs do Google obedecem à{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              Política de Dados do Usuário dos Serviços de API do Google
+          </a>
+            , incluindo os requisitos de <strong>Uso Limitado</strong> (Limited
+            Use). <em>Synq’s use and transfer to any other app of information
+            received from Google APIs will adhere to the Google API Services
+            User Data Policy, including the Limited Use requirements.</em>
+        </p>
+        <p>
+            Você pode desconectar o Google Agenda a qualquer momento em{' '}
+          <em>Agenda → Google Agenda → Desconectar</em> dentro do Synq — o que
+            revoga o token junto ao Google e o apaga do nosso banco de dados — ou
+            revogar o acesso diretamente em{' '}
+          <a href="https://myaccount.google.com/permissions" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              myaccount.google.com/permissions
+          </a>
+            . Os agendamentos já registrados permanecem no Synq; apenas a
+            sincronização é interrompida.
+        </p>
+
+        <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
+            6. Como usamos os dados
         </h2>
         <ul className="list-disc pl-6 space-y-1">
           <li>Fornecer, operar e manter a plataforma Synq.</li>
@@ -215,7 +312,7 @@ export default function PrivacidadePage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            6. Compartilhamento de dados
+            7. Compartilhamento de dados
         </h2>
         <p>
             A Synq <strong>não vende</strong> dados pessoais. Podemos compartilhar
@@ -233,6 +330,11 @@ export default function PrivacidadePage() {
               um comentário).
           </li>
           <li>
+              Com a Google LLC, exclusivamente quando a sincronização de agenda
+              exige chamada à Google Calendar API (por exemplo, criar ou
+              atualizar um evento no seu Google Agenda).
+          </li>
+          <li>
               Por obrigação legal, ordem judicial ou solicitação de autoridade
               competente.
           </li>
@@ -243,7 +345,7 @@ export default function PrivacidadePage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            7. Armazenamento, retenção e segurança
+            8. Armazenamento, retenção e segurança
         </h2>
         <ul className="list-disc pl-6 space-y-1">
           <li>
@@ -254,6 +356,17 @@ export default function PrivacidadePage() {
           <li>
               Tokens de acesso da Meta são criptografados em repouso (AES-256) e
               em trânsito (TLS 1.2+).
+          </li>
+          <li>
+              Tokens OAuth do Google são armazenados em banco de dados com
+              acesso restrito, transmitidos apenas por TLS 1.2+, e são
+              revogados junto ao Google e apagados assim que você desconecta a
+              integração.
+          </li>
+          <li>
+              Dados de eventos do Google Agenda são mantidos apenas enquanto a
+              integração estiver ativa; ao desconectar, os agendamentos
+              permanecem no Synq sem vínculo com o Google.
           </li>
           <li>
               Mensagens e comentários coletados são retidos enquanto a conta
@@ -268,7 +381,7 @@ export default function PrivacidadePage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            8. Seus direitos como titular (LGPD, art. 18)
+            9. Seus direitos como titular (LGPD, art. 18)
         </h2>
         <p>Você pode, a qualquer momento, solicitar:</p>
         <ul className="list-disc pl-6 space-y-1">
@@ -290,7 +403,7 @@ export default function PrivacidadePage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            9. Exclusão de dados e desconexão de integrações Meta
+            10. Exclusão de dados e desconexão de integrações Meta e Google
         </h2>
         <p>
             Você pode, a qualquer momento, remover seus dados pelos seguintes
@@ -321,6 +434,17 @@ export default function PrivacidadePage() {
               app à sua conta pelo lado da própria Meta.
           </li>
           <li>
+            <strong>Desconectar o Google Agenda:</strong> dentro do Synq, em{' '}
+            <em>Agenda → Google Agenda → Desconectar</em>. O Synq revoga o
+              token junto ao Google e o apaga do banco de dados; os
+              agendamentos permanecem no Synq, sem vínculo com o Google. Você
+              também pode revogar o acesso em{' '}
+            <a href="https://myaccount.google.com/permissions" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              myaccount.google.com/permissions
+            </a>
+              .
+          </li>
+          <li>
             <strong>Por e-mail</strong> (útil para quem perdeu acesso à
               conta): envie mensagem para{' '}
             <a href="mailto:suporte.synq@proton.me" className="text-indigo-600 hover:text-indigo-700">
@@ -340,7 +464,7 @@ export default function PrivacidadePage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            10. Cookies
+            11. Cookies
         </h2>
         <p>
             Usamos cookies estritamente necessários para autenticação e
@@ -351,16 +475,16 @@ export default function PrivacidadePage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            11. Transferência internacional
+            12. Transferência internacional
         </h2>
         <p>
-            Alguns provedores (ex.: Meta Platforms, Inc.) estão sediados fora do
+            Alguns provedores (ex.: Meta Platforms, Inc. e Google LLC) estão sediados fora do
             Brasil. Sempre que houver transferência internacional, garantimos
             salvaguardas adequadas conforme o art. 33 da LGPD.
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            12. Alterações nesta política
+            13. Alterações nesta política
         </h2>
         <p>
             Podemos atualizar esta política periodicamente. A versão vigente é a
@@ -370,7 +494,7 @@ export default function PrivacidadePage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            13. Contato e Encarregado pelo Tratamento de Dados (DPO)
+            14. Contato e Encarregado pelo Tratamento de Dados (DPO)
         </h2>
         <p>
           <strong>Controlador:</strong> 54.623.148 VINICIOS COELHO FELIPE DA
