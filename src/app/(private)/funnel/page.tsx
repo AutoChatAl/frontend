@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
+import Select from '@/components/Select';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { funnelService } from '@/services/funnel.service';
@@ -40,6 +41,10 @@ export default function FunnelPage() {
   const [stageSaving, setStageSaving] = useState(false);
   const [deletingStage, setDeletingStage] = useState<FunnelStage | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  /** Para onde vão os leads da etapa que está sendo excluída. */
+  const [reassignTo, setReassignTo] = useState('');
+  const [removingLead, setRemovingLead] = useState<FunnelLead | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   const { toasts, addToast, removeToast } = useToast();
   const firstLoaded = useRef(false);
@@ -186,11 +191,20 @@ export default function FunnelPage() {
     [stageModal, loadBoard, addToast],
   );
 
+  const openDeleteStage = useCallback(
+    (stage: FunnelStage) => {
+      const fallback = stages.find((item) => item.id !== stage.id);
+      setReassignTo(fallback?.id ?? '');
+      setDeletingStage(stage);
+    },
+    [stages],
+  );
+
   const handleDeleteStage = useCallback(async () => {
     if (!deletingStage) return;
     setDeleteLoading(true);
     try {
-      await funnelService.deleteStage(deletingStage.id);
+      await funnelService.deleteStage(deletingStage.id, reassignTo || undefined);
       setDeletingStage(null);
       await loadBoard();
       addToast('success', 'Etapa excluída. Os leads foram realocados.');
@@ -199,7 +213,58 @@ export default function FunnelPage() {
     } finally {
       setDeleteLoading(false);
     }
-  }, [deletingStage, loadBoard, addToast]);
+  }, [deletingStage, reassignTo, loadBoard, addToast]);
+
+  /**
+   * A ordem muda quem é a etapa de entrada e recalcula as taxas de conversão, que saem
+   * do formato do funil — por isso o quadro é relido depois que o servidor confirma.
+   */
+  const handleReorderStages = useCallback(
+    async (stageIds: string[]) => {
+      const previous = stages;
+      const byId = new Map(previous.map((stage) => [stage.id, stage]));
+      const reordered = stageIds
+        .map((stageId) => byId.get(stageId))
+        .filter((stage): stage is FunnelStage => !!stage);
+      setStages(reordered);
+      try {
+        await funnelService.reorderStages(stageIds);
+        await loadBoard();
+      } catch (err) {
+        setStages(previous);
+        addToast('error', err instanceof Error ? err.message : 'Erro ao reordenar as etapas.');
+      }
+    },
+    [stages, loadBoard, addToast],
+  );
+
+  const handleRemoveLead = useCallback(async () => {
+    if (!removingLead) return;
+    setRemoveLoading(true);
+    try {
+      await funnelService.removeLeadFromFunnel(removingLead.id);
+      const stageId = removingLead.funnelStageId ?? stages.find((stage) => stage.isEntry)?.id ?? null;
+      setColumns((prev) => {
+        const next: Record<string, FunnelLead[]> = {};
+        for (const key of Object.keys(prev)) {
+          next[key] = (prev[key] ?? []).filter((lead) => lead.id !== removingLead.id);
+        }
+        return next;
+      });
+      if (stageId) {
+        setStages((prev) =>
+          prev.map((stage) => (stage.id === stageId ? { ...stage, total: Math.max(0, stage.total - 1) } : stage)),
+        );
+      }
+      setRemovingLead(null);
+      setDrawerLead(null);
+      addToast('success', 'Lead removido do funil. Ele volta assim que houver uma nova interação.');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao remover o lead do funil.');
+    } finally {
+      setRemoveLoading(false);
+    }
+  }, [removingLead, stages, addToast]);
 
   if (loading) {
     return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
@@ -257,7 +322,8 @@ export default function FunnelPage() {
         onOpenLead={setDrawerLead}
         onLoadMore={handleLoadMore}
         onRenameStage={(stage) => setStageModal({ open: true, mode: 'edit', stage })}
-        onDeleteStage={(stage) => setDeletingStage(stage)}
+        onDeleteStage={openDeleteStage}
+        onReorderStages={handleReorderStages}
       />
 
       <LeadDetailDrawer
@@ -265,6 +331,7 @@ export default function FunnelPage() {
         stages={stages}
         onClose={() => setDrawerLead(null)}
         onSaved={handleLeadSaved}
+        onRemoveFromFunnel={setRemovingLead}
       />
 
       <StageModal
@@ -287,15 +354,57 @@ export default function FunnelPage() {
           <div className="space-y-5">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Tem certeza que deseja excluir a etapa{' '}
-              <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{deletingStage.name}&quot;</span>? Os
-              leads desta etapa serão movidos para outra etapa do funil.
+              <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{deletingStage.name}&quot;</span>? Os{' '}
+              {deletingStage.total} lead(s) desta etapa precisam de um novo lugar no funil.
             </p>
+            <Select
+              label="Mover os leads para"
+              value={reassignTo}
+              onChange={setReassignTo}
+              disabled={deleteLoading}
+              options={stages
+                .filter((stage) => stage.id !== deletingStage.id)
+                .map((stage) => ({ value: stage.id, label: stage.name }))}
+            />
+            {deletingStage.isEntry && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Esta é a etapa de entrada. Ao excluí-la, a primeira etapa restante passa a receber os leads novos.
+              </p>
+            )}
             <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-700">
               <Button variant="ghost" onClick={() => setDeletingStage(null)} disabled={deleteLoading}>
                 Cancelar
               </Button>
               <Button variant="danger" onClick={handleDeleteStage} loading={deleteLoading} loadingText="Excluindo...">
                 Excluir etapa
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {removingLead && (
+        <Modal
+          isOpen
+          onClose={() => (removeLoading ? undefined : setRemovingLead(null))}
+          title="Remover do funil"
+          size="sm"
+        >
+          <div className="space-y-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Tirar{' '}
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                &quot;{removingLead.displayName || 'Sem nome'}&quot;
+              </span>{' '}
+              do quadro. O contato continua no CRM, com conversa e histórico — ele reaparece no funil assim que houver
+              uma nova interação.
+            </p>
+            <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-700">
+              <Button variant="ghost" onClick={() => setRemovingLead(null)} disabled={removeLoading}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleRemoveLead} loading={removeLoading} loadingText="Removendo...">
+                Remover do funil
               </Button>
             </div>
           </div>

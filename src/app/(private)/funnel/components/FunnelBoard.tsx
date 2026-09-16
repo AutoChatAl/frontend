@@ -12,12 +12,17 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { useRef, useState } from 'react';
 
 import type { FunnelLead, FunnelStage, LeadTemperature } from '@/types/Funnel';
 
-import FunnelColumn from './FunnelColumn';
+import FunnelColumn, { COLUMN_DRAG_PREFIX } from './FunnelColumn';
 import { LeadCardOverlay } from './LeadCard';
 
 interface FunnelBoardProps {
@@ -32,7 +37,12 @@ interface FunnelBoardProps {
   onLoadMore: (stageId: string) => void;
   onRenameStage: (stage: FunnelStage) => void;
   onDeleteStage: (stage: FunnelStage) => void;
+  /** Nova ordem das colunas, da esquerda para a direita. */
+  onReorderStages: (stageIds: string[]) => void;
 }
+
+const isColumnId = (id: string) => id.startsWith(COLUMN_DRAG_PREFIX);
+const toStageId = (id: string) => (isColumnId(id) ? id.slice(COLUMN_DRAG_PREFIX.length) : id);
 
 export default function FunnelBoard({
   stages,
@@ -46,6 +56,7 @@ export default function FunnelBoard({
   onLoadMore,
   onRenameStage,
   onDeleteStage,
+  onReorderStages,
 }: FunnelBoardProps) {
   const [activeLead, setActiveLead] = useState<FunnelLead | null>(null);
   const originStageRef = useRef<string | null>(null);
@@ -56,7 +67,8 @@ export default function FunnelBoard({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const findStageOf = (id: string): string | undefined => {
+  const findStageOf = (rawId: string): string | undefined => {
+    const id = toStageId(rawId);
     if (columns[id]) return id;
     return stages.find((stage) => (columns[stage.id] ?? []).some((lead) => lead.id === id))?.id;
   };
@@ -71,6 +83,7 @@ export default function FunnelBoard({
 
   const handleDragStart = (event: DragStartEvent) => {
     const id = String(event.active.id);
+    if (isColumnId(id)) return;
     originStageRef.current = findStageOf(id) ?? null;
     setActiveLead(findLead(id) ?? null);
   };
@@ -79,6 +92,8 @@ export default function FunnelBoard({
     const { active, over } = event;
     if (!over) return;
     const activeId = String(active.id);
+    // Coluna só troca de lugar no fim do gesto; no meio dele não há nada a prever.
+    if (isColumnId(activeId)) return;
     const overId = String(over.id);
     const fromStage = findStageOf(activeId);
     const toStage = findStageOf(overId);
@@ -102,13 +117,25 @@ export default function FunnelBoard({
     if (!over) return;
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (isColumnId(activeId)) {
+      const from = stages.findIndex((stage) => stage.id === toStageId(activeId));
+      const to = stages.findIndex((stage) => stage.id === toStageId(overId));
+      if (from < 0 || to < 0 || from === to) return;
+      onReorderStages(arrayMove(stages, from, to).map((stage) => stage.id));
+      return;
+    }
+
     const toStage = findStageOf(overId);
     if (!toStage) return;
     const toLeads = columns[toStage] ?? [];
     const oldIndex = toLeads.findIndex((lead) => lead.id === activeId);
     if (oldIndex < 0) return;
     let finalLeads = toLeads;
-    const overIndex = columns[overId] ? toLeads.length - 1 : toLeads.findIndex((lead) => lead.id === overId);
+    // Solto sobre a coluna (e não sobre um card): vai para o fim da fila. O id pode vir
+    // prefixado quando a área que recebeu foi a da coluna arrastável.
+    const overStageKey = toStageId(overId);
+    const overIndex = columns[overStageKey] ? toLeads.length - 1 : toLeads.findIndex((lead) => lead.id === overId);
     if (overIndex >= 0 && overIndex !== oldIndex) {
       finalLeads = arrayMove(toLeads, oldIndex, overIndex);
       onColumnsChange({ ...columns, [toStage]: finalLeads });
@@ -126,20 +153,26 @@ export default function FunnelBoard({
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-[calc(100dvh-13rem)] gap-4 overflow-x-auto pb-2">
-        {stages.map((stage) => (
-          <FunnelColumn
-            key={stage.id}
-            stage={stage}
-            leads={columns[stage.id] ?? []}
-            hasMore={hasMoreByStage[stage.id] ?? false}
-            loadingMore={loadingMoreStage === stage.id}
-            temperatureFilter={temperatureFilter}
-            onOpenLead={onOpenLead}
-            onLoadMore={onLoadMore}
-            onRenameStage={onRenameStage}
-            onDeleteStage={onDeleteStage}
-          />
-        ))}
+        <SortableContext
+          items={stages.map((stage) => `${COLUMN_DRAG_PREFIX}${stage.id}`)}
+          strategy={horizontalListSortingStrategy}
+        >
+          {stages.map((stage) => (
+            <FunnelColumn
+              key={stage.id}
+              stage={stage}
+              leads={columns[stage.id] ?? []}
+              hasMore={hasMoreByStage[stage.id] ?? false}
+              loadingMore={loadingMoreStage === stage.id}
+              temperatureFilter={temperatureFilter}
+              canDelete={stages.length > 1}
+              onOpenLead={onOpenLead}
+              onLoadMore={onLoadMore}
+              onRenameStage={onRenameStage}
+              onDeleteStage={onDeleteStage}
+            />
+          ))}
+        </SortableContext>
       </div>
       <DragOverlay>{activeLead ? <LeadCardOverlay lead={activeLead} /> : null}</DragOverlay>
     </DndContext>

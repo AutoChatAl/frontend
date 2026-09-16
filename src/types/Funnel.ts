@@ -84,6 +84,8 @@ export interface FunnelStage {
   isLost: boolean;
   /** Destino do funil: `isWon` quando existe, senão a última etapa não-perdida. */
   isGoal: boolean;
+  /** Onde lead novo entra. Sempre existe uma — apagar colunas nunca deixa o funil sem. */
+  isEntry: boolean;
   aiCriteria: string;
   total: number;
   /** % dos leads que chegaram nesta etapa e terminaram em uma etapa de ganho. */

@@ -1,5 +1,5 @@
 'use client';
-import { Bot, Check, Info, Loader2, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { Bot, Check, Info, Loader2, Plus, TrendingDown, TrendingUp, UserMinus, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import Button from '@/components/Button';
@@ -29,6 +29,8 @@ interface LeadDetailDrawerProps {
   stages: FunnelStage[];
   onClose: () => void;
   onSaved: (lead: FunnelLead, fromStageId: string | null) => void;
+  /** Pedido de remoção do quadro — a confirmação e a chamada ficam na página. */
+  onRemoveFromFunnel: (lead: FunnelLead) => void;
 }
 
 const ATTENDANCE_OPTIONS = (Object.keys(ATTENDANCE_META) as AttendanceStatus[]).map((value) => ({
@@ -62,7 +64,13 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-export default function LeadDetailDrawer({ lead, stages, onClose, onSaved }: LeadDetailDrawerProps) {
+export default function LeadDetailDrawer({
+  lead,
+  stages,
+  onClose,
+  onSaved,
+  onRemoveFromFunnel,
+}: LeadDetailDrawerProps) {
   const [stageId, setStageId] = useState('');
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>('OPEN');
   const [origin, setOrigin] = useState<LeadOrigin>('MANUAL');
@@ -379,13 +387,19 @@ export default function LeadDetailDrawer({ lead, stages, onClose, onSaved }: Lea
           {error && <p className="text-xs text-rose-500">{error}</p>}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 p-4 dark:border-slate-700">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancelar
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-4 dark:border-slate-700">
+          {/* Ação destrutiva usa a variante `danger` do Button, como manda o design system. */}
+          <Button variant="danger" onClick={() => onRemoveFromFunnel(lead)} disabled={saving} icon={<UserMinus size={14} />}>
+            Remover do funil
           </Button>
-          <Button onClick={handleSave} loading={saving} loadingText="Salvando...">
-            Salvar alterações
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} loading={saving} loadingText="Salvando...">
+              Salvar alterações
+            </Button>
+          </div>
         </div>
       </div>
     </div>

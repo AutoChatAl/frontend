@@ -1,7 +1,8 @@
 'use client';
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { FunnelLead, FunnelStage, LeadTemperature } from '@/types/Funnel';
@@ -15,11 +16,16 @@ interface FunnelColumnProps {
   hasMore: boolean;
   loadingMore: boolean;
   temperatureFilter: LeadTemperature | undefined;
+  /** Falso quando é a última coluna do funil: sem ela o quadro ficaria sem entrada. */
+  canDelete: boolean;
   onOpenLead: (lead: FunnelLead) => void;
   onLoadMore: (stageId: string) => void;
   onRenameStage: (stage: FunnelStage) => void;
   onDeleteStage: (stage: FunnelStage) => void;
 }
+
+/** Prefixo separa o arrasto de coluna do de lead — os dois correm no mesmo contexto. */
+export const COLUMN_DRAG_PREFIX = 'col:';
 
 export default function FunnelColumn({
   stage,
@@ -27,6 +33,7 @@ export default function FunnelColumn({
   hasMore,
   loadingMore,
   temperatureFilter,
+  canDelete,
   onOpenLead,
   onLoadMore,
   onRenameStage,
@@ -34,6 +41,16 @@ export default function FunnelColumn({
 }: FunnelColumnProps) {
   const color = stageColorMeta(stage.color);
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  // A coluna inteira é o item arrastável, mas só a alça escuta o gesto: o resto do
+  // cabeçalho continua clicável e o corpo segue recebendo o arrasto dos leads.
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setColumnRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `${COLUMN_DRAG_PREFIX}${stage.id}` });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -55,14 +72,35 @@ export default function FunnelColumn({
   const showRate = !stage.isGoal && !stage.isLost;
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 sm:w-80">
+    <div
+      ref={setColumnRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={`flex h-full w-72 shrink-0 flex-col rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 sm:w-80 ${isDragging ? 'z-10 opacity-60' : ''}`}
+    >
       <div className="border-b border-slate-100 p-3 dark:border-slate-700">
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Mover a etapa ${stage.name}`}
+            className="-ml-1 shrink-0 cursor-grab rounded-lg p-0.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-400"
+          >
+            <GripVertical size={14} />
+          </button>
           <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.dot}`} />
           <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">{stage.name}</h3>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-500 dark:bg-slate-700/60 dark:text-slate-300">
             {count}
           </span>
+          {stage.isEntry && (
+            <span
+              title="Lead novo entra por esta etapa"
+              className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+            >
+              Entrada
+            </span>
+          )}
           <div className="relative ml-auto" ref={menuRef}>
             <button
               type="button"
@@ -85,17 +123,20 @@ export default function FunnelColumn({
                   <Pencil size={14} className="text-slate-400" />
                   Editar etapa
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDeleteStage(stage);
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-[13px] text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                >
-                  <Trash2 size={14} />
-                  Excluir
-                </button>
+                {/* Última coluna não tem opção de excluir: fora do DOM, não só escondida. */}
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onDeleteStage(stage);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-[13px] text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                  >
+                    <Trash2 size={14} />
+                    Excluir
+                  </button>
+                )}
               </div>
             )}
           </div>

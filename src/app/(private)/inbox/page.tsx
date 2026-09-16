@@ -686,13 +686,20 @@ export default function InboxPage() {
     const body = draft.trim();
     if (!body || replyLocked) return;
     setAttachError(null);
+    // O campo é limpo antes da ida ao servidor, não depois: a bolha otimista já entra no
+    // chat no mesmo instante, e ver o mesmo texto nos dois lugares durante o envio passa
+    // a sensação de que o enter não pegou. Falhando o envio, o texto volta para o campo.
+    const quoted = replyTo;
+    setDraft('');
+    setReplyTo(null);
     try {
       stickToBottomRef.current = true;
-      await sendMessage(body, undefined, replyTo);
-      setDraft('');
-      setReplyTo(null);
+      await sendMessage(body, undefined, quoted);
     } catch {
-      // erro tratado no hook
+      // O hook já mostra o erro e tira a bolha. Aqui só devolve o que foi digitado —
+      // sem atropelar a mensagem seguinte, se o atendente já começou a escrever outra.
+      setDraft((current) => (current ? current : body));
+      setReplyTo((current) => current ?? quoted);
     }
   };
 
@@ -709,20 +716,26 @@ export default function InboxPage() {
       setAttachError(invalid);
       return;
     }
+    stickToBottomRef.current = true;
+    const base64 = await fileToBase64(file).catch(() => '');
+    if (!base64) return;
+    const media: InboxOutgoingMedia = {
+      mediaType,
+      base64,
+      mimeType: file.type || 'application/octet-stream',
+      fileName: file.name,
+    };
+    // Mesma lógica do envio de texto: a legenda sai do campo assim que o anexo começa
+    // a subir, e só volta se o envio falhar.
+    const caption = draft;
+    const quoted = replyTo;
+    setDraft('');
+    setReplyTo(null);
     try {
-      stickToBottomRef.current = true;
-      const base64 = await fileToBase64(file);
-      const media: InboxOutgoingMedia = {
-        mediaType,
-        base64,
-        mimeType: file.type || 'application/octet-stream',
-        fileName: file.name,
-      };
-      await sendMessage(draft, media, replyTo);
-      setDraft('');
-      setReplyTo(null);
+      await sendMessage(caption, media, quoted);
     } catch {
-      // erro tratado no hook
+      setDraft((current) => (current ? current : caption));
+      setReplyTo((current) => current ?? quoted);
     }
   };
 
@@ -1284,7 +1297,10 @@ export default function InboxPage() {
                         className="min-w-0 flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 sm:px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 max-h-32 disabled:opacity-60 transition-colors"
                       />
                       {/* No celular o rótulo sai: o ícone basta e o campo ganha a largura. */}
-                      <Button onClick={handleSend} loading={sending} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">
+                      {/* Sem estado de carregando: quem mostra o envio em curso é a bolha
+                          apagada no chat, e travar o botão impediria a mensagem seguinte,
+                          que o enter já aceita. */}
+                      <Button onClick={handleSend} disabled={!draft.trim() || recording} icon={<Send size={16} />} className="shrink-0 px-2.5 sm:px-4">
                         <span className="hidden sm:inline">Enviar</span>
                       </Button>
                     </div>
