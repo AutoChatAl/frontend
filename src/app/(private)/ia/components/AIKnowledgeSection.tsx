@@ -177,11 +177,6 @@ export default function AIKnowledgeSection({ knowledgeEnabled, onToggleKnowledge
           }
         />
 
-        <Callout tone="info" className="mb-3">
-          A IA só recebe uma resposta daqui quando a pergunta do cliente tem relação clara com ela.
-          Nas outras mensagens nada é anexado — é o que mantém o custo por resposta praticamente igual ao de hoje.
-        </Callout>
-
         {atLimit && (
           <Callout tone="warning" className="mb-3">
             Você chegou ao limite de {maxEntries} perguntas. Remova alguma para cadastrar outra.
