@@ -13,7 +13,6 @@ class InboxService {
     return `${API_URL}${path}`;
   }
 
-
   public async getSettings(): Promise<InboxSettings> {
     const response = await apiClient.get<InboxSettings>('/inbox/settings');
     if (!response.success || !response.data) {
