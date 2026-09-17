@@ -4,6 +4,13 @@ export interface BlockMeta {
   kind: FlowNodeKind;
   label: string;
   hint: string;
+  /**
+   * `trigger` são os blocos de entrada — os que o motor pode escolher para iniciar o
+   * fluxo (`flow-engine.service`, ramo dos blocos de entrada). Todo o resto é `action`:
+   * só roda depois que alguém já entrou. A paleta separa os dois porque a diferença
+   * decide onde o bloco pode aparecer no desenho, não só como ele se parece.
+   */
+  group: 'trigger' | 'action';
   /** Cor do ponto de conexão e do rótulo do tipo no card. */
   dot: string;
   tint: string;
@@ -16,35 +23,46 @@ export interface BlockMeta {
  * encerra. A lista é fechada: o motor de execução precisa saber tratar cada tipo.
  */
 export const BLOCKS: BlockMeta[] = [
-  { kind: 'trigger', label: 'Iniciar por palavra', hint: 'Começa o fluxo quando o contato escreve algo', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400' },
-  { kind: 'welcome', label: 'Boas-vindas', hint: 'Começa o fluxo na primeira mensagem do contato', dot: 'bg-green-500', tint: 'text-green-600 dark:text-green-400' },
-  { kind: 'story_reply', label: 'Reagiu ao story', hint: 'Começa o fluxo quando o contato reage a um story seu', dot: 'bg-pink-500', tint: 'text-pink-600 dark:text-pink-400' },
-  { kind: 'story_mention', label: 'Mencionou no story', hint: 'Começa o fluxo quando o contato cita seu perfil no story dele', dot: 'bg-red-500', tint: 'text-red-600 dark:text-red-400' },
+  { kind: 'trigger', label: 'Iniciar por palavra', hint: 'Começa o fluxo quando o contato escreve algo', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400', group: 'trigger' },
+  { kind: 'welcome', label: 'Boas-vindas', hint: 'Começa o fluxo na primeira mensagem do contato', dot: 'bg-green-500', tint: 'text-green-600 dark:text-green-400', group: 'trigger' },
+  { kind: 'story_reply', label: 'Reagiu ao story', hint: 'Começa o fluxo quando o contato reage a um story seu', dot: 'bg-pink-500', tint: 'text-pink-600 dark:text-pink-400', group: 'trigger' },
+  { kind: 'story_mention', label: 'Mencionou no story', hint: 'Começa o fluxo quando o contato cita seu perfil no story dele', dot: 'bg-red-500', tint: 'text-red-600 dark:text-red-400', group: 'trigger' },
   // Mesmo matiz do gatilho por palavra: os dois começam por mensagem recebida, e
   // a paleta de matizes distintos já acabou (ver DESIGN_SYSTEM 13.1).
-  { kind: 'catch_all', label: 'Qualquer mensagem', hint: 'Último recurso: pega quem não caiu em nenhum outro gatilho', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400' },
-  { kind: 'message', label: 'Enviar mensagem', hint: 'Manda um texto para o contato', dot: 'bg-slate-400', tint: 'text-slate-500 dark:text-slate-400' },
-  { kind: 'link', label: 'Enviar link', hint: 'Card com um botão que abre uma página', dot: 'bg-sky-500', tint: 'text-sky-600 dark:text-sky-400' },
-  { kind: 'media', label: 'Enviar mídia', hint: 'Manda uma imagem, vídeo ou áudio', dot: 'bg-lime-500', tint: 'text-lime-600 dark:text-lime-400' },
-  { kind: 'document', label: 'Enviar documento', hint: 'Manda um arquivo, como um PDF', dot: 'bg-stone-500', tint: 'text-stone-600 dark:text-stone-400' },
-  { kind: 'question', label: 'Perguntar com opções', hint: 'Faz uma pergunta e abre um caminho por resposta', dot: 'bg-violet-500', tint: 'text-violet-600 dark:text-violet-400' },
-  { kind: 'ai', label: 'Inteligência artificial', hint: 'Entrega a conversa para a IA, ou separa caminhos pela intenção', dot: 'bg-yellow-500', tint: 'text-yellow-600 dark:text-yellow-400', requiresAi: true },
-  { kind: 'wait_reply', label: 'Aguardar resposta', hint: 'Segura o fluxo até o contato falar qualquer coisa', dot: 'bg-purple-500', tint: 'text-purple-600 dark:text-purple-400' },
-  { kind: 'condition', label: 'Desviar por palavra', hint: 'Separa quem respondeu com a palavra de quem não', dot: 'bg-amber-500', tint: 'text-amber-600 dark:text-amber-400' },
-  { kind: 'business_hours', label: 'Horário de atendimento', hint: 'Separa quem chega no expediente de quem chega fora dele', dot: 'bg-orange-500', tint: 'text-orange-600 dark:text-orange-400' },
-  { kind: 'randomizer', label: 'Dividir aleatoriamente', hint: 'Sorteia entre caminhos, para testar versões', dot: 'bg-fuchsia-500', tint: 'text-fuchsia-600 dark:text-fuchsia-400' },
-  { kind: 'delay', label: 'Aguardar tempo', hint: 'Segura o fluxo antes do próximo passo', dot: 'bg-blue-500', tint: 'text-blue-600 dark:text-blue-400' },
-  { kind: 'tag', label: 'Aplicar etiqueta', hint: 'Marca o contato para segmentar depois', dot: 'bg-emerald-500', tint: 'text-emerald-600 dark:text-emerald-400' },
-  { kind: 'untag', label: 'Remover etiqueta', hint: 'Tira uma marcação do contato', dot: 'bg-teal-500', tint: 'text-teal-600 dark:text-teal-400' },
-  { kind: 'has_tag', label: 'Verificar etiqueta', hint: 'Separa quem tem a etiqueta de quem não tem', dot: 'bg-cyan-500', tint: 'text-cyan-600 dark:text-cyan-400' },
-  { kind: 'funnel_stage', label: 'Mover no funil', hint: 'Leva o contato para outra etapa do funil', dot: 'bg-zinc-500', tint: 'text-zinc-600 dark:text-zinc-400' },
-  { kind: 'assign', label: 'Atribuir atendente', hint: 'Entrega a conversa a uma pessoa da equipe', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400' },
-  { kind: 'attendance', label: 'Situação do atendimento', hint: 'Marca a conversa como em andamento, aguardando ou resolvida', dot: 'bg-gray-500', tint: 'text-gray-600 dark:text-gray-400' },
-  { kind: 'notify', label: 'Notificar equipe', hint: 'Manda um aviso para o painel do workspace', dot: 'bg-neutral-500', tint: 'text-neutral-600 dark:text-neutral-400' },
-  { kind: 'handoff', label: 'Passar para atendente', hint: 'Tira da automação e chama uma pessoa', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400' },
+  { kind: 'catch_all', label: 'Qualquer mensagem', hint: 'Último recurso: pega quem não caiu em nenhum outro gatilho', dot: 'bg-indigo-500', tint: 'text-indigo-600 dark:text-indigo-400', group: 'trigger' },
+  { kind: 'message', label: 'Enviar mensagem', hint: 'Manda um texto para o contato', dot: 'bg-slate-400', tint: 'text-slate-500 dark:text-slate-400', group: 'action' },
+  { kind: 'link', label: 'Enviar link', hint: 'Card com um botão que abre uma página', dot: 'bg-sky-500', tint: 'text-sky-600 dark:text-sky-400', group: 'action' },
+  { kind: 'media', label: 'Enviar mídia', hint: 'Manda uma imagem, vídeo ou áudio', dot: 'bg-lime-500', tint: 'text-lime-600 dark:text-lime-400', group: 'action' },
+  { kind: 'document', label: 'Enviar documento', hint: 'Manda um arquivo, como um PDF', dot: 'bg-stone-500', tint: 'text-stone-600 dark:text-stone-400', group: 'action' },
+  { kind: 'question', label: 'Perguntar com opções', hint: 'Faz uma pergunta e abre um caminho por resposta', dot: 'bg-violet-500', tint: 'text-violet-600 dark:text-violet-400', group: 'action' },
+  { kind: 'ai', label: 'Inteligência artificial', hint: 'Entrega a conversa para a IA, ou separa caminhos pela intenção', dot: 'bg-yellow-500', tint: 'text-yellow-600 dark:text-yellow-400', requiresAi: true, group: 'action' },
+  { kind: 'wait_reply', label: 'Aguardar resposta', hint: 'Segura o fluxo até o contato falar qualquer coisa', dot: 'bg-purple-500', tint: 'text-purple-600 dark:text-purple-400', group: 'action' },
+  { kind: 'condition', label: 'Desviar por palavra', hint: 'Separa quem respondeu com a palavra de quem não', dot: 'bg-amber-500', tint: 'text-amber-600 dark:text-amber-400', group: 'action' },
+  { kind: 'business_hours', label: 'Horário de atendimento', hint: 'Separa quem chega no expediente de quem chega fora dele', dot: 'bg-orange-500', tint: 'text-orange-600 dark:text-orange-400', group: 'action' },
+  { kind: 'randomizer', label: 'Dividir aleatoriamente', hint: 'Sorteia entre caminhos, para testar versões', dot: 'bg-fuchsia-500', tint: 'text-fuchsia-600 dark:text-fuchsia-400', group: 'action' },
+  { kind: 'delay', label: 'Aguardar tempo', hint: 'Segura o fluxo antes do próximo passo', dot: 'bg-blue-500', tint: 'text-blue-600 dark:text-blue-400', group: 'action' },
+  { kind: 'tag', label: 'Aplicar etiqueta', hint: 'Marca o contato para segmentar depois', dot: 'bg-emerald-500', tint: 'text-emerald-600 dark:text-emerald-400', group: 'action' },
+  { kind: 'untag', label: 'Remover etiqueta', hint: 'Tira uma marcação do contato', dot: 'bg-teal-500', tint: 'text-teal-600 dark:text-teal-400', group: 'action' },
+  { kind: 'has_tag', label: 'Verificar etiqueta', hint: 'Separa quem tem a etiqueta de quem não tem', dot: 'bg-cyan-500', tint: 'text-cyan-600 dark:text-cyan-400', group: 'action' },
+  { kind: 'funnel_stage', label: 'Mover no funil', hint: 'Leva o contato para outra etapa do funil', dot: 'bg-zinc-500', tint: 'text-zinc-600 dark:text-zinc-400', group: 'action' },
+  { kind: 'assign', label: 'Atribuir atendente', hint: 'Entrega a conversa a uma pessoa da equipe', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400', group: 'action' },
+  { kind: 'attendance', label: 'Situação do atendimento', hint: 'Marca a conversa como em andamento, aguardando ou resolvida', dot: 'bg-gray-500', tint: 'text-gray-600 dark:text-gray-400', group: 'action' },
+  { kind: 'notify', label: 'Notificar equipe', hint: 'Manda um aviso para o painel do workspace', dot: 'bg-neutral-500', tint: 'text-neutral-600 dark:text-neutral-400', group: 'action' },
+  { kind: 'handoff', label: 'Passar para atendente', hint: 'Tira da automação e chama uma pessoa', dot: 'bg-rose-500', tint: 'text-rose-600 dark:text-rose-400', group: 'action' },
 ];
 
 const BY_KIND = new Map(BLOCKS.map((block) => [block.kind, block]));
+
+/** Blocos que podem iniciar um fluxo, na ordem da paleta. */
+export const TRIGGER_BLOCKS = BLOCKS.filter((block) => block.group === 'trigger');
+
+/** Blocos que só rodam depois que o fluxo já começou. */
+export const ACTION_BLOCKS = BLOCKS.filter((block) => block.group === 'action');
+
+/** Se o bloco é um ponto de entrada. Fonte única para paleta e validações. */
+export function isTriggerKind(kind: FlowNodeKind): boolean {
+  return BY_KIND.get(kind)?.group === 'trigger';
+}
 
 /** Se o bloco depende do plano de IA. Fonte única do cadeado no construtor. */
 export function requiresAiPlan(kind: FlowNodeKind): boolean {

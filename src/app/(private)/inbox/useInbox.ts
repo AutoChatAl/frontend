@@ -369,7 +369,18 @@ export function useInbox(): UseInboxReturn {
       lastThreadSyncRef.current = Date.now();
       setContactTyping(false);
       setMessages((prev) => {
-        if (prev.some((m) => m.id === incoming.id)) return prev;
+        const known = prev.find((m) => m.id === incoming.id);
+        if (known) {
+          // Mesma mensagem reemitida: o servidor promoveu a bolha do eco ao registro do
+          // envio (ganhou o selo de IA/automação). Atualiza no lugar em vez de ignorar,
+          // preservando o recibo que já tenha subido por conta própria.
+          const status = STATUS_RANK[known.deliveryStatus ?? 'SENT'] > STATUS_RANK[incoming.deliveryStatus ?? 'SENT']
+            ? known.deliveryStatus
+            : incoming.deliveryStatus;
+          return prev.map((m) => (m.id === incoming.id
+            ? { ...m, ...incoming, ...(status ? { deliveryStatus: status } : {}) }
+            : m));
+        }
         // Envio próprio ecoado pelo SSE: substitui a bolha otimista equivalente em vez de duplicar.
         let base = prev;
         if (incoming.direction === 'OUT') {

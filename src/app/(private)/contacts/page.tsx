@@ -140,7 +140,7 @@ function DeleteConfirmModal({ isOpen, contactName, loading, onConfirm, onCancel 
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Excluir contato</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-              Tem certeza que deseja excluir o contato <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{contactName}&quot;</span>? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir o contato <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{contactName}&quot;</span>? A conversa, as mensagens, os arquivos e o histórico dele também serão apagados. Esta ação não pode ser desfeita.
           </p>
         </div>
         <div className="flex gap-3 w-full mt-2">

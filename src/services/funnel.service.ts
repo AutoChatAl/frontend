@@ -61,6 +61,14 @@ class FunnelService {
     return response.data.lead;
   }
 
+  /** Tira o lead do quadro sem apagar o contato — ele volta na próxima interação. */
+  public async removeLeadFromFunnel(leadId: string): Promise<void> {
+    const response = await apiClient.delete(`/funnel/leads/${leadId}`);
+    if (!response.success) {
+      throw new Error('Falha ao remover o lead do funil.');
+    }
+  }
+
   public async listStages(): Promise<FunnelStageDefinition[]> {
     const response = await apiClient.get<{ stages: FunnelStageDefinition[] }>('/funnel/stages');
     if (!response.success || !response.data) {

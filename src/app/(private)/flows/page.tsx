@@ -15,7 +15,7 @@ import { funnelService } from '@/services/funnel.service';
 import type { Flow, FlowEdge, FlowNode, FlowNodeKind } from '@/types/Flow';
 import type { FunnelStageDefinition } from '@/types/Funnel';
 
-import { BLOCKS, blockMeta, defaultNodeFields, outputHandles, requiresAiPlan } from './components/blocks';
+import { ACTION_BLOCKS, TRIGGER_BLOCKS, blockMeta, defaultNodeFields, outputHandles, requiresAiPlan, type BlockMeta } from './components/blocks';
 import FlowCanvas from './components/FlowCanvas';
 import NodeInspector from './components/NodeInspector';
 
@@ -185,6 +185,34 @@ export default function FlowsPage() {
     } finally {
       setConfirmDelete(false);
     }
+  };
+
+  /** Card da paleta. Um só desenho para as duas seções: o que muda é a lista, não o card. */
+  const renderPaletteBlock = (block: BlockMeta) => {
+    const locked = block.requiresAi === true && !hasAiPlan;
+    return (
+      <div
+        key={block.kind}
+        draggable={!locked}
+        onDragStart={(event) => event.dataTransfer.setData('application/synq-block', block.kind)}
+        onClick={locked ? () => router.push('/plans') : undefined}
+        title={locked ? 'Disponível com um plano de IA ativo' : undefined}
+        className={
+          locked
+            ? 'cursor-pointer rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 transition-colors hover:border-indigo-300 hover:opacity-100 dark:border-slate-700 dark:hover:border-indigo-500/40'
+            : 'cursor-grab rounded-lg border border-slate-200 p-2.5 transition-colors hover:border-indigo-300 active:cursor-grabbing dark:border-slate-700 dark:hover:border-indigo-500/40'
+        }
+      >
+        <div className="flex items-center gap-1.5">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${block.dot}`} />
+          <p className="text-[13px] font-medium text-slate-900 dark:text-white">{block.label}</p>
+          {locked && <Lock size={12} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500" />}
+        </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
+          {locked ? 'Requer um plano de IA. Toque para ver os planos.' : block.hint}
+        </p>
+      </div>
+    );
   };
 
   const handleDropBlock = (kind: FlowNodeKind, x: number, y: number) => {
@@ -434,35 +462,19 @@ export default function FlowsPage() {
       {active && (
         <div className="flex min-h-0 flex-1 gap-3">
           <aside className="hidden w-56 shrink-0 flex-col gap-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 lg:flex dark:border-slate-700 dark:bg-slate-800">
+            {/* Gatilho e ação respondem a perguntas diferentes — "quando isso começa?" e
+                "o que acontece depois?" — e o fluxo só roda se tiver um de cada. Numa
+                lista única de 24 blocos, os cinco que iniciam ficavam indistinguíveis
+                dos outros dezenove. */}
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Blocos
+              Gatilhos
             </p>
-            {BLOCKS.map((block) => {
-              const locked = block.requiresAi === true && !hasAiPlan;
-              return (
-                <div
-                  key={block.kind}
-                  draggable={!locked}
-                  onDragStart={(event) => event.dataTransfer.setData('application/synq-block', block.kind)}
-                  onClick={locked ? () => router.push('/plans') : undefined}
-                  title={locked ? 'Disponível com um plano de IA ativo' : undefined}
-                  className={
-                    locked
-                      ? 'cursor-pointer rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 transition-colors hover:border-indigo-300 hover:opacity-100 dark:border-slate-700 dark:hover:border-indigo-500/40'
-                      : 'cursor-grab rounded-lg border border-slate-200 p-2.5 transition-colors hover:border-indigo-300 active:cursor-grabbing dark:border-slate-700 dark:hover:border-indigo-500/40'
-                  }
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${block.dot}`} />
-                    <p className="text-[13px] font-medium text-slate-900 dark:text-white">{block.label}</p>
-                    {locked && <Lock size={12} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500" />}
-                  </div>
-                  <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
-                    {locked ? 'Requer um plano de IA. Toque para ver os planos.' : block.hint}
-                  </p>
-                </div>
-              );
-            })}
+            {TRIGGER_BLOCKS.map(renderPaletteBlock)}
+            <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Ações
+            </p>
+            {ACTION_BLOCKS.map(renderPaletteBlock)}
+
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
               Clique numa saída e depois no bloco de destino para ligar. Clique numa linha para removê-la.
             </p>
