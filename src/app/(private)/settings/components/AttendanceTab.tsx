@@ -204,7 +204,7 @@ export default function AttendanceTab() {
 
           <ToggleRow
             title="Pausar a IA quando você responde"
-            description="Vale para a resposta enviada pela caixa de entrada e também para a que você manda pelo aplicativo do WhatsApp ou do Instagram. Desligado, a IA continua respondendo mesmo depois de você entrar na conversa."
+            description="Vale para a resposta enviada pela caixa de entrada e também para a que você manda pelo aplicativo do WhatsApp ou do Instagram. Desligado, a IA não completa a resposta que você acabou de dar, mas volta a responder na próxima mensagem do cliente."
             checked={settings.pauseAiOnHumanTakeover}
             onChange={(checked) => save({ pauseAiOnHumanTakeover: checked }, checked
               ? 'A IA passa a pausar quando você responde.'
