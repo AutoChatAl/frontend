@@ -16,6 +16,14 @@ import type { AttendanceSettings, AttendanceStatus, UpdateAttendanceSettingsPayl
 
 const COOLDOWN_OPTIONS = [0, 6, 12, 24, 48];
 
+/** Espelha a lista aceita pela API — valor fora dela é recusado no PATCH. */
+const TAKEOVER_PAUSE_OPTIONS = [10, 30, 60, 120];
+
+function takeoverPauseLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutos`;
+  return minutes === 60 ? '1 hora' : `${minutes / 60} horas`;
+}
+
 function cooldownLabel(hours: number): string {
   if (hours === 0) return 'Sempre que entrar na fila';
   if (hours === 24) return 'No máximo 1 vez por dia';
@@ -180,8 +188,8 @@ export default function AttendanceTab() {
 
       <Card className="p-4">
         <SectionHeader
-          title="Repasse para atendimento humano"
-          hint="O que acontece com a IA quando a conversa entra na fila esperando por uma pessoa."
+          title="Pausa da IA no atendimento humano"
+          hint="Quando a IA deve sair da frente para uma pessoa atender. Cada mudança é salva na hora."
         />
         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
           <ToggleRow
@@ -193,6 +201,29 @@ export default function AttendanceTab() {
               : 'A IA não pausa mais no repasse para atendimento humano.')}
             disabled={saving}
           />
+
+          <ToggleRow
+            title="Pausar a IA quando você responde"
+            description="Vale para a resposta enviada pela caixa de entrada e também para a que você manda pelo aplicativo do WhatsApp ou do Instagram. Desligado, a IA continua respondendo mesmo depois de você entrar na conversa."
+            checked={settings.pauseAiOnHumanTakeover}
+            onChange={(checked) => save({ pauseAiOnHumanTakeover: checked }, checked
+              ? 'A IA passa a pausar quando você responde.'
+              : 'A IA não pausa mais quando você responde.')}
+            disabled={saving}
+          />
+
+          {settings.pauseAiOnHumanTakeover && (
+            <div className="py-3">
+              <Select
+                label="Tempo de pausa"
+                options={TAKEOVER_PAUSE_OPTIONS.map((minutes) => ({ value: String(minutes), label: takeoverPauseLabel(minutes) }))}
+                value={String(settings.humanTakeoverPauseMinutes)}
+                onChange={(value) => save({ humanTakeoverPauseMinutes: Number(value) }, 'Tempo de pausa atualizado.')}
+                disabled={saving}
+                hint="Contado a partir da sua última mensagem. A IA volta sozinha quando o tempo acaba."
+              />
+            </div>
+          )}
         </div>
       </Card>
 

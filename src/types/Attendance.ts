@@ -7,6 +7,10 @@ export interface AttendanceSettings {
   outsideHoursAnnounceReturn: boolean;
   /** Silencia a IA quando a conversa entra na fila de atendimento humano. */
   pauseAiOnHandoff: boolean;
+  /** Silencia a IA quando uma pessoa responde o contato. */
+  pauseAiOnHumanTakeover: boolean;
+  /** Duração dessa pausa, em minutos. */
+  humanTakeoverPauseMinutes: number;
 }
 
 export interface UpdateAttendanceSettingsPayload {
@@ -15,6 +19,8 @@ export interface UpdateAttendanceSettingsPayload {
   outsideHoursCooldownHours?: number;
   outsideHoursAnnounceReturn?: boolean;
   pauseAiOnHandoff?: boolean;
+  pauseAiOnHumanTakeover?: boolean;
+  humanTakeoverPauseMinutes?: number;
 }
 
 /**
