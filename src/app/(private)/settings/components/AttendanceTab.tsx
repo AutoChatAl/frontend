@@ -178,6 +178,24 @@ export default function AttendanceTab() {
         </div>
       </Card>
 
+      <Card className="p-4">
+        <SectionHeader
+          title="Repasse para atendimento humano"
+          hint="O que acontece com a IA quando a conversa entra na fila esperando por uma pessoa."
+        />
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+          <ToggleRow
+            title="Pausar a IA ao pedir atendimento humano"
+            description="A IA fica em silêncio por 12h assim que a conversa entra na fila, para não responder por cima do atendente que vai assumir. Desligado, ela segue respondendo enquanto o cliente espera."
+            checked={settings.pauseAiOnHandoff}
+            onChange={(checked) => save({ pauseAiOnHandoff: checked }, checked
+              ? 'A IA passa a pausar no repasse para atendimento humano.'
+              : 'A IA não pausa mais no repasse para atendimento humano.')}
+            disabled={saving}
+          />
+        </div>
+      </Card>
+
       <ToastContainer toasts={toasts} onRemove={removeToast}/>
     </div>
   );

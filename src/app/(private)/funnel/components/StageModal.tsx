@@ -1,5 +1,5 @@
 'use client';
-import { Check, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -90,7 +90,6 @@ export default function StageModal({
 
         <div className="space-y-1.5">
           <label htmlFor="stage-ai-criteria" className="flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <Sparkles size={14} className="text-indigo-500 dark:text-indigo-400" />
             Critério para a IA
             <span className="font-normal text-slate-400 dark:text-slate-500">(opcional)</span>
           </label>

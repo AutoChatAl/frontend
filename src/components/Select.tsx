@@ -159,7 +159,14 @@ export default function Select<V extends string = string>({
         setOpen(false);
       }
     };
-    const handleScroll = () => setOpen(false);
+    // O menu é `fixed` e não acompanha a rolagem do container que o ancora, por
+    // isso fecha quando a página rola. Mas o listener é `capture` na window e
+    // pegava também a rolagem da própria lista de opções — passar o olho pelas
+    // opções fechava o menu antes de dar para clicar em uma.
+    const handleScroll = (e: Event) => {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
     const handleResize = () => {
       const pos = computePosition();
       if (pos) setPosition(pos);

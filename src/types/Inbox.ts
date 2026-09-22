@@ -5,6 +5,9 @@ export type InboxFilterId = InboxChannelType | 'ALL';
 export type MessageDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
 export type MessageMediaType = 'image' | 'audio' | 'video' | 'document';
 
+/** Conteúdo do próprio Instagram compartilhado no direct, e não um arquivo enviado. */
+export type MessageShareKind = 'reel' | 'post';
+
 export interface InboxConversation {
   id: string;
   workspaceId: string;
@@ -84,6 +87,12 @@ export interface InboxMessage {
   direction: InboxDirection;
   body: string;
   mediaType?: MessageMediaType | null;
+  /**
+   * Reels ou publicação do Instagram compartilhada no direct. O balão anuncia o que é
+   * em vez de soltar um player sem contexto — a mídia é de um post, não um arquivo
+   * que o contato gravou.
+   */
+  shareKind?: MessageShareKind | null;
   mediaUrl?: string | null;
   /** Só em mensagens antigas — hoje o arquivo vem por `mediaPath`. */
   mediaBase64?: string | null;

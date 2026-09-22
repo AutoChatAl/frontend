@@ -221,11 +221,6 @@ export default function AIGuardrailsSection() {
               title="Assuntos que exigem uma pessoa"
               hint="Se o cliente usar um destes termos, a IA não responde: a conversa vai direto para atendimento humano."
             />
-            <Callout tone="info" className="mb-3">
-              Esta é a proteção mais forte das três, e a mais barata: como a IA nem chega a ser chamada,
-              a mensagem sai <strong>sem gastar nada</strong>. Em conversa de teor jurídico ou reclamação formal,
-              a resposta mais segura da IA é não existir.
-            </Callout>
             <TermList
               terms={guardrails.handoffKeywords}
               suggestions={suggestions?.handoffKeywords ?? []}

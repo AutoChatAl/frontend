@@ -14,6 +14,12 @@ const MEDIA_PREVIEW_LABEL: Record<NonNullable<InboxMessage['mediaType']>, string
   document: '📄 Documento',
 };
 
+/** Espelha o `SHARE_LABEL` do backend — reels chega como vídeo e publicação como imagem. */
+const SHARE_PREVIEW_LABEL: Record<NonNullable<InboxMessage['shareKind']>, string> = {
+  reel: '🎬 Reels',
+  post: '📱 Publicação do Instagram',
+};
+
 /** Resumo curto de uma mensagem para citações e barra de resposta (espelha o preview do backend). */
 export function messagePreview(message: InboxMessage): string {
   const text = message.body?.trim();
@@ -23,6 +29,7 @@ export function messagePreview(message: InboxMessage): string {
   if (message.mediaType === 'document' && message.mediaFileName?.trim()) {
     return `📄 ${message.mediaFileName.trim()}`.slice(0, 140);
   }
+  if (message.shareKind) return SHARE_PREVIEW_LABEL[message.shareKind];
   if (message.mediaType) return MEDIA_PREVIEW_LABEL[message.mediaType];
   return '';
 }

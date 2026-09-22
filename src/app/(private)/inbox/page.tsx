@@ -10,7 +10,7 @@ import Skeleton from '@/components/Skeleton';
 import { useAttendantAlerts } from '@/contexts/AttendantAlertsContext';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
-import type { InboxConversation, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays } from '@/types/Inbox';
+import type { InboxConversation, InboxDirection, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageShareKind } from '@/types/Inbox';
 import {
   AUDIO_RECORDER_FALLBACK_MIME,
   AUDIO_WAV_MIME,
@@ -97,12 +97,61 @@ function mediaSrc(message: InboxMessage): string | null {
 }
 
 /**
+ * O que o balão diz quando o contato compartilha conteúdo do Instagram.
+ *
+ * Reels chega marcado como vídeo e publicação como imagem, mas nenhum dos dois é
+ * arquivo que a pessoa gravou: é um post, sem legenda nem autor no webhook. Um
+ * player solto no meio da conversa não dizia isso ao atendente.
+ */
+function shareNotice(kind: MessageShareKind, direction: InboxDirection): string {
+  const what = kind === 'reel' ? 'Um reels foi enviado' : 'Uma publicação do Instagram foi enviada';
+  return direction === 'IN' ? `${what} por esse usuário` : what;
+}
+
+/** Capa do post compartilhado: estática, sem controles — quem quiser ver abre em tela cheia. */
+function ShareThumbnail({ message, src, onExpand }: { message: InboxMessage; src: string; onExpand?: () => void }) {
+  const thumbClass = 'max-h-40 max-w-full rounded-lg object-cover';
+  const preview = message.mediaType === 'video'
+    // `preload="metadata"` basta para o navegador desenhar o primeiro quadro.
+    ? <video src={src} preload="metadata" muted playsInline className={thumbClass} />
+    // eslint-disable-next-line @next/next/no-img-element -- mídia de chat (CDN dinâmico / base64) não suporta next/image
+    : <img src={src} alt="Capa da publicação compartilhada" className={thumbClass} />;
+
+  if (!onExpand) return preview;
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      title="Ampliar"
+      aria-label="Ampliar publicação compartilhada"
+      className="group/media relative block cursor-zoom-in overflow-hidden rounded-lg"
+    >
+      {preview}
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/media:bg-black/25 group-hover/media:opacity-100">
+        <Maximize2 size={20} className="text-white drop-shadow" />
+      </span>
+    </button>
+  );
+}
+
+/**
  * Miniatura no balão. Foto e vídeo abrem em tela cheia — o `onExpand` só chega
  * preenchido quando a mídia entrou na galeria da conversa (mensagem confirmada,
  * com conteúdo exibível).
  */
 function MediaContent({ message, onExpand }: { message: InboxMessage; onExpand?: () => void }) {
   const src = mediaSrc(message);
+  if (message.shareKind) {
+    return (
+      <div className="space-y-1">
+        <p className={`text-xs italic ${message.direction === 'OUT' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>
+          {shareNotice(message.shareKind, message.direction)}
+        </p>
+        {/* Sem `src` o arquivo não pôde ser guardado — o aviso sozinho já diz o que chegou. */}
+        {src && <ShareThumbnail message={message} src={src} {...(onExpand ? { onExpand } : {})} />}
+      </div>
+    );
+  }
   if (!message.mediaType || !src) return null;
   if (message.mediaType === 'image') {
     const image = (
