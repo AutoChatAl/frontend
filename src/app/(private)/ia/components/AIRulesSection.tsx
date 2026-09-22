@@ -1,88 +1,29 @@
 'use client';
 
-import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
 import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
-import ToggleRow from '@/components/ToggleRow';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { AI_FOLLOW_UP_MESSAGE_MAX_CHARS, AI_FOLLOW_UP_OPTIONS, DEFAULT_AI_FOLLOW_UP_MESSAGE, type AiTriggerSettings } from '@/types/AI';
-import { LOCKED_FEATURES } from '@lib/featureFlags';
+import { AI_FOLLOW_UP_MESSAGE_MAX_CHARS, AI_FOLLOW_UP_OPTIONS, DEFAULT_AI_FOLLOW_UP_MESSAGE } from '@/types/AI';
 
 interface AIRulesSectionProps {
     customRules: string;
-    triggerSettings: AiTriggerSettings;
     followUpMinutes: number;
     followUpMessage: string;
     onCustomRulesChange: (value: string) => void;
-    onToggleTrigger: (triggerKey: keyof AiTriggerSettings) => void;
     onFollowUpMinutesChange: (value: number) => void;
     onFollowUpMessageChange: (value: string) => void;
     /** Limite vindo do GET /config. Tem prioridade sobre o da assinatura, que pode estar em cache. */
     maxChars?: number;
 }
-const triggerOptions: Array<{
-    key: keyof AiTriggerSettings;
-    title: string;
-    description: string;
-}> = [
-  {
-    key: 'qualifyLead',
-    title: 'Qualificar lead automaticamente',
-    description: 'Faz perguntas curtas de necessidade e prazo antes da recomendação.',
-  },
-  {
-    key: 'prioritizeScheduling',
-    title: 'Priorizar convite para agendamento',
-    description: 'Quando houver intenção clara, a IA puxa para o próximo passo de agenda.',
-  },
-  {
-    key: 'recoveryAfterNoReply',
-    title: 'Retomar conversa sem resposta',
-    description: 'Envia retomada curta quando o cliente some no meio do atendimento.',
-  },
-  {
-    key: 'detectUrgency',
-    title: 'Responder com urgência',
-    description: 'Prioriza acolhimento e orientação direta em mensagens urgentes.',
-  },
-];
-export default function AIRulesSection({ customRules, triggerSettings, followUpMinutes, followUpMessage, onCustomRulesChange, onToggleTrigger, onFollowUpMinutesChange, onFollowUpMessageChange, maxChars: maxCharsProp }: AIRulesSectionProps) {
+export default function AIRulesSection({ customRules, followUpMinutes, followUpMessage, onCustomRulesChange, onFollowUpMinutesChange, onFollowUpMessageChange, maxChars: maxCharsProp }: AIRulesSectionProps) {
   const { status } = useSubscription();
   const maxChars = maxCharsProp && maxCharsProp > 0 ? maxCharsProp : (status?.limits?.maxCustomRulesChars ?? 0);
   const overLimit = maxChars > 0 && customRules.length > maxChars;
   const remaining = maxChars - customRules.length;
-  const locked = LOCKED_FEATURES.iaTriggers;
   return (
     <div className="space-y-3">
-      <Card className="p-4">
-        <SectionHeader
-          title="Gatilhos prontos"
-          hint="Comportamentos comuns já escritos para você. Todos começam desligados."
-        />
-
-        {locked && (
-          <Callout tone="warning" className="mb-3">
-            Os gatilhos prontos estão temporariamente indisponíveis enquanto ajustamos o comportamento deles. Use as regras
-            personalizadas abaixo — elas continuam valendo normalmente.
-          </Callout>
-        )}
-
-        <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-          {triggerOptions.map((trigger) => (
-            <ToggleRow
-              key={trigger.key}
-              title={trigger.title}
-              description={trigger.description}
-              checked={triggerSettings[trigger.key]}
-              onChange={() => onToggleTrigger(trigger.key)}
-              disabled={locked}
-            />
-          ))}
-        </div>
-      </Card>
-
       <Card className="p-4">
         <SectionHeader
           title="Retomada automática"
@@ -116,7 +57,7 @@ export default function AIRulesSection({ customRules, triggerSettings, followUpM
 
       <Card className="p-4">
         <SectionHeader
-          title="Regras personalizadas"
+          title="Prompt de treinamento"
           hint="Uma regra por linha. Entram no prompt exatamente como você escrever, então seja direto."
         />
         <Textarea

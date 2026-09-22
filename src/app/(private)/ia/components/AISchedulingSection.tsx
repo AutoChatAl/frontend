@@ -39,11 +39,7 @@ export default function AISchedulingSection({ schedulingQueryEnabled, scheduling
           {...(schedulingQueryAllowed ? {} : { lockReason: QUERY_LOCK })}
         >
           {!schedulingQueryAllowed && <Callout tone="warning">{QUERY_LOCK}</Callout>}
-          {schedulingQueryAllowed && schedulingQueryEnabled && (
-            <Callout>
-              A base são os horários de trabalho e as exceções da aba Agendamentos. Mudou lá, muda aqui.
-            </Callout>
-          )}
+
         </ToggleRow>
 
         <ToggleRow
@@ -54,14 +50,9 @@ export default function AISchedulingSection({ schedulingQueryEnabled, scheduling
           {...(schedulingBookingAllowed ? {} : { lockReason: BOOKING_LOCK })}
         >
           {!schedulingBookingAllowed && <Callout tone="warning">{BOOKING_LOCK}</Callout>}
-          {schedulingBookingAllowed && schedulingBookingEnabled && (
-            <Callout tone="success">
-              O agendamento aparece na sua agenda com a marca &ldquo;Criado por IA&rdquo;, então dá para revisar depois.
-            </Callout>
-          )}
           {schedulingBookingAllowed && schedulingBookingEnabled && !schedulingQueryEnabled && (
             <Callout tone="warning">
-              Sem &ldquo;Consultar disponibilidade&rdquo; ligado, a IA marca sem checar a agenda antes — o risco de choque de horário sobe.
+              Sem &ldquo;Consultar disponibilidade&rdquo; ligado, a IA marca sem checar a agenda antes o risco de choque de horário sobe.
             </Callout>
           )}
         </ToggleRow>

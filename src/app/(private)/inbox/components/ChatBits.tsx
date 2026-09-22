@@ -22,12 +22,16 @@ export function Avatar({
     avatarUrl?: string | null | undefined;
     size?: number;
 }) {
-  const [errored, setErrored] = useState(false);
-  const showImage = !!avatarUrl && !errored;
+  // Guarda a URL que falhou, não um booleano: o avatar do cabeçalho e o do painel
+  // de detalhes são a mesma instância enquanto se troca de conversa, e um flag
+  // simples ficava preso em `true` — uma foto quebrada derrubava a de todas as
+  // conversas abertas depois dela.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showImage = !!avatarUrl && failedUrl !== avatarUrl;
   return (<div className="shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center" style={{ width: size, height: size }}>
     {showImage ? (
       // eslint-disable-next-line @next/next/no-img-element -- URLs de avatar de CDN dinâmico (IG/WhatsApp) não suportam next/image
-      <img src={avatarUrl as string} alt={name || 'Contato'} className="h-full w-full object-cover" onError={() => setErrored(true)}/>
+      <img key={avatarUrl} src={avatarUrl as string} alt={name || 'Contato'} className="h-full w-full object-cover" referrerPolicy="no-referrer" onError={() => setFailedUrl(avatarUrl ?? null)}/>
     ) : (<span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
       {getInitials(name, identifier)}
     </span>)}
