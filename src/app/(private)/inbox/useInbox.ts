@@ -243,6 +243,7 @@ export function useInbox(): UseInboxReturn {
         if (conversationId) loadMessagesRef.current(conversationId, true);
       },
       'message.created': (event) => { onConversationMessageRef.current(event); },
+      'message.edited': (event) => { onConversationMessageEditedRef.current(event); },
       'message.status': (event) => { onConversationStatusRef.current(event); },
       typing: (event) => { onConversationTypingRef.current(event); },
     });
@@ -404,6 +405,25 @@ export function useInbox(): UseInboxReturn {
   }, []);
   const onConversationMessageRef = useRef(onConversationMessage);
   onConversationMessageRef.current = onConversationMessage;
+
+  /**
+   * Edição feita pelo contato no WhatsApp: reescreve o balão que já está na thread. Não
+   * entra como mensagem nova e não mexe em leitura — o contato corrigiu o que já mandou.
+   */
+  const onConversationMessageEdited = useCallback((event: MessageEvent) => {
+    const conversationId = selectedIdRef.current;
+    if (!conversationId) return;
+    try {
+      const payload = JSON.parse(event.data) as { message?: InboxMessage };
+      const edited = payload.message;
+      if (!edited || edited.conversationId !== conversationId) return;
+      setMessages((prev) => prev.map((m) => (m.id === edited.id ? { ...m, ...edited } : m)));
+    } catch {
+      loadMessagesRef.current(conversationId, true);
+    }
+  }, []);
+  const onConversationMessageEditedRef = useRef(onConversationMessageEdited);
+  onConversationMessageEditedRef.current = onConversationMessageEdited;
 
   const onConversationStatus = useCallback((event: MessageEvent) => {
     try {

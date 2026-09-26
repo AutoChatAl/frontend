@@ -1,4 +1,5 @@
 import type { CreateFlowPayload, Flow, UpdateFlowPayload } from '@/types/Flow';
+import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@lib/ApiClient';
 
 class FlowService {
@@ -39,6 +40,24 @@ class FlowService {
     if (!response.success) {
       throw new Error('Falha ao excluir o fluxo.');
     }
+  }
+
+  /** Sem `flowId`, leva todos os fluxos do workspace. */
+  public async exportCsv(flowId?: string): Promise<TransferExport> {
+    const query = flowId ? `?flowId=${encodeURIComponent(flowId)}` : '';
+    const response = await apiClient.get<TransferExport>(`/flows/export${query}`);
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao exportar os fluxos.');
+    }
+    return response.data;
+  }
+
+  public async importCsv(csv: string): Promise<TransferImportResult> {
+    const response = await apiClient.post<TransferImportResult>('/flows/import', { csv }, { timeoutMs: 120000 });
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao importar os fluxos. Confira se o arquivo veio de uma exportação do Synq.');
+    }
+    return response.data;
   }
 }
 

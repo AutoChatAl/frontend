@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import ImportExportMenu from '@/components/ImportExportMenu';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -82,7 +83,7 @@ export default function FlowsPage() {
     setDirty(false);
   }, []);
 
-  useEffect(() => {
+  const reloadFlows = useCallback(() => {
     flowService
       .list()
       .then((list) => {
@@ -93,6 +94,10 @@ export default function FlowsPage() {
       .catch(() => addToast('error', 'Não foi possível carregar os fluxos.'))
       .finally(() => setLoading(false));
   }, [addToast, openFlow]);
+
+  useEffect(() => {
+    reloadFlows();
+  }, [reloadFlows]);
 
   useEffect(() => {
     void funnelService.listStages().then(setStages).catch(() => setStages([]));
@@ -432,6 +437,15 @@ export default function FlowsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Fora do bloco de `active`: importar é justamente o que se faz num
+              workspace que ainda não tem fluxo nenhum. */}
+          <ImportExportMenu
+            resourceLabel="fluxos"
+            onExport={() => flowService.exportCsv()}
+            onImport={(csv) => flowService.importCsv(csv)}
+            onImported={reloadFlows}
+            onError={(message) => addToast('error', message)}
+          />
           {active && (
             <>
               <Button variant="secondary" size="sm" className="rounded-md" onClick={handleToggleEnabled}>

@@ -16,12 +16,17 @@ import type { AttendanceSettings, AttendanceStatus, UpdateAttendanceSettingsPayl
 
 const COOLDOWN_OPTIONS = [0, 6, 12, 24, 48];
 
-/** Espelha a lista aceita pela API — valor fora dela é recusado no PATCH. */
+/** Espelham as listas aceitas pela API — valor fora delas é recusado no PATCH. */
 const TAKEOVER_PAUSE_OPTIONS = [10, 30, 60, 120];
+// Bem mais longas que as de takeover: aqui ninguém respondeu ainda, e a IA precisa
+// ficar fora do caminho até um atendente assumir.
+const HANDOFF_PAUSE_OPTIONS = [60, 240, 720, 1440];
 
-function takeoverPauseLabel(minutes: number): string {
+function pauseLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} minutos`;
-  return minutes === 60 ? '1 hora' : `${minutes / 60} horas`;
+  if (minutes === 60) return '1 hora';
+  if (minutes === 1440) return '24 horas';
+  return `${minutes / 60} horas`;
 }
 
 function cooldownLabel(hours: number): string {
@@ -194,13 +199,26 @@ export default function AttendanceTab() {
         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
           <ToggleRow
             title="Pausar a IA ao pedir atendimento humano"
-            description="A IA fica em silêncio por 12h assim que a conversa entra na fila, para não responder por cima do atendente que vai assumir. Desligado, ela segue respondendo enquanto o cliente espera."
+            description="A IA fica em silêncio assim que a conversa entra na fila, para não responder por cima do atendente que vai assumir. Desligado, ela segue respondendo enquanto o cliente espera."
             checked={settings.pauseAiOnHandoff}
             onChange={(checked) => save({ pauseAiOnHandoff: checked }, checked
               ? 'A IA passa a pausar no repasse para atendimento humano.'
               : 'A IA não pausa mais no repasse para atendimento humano.')}
             disabled={saving}
           />
+
+          {settings.pauseAiOnHandoff && (
+            <div className="py-3">
+              <Select
+                label="Tempo de pausa no repasse"
+                options={HANDOFF_PAUSE_OPTIONS.map((minutes) => ({ value: String(minutes), label: pauseLabel(minutes) }))}
+                value={String(settings.handoffPauseMinutes)}
+                onChange={(value) => save({ handoffPauseMinutes: Number(value) }, 'Tempo de pausa no repasse atualizado.')}
+                disabled={saving}
+                hint="Contado a partir da entrada na fila. Se ninguém assumir até lá, a IA volta a responder sozinha."
+              />
+            </div>
+          )}
 
           <ToggleRow
             title="Pausar a IA quando você responde"
@@ -216,7 +234,7 @@ export default function AttendanceTab() {
             <div className="py-3">
               <Select
                 label="Tempo de pausa"
-                options={TAKEOVER_PAUSE_OPTIONS.map((minutes) => ({ value: String(minutes), label: takeoverPauseLabel(minutes) }))}
+                options={TAKEOVER_PAUSE_OPTIONS.map((minutes) => ({ value: String(minutes), label: pauseLabel(minutes) }))}
                 value={String(settings.humanTakeoverPauseMinutes)}
                 onChange={(value) => save({ humanTakeoverPauseMinutes: Number(value) }, 'Tempo de pausa atualizado.')}
                 disabled={saving}

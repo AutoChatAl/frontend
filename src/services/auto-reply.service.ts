@@ -1,5 +1,6 @@
 import type { AutoReply, CreateAutoReplyInput, UpdateAutoReplyInput } from '@/types/AutoReply';
 import { getErrorMessage } from '@/types/ErrorCode';
+import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@/utils/ApiClient';
 
 function throwApiError(response: {
@@ -56,6 +57,25 @@ class AutoReplyService {
       throwApiError(response, 'Não foi possível alternar a resposta automática. Tente novamente.');
     }
     return response.data as AutoReply;
+  }
+
+  /** Sem `channelId`, leva as regras de todos os canais. */
+  public async exportCsv(channelId?: string): Promise<TransferExport> {
+    const query = channelId ? `?channelId=${encodeURIComponent(channelId)}` : '';
+    const response = await apiClient.get<TransferExport>(`/auto-replies/export${query}`);
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao exportar as auto-respostas.');
+    }
+    return response.data;
+  }
+
+  /** `channelId` é o canal de destino: o do arquivo não vale neste workspace. */
+  public async importCsv(channelId: string, csv: string): Promise<TransferImportResult> {
+    const response = await apiClient.post<TransferImportResult>('/auto-replies/import', { channelId, csv }, { timeoutMs: 120000 });
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao importar as auto-respostas. Confira se o arquivo veio de uma exportação do Synq.');
+    }
+    return response.data;
   }
 }
 export const autoReplyService = new AutoReplyService();
