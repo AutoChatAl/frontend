@@ -986,6 +986,53 @@ para o código; esgotada a paleta, repete o matiz do bloco funcionalmente mais p
 
 ---
 
+## 13.2 Diagnóstico — Conversa Estilo WhatsApp
+
+**Pasta:** `src/app/(public)/diagnostico/`
+
+Página pública de anúncio, pensada primeiro para o celular: uma conversa em que o "contato"
+Synq faz as perguntas e a pessoa responde tocando nas opções. Como imita o WhatsApp, é o único
+lugar em que **emerald** faz o papel de cor primária (botões, seleção, progresso). O indigo
+continua sendo a primária no resto do produto.
+
+**Desktop:** a página ocupa a janela toda, como o WhatsApp Web. Cabeçalho, conversa e painel
+de respostas são faixas de ponta a ponta; o conteúdo de cada uma fica em `mx-auto max-w-4xl`.
+Balões passam a `lg:max-w-[70%]`, opções vão para `sm:grid-cols-2` e o campo de contato para
+`sm:max-w-xl`. No resultado (`max-w-5xl`), a partir de `lg` o medidor ocupa 2 de 5 colunas e
+fica `sticky`, com o texto e o botão do WhatsApp nas outras 3.
+
+| Elemento | Light | Dark |
+|---|---|---|
+| Cabeçalho do contato | `bg-emerald-700 text-white`, subtítulo `text-emerald-100` | `dark:bg-slate-800`, `dark:text-slate-400` |
+| Barra de progresso | trilho `bg-slate-200`, preenchimento `bg-emerald-500` | trilho `dark:bg-slate-700` |
+| Fundo da conversa e do painel | `bg-slate-100` | `dark:bg-slate-900` |
+| Balão recebido (Synq) | `bg-white text-slate-900` | `dark:bg-slate-800 dark:text-white` |
+| Balão enviado (cliente) | `bg-emerald-100 text-slate-900` | `dark:bg-emerald-800 dark:text-white` |
+| Confirmação de leitura (✓✓) | `text-blue-500` | `dark:text-blue-400` |
+| Selo de verificado | `BadgeCheck` com `fill-blue-500 text-white` | — |
+| Opção (um toque já responde) | `border-slate-200 bg-white`, `hover:border-emerald-500`, `active:bg-emerald-50` | `dark:border-slate-700 dark:bg-slate-800`, `dark:active:bg-emerald-500/10` |
+| Botão de ação (enviar, CTA do WhatsApp) | `bg-emerald-600 hover:bg-emerald-700 text-white`; o CTA final leva `shadow-sm shadow-emerald-200` | `dark:shadow-none` |
+| Item de "Como o Synq resolve" | card `bg-white border-slate-200` com check em círculo `h-5 w-5 bg-emerald-500 text-white` | `dark:bg-slate-800 dark:border-slate-700` |
+| Medidor de saúde | arcos `stroke-red-500` / `stroke-amber-500` / `stroke-emerald-500`; valor e selo no tom da faixa (`text-red-600`, `text-amber-600`, `text-emerald-600`) | tons `-400` no texto, `/10` no fundo dos selos |
+
+**Balões:** `rounded-lg`, `shadow-xs`, `max-w-[85%]`. O primeiro de cada sequência perde o
+canto do lado da pontinha (`rounded-tl-none` / `rounded-tr-none`) e ganha a pontinha em SVG
+(`h-3 w-2`, `fill-*` igual ao fundo do balão); os seguintes ficam colados (`mt-1`). Horário
+em `text-[11px]`, flutuando no canto inferior direito.
+
+**Campo de texto:** formato de pílula (`rounded-full`) com o botão de enviar redondo dentro,
+como a barra de digitação do WhatsApp. Texto em `text-base` — abaixo de 16px o iPhone dá zoom
+ao focar o campo.
+
+**Animações** (em `globals.css`, desligadas com `prefers-reduced-motion`):
+
+| Utilitário | Uso |
+|---|---|
+| `animate-bubble-in` | Entrada de balões, do painel de respostas e da tela de resultado (sobe 6px e aparece, 220ms) |
+| `animate-typing` | Pontinhos do "digitando…", com `[animation-delay:170ms]` e `340ms` no segundo e terceiro |
+
+---
+
 ## 14. Gráficos (Dashboard)
 
 Gráficos são SVG feitos à mão (sem biblioteca), largura sempre 100% do card
