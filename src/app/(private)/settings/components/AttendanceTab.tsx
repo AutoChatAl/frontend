@@ -188,7 +188,7 @@ export default function AttendanceTab() {
 
       <Card className="p-4">
         <SectionHeader
-          title="Pausa da IA no atendimento humano"
+          title="Pausa da IA"
           hint="Quando a IA deve sair da frente para uma pessoa atender. Cada mudança é salva na hora."
         />
         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -204,7 +204,7 @@ export default function AttendanceTab() {
 
           <ToggleRow
             title="Pausar a IA quando você responde"
-            description="Vale para a resposta enviada pela caixa de entrada e também para a que você manda pelo aplicativo do WhatsApp ou do Instagram. Desligado, a IA não completa a resposta que você acabou de dar, mas volta a responder na próxima mensagem do cliente."
+            description="Vale para a resposta enviada pela caixa de entrada e também para a que você manda pelo aplicativo do WhatsApp ou do Instagram. Desligado, a IA continua respondendo mesmo depois de você entrar na conversa."
             checked={settings.pauseAiOnHumanTakeover}
             onChange={(checked) => save({ pauseAiOnHumanTakeover: checked }, checked
               ? 'A IA passa a pausar quando você responde.'

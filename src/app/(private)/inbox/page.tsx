@@ -1253,6 +1253,7 @@ export default function InboxPage() {
                               )}
                               <span className={`mt-1 flex items-center gap-1 text-[10px] ${m.direction === 'OUT' ? 'text-indigo-200' : 'text-slate-400'}`}>
                                 {m.sentByAi ? 'IA · ' : m.sentByAutomation ? 'Auto · ' : ''}
+                                {m.editedAt ? 'editada · ' : ''}
                                 {formatMessageTime(m.createdAt)}
                                 <StatusTicks message={m} />
                               </span>

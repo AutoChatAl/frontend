@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
+import ImportExportMenu from '@/components/ImportExportMenu';
 import Modal from '@/components/Modal';
 import Select from '@/components/Select';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
@@ -295,6 +296,14 @@ export default function FunnelPage() {
             Onde cada lead está e quanto ainda dá para fechar
           </p>
         </div>
+        {/* Só as colunas do quadro viajam no arquivo — os leads ficam. */}
+        <ImportExportMenu
+          resourceLabel="etapas do funil"
+          onExport={() => funnelService.exportStagesCsv()}
+          onImport={(csv) => funnelService.importStagesCsv(csv)}
+          onImported={() => { void loadBoard(); }}
+          onError={(message) => addToast('error', message)}
+        />
       </div>
 
       <FunnelFilters

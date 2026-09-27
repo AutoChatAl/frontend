@@ -6,11 +6,13 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
+import ImportExportMenu from '@/components/ImportExportMenu';
 import { SkeletonForm, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { aiService } from '@/services/ai.service';
 
 import AICatalogSection from './components/AICatalogSection';
 import AIChannelsList from './components/AIChannelsList';
@@ -40,7 +42,7 @@ export default function IAPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
-  const { segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, knowledgeEnabled, toggleKnowledge, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
+  const { addToast, reloadConfig, segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, knowledgeEnabled, toggleKnowledge, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
   const customRulesLimit = maxCustomRulesChars > 0 ? maxCustomRulesChars : (status?.limits?.maxCustomRulesChars ?? 0);
   // Passar do limite é erro 422 garantido no backend — o botão trava antes de gastar a ida.
   const customRulesOverLimit = customRulesLimit > 0 && customRules.length > customRulesLimit;
@@ -82,11 +84,22 @@ export default function IAPage() {
       </Card>);
   }
   return (<div className="w-full max-w-full space-y-3">
-    <div className="min-w-0">
-      <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Inteligência Artificial</h1>
-      <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-        Quem é o assistente, o que ele pode oferecer e até onde ele age sozinho
-      </p>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Inteligência Artificial</h1>
+        <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+          Quem é o assistente, o que ele pode oferecer e até onde ele age sozinho
+        </p>
+      </div>
+      {/* Leva identidade, tom e prompt de treinamento. Canal, catálogo e base de
+          conhecimento ficam de fora — cada um é um acervo próprio. */}
+      <ImportExportMenu
+        resourceLabel="perfis de IA"
+        onExport={() => aiService.exportProfilesCsv()}
+        onImport={(csv) => aiService.importProfilesCsv(csv)}
+        onImported={() => { void reloadConfig(); }}
+        onError={(message) => addToast('error', message)}
+      />
     </div>
 
     {/* Nav à esquerda e conteúdo ao lado; no mobile a nav vira uma fila rolável em cima. */}

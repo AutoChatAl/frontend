@@ -1,6 +1,7 @@
 import type { AiCatalogScope, AiProfile, AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import { getErrorMessage } from '@/types/ErrorCode';
+import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@/utils/ApiClient';
 
 const IMPORT_TIMEOUT_MS = 120000;
@@ -292,6 +293,22 @@ class AiService {
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsDataURL(file);
     });
+  }
+
+  public async exportProfilesCsv(): Promise<TransferExport> {
+    const response = await apiClient.get<TransferExport>('/ai/profiles/export');
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao exportar os perfis de IA.');
+    }
+    return response.data;
+  }
+
+  public async importProfilesCsv(csv: string): Promise<TransferImportResult> {
+    const response = await apiClient.post<TransferImportResult>('/ai/profiles/import', { csv }, { timeoutMs: 120000 });
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao importar os perfis. Confira se o arquivo veio de uma exportação do Synq.');
+    }
+    return response.data;
   }
 }
 export const aiService = new AiService();

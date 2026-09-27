@@ -493,6 +493,9 @@ export function useAIConfig() {
     return report;
   }, [loadProducts]);
   return {
+    addToast,
+    /** Recarrega a configuração do servidor — usado depois de importar perfis. */
+    reloadConfig: loadConfig,
     segment,
     setSegment,
     businessName,

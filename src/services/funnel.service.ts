@@ -8,6 +8,7 @@ import type {
   StagePayload,
   UpdateLeadPayload,
 } from '@/types/Funnel';
+import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@/utils/ApiClient';
 
 type QueryValue = string | number | undefined;
@@ -111,6 +112,22 @@ class FunnelService {
       throw new Error('Falha ao reordenar as etapas.');
     }
     return response.data.stages;
+  }
+
+  public async exportStagesCsv(): Promise<TransferExport> {
+    const response = await apiClient.get<TransferExport>('/funnel/stages/export');
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao exportar a configuração do funil.');
+    }
+    return response.data;
+  }
+
+  public async importStagesCsv(csv: string): Promise<TransferImportResult> {
+    const response = await apiClient.post<TransferImportResult>('/funnel/stages/import', { csv }, { timeoutMs: 120000 });
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao importar o funil. Confira se o arquivo veio de uma exportação do Synq.');
+    }
+    return response.data;
   }
 }
 

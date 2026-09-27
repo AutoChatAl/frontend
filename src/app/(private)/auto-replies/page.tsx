@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
+import ImportExportMenu from '@/components/ImportExportMenu';
+import Select from '@/components/Select';
 import { SkeletonPage, SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
@@ -39,6 +41,8 @@ export default function AutoRepliesPage() {
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<KindFilter>(() => kindFromParam(searchParams.get('tipo')));
   const [channelId, setChannelId] = useState('');
+  // Canal de destino da importação: o id que vem no arquivo é do workspace de origem.
+  const [importChannelId, setImportChannelId] = useState('');
 
   const [typePickerOpen, setTypePickerOpen] = useState(false);
   const [creating, setCreating] = useState<AutomationKind | null>(null);
@@ -160,10 +164,31 @@ export default function AutoRepliesPage() {
           Respostas automáticas por palavra-chave, em mensagens diretas e em comentários
         </p>
       </div>
-      <div data-tour="auto-replies-new">
-        <Button icon={<Plus size={16}/>} onClick={() => setTypePickerOpen(true)} className="w-full justify-center sm:w-auto">
-          Nova automação
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <ImportExportMenu
+          resourceLabel="auto-respostas"
+          onExport={() => autoReplyService.exportCsv(channelId || undefined)}
+          onImport={(csv) => autoReplyService.importCsv(importChannelId, csv)}
+          onImported={() => { void fetchRows(); }}
+          onError={(message) => addToast('error', message)}
+          importBlocked={!importChannelId}
+          importExtra={(
+            <Select
+              label="Canal de destino"
+              placeholder={channels.length === 0 ? 'Nenhum canal conectado' : 'Escolha o canal...'}
+              value={importChannelId}
+              onChange={setImportChannelId}
+              disabled={channels.length === 0}
+              options={channels.map((channel) => ({ value: channel.id, label: channel.name }))}
+              hint="Todas as regras do arquivo entram neste canal."
+            />
+          )}
+        />
+        <div data-tour="auto-replies-new">
+          <Button icon={<Plus size={16}/>} onClick={() => setTypePickerOpen(true)} className="w-full justify-center sm:w-auto">
+            Nova automação
+          </Button>
+        </div>
       </div>
     </div>
 

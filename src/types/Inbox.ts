@@ -111,6 +111,8 @@ export interface InboxMessage {
   /** Presente quando a mensagem levou botão ou card — desenhado no balão. */
   interactive?: InboxMessageInteractive | null;
   readAt?: string | null;
+  /** Preenchido quando o contato editou a mensagem no WhatsApp — o balão marca "editada". */
+  editedAt?: string | null;
   createdAt: string;
   /** Somente no cliente: mensagem otimista aguardando confirmação do envio. */
   pending?: boolean;
