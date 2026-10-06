@@ -62,7 +62,8 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
   const formatted = draft.channelType !== 'INSTAGRAM';
   const showText = hasText(draft.replyType) && draft.message.trim().length > 0;
   const showLink = draft.linkUrl.trim().length > 0;
-  const commentReply = isCommentLike(kind) && draft.commentReplyEnabled && draft.commentReplyMessage.trim().length > 0;
+  // Resposta pública só existe no post — na live o Instagram não aceita reply.
+  const commentReply = kind === 'COMMENT' && draft.commentReplyEnabled && draft.commentReplyMessage.trim().length > 0;
   // No Instagram com botão a mensagem vira o `title` do generic template, e o
   // Instagram renderiza esse campo em negrito por conta própria.
   const isInstagramCard = draft.channelType === 'INSTAGRAM' && showLink;

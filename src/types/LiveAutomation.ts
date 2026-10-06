@@ -5,8 +5,9 @@ export type { DmReplyType };
 /**
  * Regra de resposta automática para comentários de transmissão ao vivo.
  *
- * Espelha a automação de comentários sem o filtro de post: numa live não existe
- * publicação para escolher.
+ * Espelha a automação de comentários sem o filtro de post (numa live não existe
+ * publicação para escolher) e sem resposta pública: o Instagram não aceita reply em
+ * comentário de live, então a única resposta possível na transmissão é a DM.
  */
 export interface LiveAutomation {
     id: string;
@@ -19,9 +20,11 @@ export interface LiveAutomation {
     matchMode: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive: boolean;
     triggerOnAnyComment: boolean;
+    /** Legado: sempre `false` nas regras novas e nunca enviado. Fica só pelas regras antigas. */
     commentReplyEnabled: boolean;
+    /** Legado, ver `commentReplyEnabled`. */
     commentReplyMessage: string;
-    /** Variações sorteadas a cada comentário. Vazia = usa `commentReplyMessage`. */
+    /** Legado, ver `commentReplyEnabled`. */
     commentReplyMessages?: string[];
     dmReplyType: DmReplyType;
     dmMessage: string;
@@ -47,9 +50,6 @@ export interface CreateLiveAutomationInput {
     matchMode?: 'EXACT' | 'CONTAINS' | 'STARTS_WITH';
     caseSensitive?: boolean;
     triggerOnAnyComment?: boolean;
-    commentReplyEnabled?: boolean;
-    commentReplyMessage?: string;
-    commentReplyMessages?: string[];
     dmReplyType?: DmReplyType;
     dmMessage?: string;
     dmImageBase64?: string;

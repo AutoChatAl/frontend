@@ -1,4 +1,4 @@
-import type { ChannelMessageStats, InstagramAccount, InstagramMedia, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
+import type { ChannelMessageStats, InstagramAccount, InstagramMedia, InstagramWebhookSubscription, WhatsAppInstance, WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse, WhatsAppCreateResponse } from '@/types/Channel';
 import { getErrorMessage } from '@/types/ErrorCode';
 import { apiClient } from '@/utils/ApiClient';
 
@@ -95,6 +95,20 @@ class ChannelsService {
     if (!response.success || !response.data)
       throwApiError(response, 'Nao foi possivel carregar as publicacoes do Instagram. Tente novamente.');
     return (response.data as { data: InstagramMedia[] }).data;
+  }
+  /** Situação da assinatura de webhooks da conta — a automação de live depende de `live_comments`. */
+  public async getInstagramWebhookSubscription(channelId: string): Promise<InstagramWebhookSubscription> {
+    const response = await apiClient.get<InstagramWebhookSubscription>(`/channels/instagram/${channelId}/webhook-subscription`);
+    if (!response.success || !response.data)
+      throwApiError(response, 'Não foi possível verificar a escuta de comentários desta conta.');
+    return response.data as InstagramWebhookSubscription;
+  }
+  /** Reassina os webhooks da conta. Idempotente: só garante que os campos novos entrem. */
+  public async resubscribeInstagramWebhooks(channelId: string): Promise<InstagramWebhookSubscription> {
+    const response = await apiClient.post<InstagramWebhookSubscription>(`/channels/instagram/${channelId}/webhook-subscription`);
+    if (!response.success || !response.data)
+      throwApiError(response, 'Não foi possível ativar a escuta de comentários nesta conta.');
+    return response.data as InstagramWebhookSubscription;
   }
   public async getInstagramOAuthUrl(): Promise<{
         url: string;

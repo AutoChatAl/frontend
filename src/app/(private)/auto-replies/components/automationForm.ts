@@ -78,8 +78,8 @@ export function emptyDraft(kind: AutomationKind): AutomationDraft {
     matchMode: 'CONTAINS',
     caseSensitive: false,
     triggerOnAnyComment: false,
-    // A resposta pública nasce ligada no post e desligada na live: na transmissão o
-    // chat corre rápido e responder cada comentário polui a tela de quem assiste.
+    // Resposta pública só existe no post: a Graph API não aceita reply em comentário
+    // de live, então na transmissão a única resposta é a DM.
     commentReplyEnabled: kind === 'COMMENT',
     commentReplyMessage: '',
     commentReplyMessages: [''],
@@ -133,7 +133,11 @@ export function draftFromAutoReply(rule: AutoReply): AutomationDraft {
   };
 }
 
-/** A regra de live tem os mesmos campos da de comentário, menos o filtro de post. */
+/**
+ * A regra de live tem os mesmos campos da de comentário, menos o filtro de post e a
+ * resposta pública — regra antiga pode ter uma gravada, mas o Instagram não aceita
+ * reply em comentário de live e o backend nunca envia; aqui ela é ignorada.
+ */
 export function draftFromLiveAutomation(rule: LiveAutomation): AutomationDraft {
   return {
     ...emptyDraft('LIVE'),
@@ -144,11 +148,6 @@ export function draftFromLiveAutomation(rule: LiveAutomation): AutomationDraft {
     matchMode: rule.matchMode,
     caseSensitive: rule.caseSensitive,
     triggerOnAnyComment: rule.triggerOnAnyComment,
-    commentReplyEnabled: rule.commentReplyEnabled,
-    commentReplyMessage: rule.commentReplyMessage ?? '',
-    commentReplyMessages: rule.commentReplyMessages?.length
-      ? rule.commentReplyMessages
-      : [rule.commentReplyMessage ?? ''],
     replyType: rule.dmReplyType,
     message: rule.dmMessage ?? '',
     imageBase64: rule.dmImageBase64 ?? '',
@@ -237,9 +236,16 @@ export function toAutoReplyInput(draft: AutomationDraft): CreateAutoReplyInput {
   return input;
 }
 
-/** Mesmo payload da automação de comentário, sem o filtro de post. */
+/** Mesmo payload da automação de comentário, sem o filtro de post e sem a resposta pública. */
 export function toLiveAutomationInput(draft: AutomationDraft): CreateLiveAutomationInput {
-  const { postFilter: _postFilter, postIds: _postIds, ...rest } = toCommentAutomationInput(draft);
+  const {
+    postFilter: _postFilter,
+    postIds: _postIds,
+    commentReplyEnabled: _commentReplyEnabled,
+    commentReplyMessage: _commentReplyMessage,
+    commentReplyMessages: _commentReplyMessages,
+    ...rest
+  } = toCommentAutomationInput(draft);
   return rest;
 }
 
@@ -345,7 +351,7 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Rec
     errors.postIds = 'Escolha ao menos um post ou volte para "Todos os posts"';
   }
 
-  if (isCommentLike(kind) && draft.commentReplyEnabled && !draft.commentReplyMessages.some((m) => m.trim())) {
+  if (kind === 'COMMENT' && draft.commentReplyEnabled && !draft.commentReplyMessages.some((m) => m.trim())) {
     errors.commentReplyMessage = 'Informe ao menos uma resposta ao comentário';
   }
 

@@ -140,18 +140,20 @@ const KEYWORD_CHIP = 'max-w-full truncate rounded-md bg-slate-100 px-2 py-0.5 te
  * "e" quando a mensagem precisa conter todas. Sem isso, duas palavras na tela
  * não dizem qual das duas leituras vale.
  */
-function Trigger({ label, keywords, logic, any }: {
+function Trigger({ label, keywords, logic, any, anyLabel = 'qualquer comentário no post' }: {
   label: string;
   keywords: string[];
   logic?: 'ANY' | 'ALL';
   any?: boolean;
+  /** Texto do gatilho sem palavra-chave — muda entre post e live. */
+  anyLabel?: string;
 }) {
   const separator = logic === 'ALL' ? 'e' : 'ou';
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[11px] text-slate-400 dark:text-slate-500">{label}</span>
       {any ? (
-        <span className="text-[13px] text-slate-500 dark:text-slate-400">qualquer comentário no post</span>
+        <span className="text-[13px] text-slate-500 dark:text-slate-400">{anyLabel}</span>
       ) : (
         keywords.map((keyword, index) => (
           <span key={`${keyword}-${index}`} className="flex min-w-0 items-center gap-2">
@@ -228,11 +230,14 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
           ) : (
             <>
               <Trigger
-                label="Quando comentarem"
+                label={row.kind === 'LIVE' ? 'Quando comentarem na live' : 'Quando comentarem'}
                 keywords={keywordsOf(row.rule)}
                 any={row.rule.triggerOnAnyComment}
+                anyLabel={row.kind === 'LIVE' ? 'qualquer comentário durante a live' : 'qualquer comentário no post'}
               />
-              {row.rule.commentReplyEnabled && row.rule.commentReplyMessage && (
+              {/* Só no post: regra de live antiga pode ter resposta pública gravada, mas
+                  o Instagram não aceita reply em comentário de live e ela nunca sai. */}
+              {row.kind === 'COMMENT' && row.rule.commentReplyEnabled && row.rule.commentReplyMessage && (
                 <div className="rounded-lg border border-fuchsia-100 bg-fuchsia-50/60 p-2.5 dark:border-fuchsia-500/20 dark:bg-fuchsia-500/5">
                   <p className="mb-1 text-[11px] text-fuchsia-600 dark:text-fuchsia-400">Responde no comentário</p>
                   <FormattedMessage text={row.rule.commentReplyMessage} clamp={2} />

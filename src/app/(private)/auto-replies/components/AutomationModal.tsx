@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, Radio, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import AudioPicker from '@/components/AudioPicker';
@@ -53,6 +53,7 @@ import {
 } from './automationForm';
 import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind, type AutomationRow } from './automationMeta';
 import AutomationPreview from './AutomationPreview';
+import LiveWebhookStatus from './LiveWebhookStatus';
 
 interface AutomationModalProps {
   isOpen: boolean;
@@ -273,11 +274,49 @@ export default function AutomationModal({
           </div>
         )}
 
+        {/* A live tem regras que o resto da tela não deixa claro: o Instagram só avisa
+            dos comentários enquanto a transmissão está no ar, e a DM só sai nesse
+            intervalo. Quem cria a regra depois de começar a live, ou espera a DM sair
+            depois que ela acabou, acha que a automação falhou. */}
+        {kind === 'LIVE' && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                <Radio size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Como funciona na live</p>
+                <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">1.</span>
+                    <span>Deixe esta regra ativa <strong className="font-semibold text-slate-800 dark:text-slate-200">antes</strong> de iniciar a transmissão.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">2.</span>
+                    <span>Enquanto a live estiver no ar, quem comentar a palavra-chave recebe a DM na hora, ainda durante a transmissão.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">3.</span>
+                    <span>Quando a live termina, os comentários dela deixam de ser respondidos — o Instagram só avisa a automação durante a transmissão.</span>
+                  </li>
+                </ol>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                  A resposta sai <strong className="font-semibold text-slate-700 dark:text-slate-300">só por DM</strong>: o
+                  Instagram não permite que a automação escreva no chat da live. Requisitos: conta profissional
+                  (comercial ou criador de conteúdo) e pública.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <FormSection
           title="Canal"
-          description={isCommentLike(kind)
-            ? 'Automação de comentário funciona apenas em contas do Instagram.'
-            : 'Onde a automação fica escutando as mensagens recebidas.'}
+          description={kind === 'LIVE'
+            ? 'Automação de live funciona apenas em contas profissionais do Instagram.'
+            : isCommentLike(kind)
+              ? 'Automação de comentário funciona apenas em contas do Instagram.'
+              : 'Onde a automação fica escutando as mensagens recebidas.'}
         >
           <ChannelPicker
             channels={pickableChannels}
@@ -289,6 +328,12 @@ export default function AutomationModal({
               : 'Nenhum canal disponível. Conecte um canal primeiro.'}
             error={errors.channelId}
           />
+          {/* Só na live: a conta precisa ter assinado `live_comments` na Meta, e conta
+              conectada antes da feature não assinou. Mostrar isso aqui, com o botão
+              que resolve, poupa descobrir pelo silêncio durante a transmissão. */}
+          {kind === 'LIVE' && draft.channelId && (
+            <LiveWebhookStatus channelId={draft.channelId} />
+          )}
         </FormSection>
 
         <FormSection title="Gatilho" description="O que precisa acontecer para a automação disparar.">
@@ -300,7 +345,9 @@ export default function AutomationModal({
                 clearError('keyword');
               }}
               label="Qualquer comentário"
-              description="Dispara para todos os comentários, sem depender do conteúdo"
+              description={kind === 'LIVE'
+                ? 'Dispara para todo comentário feito durante a live, sem depender do conteúdo'
+                : 'Dispara para todos os comentários, sem depender do conteúdo'}
             />
           )}
 
@@ -371,12 +418,12 @@ export default function AutomationModal({
           )}
         </FormSection>
 
-        {isCommentLike(kind) && (
+        {/* Só no post: a Graph API não aceita reply em comentário de live, então a
+            única resposta possível na transmissão é a DM. */}
+        {kind === 'COMMENT' && (
           <FormSection
             title="Resposta pública"
-            description={kind === 'LIVE'
-              ? 'O que a automação escreve no chat da transmissão, visível para quem está assistindo.'
-              : 'O que a automação escreve embaixo do comentário, visível para todo mundo.'}
+            description="O que a automação escreve embaixo do comentário, visível para todo mundo."
           >
             <Checkbox
               checked={draft.commentReplyEnabled}
@@ -462,9 +509,11 @@ export default function AutomationModal({
 
         <FormSection
           title={answerTitle}
-          description={isCommentLike(kind)
-            ? 'Enviada no direct de quem comentou.'
-            : 'Enviada automaticamente para quem mandou a palavra-chave.'}
+          description={kind === 'LIVE'
+            ? 'Enviada no direct de quem comentou, ainda durante a transmissão.'
+            : isCommentLike(kind)
+              ? 'Enviada no direct de quem comentou.'
+              : 'Enviada automaticamente para quem mandou a palavra-chave.'}
         >
           <div>
             <FieldLabel>Tipo de conteúdo</FieldLabel>
@@ -479,7 +528,10 @@ export default function AutomationModal({
             {isCommentLike(kind) && !hasText(draft.replyType) && (
               <p className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-300">
                 A mídia é entregue via <strong>Private Reply</strong> do Instagram, pelo ID do comentário: funciona mesmo
-                se a pessoa nunca te mandou DM nem te segue, desde que tenha comentado nos últimos 7 dias.
+                se a pessoa nunca te mandou DM nem te segue
+                {kind === 'LIVE'
+                  ? ' — na live, apenas enquanto a transmissão está no ar.'
+                  : ', desde que tenha comentado nos últimos 7 dias.'}
               </p>
             )}
           </div>
@@ -662,13 +714,15 @@ export default function AutomationModal({
           </FormSection>
         )}
 
-        {kind === 'COMMENT' && (
+        {isCommentLike(kind) && (
           <FormSection title="Opções">
             <Checkbox
               checked={draft.oncePerUser}
               onChange={(checked) => patch({ oncePerUser: checked })}
               label="Enviar a DM apenas uma vez por pessoa"
-              description="Evita repetir a mesma DM para quem comentar várias vezes"
+              description={kind === 'LIVE'
+                ? 'Numa live a mesma pessoa comenta várias vezes — sem isso, ela receberia uma DM a cada comentário'
+                : 'Evita repetir a mesma DM para quem comentar várias vezes'}
             />
           </FormSection>
         )}

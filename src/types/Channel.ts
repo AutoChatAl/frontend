@@ -100,6 +100,17 @@ export type InstagramMedia = {
     timestamp: string | null;
 };
 
+/**
+ * `/channels/instagram/:id/webhook-subscription` — campos de webhook que a conta tem
+ * assinados para o app. `fields` vem `null` quando a Meta não respondeu a leitura:
+ * aí a tela não pode afirmar que a escuta está desligada.
+ */
+export type InstagramWebhookSubscription = {
+    fields: string[] | null;
+    /** Campos que o produto precisa e a conta ainda não assinou. */
+    missing: string[];
+};
+
 export type InstagramAccount = {
     id: string;
     name: string;
