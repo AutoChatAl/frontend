@@ -33,6 +33,14 @@ export interface AIRule {
     description: string;
     enabled: boolean;
 }
+export interface AiBlockedContact {
+    id: string;
+    displayName: string | null;
+    phoneE164: string | null;
+    igUsername: string | null;
+    channels: Array<'WHATSAPP' | 'INSTAGRAM'>;
+    blockedAt: string | null;
+}
 export interface AITab {
     id: string;
     label: string;

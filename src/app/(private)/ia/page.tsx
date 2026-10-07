@@ -16,6 +16,7 @@ import { useAIConfig } from '@/hooks/AIHooks';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { aiService } from '@/services/ai.service';
 
+import AIBlocklistSection from './components/AIBlocklistSection';
 import AICatalogSection from './components/AICatalogSection';
 import AIChannelsList from './components/AIChannelsList';
 import AIFunnelSection from './components/AIFunnelSection';
@@ -187,6 +188,8 @@ export default function IAPage() {
         {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} followUpMinutes={followUpMinutes} followUpMessage={followUpMessage} maxChars={customRulesLimit} onCustomRulesChange={setCustomRules} onFollowUpMinutesChange={setFollowUpMinutes} onFollowUpMessageChange={setFollowUpMessage}/>)}
 
         {activeTab === 'guardrails' && (<AIGuardrailsSection/>)}
+
+        {activeTab === 'blocklist' && (<AIBlocklistSection/>)}
 
         {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
 
