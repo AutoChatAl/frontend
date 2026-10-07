@@ -15,6 +15,7 @@ interface SubscriptionContextType {
         tries?: number;
     }) => Promise<void>;
     isTrialing: boolean;
+    isTrialExpired: boolean;
     trialDaysRemaining: number;
     trialEnd: string | null;
     planName: string;
@@ -26,6 +27,8 @@ interface SubscriptionContextType {
     aiPlan: AiPlan | null;
 }
 const SubscriptionContext = createContext<SubscriptionContextType | null>(null);
+const TRIAL_END_REFRESH_GRACE_MS = 65_000;
+const MAX_TIMEOUT_MS = 2_147_483_647;
 export function SubscriptionProvider({ children }: {
     children: ReactNode;
 }) {
@@ -84,9 +87,27 @@ export function SubscriptionProvider({ children }: {
   useEffect(() => {
     refresh();
   }, [refresh]);
+  const trialEndAt = status?.subscription?.status === 'active' ? status.subscription.trialEnd : null;
+  useEffect(() => {
+    if (!trialEndAt)
+      return;
+    const delay = new Date(trialEndAt).getTime() - Date.now() + TRIAL_END_REFRESH_GRACE_MS;
+    if (delay <= 0 || delay > MAX_TIMEOUT_MS)
+      return;
+    const timer = setTimeout(() => {
+      refresh();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [trialEndAt, refresh]);
   const derived = useMemo(() => {
     const sub = status?.subscription;
     const isTrialing = !!(sub?.status === 'active' && sub?.trialEnd && new Date(sub.trialEnd) > new Date());
+    const isTrialExpired = !!(
+      sub?.trialEnd
+      && new Date(sub.trialEnd) <= new Date()
+      && !sub.stripeSubscriptionId
+      && (sub.status === 'block' || sub.status === 'active')
+    );
     const isActive = sub?.status === 'active';
     const isCanceled = sub?.status === 'canceled';
     const isInactive = !!sub && sub.status !== 'active';
@@ -97,6 +118,7 @@ export function SubscriptionProvider({ children }: {
     }
     return {
       isTrialing,
+      isTrialExpired,
       trialDaysRemaining,
       trialEnd: sub?.trialEnd ?? null,
       planName: isCanceled ? 'Sem plano' : (status?.plan?.name ?? 'Sem plano'),

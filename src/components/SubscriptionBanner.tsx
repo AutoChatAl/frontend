@@ -7,10 +7,10 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import Button from './Button';
 
 export default function SubscriptionBanner() {
-  const { isInactive, isCanceled, isTrialing, loading } = useSubscription();
+  const { isInactive, isCanceled, isTrialing, isTrialExpired, loading } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
-  if (loading || !isInactive || isTrialing)
+  if (loading || !isInactive || isTrialing || isTrialExpired)
     return null;
   if (pathname?.startsWith('/plans') || pathname?.startsWith('/settings'))
     return null;

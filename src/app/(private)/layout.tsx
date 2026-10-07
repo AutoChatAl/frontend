@@ -9,6 +9,7 @@ import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/componen
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import SupportChatWidget from '@/components/support-chat/SupportChatWidget';
 import TrialBanner from '@/components/TrialBanner';
+import TrialEndedGate from '@/components/TrialEndedScreen';
 import TrialWelcomeModal from '@/components/TrialWelcomeModal';
 import { AttendantAlertsProvider } from '@/contexts/AttendantAlertsContext';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
@@ -110,7 +111,9 @@ export default function PrivateLayout({ children }: Readonly<{
                       <TrialBanner />
                       <SubscriptionBanner />
                       <TrialWelcomeModal />
-                      {children}
+                      <TrialEndedGate canChoosePlan={userRole !== 'collaborator'} showSupport={!isAdmin}>
+                        {children}
+                      </TrialEndedGate>
                     </main>
                   </div>
                 </div>

@@ -1,51 +1,62 @@
 'use client';
-import { Bot, Megaphone, MonitorSmartphone, Sparkles } from 'lucide-react';
+import { Bot, MonitorSmartphone, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 import Button from './Button';
 import Modal from './Modal';
 
-/** Marca a sessão do navegador; o logout limpa, então volta a aparecer no próximo login. */
 export const TRIAL_MODAL_SEEN_KEY = 'trial_modal_seen';
 
-const DESTAQUES = [
-  {
-    icon: Bot,
-    titulo: 'IA respondendo por você',
-    texto: 'Atendimento automático que consulta agenda, agenda horários e conhece seus produtos.',
-  },
-  {
-    icon: MonitorSmartphone,
-    titulo: 'Mais canais conectados',
-    texto: 'WhatsApp e Instagram em paralelo, com colaboradores dividindo o atendimento.',
-  },
-  {
-    icon: Megaphone,
-    titulo: 'Campanhas e automações',
-    texto: 'Disparos em massa, respostas automáticas e automações de comentários sem limite de teste.',
-  },
-];
+const SHOW_FROM_DAYS_REMAINING = 2;
+const OPEN_DELAY_MS = 1200;
 
-/**
- * Convite para assinar, exibido uma vez por login enquanto a conta está em teste.
- * Não aparece para quem já assinou nem se repete a cada navegação.
- */
+function readSeen(): boolean {
+  try {
+    return sessionStorage.getItem(TRIAL_MODAL_SEEN_KEY) === 'true';
+  }
+  catch {
+    return false;
+  }
+}
+
+function markSeen() {
+  try {
+    sessionStorage.setItem(TRIAL_MODAL_SEEN_KEY, 'true');
+  }
+  catch {
+    return;
+  }
+}
+
 export default function TrialWelcomeModal() {
-  const { isTrialing, trialDaysRemaining, trialEnd, loading } = useSubscription();
+  const { isTrialing, trialDaysRemaining, trialEnd, loading, usage, aiPlan } = useSubscription();
+  const { showWelcome, activeStep } = useOnboarding();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
+  const tourBusy = showWelcome || activeStep !== null;
+  const inFinalDays = trialDaysRemaining <= SHOW_FROM_DAYS_REMAINING;
+
   useEffect(() => {
-    if (loading || !isTrialing)
+    if (loading || !isTrialing || !inFinalDays || tourBusy)
       return;
-    if (sessionStorage.getItem(TRIAL_MODAL_SEEN_KEY) === 'true')
+    if (readSeen())
       return;
-    sessionStorage.setItem(TRIAL_MODAL_SEEN_KEY, 'true');
-    setIsOpen(true);
-  }, [loading, isTrialing]);
+    const timer = setTimeout(() => {
+      markSeen();
+      setIsOpen(true);
+    }, OPEN_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [loading, isTrialing, inFinalDays, tourBusy]);
+
+  useEffect(() => {
+    if (isOpen && tourBusy)
+      setIsOpen(false);
+  }, [isOpen, tourBusy]);
 
   if (!isOpen)
     return null;
@@ -54,10 +65,35 @@ export default function TrialWelcomeModal() {
     ? 'menos de um dia'
     : `${trialDaysRemaining} ${trialDaysRemaining === 1 ? 'dia' : 'dias'}`;
 
-  return (<Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Você está no período de teste" size="sm">
+  const aiLimit = usage?.aiMessages.limit && usage.aiMessages.limit > 0
+    ? usage.aiMessages.limit
+    : aiPlan?.limits.maxAiMessagesPerMonth ?? 0;
+  const aiText = aiLimit > 0
+    ? `Até ${aiLimit.toLocaleString('pt-BR')} respostas da IA no teste, atendendo seus clientes a qualquer hora.`
+    : 'A IA atende seus clientes a qualquer hora, consulta sua agenda e conhece seus produtos.';
+
+  const destaques = [
+    {
+      icon: Bot,
+      titulo: 'IA respondendo seus clientes',
+      texto: aiText,
+    },
+    {
+      icon: MonitorSmartphone,
+      titulo: 'WhatsApp e Instagram',
+      texto: 'Suas conversas dos dois canais num só lugar.',
+    },
+    {
+      icon: Zap,
+      titulo: 'Automações',
+      texto: 'Respostas automáticas, mensagens para quem comenta nos seus posts e campanhas.',
+    },
+  ];
+
+  return (<Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Seu teste está chegando ao fim" size="sm">
     <div className="space-y-5">
-      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
           <Sparkles size={18}/>
         </span>
         <div className="min-w-0">
@@ -65,17 +101,17 @@ export default function TrialWelcomeModal() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {trialEnd
               ? `Termina em ${new Date(trialEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`
-              : 'Assine antes do fim para não perder o acesso.'}
+              : 'Assine antes do fim para não parar o atendimento.'}
           </p>
         </div>
       </div>
 
       <div>
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
-          O teste tem limites reduzidos. Assinando um plano, você libera:
+          Tudo isto já está liberado no seu teste. Assinando um plano, continua funcionando sem parar:
         </p>
         <ul className="space-y-3">
-          {DESTAQUES.map(({ icon: Icon, titulo, texto }) => (
+          {destaques.map(({ icon: Icon, titulo, texto }) => (
             <li key={titulo} className="flex items-start gap-3">
               <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                 <Icon size={14}/>
@@ -89,6 +125,10 @@ export default function TrialWelcomeModal() {
         </ul>
       </div>
 
+      <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+        Suas configurações, contatos e automações ficam guardados mesmo depois do fim do teste.
+      </p>
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           className="flex-1 justify-center"
@@ -97,7 +137,7 @@ export default function TrialWelcomeModal() {
             router.push('/plans');
           }}
         >
-          Ver planos
+          Escolher um plano
         </Button>
         <Button variant="secondary" className="flex-1 justify-center" onClick={() => setIsOpen(false)}>
           Continuar no teste

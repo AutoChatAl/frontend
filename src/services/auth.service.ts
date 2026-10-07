@@ -257,6 +257,7 @@ class AuthService {
       // voltar a aparecer no próximo login, e não uma única vez por aba do navegador.
       sessionStorage.removeItem('trial_modal_seen');
       sessionStorage.removeItem('trial_banner_dismissed');
+      sessionStorage.removeItem('trial_usage_banner_dismissed');
     }
   }
 }
