@@ -12,9 +12,9 @@ interface AutomationTypeModalProps {
 }
 
 const OPTIONS: { kind: AutomationKind; description: string }[] = [
-  { kind: 'DM', description: 'Responde quando alguém manda uma palavra-chave no WhatsApp ou no Instagram.' },
-  { kind: 'COMMENT', description: 'Responde o comentário no post do Instagram e ainda manda um DM para quem comentou.' },
-  { kind: 'LIVE', description: 'Durante a transmissão ao vivo, responde no chat e manda um DM para quem comentou.' },
+  { kind: 'DM', description: 'Responde sozinho quando alguém manda uma palavra no WhatsApp ou no Direct do Instagram.' },
+  { kind: 'COMMENT', description: 'Responde o comentário no post do Instagram e manda uma mensagem no Direct de quem comentou.' },
+  { kind: 'LIVE', description: 'Durante a live, responde no chat e manda uma mensagem no Direct de quem comentou.' },
 ];
 
 /** Um passo antes do formulário: cada tipo abre o modal que já existia. */
@@ -22,7 +22,7 @@ export default function AutomationTypeModal({ isOpen, onClose, onPick }: Automat
   return (
     // `lg` em vez de `md`: com três opções, `max-w-2xl` deixaria cada card com ~200px
     // e o texto quebraria demais.
-    <Modal isOpen={isOpen} onClose={onClose} title="Nova automação" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Criar do zero" size="lg">
       {/* Os três lado a lado a partir de md. Abaixo disso não cabem sem espremer o
           texto, então empilham — é o único ponto em que a linha se quebra. */}
       <div className="grid gap-3 md:grid-cols-3">

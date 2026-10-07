@@ -1,28 +1,35 @@
 'use client';
-import { AlertCircle, Plus, Reply } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Plus } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import EmptyState from '@/components/EmptyState';
 import ImportExportMenu from '@/components/ImportExportMenu';
 import Select from '@/components/Select';
 import { SkeletonPage, SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { autoReplyService } from '@/services/auto-reply.service';
+import { automationInsightsService } from '@/services/automation-insights.service';
 import { commentAutomationService } from '@/services/comment-automation.service';
 import { liveAutomationService } from '@/services/live-automation.service';
+import { setupOnboardingService } from '@/services/setup-onboarding.service';
+import type { AutomationResult } from '@/types/AutomationInsights';
 import type { AutoReply } from '@/types/AutoReply';
+import type { BusinessType } from '@/types/BusinessType';
 import type { CommentAutomation } from '@/types/CommentAutomation';
 import type { LiveAutomation } from '@/types/LiveAutomation';
+import { getErrorMessageFromCatch } from '@/utils/ErrorHandling';
 
 import AutomationCard from './components/AutomationCard';
 import AutomationFilters, { type KindFilter } from './components/AutomationFilters';
+import { draftFromSuggestion, type AutomationDraft } from './components/automationForm';
 import { toCommentRow, toDmRow, toLiveRow, type AutomationKind, type AutomationRow } from './components/automationMeta';
 import AutomationModal from './components/AutomationModal';
 import AutomationTypeModal from './components/AutomationTypeModal';
+import RecipeGallery from './components/RecipeGallery';
+import { getRecipe, recipesForBusiness, type AutomationRecipe } from './recipes';
 
 /** `?tipo=` abre a tela já filtrada — é por onde a rota antiga de comentários chega. */
 function kindFromParam(value: string | null): KindFilter {
@@ -34,8 +41,22 @@ function kindFromParam(value: string | null): KindFilter {
 
 type WithMongoId<T> = T & { _id?: string };
 
+interface CreateRequest {
+  kind: AutomationKind;
+  draft?: Partial<AutomationDraft>;
+  requireLink?: boolean;
+  messagePlaceholder?: string;
+  intro?: string;
+  title?: string;
+}
+
+function resultKey(kind: string, id: string): string {
+  return `${kind}-${id}`;
+}
+
 export default function AutoRepliesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [rows, setRows] = useState<AutomationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,10 +66,16 @@ export default function AutoRepliesPage() {
   const [importChannelId, setImportChannelId] = useState('');
 
   const [typePickerOpen, setTypePickerOpen] = useState(false);
-  const [creating, setCreating] = useState<AutomationKind | null>(null);
+  const [creating, setCreating] = useState<CreateRequest | null>(null);
   const [editTarget, setEditTarget] = useState<AutomationRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AutomationRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [businessType, setBusinessType] = useState<BusinessType | null>(null);
+  const [results, setResults] = useState<Map<string, AutomationResult> | null>(null);
+  const [describing, setDescribing] = useState(false);
+  const [describeError, setDescribeError] = useState<string | null>(null);
+  const recipeHandled = useRef(false);
 
   const { toasts, addToast, removeToast } = useToast();
   const { channels, loading: channelsLoading } = useWorkspaceChannels();
@@ -64,7 +91,7 @@ export default function AutoRepliesPage() {
         liveAutomationService.list().catch(() => null),
       ]);
       if (dms === null && comments === null && lives === null) {
-        throw new Error('Erro ao carregar as automações');
+        throw new Error('Não foi possível carregar as automações');
       }
       const merged: AutomationRow[] = [
         ...(dms ?? []).map((rule: WithMongoId<AutoReply>) => toDmRow({ ...rule, id: rule.id || rule._id || '' })),
@@ -74,15 +101,35 @@ export default function AutoRepliesPage() {
       merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRows(merged);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar as automações');
+      setError(err instanceof Error ? err.message : 'Não foi possível carregar as automações');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const fetchResults = useCallback(async () => {
+    try {
+      const list = await automationInsightsService.getResults();
+      setResults(new Map(list.map((item) => [resultKey(item.kind, item.automationId), item])));
+    } catch {
+      setResults(null);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchRows();
-  }, [fetchRows]);
+    void fetchRows();
+    void fetchResults();
+  }, [fetchRows, fetchResults]);
+
+  useEffect(() => {
+    let alive = true;
+    setupOnboardingService.fetch()
+      .then((state) => { if (alive) setBusinessType(state.businessType); })
+      .catch(() => { if (alive) setBusinessType(null); });
+    return () => { alive = false; };
+  }, []);
+
+  const recipes = useMemo(() => recipesForBusiness(businessType), [businessType]);
 
   const channelNameById = useMemo(
     () => new Map(channels.map((channel) => [channel.id, channel.name])),
@@ -106,6 +153,57 @@ export default function AutoRepliesPage() {
     [byChannel, kind],
   );
 
+  const openRecipe = useCallback((recipe: AutomationRecipe) => {
+    const { target } = recipe;
+    if (target.type === 'automation') {
+      setCreating({
+        kind: target.kind,
+        draft: target.draft,
+        title: recipe.title,
+        ...(target.requiresLink ? { requireLink: true } : {}),
+        ...(target.messagePlaceholder ? { messagePlaceholder: target.messagePlaceholder } : {}),
+        ...(target.note ? { intro: target.note } : {}),
+      });
+      return;
+    }
+    if (target.type === 'flow') {
+      router.push(`/flows?template=${encodeURIComponent(target.templateId)}`);
+      return;
+    }
+    if (target.type === 'cart-recovery') {
+      router.push('/cart-recovery');
+      return;
+    }
+    router.push('/ia');
+  }, [router]);
+
+  useEffect(() => {
+    if (recipeHandled.current) return;
+    const recipe = getRecipe(searchParams.get('recipe'));
+    if (!recipe) return;
+    recipeHandled.current = true;
+    router.replace('/auto-replies');
+    openRecipe(recipe);
+  }, [searchParams, router, openRecipe]);
+
+  const handleDescribe = async (description: string) => {
+    setDescribing(true);
+    setDescribeError(null);
+    try {
+      const suggestion = await automationInsightsService.draftFromText(description);
+      setCreating({
+        kind: suggestion.kind,
+        draft: draftFromSuggestion(suggestion),
+        title: 'Revise a automação sugerida',
+        intro: 'Montamos esta automação a partir do que você escreveu. Confira as palavras e a mensagem, escolha onde ela vale e salve para ativar.',
+      });
+    } catch (err) {
+      setDescribeError(getErrorMessageFromCatch(err, 'Não conseguimos entender o pedido agora. Tente descrever de outro jeito ou escolha um dos objetivos acima.'));
+    } finally {
+      setDescribing(false);
+    }
+  };
+
   const handleToggle = async (row: AutomationRow) => {
     try {
       if (row.kind === 'DM') await autoReplyService.toggle(row.id);
@@ -114,7 +212,7 @@ export default function AutoRepliesPage() {
       setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, enabled: !item.enabled } : item)));
       addToast('success', `Automação ${row.enabled ? 'desativada' : 'ativada'}`);
     } catch {
-      addToast('error', 'Erro ao alterar o status da automação');
+      addToast('error', 'Não foi possível ligar ou desligar a automação');
     }
   };
 
@@ -128,7 +226,7 @@ export default function AutoRepliesPage() {
       setRows((prev) => prev.filter((item) => item.id !== deleteTarget.id));
       addToast('success', 'Automação excluída');
     } catch {
-      addToast('error', 'Erro ao excluir a automação');
+      addToast('error', 'Não foi possível excluir a automação');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -136,11 +234,12 @@ export default function AutoRepliesPage() {
   };
 
   const afterSave = (message: string) => {
-    fetchRows();
+    void fetchRows();
+    void fetchResults();
     addToast('success', message);
   };
 
-  if (loading) {
+  if (loading && rows.length === 0) {
     return <SkeletonPage><SkeletonRows count={5}/></SkeletonPage>;
   }
 
@@ -159,14 +258,14 @@ export default function AutoRepliesPage() {
   return (<div className="w-full max-w-full space-y-3">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Auto-respostas</h1>
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Automações</h1>
         <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-          Respostas automáticas por palavra-chave, em mensagens diretas e em comentários
+          Respostas automáticas para mensagens, comentários e lives, funcionando 24 horas por dia
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <ImportExportMenu
-          resourceLabel="auto-respostas"
+          resourceLabel="automações"
           onExport={() => autoReplyService.exportCsv(channelId || undefined)}
           onImport={(csv) => autoReplyService.importCsv(importChannelId, csv)}
           onImported={() => { void fetchRows(); }}
@@ -174,25 +273,37 @@ export default function AutoRepliesPage() {
           importBlocked={!importChannelId}
           importExtra={(
             <Select
-              label="Canal de destino"
-              placeholder={channels.length === 0 ? 'Nenhum canal conectado' : 'Escolha o canal...'}
+              label="Onde as respostas vão funcionar"
+              placeholder={channels.length === 0 ? 'Nenhum número ou conta conectada' : 'Escolha o número ou a conta...'}
               value={importChannelId}
               onChange={setImportChannelId}
               disabled={channels.length === 0}
               options={channels.map((channel) => ({ value: channel.id, label: channel.name }))}
-              hint="Todas as regras do arquivo entram neste canal."
+              hint="Todas as respostas do arquivo entram aqui."
             />
           )}
         />
         <div data-tour="auto-replies-new">
           <Button icon={<Plus size={16}/>} onClick={() => setTypePickerOpen(true)} className="w-full justify-center sm:w-auto">
-            Nova automação
+            Criar do zero
           </Button>
         </div>
       </div>
     </div>
 
-    {rows.length > 0 && (
+    <RecipeGallery
+      recipes={recipes}
+      businessType={businessType}
+      onPick={openRecipe}
+      onDescribe={(text) => { void handleDescribe(text); }}
+      describing={describing}
+      describeError={describeError}
+      onDescribeChange={() => setDescribeError(null)}
+      initialVisible={rows.length > 0 ? 3 : 6}
+    />
+
+    {rows.length > 0 && (<>
+      <h2 className="pt-2 text-sm font-semibold text-slate-900 dark:text-white">Suas automações</h2>
       <AutomationFilters
         kind={kind}
         onKindChange={setKind}
@@ -201,14 +312,9 @@ export default function AutoRepliesPage() {
         channels={channels}
         counts={counts}
       />
-    )}
+    </>)}
 
-    {rows.length === 0 ? (<EmptyState
-      icon={<Reply size={20}/>}
-      title="Nenhuma automação configurada"
-      description="Crie regras para responder sozinho quando alguém mandar uma palavra-chave no direct ou comentar num post."
-      action={{ label: 'Criar primeira automação', icon: <Plus size={16}/>, onClick: () => setTypePickerOpen(true) }}
-    />) : visible.length === 0 ? (<p className="rounded-lg border border-dashed border-slate-200 py-8 text-center text-[13px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
+    {rows.length === 0 ? null : visible.length === 0 ? (<p className="rounded-lg border border-dashed border-slate-200 py-8 text-center text-[13px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
       Nenhuma automação com esses filtros.
     </p>) : (<div className="grid gap-2 sm:gap-3">
       {visible.map((row) => (
@@ -216,6 +322,8 @@ export default function AutoRepliesPage() {
           key={`${row.kind}-${row.id}`}
           row={row}
           channelName={channelNameById.get(row.channelId) ?? null}
+          result={results?.get(resultKey(row.kind, row.id)) ?? null}
+          resultsReady={results !== null}
           onToggle={handleToggle}
           onEdit={setEditTarget}
           onDelete={setDeleteTarget}
@@ -228,19 +336,24 @@ export default function AutoRepliesPage() {
       onClose={() => setTypePickerOpen(false)}
       onPick={(picked) => {
         setTypePickerOpen(false);
-        setCreating(picked);
+        setCreating({ kind: picked });
       }}
     />
 
     {creating && (<AutomationModal
       isOpen
-      kind={creating}
+      kind={creating.kind}
+      initialDraft={creating.draft}
+      requireLink={creating.requireLink}
+      messagePlaceholder={creating.messagePlaceholder}
+      intro={creating.intro}
+      title={creating.title}
       channels={channels}
       channelsLoading={channelsLoading}
       onClose={() => setCreating(null)}
       onSuccess={() => {
         setCreating(null);
-        afterSave('Automação criada com sucesso!');
+        afterSave('Automação criada e ativada!');
       }}
     />)}
 
@@ -253,7 +366,7 @@ export default function AutoRepliesPage() {
       onClose={() => setEditTarget(null)}
       onSuccess={() => {
         setEditTarget(null);
-        afterSave('Automação atualizada com sucesso!');
+        afterSave('Automação atualizada!');
       }}
     />)}
 
@@ -264,7 +377,7 @@ export default function AutoRepliesPage() {
       loading={deleting}
       title="Excluir automação"
       message={deleteTarget.kind === 'DM'
-        ? `Tem certeza que deseja excluir a auto-resposta para "${deleteTarget.rule.keyword}"?`
+        ? `Tem certeza que deseja excluir a resposta automática para "${deleteTarget.rule.keyword}"?`
         : `Tem certeza que deseja excluir a automação ${deleteTarget.kind === 'LIVE' ? 'de live ' : ''}${deleteTarget.rule.keyword ? `para "${deleteTarget.rule.keyword}"` : 'de qualquer comentário'}?`}
     />)}
 

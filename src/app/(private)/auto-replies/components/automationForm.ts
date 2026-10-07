@@ -1,4 +1,5 @@
 import type { WorkspaceChannelType } from '@/hooks/WorkspaceChannelsHook';
+import type { AutomationDraftSuggestion } from '@/types/AutomationInsights';
 import type { AutoReply, CreateAutoReplyInput, ReplyType } from '@/types/AutoReply';
 import type { CommentAutomation, CreateCommentAutomationInput } from '@/types/CommentAutomation';
 import type { CreateLiveAutomationInput, LiveAutomation } from '@/types/LiveAutomation';
@@ -67,6 +68,16 @@ export const COMMENT_REPLY_MAX = 300;
 /** Teto de variações da resposta pública. Acima disso a tela vira uma lista sem fim. */
 export const COMMENT_REPLY_OPTIONS_MAX = 5;
 
+export const DEFAULT_COMMENT_REPLIES = [
+  'Oi, {{username}}! Te mandei tudo no Direct 💬',
+  'Prontinho, {{username}}! Dá uma olhada no seu Direct 📩',
+  'Acabei de te chamar no Direct, {{username}} 😉',
+];
+
+export function hasAdvancedMatching(draft: AutomationDraft): boolean {
+  return draft.matchMode !== 'CONTAINS' || draft.caseSensitive || draft.keywordLogic === 'ALL';
+}
+
 export function emptyDraft(kind: AutomationKind): AutomationDraft {
   return {
     channelId: '',
@@ -82,7 +93,7 @@ export function emptyDraft(kind: AutomationKind): AutomationDraft {
     // chat corre rápido e responder cada comentário polui a tela de quem assiste.
     commentReplyEnabled: kind === 'COMMENT',
     commentReplyMessage: '',
-    commentReplyMessages: [''],
+    commentReplyMessages: isCommentLike(kind) ? [...DEFAULT_COMMENT_REPLIES] : [''],
     replyType: 'TEXT',
     message: '',
     audioBase64: '',
@@ -198,6 +209,23 @@ export function draftFromCommentAutomation(rule: CommentAutomation): AutomationD
   };
 }
 
+export function draftFromSuggestion(suggestion: AutomationDraftSuggestion): Partial<AutomationDraft> {
+  const commentLike = isCommentLike(suggestion.kind);
+  const replies = suggestion.commentReplyMessages.map((entry) => entry.trim()).filter(Boolean);
+  const draft: Partial<AutomationDraft> = {
+    keywords: addKeywords([], suggestion.keywords.join(',')),
+    triggerOnAnyComment: commentLike && suggestion.triggerOnAnyComment,
+    message: suggestion.message,
+    linkUrl: suggestion.linkUrl,
+    linkLabel: suggestion.linkLabel.slice(0, LINK_LABEL_MAX),
+  };
+  if (commentLike && replies.length > 0) {
+    draft.commentReplyEnabled = true;
+    draft.commentReplyMessages = replies.slice(0, COMMENT_REPLY_OPTIONS_MAX).map((entry) => entry.slice(0, COMMENT_REPLY_MAX));
+  }
+  return draft;
+}
+
 /**
  * Os campos do botão de link vão sempre, mesmo vazios. Omitir um campo faz o
  * backend manter o valor antigo — seria impossível apagar um botão já salvo.
@@ -255,7 +283,7 @@ export function toCommentAutomationInput(draft: AutomationDraft): CreateCommentA
     caseSensitive: draft.caseSensitive,
     triggerOnAnyComment: draft.triggerOnAnyComment,
     commentReplyEnabled: draft.commentReplyEnabled,
-    commentReplyMessage: draft.commentReplyMessages[0]?.trim() ?? '',
+    commentReplyMessage: draft.commentReplyMessages.map((m) => m.trim()).find(Boolean) ?? '',
     commentReplyMessages: draft.commentReplyMessages.map((m) => m.trim()).filter(Boolean),
     dmReplyType: draft.replyType,
     dmMessage: draft.message,
@@ -282,18 +310,18 @@ export function toCommentAutomationInput(draft: AutomationDraft): CreateCommentA
 export const MATCH_MODE_OPTIONS: { value: MatchMode; label: string; description: Record<AutomationKind, string> }[] = [
   {
     value: 'CONTAINS',
-    label: 'Contém',
-    description: { DM: 'A mensagem contém a palavra-chave', COMMENT: 'O comentário contém a palavra-chave', LIVE: 'O comentário na live contém a palavra-chave' },
+    label: 'Tem a palavra',
+    description: { DM: 'Responde se a palavra aparecer em qualquer parte da mensagem. É o mais indicado.', COMMENT: 'Responde se a palavra aparecer em qualquer parte do comentário. É o mais indicado.', LIVE: 'Responde se a palavra aparecer em qualquer parte do comentário da live. É o mais indicado.' },
   },
   {
     value: 'EXACT',
-    label: 'Exata',
-    description: { DM: 'A mensagem é exatamente a palavra-chave', COMMENT: 'O comentário é exatamente a palavra-chave', LIVE: 'O comentário na live é exatamente a palavra-chave' },
+    label: 'Só a palavra',
+    description: { DM: 'Responde só se a pessoa mandar exatamente a palavra, sem mais nada.', COMMENT: 'Responde só se o comentário for exatamente a palavra, sem mais nada.', LIVE: 'Responde só se o comentário da live for exatamente a palavra, sem mais nada.' },
   },
   {
     value: 'STARTS_WITH',
     label: 'Começa com',
-    description: { DM: 'A mensagem começa com a palavra-chave', COMMENT: 'O comentário começa com a palavra-chave', LIVE: 'O comentário na live começa com a palavra-chave' },
+    description: { DM: 'Responde se a mensagem começar com a palavra.', COMMENT: 'Responde se o comentário começar com a palavra.', LIVE: 'Responde se o comentário da live começar com a palavra.' },
   },
 ];
 
@@ -324,19 +352,27 @@ export function replyTypeOptions(channelType: WorkspaceChannelType, kind: Automa
   return allowed.filter((option) => !hasDocument(option.value));
 }
 
-export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Record<string, string> {
+export interface ValidateDraftOptions {
+  requireLink?: boolean;
+}
+
+export function validateDraft(draft: AutomationDraft, kind: AutomationKind, options: ValidateDraftOptions = {}): Record<string, string> {
   const errors: Record<string, string> = {};
 
   if (!draft.channelId) {
-    errors.channelId = isCommentLike(kind) ? 'Selecione uma conta do Instagram' : 'Selecione um canal';
+    errors.channelId = isCommentLike(kind) ? 'Escolha a conta do Instagram' : 'Escolha onde a automação vai funcionar';
   }
 
   if (isCommentLike(kind) && draft.triggerOnAnyComment) {
     // Sem palavra-chave por definição.
   } else if (draft.keywords.length === 0) {
     errors.keywords = isCommentLike(kind)
-      ? 'Informe a palavra-chave ou ative "Qualquer comentário"'
-      : 'Informe ao menos uma palavra-chave';
+      ? 'Escreva ao menos uma palavra ou escolha "Qualquer comentário"'
+      : 'Escreva ao menos uma palavra';
+  }
+
+  if (options.requireLink && hasText(draft.replyType) && !draft.linkUrl.trim()) {
+    errors.linkUrl = 'Cole aqui o link que a pessoa vai receber';
   }
 
   if (kind === 'COMMENT' && draft.postFilter === 'SPECIFIC' && draft.postIds.length === 0) {
@@ -346,11 +382,11 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Rec
   }
 
   if (isCommentLike(kind) && draft.commentReplyEnabled && !draft.commentReplyMessages.some((m) => m.trim())) {
-    errors.commentReplyMessage = 'Informe ao menos uma resposta ao comentário';
+    errors.commentReplyMessage = 'Escreva a resposta que vai aparecer no comentário';
   }
 
   if (hasText(draft.replyType) && !draft.message.trim()) {
-    errors.message = isCommentLike(kind) ? 'Informe a mensagem da DM' : 'Informe a mensagem de resposta';
+    errors.message = isCommentLike(kind) ? 'Escreva a mensagem que vai no Direct' : 'Escreva a mensagem de resposta';
   }
   if (!isCommentLike(kind) && hasAudio(draft.replyType) && !draft.audioBase64) {
     errors.audio = 'Envie um arquivo de áudio';
@@ -364,7 +400,7 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Rec
 
   const linkUrl = draft.linkUrl.trim();
   if (linkUrl && !/^https?:\/\/.+/.test(linkUrl)) {
-    errors.linkUrl = 'Informe uma URL válida (ex.: https://exemplo.com)';
+    errors.linkUrl = 'Confira o link: ele precisa começar com https:// (ex.: https://minhaloja.com)';
   }
   if (draft.linkLabel.trim().length > LINK_LABEL_MAX) {
     errors.linkLabel = `O texto do botão deve ter no máximo ${LINK_LABEL_MAX} caracteres`;

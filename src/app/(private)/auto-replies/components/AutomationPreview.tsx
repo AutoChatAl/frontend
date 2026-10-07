@@ -58,11 +58,21 @@ function Caption({ children }: { children: string }) {
   return <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">{children}</p>;
 }
 
-export default function AutomationPreview({ kind, draft }: { kind: AutomationKind; draft: AutomationDraft }) {
+interface AutomationPreviewProps {
+  kind: AutomationKind;
+  draft: AutomationDraft;
+  sampleText?: string;
+  fires?: boolean;
+  bare?: boolean;
+}
+
+export default function AutomationPreview({ kind, draft, sampleText = '', fires = true, bare = false }: AutomationPreviewProps) {
   const formatted = draft.channelType !== 'INSTAGRAM';
+  const sample = sampleText.trim();
   const showText = hasText(draft.replyType) && draft.message.trim().length > 0;
   const showLink = draft.linkUrl.trim().length > 0;
-  const commentReply = isCommentLike(kind) && draft.commentReplyEnabled && draft.commentReplyMessage.trim().length > 0;
+  const firstReply = draft.commentReplyMessages.find((entry) => entry.trim()) ?? draft.commentReplyMessage;
+  const commentReply = isCommentLike(kind) && draft.commentReplyEnabled && firstReply.trim().length > 0;
   // No Instagram com botão a mensagem vira o `title` do generic template, e o
   // Instagram renderiza esse campo em negrito por conta própria.
   const isInstagramCard = draft.channelType === 'INSTAGRAM' && showLink;
@@ -73,21 +83,33 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
     || (hasImage(draft.replyType) && draft.imageBase64)
     || (hasDocument(draft.replyType) && draft.documentBase64);
 
-  if (!hasAnything) return null;
+  if (!hasAnything && !sample) return null;
 
-  const triggerLabel = isCommentLike(kind)
-    ? (draft.triggerOnAnyComment
-      ? (kind === 'LIVE' ? 'Qualquer comentário na live' : 'Qualquer comentário')
-      : (kind === 'LIVE' ? 'Comentário na live' : 'Comentário'))
-    : 'Mensagem recebida';
-  const answerLabel = isCommentLike(kind) ? 'DM enviada' : 'Resposta automática';
+  const triggerLabel = sample
+    ? (isCommentLike(kind) ? (kind === 'LIVE' ? 'Comentário de teste na live' : 'Comentário de teste') : 'Mensagem de teste')
+    : isCommentLike(kind)
+      ? (draft.triggerOnAnyComment
+        ? (kind === 'LIVE' ? 'Qualquer comentário na live' : 'Qualquer comentário')
+        : (kind === 'LIVE' ? 'Comentário na live' : 'Comentário'))
+      : 'Mensagem recebida';
+  const answerLabel = isCommentLike(kind) ? 'Mensagem no Direct' : 'Resposta automática';
+  const showAnswer = fires && hasAnything;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prévia</p>
+    <div className={bare ? '' : 'rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40'}>
+      {!bare && <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prévia</p>}
 
       <div className="space-y-4">
-        {(draft.keywords.length > 0 || draft.triggerOnAnyComment) && (
+        {sample && (
+          <div>
+            <Caption>{triggerLabel}</Caption>
+            <div className={`${BUBBLE} inline-block max-w-[85%]`}>
+              <p className="whitespace-pre-wrap wrap-break-word">{sample}</p>
+            </div>
+          </div>
+        )}
+
+        {!sample && (draft.keywords.length > 0 || draft.triggerOnAnyComment) && (
           <div>
             <Caption>{triggerLabel}</Caption>
             {draft.triggerOnAnyComment ? (
@@ -114,16 +136,20 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
           </div>
         )}
 
-        {commentReply && (
+        {sample && !fires && (
+          <p className="text-xs italic text-slate-400 dark:text-slate-500">Nenhuma resposta seria enviada.</p>
+        )}
+
+        {fires && commentReply && (
           <div>
-            <Caption>Resposta pública no comentário</Caption>
+            <Caption>{kind === 'LIVE' ? 'Resposta no chat da live' : 'Resposta pública no comentário'}</Caption>
             <div className={`${BUBBLE} ml-6 inline-block max-w-[85%]`}>
-              <MessageBody text={withUsername(draft.commentReplyMessage)} formatted={false} />
+              <MessageBody text={withUsername(firstReply)} formatted={false} />
             </div>
           </div>
         )}
 
-        <div>
+        {showAnswer && (<div>
           <Caption>{answerLabel}</Caption>
           <div className="max-w-[85%] space-y-2">
             {showText && (
@@ -151,7 +177,7 @@ export default function AutomationPreview({ kind, draft }: { kind: AutomationKin
               <Attachment icon={<FileText size={14} />} label={draft.documentName || 'Documento anexado'} />
             )}
           </div>
-        </div>
+        </div>)}
       </div>
     </div>
   );

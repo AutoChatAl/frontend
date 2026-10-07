@@ -1,9 +1,10 @@
 'use client';
-import { ExternalLink, FileText, Image as ImageIcon, Mic, Pencil, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Image as ImageIcon, Mic, MousePointerClick, Pencil, Send, Trash2, Zap } from 'lucide-react';
 
 import Card from '@/components/Card';
 import IconButton from '@/components/IconButton';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import type { AutomationResult } from '@/types/AutomationInsights';
 import { whatsAppToHtml } from '@/utils/whatsappFormat';
 
 import {
@@ -20,9 +21,61 @@ import {
 interface AutomationCardProps {
   row: AutomationRow;
   channelName: string | null;
+  result?: AutomationResult | null | undefined;
+  resultsReady?: boolean;
   onToggle: (row: AutomationRow) => void;
   onEdit: (row: AutomationRow) => void;
   onDelete: (row: AutomationRow) => void;
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count.toLocaleString('pt-BR')} ${count === 1 ? one : many}`;
+}
+
+function lastTriggered(iso: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const startOf = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(date)) / 86_400_000);
+  if (days <= 0) return 'última vez hoje';
+  if (days === 1) return 'última vez ontem';
+  if (days < 30) return `última vez há ${days} dias`;
+  return `última vez em ${date.toLocaleDateString('pt-BR')}`;
+}
+
+function ResultsLine({ result, ready }: { result: AutomationResult | null | undefined; ready: boolean }) {
+  if (!ready) return null;
+  if (!result || result.triggers === 0) {
+    return (
+      <p className="flex items-center gap-1.5 border-t border-slate-100 pt-2.5 text-xs text-slate-400 dark:border-slate-700/60 dark:text-slate-500">
+        <Zap size={12} className="shrink-0" />
+        Ainda não disparou
+      </p>
+    );
+  }
+  const when = lastTriggered(result.lastTriggeredAt);
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2.5 text-xs text-slate-500 dark:border-slate-700/60 dark:text-slate-400">
+      <span className="inline-flex items-center gap-1.5">
+        <Zap size={12} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+        <strong className="font-semibold text-slate-900 dark:text-white">{plural(result.triggers, 'disparo', 'disparos')}</strong>
+      </span>
+      {result.linksSent > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <Send size={12} className="shrink-0 text-indigo-500 dark:text-indigo-400" />
+          {plural(result.linksSent, 'pessoa recebeu o link', 'pessoas receberam o link')}
+        </span>
+      )}
+      {result.linksSent > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <MousePointerClick size={12} className="shrink-0 text-emerald-500 dark:text-emerald-400" />
+          {plural(result.clicks, 'clique', 'cliques')}
+        </span>
+      )}
+      {when && <span className="text-slate-400 dark:text-slate-500">{when}</span>}
+    </div>
+  );
 }
 
 function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -151,7 +204,7 @@ function Trigger({ label, keywords, logic, any }: {
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[11px] text-slate-400 dark:text-slate-500">{label}</span>
       {any ? (
-        <span className="text-[13px] text-slate-500 dark:text-slate-400">qualquer comentário no post</span>
+        <span className="text-[13px] text-slate-500 dark:text-slate-400">qualquer comentário</span>
       ) : (
         keywords.map((keyword, index) => (
           <span key={`${keyword}-${index}`} className="flex min-w-0 items-center gap-2">
@@ -169,7 +222,7 @@ function keywordsOf(rule: { keyword: string; keywords?: string[] }): string[] {
   return rule.keywords?.length ? rule.keywords : [rule.keyword].filter(Boolean);
 }
 
-export default function AutomationCard({ row, channelName, onToggle, onEdit, onDelete }: AutomationCardProps) {
+export default function AutomationCard({ row, channelName, result, resultsReady = false, onToggle, onEdit, onDelete }: AutomationCardProps) {
   const kind = KIND_META[row.kind];
   const KindIcon = kind.icon;
   const channel = CHANNEL_TYPE_META[row.channelType];
@@ -188,7 +241,7 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
               <ChannelIcon size={11} />
               {channelName ?? channel.label}
             </Chip>
-            {row.kind !== 'DM' && row.rule.triggerOnAnyComment
+            {(row.kind !== 'DM' && row.rule.triggerOnAnyComment) || row.rule.matchMode === 'CONTAINS'
               ? null
               : <Chip>{MATCH_MODE_LABELS[row.rule.matchMode] ?? row.rule.matchMode}</Chip>}
             {row.kind === 'DM' && row.rule.caseSensitive && (
@@ -228,8 +281,9 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
           ) : (
             <>
               <Trigger
-                label="Quando comentarem"
+                label={row.kind === 'LIVE' ? 'Quando comentarem na live' : 'Quando comentarem'}
                 keywords={keywordsOf(row.rule)}
+                {...(row.rule.keywordLogic ? { logic: row.rule.keywordLogic } : {})}
                 any={row.rule.triggerOnAnyComment}
               />
               {row.rule.commentReplyEnabled && row.rule.commentReplyMessage && (
@@ -239,7 +293,7 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
                 </div>
               )}
               <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 dark:border-slate-700/60 dark:bg-slate-900/30">
-                <p className="mb-1 text-[11px] text-slate-400 dark:text-slate-500">DM enviada</p>
+                <p className="mb-1 text-[11px] text-slate-400 dark:text-slate-500">Mensagem no Direct</p>
                 <ResponseBody
                   text={row.rule.dmMessage}
                   link={linkOf(row.rule.dmLinkUrl, row.rule.dmLinkLabel, row.rule.dmLinkDescription)}
@@ -255,6 +309,8 @@ export default function AutomationCard({ row, channelName, onToggle, onEdit, onD
               </div>
             </>
           )}
+
+          <ResultsLine result={result} ready={resultsReady} />
         </div>
 
         <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
