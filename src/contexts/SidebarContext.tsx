@@ -1,9 +1,19 @@
 'use client';
-import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3 } from 'lucide-react';
+import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3, Rocket } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
+import {
+  activeSetupSteps,
+  hasAnyAutomation,
+  hasConfiguredAi,
+  hasConnectedChannel,
+  LEGACY_STEP_IDS,
+  type SetupStepId,
+} from '@/app/get-started/setupSteps';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { authService, type Permission } from '@/services/auth.service';
+import { setupOnboardingService } from '@/services/setup-onboarding.service';
 import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 
 export type MenuGroupId = 'main' | 'audience' | 'engagement' | 'automation' | 'system';
@@ -39,6 +49,7 @@ export interface MenuItem {
     permission?: Permission | Permission[];
     locked?: boolean;
     beta?: boolean;
+    advanced?: boolean;
 }
 interface SidebarContextType {
     activeTab: string;
@@ -62,9 +73,9 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Base do workspace — sem rótulo de seção.
   { id: 'dashboard', icon: LayoutDashboard, text: 'Visão Geral', href: '/dashboard', permission: 'dashboard', group: 'main' },
   { id: 'channels', icon: Share2, text: 'Canais', href: '/channels', permission: ['channels', 'whatsapp-official'], group: 'main' },
-  { id: 'whatsapp-official', icon: BadgeCheck, text: 'API Oficial', href: '/whatsapp-official', permission: 'whatsapp-official', group: 'main' },
+  { id: 'whatsapp-official', icon: BadgeCheck, text: 'WhatsApp Oficial', href: '/whatsapp-official', permission: 'whatsapp-official', group: 'main' },
   // Público — quem você alcança.
-  { id: 'inbox', icon: MessagesSquare, text: 'Chat', href: '/inbox', permission: 'inbox', group: 'audience', beta: true },
+  { id: 'inbox', icon: MessagesSquare, text: 'Conversas', href: '/inbox', permission: 'inbox', group: 'audience', beta: true },
   { id: 'contacts', icon: Users, text: 'Contatos', href: '/contacts', permission: 'contacts', group: 'audience' },
   { id: 'groups', icon: Layers, text: 'Grupos', href: '/groups', permission: 'groups', group: 'audience' },
   // Engajamento — disparos e ações proativas.
@@ -75,7 +86,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'cart-recovery', group: 'engagement' },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas e IA.
-  { id: 'auto-replies', icon: Reply, text: 'Auto-Respostas', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
+  { id: 'auto-replies', icon: Reply, text: 'Automações', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
   { id: 'flows', icon: Workflow, text: 'Fluxos', href: '/flows', permission: 'auto-replies', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'Inteligência Artificial', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
@@ -87,7 +98,30 @@ const ALL_MENU_ITEMS: MenuItem[] = [
 const HIDDEN_MENU_IDS = new Set<string>([
   ...(HIDDEN_FEATURES.cartRecovery ? ['cart-recovery'] : []),
 ]);
+const ADVANCED_MENU_IDS = new Set<string>(['flows', 'funnel']);
 const FULL_ACCESS_ROLES = ['owner', 'admin'];
+const SETUP_MENU_ITEM: MenuItem = { id: 'get-started', icon: Rocket, text: 'Primeiros passos', href: '/get-started', group: 'main' };
+
+function canSeeSetup(role: string | undefined): boolean {
+  return !!role && FULL_ACCESS_ROLES.includes(role);
+}
+
+async function hasPendingSetupStep(hasAiPlan: boolean): Promise<boolean> {
+  const state = await setupOnboardingService.fetch();
+  const saved = new Set(state.completedSteps);
+  const savedDone = (step: SetupStepId): boolean => saved.has(step) || LEGACY_STEP_IDS[step].some((id) => saved.has(id));
+  const steps = activeSetupSteps(hasAiPlan);
+  if (steps.includes('ai-test') && !savedDone('ai-test')) return true;
+  const detectors: Array<[SetupStepId, () => Promise<boolean>]> = [
+    ['channel', hasConnectedChannel],
+    ['ai', hasConfiguredAi],
+    ['recipe', hasAnyAutomation],
+  ];
+  for (const [step, detect] of detectors) {
+    if (steps.includes(step) && !savedDone(step) && !(await detect())) return true;
+  }
+  return false;
+}
 
 /** Dono e admin passam por tudo; colaborador precisa da permissão explícita. */
 export function canAccessMenuItem(
@@ -152,10 +186,32 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
   const [activeTab, setActiveTab] = useState(defaultActiveTab);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [setupPending, setSetupPending] = useState(false);
+  const setupCheckedRef = useRef(false);
+  const onDashboard = pathname === '/dashboard';
+  const { hasAiPlan, loading: subscriptionLoading } = useSubscription();
   useEffect(() => {
     const currentTab = pathname.split('/')[1] || 'dashboard';
     setActiveTab(currentTab);
   }, [pathname]);
+  useEffect(() => {
+    if (customMenuItems || !canSeeSetup(authService.getUser()?.role)) {
+      setSetupPending(false);
+      return;
+    }
+    if (subscriptionLoading) return;
+    if (setupCheckedRef.current && !onDashboard) return;
+    setupCheckedRef.current = true;
+    let active = true;
+    hasPendingSetupStep(hasAiPlan)
+      .then((pending) => {
+        if (active) setSetupPending(pending);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [customMenuItems, onDashboard, hasAiPlan, subscriptionLoading]);
   const menuItems = useMemo(() => {
     if (customMenuItems)
       return customMenuItems;
@@ -174,8 +230,11 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
       items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
-    return items.filter((item) => !HIDDEN_MENU_IDS.has(item.id));
-  }, [customMenuItems, showSupportTab]);
+    const visible = items
+      .filter((item) => !HIDDEN_MENU_IDS.has(item.id))
+      .map((item) => (setupPending && ADVANCED_MENU_IDS.has(item.id) ? { ...item, advanced: true } : item));
+    return setupPending ? [SETUP_MENU_ITEM, ...visible] : visible;
+  }, [customMenuItems, showSupportTab, setupPending]);
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);
   const value: SidebarContextType = {

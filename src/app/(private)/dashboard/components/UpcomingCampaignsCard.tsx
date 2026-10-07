@@ -1,4 +1,5 @@
 'use client';
+import { Megaphone } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -7,6 +8,8 @@ import Card from '@/components/Card';
 import CardEmptyState from '@/components/CardEmptyState';
 import { campaignService } from '@/services/campaign.service';
 import type { Campaign } from '@/types/Campaign';
+
+import DashboardEmptyHint from './DashboardEmptyHint';
 
 interface TodayRow {
     key: string;
@@ -181,7 +184,12 @@ export default function UpcomingCampaignsCard() {
 
     {loading ? (<div className="flex-1 flex flex-col justify-center animate-pulse" aria-hidden>
       <div className="h-9 w-full rounded-md bg-slate-100 dark:bg-slate-700/60"/>
-    </div>) : visible.length === 0 ? (<CardEmptyState message="Nenhum disparo para hoje." action={
+    </div>) : campaigns !== null && campaigns.length === 0 ? (<DashboardEmptyHint
+      icon={Megaphone}
+      message="Com uma campanha você manda a mesma mensagem para muitos contatos de uma vez. Os envios marcados para hoje aparecem aqui."
+      actionLabel="Criar uma campanha"
+      href="/campaigns"
+    />) : visible.length === 0 ? (<CardEmptyState message="Nenhum disparo para hoje." action={
       <Link href="/campaigns" className="text-[13px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           Criar uma campanha
       </Link>

@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { authService } from '@/services/auth.service';
 
@@ -28,5 +29,9 @@ export default function ComecarLayout({ children }: Readonly<{ children: React.R
     );
   }
 
-  return <ThemeProvider>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <SubscriptionProvider>{children}</SubscriptionProvider>
+    </ThemeProvider>
+  );
 }

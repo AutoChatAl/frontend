@@ -1,184 +1,93 @@
 'use client';
-import { Bot, Instagram, Lock, MessageCircle, MessageSquare, PartyPopper, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Instagram, Lock, MessageCircle, MessagesSquare, PartyPopper, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import AutomationModal from '@/app/(private)/auto-replies/components/AutomationModal';
-import CreateCampaignModal from '@/app/(private)/campaigns/components/CreateCampaignModal';
+import { RECIPE_DESTINATION_LABEL, type AutomationRecipe } from '@/app/(private)/auto-replies/recipes';
+import InstagramConnectCheckModal from '@/app/(private)/channels/components/InstagramConnectCheckModal';
 import WhatsAppCreateModal from '@/app/(private)/channels/components/WhatsAppCreateModal';
+import { useInstagramOAuthPopup } from '@/app/(private)/channels/hooks/useInstagramOAuthPopup';
 import BrandLogo from '@/components/BrandLogo';
 import Button from '@/components/Button';
 import { ToastContainer, useToast } from '@/components/Toast';
-import { useInstagramAccounts, useWhatsAppInstances } from '@/hooks/ChannelHook';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useWhatsAppInstances } from '@/hooks/ChannelHook';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { authService } from '@/services/auth.service';
-import { autoReplyService } from '@/services/auto-reply.service';
-import { campaignService } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
-import { commentAutomationService } from '@/services/comment-automation.service';
 import { setupOnboardingService } from '@/services/setup-onboarding.service';
-import { whatsappOfficialService } from '@/services/whatsapp-official.service';
+import { BUSINESS_TYPE_LABELS, type BusinessType } from '@/types/BusinessType';
 import type { WhatsAppInstance } from '@/types/Channel';
-import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
-import SetupStepCard, { type SetupStepAccent, type SetupStepStatus } from './components/SetupStepCard';
+import AiSetupModal from './components/AiSetupModal';
+import AiTestModal from './components/AiTestModal';
+import BusinessTypePicker from './components/BusinessTypePicker';
+import NextSteps from './components/NextSteps';
+import SetupStepCard, { type SetupStepAction } from './components/SetupStepCard';
+import { useSetupProgress } from './hooks/useSetupProgress';
+import { pickStarterRecipe, SETUP_STEP_TITLES } from './setupSteps';
 
-interface StepDef {
-  id: string;
-  accent: SetupStepAccent;
-  icon: ReactNode;
-  title: string;
-  description: string;
-  done: boolean;
-  actionLabel: string;
-  onAction: () => void;
-  canSkip?: boolean;
-  locked?: boolean;
-  lockedHint?: string;
-  actionLoading?: boolean;
+interface RecipeModalRequest {
+  recipe: AutomationRecipe;
 }
+
+const CONNECTED = 'CONNECTED';
 
 export default function GetStartedPage() {
   const router = useRouter();
   const { toasts, addToast, removeToast } = useToast();
+  const { hasAiPlan, loading: subscriptionLoading } = useSubscription();
 
   const { instances, refetch: refetchWhatsApp, createInstance, connectInstance, deleteInstance, getStatus } = useWhatsAppInstances();
-  const { accounts, refetch: refetchInstagram, getOAuthUrl } = useInstagramAccounts();
-  const { channels: workspaceChannels, loading: workspaceChannelsLoading } = useWorkspaceChannels();
+  const { channels: workspaceChannels, loading: workspaceChannelsLoading, reload: reloadChannels } = useWorkspaceChannels();
+
+  const liveChannelDone = workspaceChannels.some((channel) => channel.status === CONNECTED)
+    || instances.some((instance) => instance.status === CONNECTED);
+  const hasInstagram = workspaceChannels.some((channel) => channel.type === 'INSTAGRAM' && channel.status === CONNECTED);
+
+  const progress = useSetupProgress({ liveDone: { channel: liveChannelDone } });
+  const { loading, businessType, done, completedCount, total, nextStep, refresh, markStepDone, chooseBusinessType, markFinished } = progress;
 
   const refetchWaRef = useRef(refetchWhatsApp);
-  const refetchIgRef = useRef(refetchInstagram);
+  const reloadChannelsRef = useRef(reloadChannels);
+  const refreshRef = useRef(refresh);
   useEffect(() => {
     refetchWaRef.current = refetchWhatsApp;
-    refetchIgRef.current = refetchInstagram;
+    reloadChannelsRef.current = reloadChannels;
+    refreshRef.current = refresh;
   });
 
-  const [checking, setChecking] = useState(true);
-  const [skipped, setSkipped] = useState<Set<string>>(new Set());
-  const [persisted, setPersisted] = useState<Set<string>>(new Set());
   const [firstName, setFirstName] = useState('');
-
-  const [autoReplyCount, setAutoReplyCount] = useState(0);
-  const [commentCount, setCommentCount] = useState(0);
-  const [campaignCount, setCampaignCount] = useState(0);
-  const [officialChannelCount, setOfficialChannelCount] = useState(0);
-
+  const [changingType, setChangingType] = useState(false);
+  const [savingType, setSavingType] = useState<BusinessType | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
-  const [autoReplyModalOpen, setAutoReplyModalOpen] = useState(false);
-  const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [campaignModalOpen, setCampaignModalOpen] = useState(false);
-  const [connectingInstagram, setConnectingInstagram] = useState(false);
+  const [instagramCheckOpen, setInstagramCheckOpen] = useState(false);
+  const [aiSetupOpen, setAiSetupOpen] = useState(false);
+  const [aiTestOpen, setAiTestOpen] = useState(false);
+  const [recipeModal, setRecipeModal] = useState<RecipeModalRequest | null>(null);
   const [leaving, setLeaving] = useState(false);
-
-  const loadAutomations = useCallback(async () => {
-    const [autoReplies, comments, campaigns, officialChannels] = await Promise.all([
-      autoReplyService.list().catch(() => []),
-      commentAutomationService.list().catch(() => []),
-      campaignService.listCampaigns().catch(() => []),
-      whatsappOfficialService.getInstances().catch(() => []),
-    ]);
-    setAutoReplyCount(autoReplies.length);
-    setCommentCount(comments.length);
-    setCampaignCount(campaigns.length);
-    setOfficialChannelCount(officialChannels.filter((ch) => ch.status === 'CONNECTED').length);
-  }, []);
 
   useEffect(() => {
     const user = authService.getUser();
     setFirstName(user?.name?.trim().split(' ')[0] ?? '');
-
-    let cancelled = false;
-    (async () => {
-      const state = await setupOnboardingService.fetch();
-      if (cancelled) return;
-      if (state.finishedAt) {
-        router.replace('/dashboard');
-        return;
-      }
-      setSkipped(new Set(state.skippedSteps));
-      setPersisted(new Set(state.completedSteps));
-      setChecking(false);
-      setupOnboardingService.update({ started: true }).catch(() => {});
-    })();
-    void loadAutomations();
-    return () => {
-      cancelled = true;
-    };
-  }, [router, loadAutomations]);
-
-  const whatsappDone = instances.some((i) => i.status === 'CONNECTED');
-  const instagramDone = accounts.some((a) => a.status === 'CONNECTED');
-  const autoReplyDone = autoReplyCount > 0;
-  const commentDone = commentCount > 0;
-  const campaignDone = campaignCount > 0;
-  const whatsappOfficialDone = officialChannelCount > 0;
-  const hasAnyChannel = whatsappDone || instagramDone;
-
-  useEffect(() => {
-    const doneById: Record<string, boolean> = {
-      whatsapp: whatsappDone,
-      instagram: instagramDone,
-      'auto-reply': autoReplyDone,
-      'comment-automation': commentDone,
-      campaign: campaignDone,
-    };
-    const newlyDone = Object.keys(doneById).filter((id) => doneById[id] && !persisted.has(id));
-    if (newlyDone.length === 0) return;
-    setPersisted((prev) => new Set([...prev, ...newlyDone]));
-    setSkipped((prev) => {
-      if (!newlyDone.some((id) => prev.has(id))) return prev;
-      const next = new Set(prev);
-      newlyDone.forEach((id) => next.delete(id));
-      return next;
-    });
-    newlyDone.forEach((id) => {
-      setupOnboardingService.update({ completeStep: id }).catch(() => {});
-    });
-  }, [whatsappDone, instagramDone, autoReplyDone, commentDone, campaignDone, persisted]);
-
-  const handleSkip = useCallback((id: string) => {
-    setSkipped((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-    setupOnboardingService.update({ skipStep: id }).catch(() => {});
+    setupOnboardingService.update({ started: true }).catch(() => {});
   }, []);
 
-  const handleConnectInstagram = useCallback(async () => {
-    try {
-      setConnectingInstagram(true);
-      const url = await getOAuthUrl();
-      const width = 600;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-      const popup = window.open(url, 'Instagram OAuth', `width=${width},height=${height},left=${left},top=${top}`);
-      const checkPopup = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkPopup);
-          setConnectingInstagram(false);
-          void refetchInstagram();
-        }
-      }, 500);
-    } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao conectar com Instagram. Tente novamente.');
-      setConnectingInstagram(false);
-    }
-  }, [getOAuthUrl, refetchInstagram, addToast]);
-
-  const goToDashboard = useCallback(async () => {
-    if (!hasAnyChannel) return;
-    setLeaving(true);
-    await setupOnboardingService.update({ finished: true }).catch(() => {});
-    router.push('/dashboard');
-  }, [hasAnyChannel, router]);
+  const { connecting: connectingInstagram, start: startInstagramLogin } = useInstagramOAuthPopup({
+    getOAuthUrl: async () => (await channelsService.getInstagramOAuthUrl()).url,
+    onFinished: () => {
+      setInstagramCheckOpen(false);
+      void reloadChannelsRef.current();
+    },
+    onError: (message) => addToast('error', message),
+  });
 
   const checkWhatsAppConnection = useCallback(async () => {
     const list = await channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]);
-    const pending = list.filter((i) => i.status !== 'CONNECTED');
+    const pending = list.filter((instance) => instance.status !== CONNECTED);
     if (pending.length > 0) {
-      await Promise.all(pending.map((i) => channelsService.getWhatsAppStatus(i.id).catch(() => null)));
+      await Promise.all(pending.map((instance) => channelsService.getWhatsAppStatus(instance.id).catch(() => null)));
     }
     await refetchWaRef.current().catch(() => {});
   }, []);
@@ -190,196 +99,330 @@ export default function GetStartedPage() {
   }, [waModalOpen, checkWhatsAppConnection]);
 
   useEffect(() => {
-    if (whatsappDone && waModalOpen) setWaModalOpen(false);
-  }, [whatsappDone, waModalOpen]);
-
-  useEffect(() => {
     const onFocus = () => {
       void checkWhatsAppConnection();
-      void refetchIgRef.current().catch(() => {});
+      void reloadChannelsRef.current();
+      void refreshRef.current();
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [checkWhatsAppConnection]);
 
-  const steps: StepDef[] = [
-    {
-      id: 'whatsapp',
-      accent: 'emerald',
-      icon: <MessageCircle size={22} />,
-      title: 'Conecte seu WhatsApp',
-      description: 'Escaneie um QR Code e comece a atender, automatizar respostas e disparar campanhas pelo WhatsApp.',
-      done: whatsappDone,
-      canSkip: false,
-      actionLabel: 'Conectar WhatsApp',
-      onAction: () => setWaModalOpen(true),
-    },
-    {
-      id: 'instagram',
-      accent: 'fuchsia',
-      icon: <Instagram size={22} />,
-      title: 'Conecte seu Instagram',
-      description: 'Faça login com sua conta para responder DMs e automatizar comentários e mensagens diretas.',
-      done: instagramDone,
-      canSkip: false,
-      actionLabel: connectingInstagram ? 'Abrindo...' : 'Conectar Instagram',
-      actionLoading: connectingInstagram,
-      onAction: () => void handleConnectInstagram(),
-    },
-    {
-      id: 'auto-reply',
-      accent: 'indigo',
-      icon: <Bot size={22} />,
-      title: 'Crie uma resposta automática',
-      description: 'Responda na hora quando alguém enviar uma palavra-chave no seu WhatsApp ou Instagram.',
-      done: autoReplyDone,
-      locked: !hasAnyChannel,
-      lockedHint: 'Conecte um canal acima para liberar esta etapa.',
-      actionLabel: 'Criar resposta automática',
-      onAction: () => setAutoReplyModalOpen(true),
-    },
-    {
-      id: 'comment-automation',
-      accent: 'violet',
-      icon: <MessageSquare size={22} />,
-      title: 'Automatize comentários do Instagram',
-      description: 'Responda comentários e envie uma DM automática quando alguém comentar com uma palavra-chave.',
-      done: commentDone,
-      locked: !instagramDone,
-      lockedHint: 'Conecte o Instagram para liberar esta etapa.',
-      actionLabel: 'Criar automação',
-      onAction: () => setCommentModalOpen(true),
-    },
-    {
-      id: 'campaign',
-      accent: 'amber',
-      icon: <Send size={22} />,
-      title: 'Crie sua primeira campanha',
-      description: 'Envie uma mensagem para vários contatos do WhatsApp de uma vez, agora ou de forma agendada.',
-      done: campaignDone,
-      // A campanha só dispara pela API Oficial enquanto a flag estiver ligada, então esta
-      // etapa depende de um número oficial conectado — e não do WhatsApp comum.
-      locked: HIDDEN_FEATURES.campaignNonOfficialChannels ? !whatsappOfficialDone : !whatsappDone,
-      lockedHint: HIDDEN_FEATURES.campaignNonOfficialChannels
-        ? 'Conecte um número na API Oficial do WhatsApp para liberar esta etapa.'
-        : 'Conecte o WhatsApp para liberar esta etapa.',
-      actionLabel: 'Criar campanha',
-      onAction: () => setCampaignModalOpen(true),
-    },
-  ];
+  const handlePickType = useCallback(async (type: BusinessType) => {
+    setSavingType(type);
+    const ok = await chooseBusinessType(type);
+    setSavingType(null);
+    if (!ok) {
+      addToast('error', 'Não foi possível salvar o tipo de negócio. Tente de novo.');
+      return;
+    }
+    setChangingType(false);
+  }, [chooseBusinessType, addToast]);
 
-  const total = steps.length;
-  const completedCount = steps.filter((s) => s.done).length;
-  const progress = Math.round((completedCount / total) * 100);
-  const allDone = completedCount === total;
+  const goToDashboard = useCallback(async () => {
+    if (!done.channel) return;
+    setLeaving(true);
+    await markFinished();
+    router.push('/dashboard');
+  }, [done.channel, markFinished, router]);
 
-  if (checking) {
+  const closeAiSetup = useCallback(() => {
+    setAiSetupOpen(false);
+    void refresh();
+  }, [refresh]);
+
+  const closeAiTest = useCallback(() => {
+    setAiTestOpen(false);
+  }, []);
+
+  const handleAiReplied = useCallback(() => {
+    markStepDone('ai-test');
+  }, [markStepDone]);
+
+  const openAiSetup = useCallback(() => {
+    if (!subscriptionLoading && !hasAiPlan) {
+      router.push('/ia');
+      return;
+    }
+    setAiSetupOpen(true);
+  }, [subscriptionLoading, hasAiPlan, router]);
+
+  const starterRecipe = pickStarterRecipe(businessType, hasInstagram || !done.channel);
+
+  const openRecipe = useCallback((recipe: AutomationRecipe) => {
+    const { target } = recipe;
+    if (target.type === 'automation') {
+      setRecipeModal({ recipe });
+      return;
+    }
+    if (target.type === 'flow') {
+      router.push(`/flows?template=${encodeURIComponent(target.templateId)}`);
+      return;
+    }
+    if (target.type === 'cart-recovery') {
+      router.push('/cart-recovery');
+      return;
+    }
+    router.push('/ia');
+  }, [router]);
+
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-900">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600 dark:border-indigo-400" />
       </div>
     );
   }
 
+  const showTypePicker = !businessType || changingType;
+  const allDone = completedCount === total;
+  const percent = Math.round((completedCount / total) * 100);
+  const suggestInstagram = businessType === 'infoproduct';
+  const aiLocked = !subscriptionLoading && !hasAiPlan;
+
+  const whatsappAction: SetupStepAction = {
+    label: 'Conectar WhatsApp',
+    accent: 'emerald',
+    icon: <MessageCircle size={16} />,
+    outline: suggestInstagram,
+    onClick: () => setWaModalOpen(true),
+    ...(suggestInstagram ? {} : { hint: 'Recomendado para você' }),
+  };
+  const instagramAction: SetupStepAction = {
+    label: connectingInstagram ? 'Abrindo o Instagram...' : 'Conectar Instagram',
+    accent: 'fuchsia',
+    icon: <Instagram size={16} />,
+    outline: !suggestInstagram,
+    loading: connectingInstagram,
+    onClick: () => setInstagramCheckOpen(true),
+    ...(suggestInstagram ? { hint: 'Recomendado para você' } : {}),
+  };
+
+  const recipeActions: SetupStepAction[] = starterRecipe
+    ? [
+      { label: 'Ativar esta automação', accent: 'amber', icon: <Zap size={16} />, onClick: () => openRecipe(starterRecipe) },
+      { label: 'Ver outras ideias', accent: 'amber', outline: true, icon: <ArrowRight size={16} />, onClick: () => router.push('/auto-replies') },
+    ]
+    : [{ label: 'Escolher uma automação', accent: 'amber', icon: <Zap size={16} />, onClick: () => router.push('/auto-replies') }];
+
+  const RecipeIcon = starterRecipe?.icon;
+
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-        <div className="flex items-center gap-2">
-          <BrandLogo size={22}/>
-          <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Synq</span>
-        </div>
-
-        <header className="mt-8">
-          {allDone ? (
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
-                <PartyPopper size={24} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-                  Tudo pronto{firstName ? `, ${firstName}` : ''}!
-                </h1>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">
-                  Você concluiu os primeiros passos. Agora é só começar a usar.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-                Bem-vindo{firstName ? `, ${firstName}` : ''}!
-              </h1>
-              <p className="mt-2 text-slate-500 dark:text-slate-400">
-                Conecte pelo menos um canal (WhatsApp ou Instagram) para continuar. Os demais passos são
-                opcionais — você pode configurá-los quando quiser pelo menu.
-              </p>
-            </>
-          )}
-        </header>
-
-        {!allDone && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
-              <span>
-                {completedCount} de {total} concluídos
-              </span>
-              <span>{progress}%</span>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div
-                className="h-full rounded-full bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BrandLogo size={22} />
+            <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Synq</span>
           </div>
-        )}
-
-        <div className="mt-8 space-y-3">
-          {steps.map((step) => {
-            const status: SetupStepStatus = step.done ? 'done' : skipped.has(step.id) ? 'skipped' : 'pending';
-            return (
-              <SetupStepCard
-                key={step.id}
-                icon={step.icon}
-                accent={step.accent}
-                title={step.title}
-                description={step.description}
-                status={status}
-                actionLabel={step.actionLabel}
-                onAction={step.onAction}
-                onSkip={() => handleSkip(step.id)}
-                canSkip={step.canSkip ?? true}
-                locked={step.locked ?? false}
-                {...(step.lockedHint ? { lockedHint: step.lockedHint } : {})}
-                actionLoading={step.actionLoading ?? false}
-              />
-            );
-          })}
-        </div>
-
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <Button
-            onClick={() => void goToDashboard()}
-            variant="primary"
-            size="lg"
-            loading={leaving}
-            loadingText="Abrindo painel..."
-            disabled={!hasAnyChannel}
-          >
-            Ir para o painel
-          </Button>
-          {!hasAnyChannel ? (
-            <p className="inline-flex items-center gap-1.5 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
-              <Lock size={12} /> Conecte o WhatsApp ou o Instagram para continuar.
-            </p>
-          ) : (
-            !allDone && (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                Os demais passos são opcionais e continuam disponíveis no menu a qualquer momento.
-              </p>
-            )
+          {done.channel && !showTypePicker && (
+            <button
+              type="button"
+              onClick={() => void goToDashboard()}
+              className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+            >
+              Ir para o painel <ArrowRight size={12} />
+            </button>
           )}
         </div>
+
+        {showTypePicker ? (
+          <section className="mt-8 sm:mt-12">
+            {changingType && (
+              <button
+                type="button"
+                onClick={() => setChangingType(false)}
+                className="mb-4 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
+              >
+                <ArrowLeft size={12} /> Voltar aos primeiros passos
+              </button>
+            )}
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              {firstName ? `Olá, ${firstName}!` : 'Olá!'}
+            </p>
+            <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Qual é o seu tipo de negócio?</h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+              Assim mostramos os passos e as automações que mais ajudam você a vender. Dá para trocar depois.
+            </p>
+            <div className="mt-6">
+              <BusinessTypePicker value={businessType} saving={savingType} onPick={(type) => void handlePickType(type)} />
+            </div>
+          </section>
+        ) : (
+          <>
+            <header className="mt-8">
+              {allDone ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                    <PartyPopper size={24} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+                      Tudo pronto{firstName ? `, ${firstName}` : ''}!
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                      {aiLocked
+                        ? 'Seu canal está conectado e a primeira automação já está ativa.'
+                        : 'Seu canal está conectado, a IA conhece o seu negócio e a primeira automação já está ativa.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+                    Bem-vindo{firstName ? `, ${firstName}` : ''}!
+                  </h1>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                    Em {total} passos rápidos o Synq começa a atender e vender por você. Comece conectando um canal.
+                  </p>
+                </>
+              )}
+              {businessType && (
+                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                  <span>
+                    Passos pensados para: <span className="font-semibold text-slate-700 dark:text-slate-200">{BUSINESS_TYPE_LABELS[businessType]}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setChangingType(true)}
+                    className="cursor-pointer font-medium text-indigo-600 underline-offset-2 transition-colors hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
+                  >
+                    Trocar tipo de negócio
+                  </button>
+                </p>
+              )}
+            </header>
+
+            <div className="mt-6" role="progressbar" aria-valuenow={completedCount} aria-valuemin={0} aria-valuemax={total} aria-label="Progresso dos primeiros passos">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+                <span>{completedCount} de {total} concluídos</span>
+                <span>{percent}%</span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-linear-to-r from-indigo-500 via-violet-500 to-fuchsia-500'}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <SetupStepCard
+                step={1}
+                icon={<MessagesSquare size={22} />}
+                accent="emerald"
+                title={SETUP_STEP_TITLES.channel}
+                description="Um canal basta para começar. É por ele que a IA e as automações vão conversar com seus clientes."
+                done={done.channel}
+                current={nextStep === 'channel'}
+                actions={suggestInstagram ? [instagramAction, whatsappAction] : [whatsappAction, instagramAction]}
+                doneHint="Pronto! Seu canal está conectado e já pode receber mensagens."
+                doneAction={{ label: 'Conectar outro canal', onClick: () => router.push('/channels') }}
+              />
+
+              <SetupStepCard
+                step={2}
+                icon={<Bot size={22} />}
+                accent="violet"
+                title={SETUP_STEP_TITLES.ai}
+                description="Responda 3 perguntas rápidas: o que você vende, o horário de atendimento e onde estão os preços. A IA usa isso para atender sozinha."
+                done={done.ai}
+                current={nextStep === 'ai'}
+                actions={[{
+                  label: aiLocked ? 'Conhecer a IA' : 'Responder as perguntas',
+                  accent: 'violet',
+                  icon: <Sparkles size={16} />,
+                  onClick: openAiSetup,
+                }]}
+                doneHint="A IA já conhece o seu negócio. Você pode ajustar as respostas quando quiser."
+                doneAction={{ label: 'Revisar as respostas', onClick: openAiSetup }}
+              >
+                {aiLocked && (
+                  <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <Lock size={12} /> Seu plano ainda não inclui a IA. Toque no botão para ver como ativar.
+                  </p>
+                )}
+              </SetupStepCard>
+
+              <SetupStepCard
+                step={3}
+                icon={<MessageCircle size={22} />}
+                accent="indigo"
+                title={SETUP_STEP_TITLES['ai-test']}
+                description="Faça de conta que é um cliente e veja como a IA responde. Nada é enviado para ninguém."
+                done={done['ai-test']}
+                current={nextStep === 'ai-test'}
+                locked={aiLocked}
+                lockedHint="Disponível quando a IA estiver ativa no seu plano."
+                actions={[{ label: 'Testar a IA', accent: 'indigo', icon: <MessageCircle size={16} />, onClick: () => setAiTestOpen(true) }]}
+                doneHint="Você já viu a IA em ação. Teste de novo sempre que mudar as respostas."
+                doneAction={{ label: 'Testar de novo', onClick: () => setAiTestOpen(true) }}
+              />
+
+              <SetupStepCard
+                step={4}
+                icon={<Zap size={22} />}
+                accent="amber"
+                title={SETUP_STEP_TITLES.recipe}
+                description="Escolhemos uma automação pronta para o seu tipo de negócio. É só revisar e salvar."
+                done={done.recipe}
+                current={nextStep === 'recipe'}
+                locked={!done.channel}
+                lockedHint="Conecte um canal no passo 1 para liberar."
+                actions={recipeActions}
+                doneHint="Sua primeira automação já está funcionando."
+                doneAction={{ label: 'Ver minhas automações', onClick: () => router.push('/auto-replies') }}
+              >
+                {!done.recipe && starterRecipe && RecipeIcon && (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-100 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 dark:bg-slate-800 dark:text-amber-400">
+                      <RecipeIcon size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {starterRecipe.title}
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                          {RECIPE_DESTINATION_LABEL[starterRecipe.target.type]}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{starterRecipe.description}</p>
+                    </div>
+                  </div>
+                )}
+              </SetupStepCard>
+            </div>
+
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <Button
+                onClick={() => void goToDashboard()}
+                variant="primary"
+                size="lg"
+                loading={leaving}
+                loadingText="Abrindo o painel..."
+                disabled={!done.channel}
+                icon={<ArrowRight size={16} />}
+                className="w-full justify-center sm:w-auto"
+              >
+                Ir para o painel
+              </Button>
+              {!done.channel ? (
+                <p className="inline-flex items-center gap-1.5 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+                  <Lock size={12} /> Conecte o WhatsApp ou o Instagram para continuar.
+                </p>
+              ) : (
+                !allDone && (
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                    Os passos que faltam continuam aqui. Você pode voltar pelo painel a qualquer momento.
+                  </p>
+                )
+              )}
+            </div>
+
+            <div className="mt-10 border-t border-slate-200 pt-8 dark:border-slate-700">
+              <NextSteps businessType={businessType} />
+            </div>
+          </>
+        )}
       </div>
 
       {waModalOpen && (
@@ -388,6 +431,7 @@ export default function GetStartedPage() {
           onClose={() => {
             setWaModalOpen(false);
             void checkWhatsAppConnection();
+            void reloadChannels();
           }}
           onCreate={createInstance}
           onConnect={connectInstance}
@@ -396,34 +440,36 @@ export default function GetStartedPage() {
         />
       )}
 
-      {autoReplyModalOpen && (
-        <AutomationModal
-          isOpen
-          kind="DM"
-          channels={workspaceChannels}
-          channelsLoading={workspaceChannelsLoading}
-          onClose={() => setAutoReplyModalOpen(false)}
-          onSuccess={() => void loadAutomations()}
-        />
-      )}
-
-      {commentModalOpen && (
-        <AutomationModal
-          isOpen
-          kind="COMMENT"
-          channels={workspaceChannels}
-          channelsLoading={workspaceChannelsLoading}
-          onClose={() => setCommentModalOpen(false)}
-          onSuccess={() => void loadAutomations()}
-        />
-      )}
-
-      <CreateCampaignModal
-        isOpen={campaignModalOpen}
-        onClose={() => setCampaignModalOpen(false)}
-        onSuccess={() => void loadAutomations()}
-        addToast={addToast}
+      <InstagramConnectCheckModal
+        isOpen={instagramCheckOpen}
+        onClose={() => setInstagramCheckOpen(false)}
+        onContinue={() => void startInstagramLogin()}
+        loading={connectingInstagram}
       />
+
+      {aiSetupOpen && <AiSetupModal onClose={closeAiSetup} />}
+
+      {aiTestOpen && <AiTestModal onClose={closeAiTest} onReplied={handleAiReplied} />}
+
+      {recipeModal && recipeModal.recipe.target.type === 'automation' && (
+        <AutomationModal
+          isOpen
+          kind={recipeModal.recipe.target.kind}
+          initialDraft={recipeModal.recipe.target.draft}
+          requireLink={recipeModal.recipe.target.requiresLink}
+          messagePlaceholder={recipeModal.recipe.target.messagePlaceholder}
+          intro={recipeModal.recipe.target.note}
+          title={recipeModal.recipe.title}
+          channels={workspaceChannels}
+          channelsLoading={workspaceChannelsLoading}
+          onClose={() => setRecipeModal(null)}
+          onSuccess={() => {
+            setRecipeModal(null);
+            markStepDone('recipe');
+            addToast('success', 'Automação criada e ativada!');
+          }}
+        />
+      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
