@@ -50,7 +50,7 @@ export default function TemplatesPage() {
       setChannels(channelList);
       setTemplates(templateList);
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao carregar templates.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível carregar os modelos de mensagem.');
     } finally {
       setLoading(false);
     }
@@ -70,17 +70,17 @@ export default function TemplatesPage() {
   const handleSync = async () => {
     const targets = selectedChannelId ? channels.filter((c) => c.id === selectedChannelId) : channels;
     if (targets.length === 0) {
-      addToast('error', 'Conecte um canal oficial antes de sincronizar.');
+      addToast('error', 'Conecte um número do WhatsApp Oficial antes de atualizar.');
       return;
     }
     setSyncing(true);
     try {
       const results = await Promise.all(targets.map((c) => templateService.sync(c.id)));
       const total = results.reduce((acc, r) => acc + r.synced, 0);
-      addToast('success', `${total} templates sincronizados com a Meta${targets.length > 1 ? ` (${targets.length} números)` : ''}.`);
+      addToast('success', `${total} ${total === 1 ? 'modelo de mensagem atualizado' : 'modelos de mensagem atualizados'} com a Meta${targets.length > 1 ? ` (${targets.length} números)` : ''}.`);
       await loadData(selectedChannelId || undefined);
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao sincronizar.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível atualizar com a Meta. Tente de novo em alguns instantes.');
     } finally {
       setSyncing(false);
     }
@@ -91,10 +91,10 @@ export default function TemplatesPage() {
     setDeleting(true);
     try {
       await templateService.remove(deleteTarget.id);
-      addToast('success', 'Template excluído.');
+      addToast('success', 'Modelo de mensagem excluído.');
       await loadData(selectedChannelId || undefined);
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao excluir template.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível excluir o modelo de mensagem.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -102,7 +102,7 @@ export default function TemplatesPage() {
   };
 
   const channelOptions = useMemo(() => ([
-    { value: '', label: 'Todos os canais' },
+    { value: '', label: 'Todos os números' },
     ...channels.map((c) => ({
       value: c.id,
       label: c.whatsappOfficial.verifiedName || c.whatsappOfficial.displayPhoneNumber || c.name,
@@ -131,17 +131,17 @@ export default function TemplatesPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Templates</h2>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Modelos de mensagem</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Modelos de mensagem da API Oficial — criados aqui e aprovados pela Meta, sem sair do sistema
+            Textos prontos do WhatsApp Oficial. Você cria aqui, a Meta aprova e depois eles podem chamar seus clientes a qualquer momento.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" icon={<RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />} onClick={handleSync} disabled={syncing || channels.length === 0}>
-            Sincronizar
+            Atualizar com a Meta
           </Button>
           <Button icon={<Plus size={16} />} onClick={() => { setEditingTemplate(null); setBuilderOpen(true); }} disabled={channels.length === 0}>
-            Novo Template
+            Novo modelo
           </Button>
         </div>
       </div>
@@ -149,23 +149,23 @@ export default function TemplatesPage() {
       {channels.length === 0 ? (
         <EmptyState
           icon={<LayoutTemplate size={56} />}
-          title="Conecte a API Oficial para usar templates"
-          description="Templates são os modelos de mensagem aprovados pela Meta, obrigatórios para iniciar conversas e campanhas pela API Oficial do WhatsApp."
-          action={{ label: 'Conectar canal oficial', onClick: () => router.push('/channels') }}
+          title="Conecte o WhatsApp Oficial para criar modelos de mensagem"
+          description="Modelos de mensagem são textos aprovados pela Meta. Eles são obrigatórios para enviar campanhas e para chamar clientes que não falam com você há mais de 24h pelo WhatsApp Oficial."
+          action={{ label: 'Conectar WhatsApp Oficial', onClick: () => router.push('/channels') }}
         />
       ) : (
         <>
           {channels.length > 1 && (
             <div className="max-w-xs">
-              <Dropdown label="Filtrar por canal" options={channelOptions} value={selectedChannelId} onChange={handleChannelFilter} />
+              <Dropdown label="Filtrar por número" options={channelOptions} value={selectedChannelId} onChange={handleChannelFilter} />
             </div>
           )}
 
           {templates.length === 0 ? (
             <EmptyState
               icon={<LayoutTemplate size={56} />}
-              title="Nenhum template ainda"
-              description="Crie seu primeiro template ou sincronize os templates já existentes na sua conta Meta."
+              title="Nenhum modelo de mensagem ainda"
+              description="Crie seu primeiro modelo ou clique em Atualizar com a Meta para trazer os que você já tem lá."
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -231,8 +231,8 @@ export default function TemplatesPage() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir template"
-        message={`Excluir o template "${deleteTarget?.name}"? Ele também será removido da sua conta na Meta.`}
+        title="Excluir modelo de mensagem"
+        message={`Excluir o modelo "${deleteTarget?.name}"? Ele também será removido da sua conta na Meta.`}
         confirmLabel="Excluir"
         loading={deleting}
       />

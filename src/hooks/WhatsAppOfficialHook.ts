@@ -36,7 +36,7 @@ export function useWhatsAppOfficialInstances(options: { enabled?: boolean } = {}
     catch (err) {
       // Workspace sem API Oficial provisionada cai aqui — o card mostra o motivo
       // em vez de um estado vazio que sugeriria "é só clicar em conectar".
-      setError(getErrorMessageFromCatch(err, 'Erro ao carregar canais da API Oficial'));
+      setError(getErrorMessageFromCatch(err, 'Não foi possível carregar os números do WhatsApp Oficial. Atualize a página e tente de novo.'));
     }
     finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export function useWhatsAppOfficialInstances(options: { enabled?: boolean } = {}
       setInstances((prev) => prev.filter((instance) => instance.id !== id));
     }
     catch (err) {
-      throw new Error(getErrorMessageFromCatch(err, 'Erro ao desconectar a conta oficial'));
+      throw new Error(getErrorMessageFromCatch(err, 'Não foi possível desconectar o número. Tente de novo.'));
     }
   }, []);
 
@@ -63,7 +63,7 @@ export function useWhatsAppOfficialInstances(options: { enabled?: boolean } = {}
       setInstances((prev) => prev.map((instance) => (instance.id === id ? { ...instance, name } : instance)));
     }
     catch (err) {
-      throw new Error(getErrorMessageFromCatch(err, 'Erro ao renomear a conta oficial'));
+      throw new Error(getErrorMessageFromCatch(err, 'Não foi possível mudar o nome do número. Tente de novo.'));
     }
   }, []);
 
@@ -73,7 +73,7 @@ export function useWhatsAppOfficialInstances(options: { enabled?: boolean } = {}
       setInstances((prev) => prev.map((instance) => (instance.id === id ? updated : instance)));
     }
     catch (err) {
-      throw new Error(getErrorMessageFromCatch(err, 'Erro ao sincronizar a conta com a Meta'));
+      throw new Error(getErrorMessageFromCatch(err, 'Não foi possível atualizar as informações do número com a Meta. Tente de novo.'));
     }
   }, []);
 
@@ -118,7 +118,7 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
         const data = await whatsappOfficialService.getInstances();
         if (data.length > previousCount) {
           await onSuccess();
-          onToast('success', 'Conta oficial conectada com sucesso!');
+          onToast('success', 'Número oficial conectado!');
           return true;
         }
       }
@@ -185,11 +185,11 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Falha ao carregar o SDK da Meta. Verifique bloqueadores de anúncio.'));
+      script.onerror = () => reject(new Error('Não conseguimos abrir a janela da Meta. Se você usa bloqueador de anúncios, desligue nesta página e tente de novo.'));
       document.body.appendChild(script);
     });
     if (!window.FB) {
-      throw new Error('SDK da Meta indisponível.');
+      throw new Error('A janela da Meta não abriu. Atualize a página e tente de novo.');
     }
     window.FB.init({ appId, autoLogAppEvents: true, xfbml: false, version: graphVersion });
     sdkLoadedRef.current = true;
@@ -198,7 +198,7 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
 
   const connect = useCallback(async (mode: WhatsAppOfficialConnectMode) => {
     if (blocked) {
-      onToast('error', 'Sua assinatura está inativa. Reative seu plano para conectar canais.');
+      onToast('error', 'Seu plano não está ativo. Renove o plano para conectar números.');
       return;
     }
     setConnecting(true);
@@ -220,11 +220,11 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
         }
         if (!code) {
           if (signupFinishedRef.current) {
-            onToast('success', 'Cadastro concluído na Meta — sincronizando o canal...');
+            onToast('success', 'Tudo certo na Meta. Estamos terminando de conectar o número...');
             (async () => {
               const found = await pollForNewInstance(previousCount);
               if (!found) {
-                onToast('error', 'O canal não apareceu ainda. Recarregue a página em instantes.');
+                onToast('error', 'O número ainda não apareceu aqui. Atualize a página em alguns instantes.');
                 await onSuccess();
               }
               setConnecting(false);
@@ -232,7 +232,7 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
             return;
           }
           setConnecting(false);
-          onToast('error', 'Conexão cancelada antes de concluir o cadastro na Meta.');
+          onToast('error', 'A conexão foi interrompida antes de terminar na Meta. Comece de novo quando quiser.');
           return;
         }
         (async () => {
@@ -245,11 +245,11 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
               payload.phoneNumberId = signupDataRef.current.phoneNumberId;
             }
             await whatsappOfficialService.connect(payload);
-            onToast('success', 'Conta oficial conectada com sucesso!');
+            onToast('success', 'Número oficial conectado!');
             await onSuccess();
           }
           catch (error) {
-            onToast('error', error instanceof Error ? error.message : 'Erro ao concluir a conexão.');
+            onToast('error', error instanceof Error ? error.message : 'Não foi possível terminar a conexão. Tente de novo.');
             await pollForNewInstance(previousCount);
           }
           finally {
@@ -264,7 +264,7 @@ export function useWhatsAppOfficialSignup({ instanceCount, onSuccess, onToast, b
       });
     }
     catch (error) {
-      onToast('error', error instanceof Error ? error.message : 'Erro ao iniciar a conexão com a Meta.');
+      onToast('error', error instanceof Error ? error.message : 'Não foi possível começar a conexão com a Meta. Tente de novo.');
       setConnecting(false);
     }
   }, [blocked, instanceCount, loadFacebookSdk, onSuccess, onToast, pollForNewInstance]);

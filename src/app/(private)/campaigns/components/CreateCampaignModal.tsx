@@ -227,12 +227,12 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
     if (isOfficialCampaign) {
       if (!formData.messageMeta?.templateId) {
-        newErrors.template = 'Selecione um template aprovado para a campanha oficial';
+        newErrors.template = 'Escolha um modelo de mensagem aprovado para esta campanha.';
       } else {
         const vars = formData.messageMeta?.templateVariables ?? {};
         const missing = templateVariableNames.filter((name) => !vars[name]?.trim());
         if (missing.length > 0) {
-          newErrors.template = `Preencha as variáveis do template: ${missing.map((v) => `{{${v}}}`).join(', ')}`;
+          newErrors.template = `Preencha os campos do modelo de mensagem: ${missing.map((v) => `{{${v}}}`).join(', ')}`;
         }
       }
     } else {
@@ -467,7 +467,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       const hasOfficial = formData.channelIds.some((id) => officialChannelIds.has(id));
       const hasUnofficial = formData.channelIds.some((id) => !officialChannelIds.has(id));
       if ((addingOfficial && hasUnofficial) || (!addingOfficial && hasOfficial)) {
-        addToast('error', 'Não é possível misturar canais oficiais e não oficiais na mesma campanha. Crie campanhas separadas.');
+        addToast('error', 'Não dá para misturar números do WhatsApp Oficial com outros canais na mesma campanha. Crie uma campanha separada para cada tipo.');
         return;
       }
     }
@@ -726,13 +726,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
             <MessageCircle size={24} className="text-slate-300 dark:text-slate-600"/>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
               {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Nenhum número da API Oficial conectado'
+                ? 'Nenhum número do WhatsApp Oficial conectado'
                 : 'Nenhum canal disponível'}
             </p>
             <p className="text-xs text-slate-400 dark:text-slate-500">
               {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Conecte um número da API Oficial do WhatsApp em Canais para criar campanhas.'
-                : 'Configure seus canais primeiro nas configurações'}
+                ? 'Conecte um número do WhatsApp Oficial em Canais para criar campanhas.'
+                : 'Conecte um número ou uma conta em Canais para começar.'}
             </p>
           </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {channels.map((channel) => {
@@ -868,38 +868,39 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           <div className="flex items-start gap-2 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
             <BadgeCheck size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5"/>
             <p className="text-xs text-indigo-700 dark:text-indigo-300">
-              Campanha pela <strong>API Oficial</strong>: a Meta exige um template aprovado para iniciar conversas.
-              A cobrança é por mensagem entregue, conforme a categoria do template.
+              Campanha pelo <strong>WhatsApp Oficial</strong>: para chamar seus clientes, a Meta exige um modelo de mensagem aprovado.
+              A cobrança é por mensagem entregue e muda conforme o tipo do modelo.
             </p>
           </div>
 
           <Dropdown
-            label="Template aprovado"
+            label="Modelo de mensagem aprovado"
             options={availableTemplates.map((t) => ({
               value: t.id,
               label: `${t.name} · ${t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utilidade' : 'Autenticação'} (${t.language})`,
             }))}
             value={formData.messageMeta?.templateId ?? ''}
             onChange={selectTemplate}
+            hint={availableTemplates.length > 0 ? 'É o texto que a Meta já aprovou. Só ele pode chamar clientes pelo WhatsApp Oficial, mesmo quem não fala com você há dias.' : undefined}
             placeholder={availableTemplates.length > 0
-              ? 'Selecione um template...'
+              ? 'Selecione um modelo...'
               : formData.channelIds.length === 0
                 ? 'Selecione um canal primeiro'
-                : 'Nenhum template aprovado para este canal'}
+                : 'Nenhum modelo aprovado para este número'}
           />
           {availableTemplates.length === 0 && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               {formData.channelIds.length === 0 ? (<>
-                Escolha o canal na etapa <strong>Origem dos Destinatários</strong>, acima, para listar os templates aprovados dele.
+                Escolha o canal na etapa <strong>Origem dos Destinatários</strong>, acima, para ver os modelos de mensagem aprovados dele.
               </>) : (<>
-                Nenhum template aprovado para o canal selecionado. Crie um na área <strong>Templates</strong> e aguarde a aprovação da Meta.
+                Nenhum modelo de mensagem aprovado para o número escolhido. Crie um em <strong>Modelos de mensagem</strong> e espere a aprovação da Meta.
               </>)}
             </p>
           )}
           <FieldError msg={errors.template}/>
 
           {selectedTemplate && templateVariableNames.length > 0 && (<div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Variáveis do template</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Campos do modelo</p>
             {templateVariableNames.map((name) => (<div key={name}>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 {`Valor para {{${name}}}`}
@@ -919,7 +920,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
 
           {selectedTemplate && templatePreviewMessage && (<div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Preview no WhatsApp
+              Prévia no WhatsApp
             </label>
             <WhatsAppPreview message={templatePreviewMessage}/>
           </div>)}
@@ -1005,7 +1006,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
 
           {(formData.message.trim() || formData.messageMeta?.imageBase64) && (<div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Preview no WhatsApp
+                    Prévia no WhatsApp
             </label>
             <WhatsAppPreview message={formData.message} linkUrl={formData.linkUrl} linkLabel={formData.linkLabel}/>
             {formData.messageMeta?.imageBase64 && (<div className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">

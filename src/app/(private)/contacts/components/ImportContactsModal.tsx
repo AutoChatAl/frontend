@@ -126,7 +126,7 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3 text-xs text-slate-600 dark:text-slate-400 space-y-1">
         <p>Os contatos importados <strong>não ficam ligados a nenhum canal</strong>: entram na sua base e podem ser usados em campanhas do WhatsApp Oficial.</p>
-        <p>Eles entram <strong>com opt-in de marketing</strong>, para receberem qualquer categoria de template — inclusive marketing. Só importe quem já autorizou receber suas mensagens: o consentimento é responsabilidade sua, e denúncias derrubam a qualidade do seu número na Meta.</p>
+        <p>Eles entram <strong>como quem aceitou receber promoções</strong>, então podem receber qualquer modelo de mensagem, inclusive de marketing. Só importe quem já autorizou receber suas mensagens: o consentimento é responsabilidade sua, e denúncias derrubam a qualidade do seu número na Meta.</p>
       </div>
 
       <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); selectFile(e.dataTransfer.files[0]); }} onClick={() => fileInputRef.current?.click()} className={`rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${dragging ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'}`}>

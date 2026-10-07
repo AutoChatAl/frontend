@@ -160,10 +160,10 @@ export default function ConversationContextPanel({
       <Hourglass size={14} className={expiringSoon ? 'text-amber-600 dark:text-amber-400 shrink-0' : 'text-slate-400 dark:text-slate-500 shrink-0'}/>
       <div className="min-w-0 flex-1">
         <p className={`text-[13px] font-medium ${expiringSoon ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
-          {msToExpiry !== null && msToExpiry <= 0 ? 'Conversa expirada' : `Expira em ${formatCountdown(expiresAt)}`}
+          {msToExpiry !== null && msToExpiry <= 0 ? 'Conversa saindo da caixa de entrada' : `Sai da caixa de entrada em ${formatCountdown(expiresAt)}`}
         </p>
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-            A janela reinicia a cada nova mensagem
+            A contagem recomeça a cada nova mensagem
         </p>
       </div>
     </div>)}
@@ -313,7 +313,7 @@ export default function ConversationContextPanel({
         <Row label="Canal" value={CHANNEL_LABEL[conversation.channelType]}/>
         <Row label="Recebido em" value={conversation.channelName || conversation.channelIdentifier || '—'}/>
         <Row label="Última mensagem" value={relativeTime(conversation.lastMessageAt)}/>
-        <Row label="Janela de resposta" value={replyLocked || !replyWindowExpiresAt ? 'Encerrada' : `Fecha em ${formatCountdown(replyWindowExpiresAt)}`}/>
+        <Row label="Prazo para responder" value={replyLocked || !replyWindowExpiresAt ? 'Encerrado' : `Fecha em ${formatCountdown(replyWindowExpiresAt)}`}/>
         <Row label="Conversa criada" value={new Date(conversation.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}/>
         <Row label="Mensagens no histórico" value={messageCount.toLocaleString('pt-BR')}/>
         <Row label="Não lidas" value={conversation.unreadCount.toLocaleString('pt-BR')}/>

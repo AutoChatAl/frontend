@@ -103,10 +103,10 @@ function DisableView({ onDisable, onClose }: {
       </div>
       <div>
         <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-            2FA está ativo na sua conta
+            A verificação em duas etapas está ativa
         </p>
         <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-            Autenticação de dois fatores protege seu acesso.
+            Além da senha, o login pede um código do seu celular.
         </p>
       </div>
     </div>
@@ -121,7 +121,7 @@ function DisableView({ onDisable, onClose }: {
     <div className="flex gap-3 justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
       <Button variant="ghost" onClick={onClose}>Cancelar</Button>
       <Button variant="danger" onClick={handle} loading={loading} loadingText="Desativando..." icon={<ShieldOff size={16}/>}>
-          Desativar 2FA
+          Desativar verificação
       </Button>
     </div>
   </div>);
@@ -218,7 +218,7 @@ function SetupView({ setupData, onVerify, onClose }: {
 
       <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
         <div className="shrink-0 p-2.5 bg-white rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm">
-          <Image src={setupData.qrCode} alt="QR Code 2FA" width={160} height={160} className="w-40 h-40"/>
+          <Image src={setupData.qrCode} alt="QR Code da verificação em duas etapas" width={160} height={160} className="w-40 h-40"/>
         </div>
 
         <div className="flex-1 min-w-0 space-y-3 w-full">
@@ -254,7 +254,7 @@ function SetupView({ setupData, onVerify, onClose }: {
                 Quase lá!
           </p>
           <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
-                Abra o {app.name} e insira o código de 6 dígitos gerado para ativar o 2FA.
+                Abra o {app.name} e digite o código de 6 dígitos que aparece lá para ativar a verificação em duas etapas.
           </p>
         </div>
       </div>
@@ -282,7 +282,7 @@ function IdleView({ onSetup, loading, onClose }: {
       </div>
       <div className="text-center">
         <h4 className="text-base font-semibold text-slate-900 dark:text-white">
-            Proteja sua conta com 2FA
+            Proteja sua conta com a verificação em duas etapas
         </h4>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
             Adicione uma camada extra de segurança. Cada login exigirá um código gerado pelo seu app autenticador.
@@ -306,7 +306,7 @@ function IdleView({ onSetup, loading, onClose }: {
     <div className="flex gap-3 justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
       <Button variant="ghost" onClick={onClose}>Cancelar</Button>
       <Button onClick={onSetup} loading={loading} loadingText="Configurando..." icon={<Shield size={16}/>}>
-          Ativar 2FA
+          Ativar verificação
       </Button>
     </div>
   </div>);

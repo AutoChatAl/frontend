@@ -666,7 +666,7 @@ export default function InboxPage() {
         setRetentionDays(settings.retentionDays);
         if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
       })
-      .catch(() => setSettingsError('Não foi possível carregar a configuração do chat.'))
+      .catch(() => setSettingsError('Não foi possível carregar a configuração das conversas.'))
       .finally(() => setSettingsLoaded(true));
   }, [workspaceId]);
 
@@ -708,7 +708,7 @@ export default function InboxPage() {
       if (workspaceId) localStorage.setItem(chatEnabledCacheKey(workspaceId), String(settings.enabled));
     } catch (e) {
       setChatEnabled(previous);
-      setSettingsError(e instanceof Error ? e.message : 'Não foi possível salvar a configuração do chat.');
+      setSettingsError(e instanceof Error ? e.message : 'Não foi possível salvar a configuração das conversas.');
     } finally {
       setSavingChatSetting(false);
     }
@@ -898,7 +898,7 @@ export default function InboxPage() {
       {/* Cabeçalho some no celular: a caixa de entrada usa a altura toda. */}
       <div className="hidden sm:flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Chat multi-plataforma</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Conversas</h1>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
             WhatsApp e Instagram na mesma caixa de entrada
           </p>
@@ -1068,7 +1068,7 @@ export default function InboxPage() {
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <span className={`h-1.5 w-1.5 rounded-full ${chatEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden />
-                {chatEnabled ? 'Chat ativo' : 'Chat desativado'}
+                {chatEnabled ? 'Conversas ligadas' : 'Conversas desligadas'}
               </p>
 
             </div>
@@ -1082,7 +1082,7 @@ export default function InboxPage() {
               <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500">
                 <MessageCircle size={22} />
               </span>
-              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Chat desativado</p>
+              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Conversas desligadas</p>
               <p className="max-w-xs text-[11px] text-slate-400 dark:text-slate-500">
                 Abra as configurações no rodapé da lista para ligar o recebimento de mensagens.
               </p>
@@ -1273,9 +1273,11 @@ export default function InboxPage() {
                   <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 py-2.5">
                     <Lock size={16} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Envio bloqueado</p>
+                      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Resposta indisponível por enquanto</p>
                       <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        O contato não escreve há mais de 24h. Você poderá responder de novo assim que ele mandar uma nova mensagem.
+                        {selectedConversation.channelType === 'WHATSAPP_OFFICIAL'
+                          ? 'Este cliente não fala com você há mais de 24h. Para chamar de novo, use um modelo aprovado em uma campanha.'
+                          : 'Este cliente não fala com você há mais de 24h. Você poderá responder assim que ele mandar uma nova mensagem.'}
                       </p>
                     </div>
                   </div>

@@ -37,7 +37,7 @@ export default function InstagramSection() {
 
           <p className="text-base text-slate-600 mb-8 leading-relaxed">
             Pare de perder oportunidades nos seus posts e stories. A Synq automatiza DMs e comentários
-            do Instagram via <strong className="text-slate-900">API Oficial Meta</strong> — segurança e
+            do Instagram pela <strong className="text-slate-900">conexão oficial da Meta</strong> — segurança e
             estabilidade sem risco de banimento.
           </p>
 

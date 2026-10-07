@@ -287,8 +287,8 @@ function ConnectStage() {
             {instagramDone
               ? 'Conta autorizada via Meta'
               : showConsent
-                ? 'Permissões da API Oficial'
-                : 'Login seguro pela API Oficial'}
+                ? 'Permissões oficiais do Instagram'
+                : 'Login seguro pelo próprio Instagram'}
           </p>
         </div>
       </div>
@@ -800,7 +800,7 @@ const STEPS = [
     title: 'Conecte seus canais',
     short: 'Conecte seu atendimento',
     description:
-      'Leia o QR Code no WhatsApp e autorize o Instagram pela API Oficial. Sem código, sem integração manual.',
+      'Leia o QR Code no WhatsApp e autorize o Instagram pelo login oficial. Sem código, sem integração manual.',
     tone: 'from-indigo-400 to-indigo-500',
     Stage: ConnectStage,
   },

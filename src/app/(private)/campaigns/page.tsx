@@ -263,7 +263,7 @@ function CampaignsPageContent() {
         <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Campanhas de Disparo</h1>
         <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
           {HIDDEN_FEATURES.campaignNonOfficialChannels
-            ? 'Gerencie envios em massa pela API Oficial do WhatsApp'
+            ? 'Gerencie envios em massa pelo WhatsApp Oficial'
             : 'Gerencie envios em massa para WhatsApp e Instagram'}
         </p>
       </div>

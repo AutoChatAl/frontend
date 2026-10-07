@@ -36,7 +36,7 @@ const LANGUAGES = [
 
 const CATEGORY_OPTIONS: { value: WaTemplateCategory; label: string; description: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { value: 'MARKETING', label: 'Marketing', description: 'Promoções e novidades — sempre cobrado', icon: Megaphone },
-  { value: 'UTILITY', label: 'Utilidade', description: 'Pedidos e avisos — grátis na janela de 24h', icon: Wrench },
+  { value: 'UTILITY', label: 'Utilidade', description: 'Pedidos e avisos — grátis se o cliente falou com você nas últimas 24h', icon: Wrench },
   { value: 'AUTHENTICATION', label: 'Autenticação', description: 'Códigos de verificação — tarifa própria', icon: KeyRound },
 ];
 
@@ -137,7 +137,7 @@ export default function TemplateBuilderModal({
     if (headerText.trim()) parts.push(`*${applyVars(headerText.trim())}*`);
     if (bodyText.trim()) parts.push(applyVars(bodyText.trim()));
     if (footerText.trim()) parts.push(`_${footerText.trim()}_`);
-    return parts.join('\n\n') || 'Seu template aparecerá aqui...';
+    return parts.join('\n\n') || 'Seu modelo de mensagem aparecerá aqui...';
   }, [headerText, bodyText, footerText, variableExamples]);
 
   const insertVariable = () => {
@@ -189,16 +189,16 @@ export default function TemplateBuilderModal({
     setFormError('');
     if (!isEditing) {
       if (!channelId) {
-        setFormError('Selecione o canal oficial.');
+        setFormError('Escolha o número do WhatsApp Oficial.');
         return;
       }
       if (!/^[a-z0-9_]{1,512}$/.test(name.trim())) {
-        setFormError('Nome inválido: use apenas letras minúsculas, números e underscore (ex.: promo_natal).');
+        setFormError('Nome inválido. Use só letras minúsculas sem acento, números e _ no lugar dos espaços. Exemplo: promo_natal.');
         return;
       }
     }
     if (!bodyText.trim()) {
-      setFormError('O corpo da mensagem é obrigatório.');
+      setFormError('Escreva o texto da mensagem.');
       return;
     }
     const missingExamples = variables.filter((v) => !variableExamples[v]?.trim());
@@ -226,7 +226,7 @@ export default function TemplateBuilderModal({
           variableExamples,
           ...(editing.status !== 'APPROVED' ? { category } : {}),
         });
-        onSuccess('Template atualizado e reenviado para análise da Meta.');
+        onSuccess('Modelo de mensagem atualizado e reenviado para a Meta aprovar.');
       } else {
         await templateService.create({
           channelId,
@@ -237,12 +237,12 @@ export default function TemplateBuilderModal({
           components: buildComponents(),
           variableExamples,
         });
-        onSuccess('Template enviado para aprovação da Meta. Você será notificado quando for analisado.');
+        onSuccess('Modelo de mensagem enviado para a Meta aprovar. Avisaremos você quando a análise terminar.');
       }
       onSaved();
       onClose();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Erro ao salvar o template.');
+      onError(error instanceof Error ? error.message : 'Não foi possível salvar o modelo de mensagem. Tente de novo.');
     } finally {
       setSaving(false);
     }
@@ -251,14 +251,14 @@ export default function TemplateBuilderModal({
   const previewButtons = buttons.filter((b) => b.text.trim());
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? `Editar template: ${editing?.name}` : 'Novo template'} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? `Editar modelo de mensagem: ${editing?.name}` : 'Novo modelo de mensagem'} size="xl">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-5">
           <div className="space-y-3">
             <SectionLabel>Identificação</SectionLabel>
             {!isEditing && (
               <Dropdown
-                label="Canal oficial"
+                label="Número do WhatsApp Oficial"
                 required
                 options={channels.map((c) => ({
                   value: c.id,
@@ -271,13 +271,13 @@ export default function TemplateBuilderModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Nome do template"
+                label="Nome do modelo"
                 required
                 placeholder="ex.: promo_primeira_compra"
                 value={name}
                 onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
                 disabled={lockIdentity}
-                hint={lockIdentity ? 'Não pode ser alterado após o envio.' : 'Minúsculas, números e underscore.'}
+                hint={lockIdentity ? 'Não pode ser alterado depois do envio.' : 'Só aparece para você. Use letras minúsculas sem acento, números e _ no lugar dos espaços.'}
               />
               <Dropdown label="Idioma" required options={LANGUAGES} value={language} onChange={setLanguage} disabled={lockIdentity} />
             </div>
@@ -286,7 +286,7 @@ export default function TemplateBuilderModal({
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Categoria<span className="text-red-500 ml-0.5" aria-hidden>*</span>
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Categoria do template">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Categoria do modelo de mensagem">
                 {CATEGORY_OPTIONS.map((option) => {
                   const selected = category === option.value;
                   const Icon = option.icon;
@@ -311,7 +311,7 @@ export default function TemplateBuilderModal({
                 })}
               </div>
               {categoryLocked && (
-                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">A categoria de um template aprovado não pode mudar.</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">A categoria de um modelo já aprovado não pode mudar.</p>
               )}
             </div>
           </div>
@@ -330,13 +330,13 @@ export default function TemplateBuilderModal({
 
             <div>
               <Textarea
-                label="Corpo da mensagem"
+                label="Texto da mensagem"
                 required
                 placeholder="ex.: Olá {{1}}! Temos uma oferta especial para você..."
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value.slice(0, 1024))}
                 rows={5}
-                hint="Use {{1}}, {{2}}... para variáveis preenchidas no envio."
+                hint="Use {{1}}, {{2}}... nos lugares que mudam a cada cliente, como o nome. Você preenche na hora de enviar."
               />
               <div className="mt-1 flex items-center justify-between gap-3">
                 <button
@@ -344,7 +344,7 @@ export default function TemplateBuilderModal({
                   onClick={insertVariable}
                   className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
                 >
-                  <Plus size={12} /> Adicionar variável
+                  <Plus size={12} /> Adicionar campo
                 </button>
                 <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">{bodyText.length}/1024</span>
               </div>
@@ -353,7 +353,7 @@ export default function TemplateBuilderModal({
             {variables.length > 0 && (
               <div className="rounded-lg border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-500/5 p-3 space-y-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                  Exemplos das variáveis · exigido pela Meta
+                  Exemplos dos campos · exigido pela Meta
                 </p>
                 {variables.map((variable) => (
                   <Input
@@ -377,7 +377,7 @@ export default function TemplateBuilderModal({
               />
               <div className="mt-1 flex items-start justify-between gap-3">
                 {category === 'MARKETING'
-                  ? (<span className="text-xs text-slate-400 dark:text-slate-500">Instrução de descadastro reduz denúncias e protege a qualidade do número.</span>)
+                  ? (<span className="text-xs text-slate-400 dark:text-slate-500">Dizer como parar de receber reduz denúncias e protege a qualidade do seu número.</span>)
                   : <span/>}
                 <span className="shrink-0 text-[11px] tabular-nums text-slate-400 dark:text-slate-500">{footerText.length}/60</span>
               </div>
@@ -392,7 +392,7 @@ export default function TemplateBuilderModal({
               </Button>
             </div>
             {buttons.length === 0 && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">Respostas rápidas, links rastreáveis ou botão de ligação — até 10 por template.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Respostas rápidas, links com rastreio de vendas ou botão de ligação — até 10 por modelo.</p>
             )}
             {buttons.map((button, index) => (
               <div key={index} className="flex flex-col sm:flex-row gap-2 items-start p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
@@ -420,7 +420,7 @@ export default function TemplateBuilderModal({
                           className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500"
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-400">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — cada contato recebe o link com rastreio próprio (sck/UTM) para atribuir compras.
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Rastrear vendas deste link</span> — cada contato recebe um link próprio, assim você sabe quem comprou depois de clicar.
                         </span>
                       </label>
                     </>
@@ -455,9 +455,9 @@ export default function TemplateBuilderModal({
             </div>
           )}
           <div className="rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700/60 p-3 space-y-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-            <p>• A Meta analisa o template automaticamente (minutos a 24h na maioria dos casos).</p>
-            <p>• Evite conteúdo promocional em templates de utilidade — causa reprovação por categoria incorreta.</p>
-            <p>• Templates aprovados podem ser editados até 10x por mês (1x a cada 24h).</p>
+            <p>• A Meta analisa o modelo sozinha. Na maioria das vezes leva de alguns minutos a 24h.</p>
+            <p>• Não coloque promoções em modelos de Utilidade: a Meta reprova por categoria errada.</p>
+            <p>• Modelos aprovados podem ser editados até 10 vezes por mês, uma vez a cada 24h.</p>
           </div>
         </div>
       </div>

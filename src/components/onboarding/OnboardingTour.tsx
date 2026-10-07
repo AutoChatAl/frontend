@@ -166,7 +166,7 @@ function WelcomeModal({
           </h2>
           <p className="text-sm text-slate-400 leading-relaxed">
             Em poucos passos você vai conhecer tudo que dá pra fazer aqui: conectar Instagram e
-            WhatsApp, disparar campanhas em massa, criar auto-respostas inteligentes, responder
+            WhatsApp, disparar campanhas em massa, criar automações inteligentes, responder
             comentários no Instagram{HIDDEN_FEATURES.cartRecovery ? '' : ', recuperar carrinhos abandonados no automático'} e configurar
             um chatbot com IA que conversa por você 24/7.
           </p>
@@ -175,7 +175,7 @@ function WelcomeModal({
             {[
               { icon: '📡', label: 'Conectar canais' },
               { icon: '📨', label: 'Disparos em massa' },
-              { icon: '⚡', label: 'Auto-respostas' },
+              { icon: '⚡', label: 'Automações' },
               { icon: '💬', label: 'Responder comentários' },
               ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ icon: '🛒', label: 'Recuperar carrinhos' }]),
               { icon: '🤖', label: 'IA conversacional' },

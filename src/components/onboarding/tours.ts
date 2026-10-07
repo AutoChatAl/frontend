@@ -54,84 +54,39 @@ const ALL_TOURS: TourConfig[] = [
     label: 'Visão Geral',
     steps: [
       {
-        id: 'dashboard:overview',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-dashboard"]',
-        title: 'Visão Geral da sua operação',
-        description:
-          'Aqui você acompanha em tempo real mensagens enviadas, taxa de entrega, novos contatos e o desempenho dos seus colaboradores.',
-        placement: 'right',
-      },
-      {
-        id: 'dashboard:groups-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-groups"]',
-        title: 'Grupos de contatos',
-        description:
-          'Crie listas de transmissão segmentadas (clientes VIP, leads frios, recuperação) para usar nas campanhas. Pode ser manual ou dinâmico por tags.',
-        placement: 'right',
-      },
-      {
         id: 'dashboard:channels-nav',
         tourId: 'dashboard',
         selector: '[data-tour="sidebar-channels"]',
-        title: 'Conecte seus canais',
+        title: 'Conecte seu WhatsApp ou Instagram aqui',
         description:
-          'É por aqui que você liga sua conta do WhatsApp ou Instagram à plataforma. Sem um canal conectado, nada dispara nem recebe mensagens.',
-        placement: 'right',
-      },
-      {
-        id: 'dashboard:contacts-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-contacts"]',
-        title: 'Seus contatos e a fila de atendimento',
-        description:
-          'Sua base completa de contatos vive aqui. Quem chegou pelo WhatsApp, e também quem manda DM no Instagram — esses entram automaticamente conforme conversam com você. É aqui também que aparece, em destaque, quem pediu para falar com um humano em vez do bot, para você ou seu time assumir a conversa rapidinho.',
-        placement: 'right',
-      },
-      {
-        id: 'dashboard:scheduling-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-scheduling"]',
-        title: 'Agendamentos',
-        description:
-          'Configure horários de funcionamento, duração de serviços e veja sua agenda no calendário. A IA pode até marcar horários direto no chat com o cliente.',
+          'É o primeiro passo: ligue o número de WhatsApp ou a conta do Instagram do seu negócio. Sem isso, nenhuma mensagem é enviada nem recebida.',
         placement: 'right',
       },
       {
         id: 'dashboard:auto-replies-nav',
         tourId: 'dashboard',
         selector: '[data-tour="sidebar-auto-replies"]',
-        title: 'Auto-Respostas inteligentes',
+        title: 'Crie sua primeira automação aqui',
         description:
-          'Configure respostas automáticas para palavras-chave: quando alguém escrever “orçamento”, “preço”, “horário”, a sua mensagem dispara sozinha.',
-        placement: 'right',
-      },
-      {
-        id: 'dashboard:cart-recovery-nav',
-        tourId: 'dashboard',
-        selector: '[data-tour="sidebar-cart-recovery"]',
-        title: 'Recuperação de carrinhos abandonados',
-        description:
-          'Conecte Hotmart, Kiwify, Eduzz, Monetizze e PerfectPay e o Synq dispara automaticamente mensagens no WhatsApp ou Instagram pra quem abandonou o checkout. Configure uma vez e rode no automático.',
+          'Deixe o Synq responder sozinho: quando alguém perguntar o preço ou comentar no seu post, a resposta sai na hora, de dia ou de noite.',
         placement: 'right',
       },
       {
         id: 'dashboard:ia-nav',
         tourId: 'dashboard',
         selector: '[data-tour="sidebar-ia"]',
-        title: 'Chatbot com IA',
+        title: 'Ensine a IA sobre seu negócio aqui',
         description:
-          'Um assistente que conversa com seus leads 24/7, responde dúvidas sobre produtos, agenda horários e passa para o humano quando preciso.',
+          'Conte o que você vende, os preços e os horários. A IA usa isso para atender seus clientes a qualquer hora e chama você quando for preciso.',
         placement: 'right',
       },
       {
-        id: 'dashboard:settings-nav',
+        id: 'dashboard:overview',
         tourId: 'dashboard',
-        selector: '[data-tour="sidebar-settings"]',
-        title: 'Configurações',
+        selector: '[data-tour="sidebar-dashboard"]',
+        title: 'Acompanhe os resultados aqui',
         description:
-          'Conta, segurança, faturamento, notificações e gestão de colaboradores ficam aqui. Você também pode refazer este tour a qualquer momento.',
+          'Veja quantas mensagens saíram, quantos clientes novos chegaram e como suas automações estão funcionando. Você pode refazer este tour guiado quando quiser em Configurações > Conta.',
         placement: 'right',
       },
     ],
@@ -149,7 +104,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Conecte seus canais',
         description:
-          'Esta é a página onde você conecta as contas que vão enviar e receber mensagens. Sem isso, campanhas e bots não funcionam.',
+          'Aqui você conecta os números e as contas que vão enviar e receber mensagens. Sem isso, campanhas, automações e a IA não funcionam.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -157,18 +112,18 @@ const ALL_TOURS: TourConfig[] = [
         id: 'channels:tabs',
         tourId: 'channels',
         selector: '[data-tour="channels-cards"]',
-        title: 'Um card por tipo de canal',
+        title: 'Um quadro para cada tipo de canal',
         description:
-          'WhatsApp e Instagram ficam lado a lado, cada um listando as contas já conectadas. Você pode ter vários canais ao mesmo tempo, inclusive contas distintas.',
+          'WhatsApp e Instagram ficam lado a lado, cada um mostrando os números e as contas já conectados. Você pode ter vários ao mesmo tempo.',
         placement: 'bottom',
       },
       {
         id: 'channels:add',
         tourId: 'channels',
         selector: '[data-tour="channels-add"]',
-        title: 'Adicione uma nova instância',
+        title: 'Conecte um novo número ou conta',
         description:
-          'Cada card tem seu botão de conectar. No WhatsApp você escaneia um QR Code, no Instagram você autoriza via login do Facebook.',
+          'Cada quadro tem o seu botão de conectar. No WhatsApp você lê um QR Code com o celular; no Instagram você entra com o usuário e a senha da sua conta profissional.',
         placement: 'bottom',
       },
     ],
@@ -177,16 +132,16 @@ const ALL_TOURS: TourConfig[] = [
   {
     id: 'auto-replies',
     pathname: '/auto-replies',
-    label: 'Auto-Respostas',
+    label: 'Automações',
     permission: 'auto-replies',
     steps: [
       {
         id: 'auto-replies:intro',
         tourId: 'auto-replies',
         selector: null,
-        title: 'Respostas automáticas',
+        title: 'Suas automações',
         description:
-          'Defina gatilhos por palavra-chave que disparam respostas instantâneas. Funciona para WhatsApp e Instagram DM.',
+          'Escolha as palavras que fazem o Synq responder sozinho, na hora. Funciona no WhatsApp e no Direct do Instagram.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -194,9 +149,9 @@ const ALL_TOURS: TourConfig[] = [
         id: 'auto-replies:new',
         tourId: 'auto-replies',
         selector: '[data-tour="auto-replies-new"]',
-        title: 'Crie uma nova regra',
+        title: 'Crie uma nova automação',
         description:
-          'Escolha o tipo de match (contém, exato, começa com), a palavra-chave e a resposta. Pode anexar mídia e áudio também.',
+          'Diga quando responder (a mensagem contém a palavra, é igual a ela ou começa com ela), quais palavras valem e qual será a resposta. Dá para anexar imagem, áudio ou documento também.',
         placement: 'left',
       },
     ],
@@ -214,7 +169,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Seu assistente com IA',
         description:
-          'Configure a personalidade, segmento, tom de voz e regras do bot. Ele aprende sobre seu negócio e responde 24/7.',
+          'Conte para a IA o que você vende, como fala com seus clientes e o que ela pode ou não fazer. Ela aprende sobre o seu negócio e atende a qualquer hora.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -222,18 +177,19 @@ const ALL_TOURS: TourConfig[] = [
         id: 'ia:tabs',
         tourId: 'ia',
         selector: '[data-tour="ia-tabs"]',
-        title: 'Configure por seção',
+        title: 'Simples primeiro, detalhes depois',
         description:
-          'Identidade, regras personalizadas, produtos, canais ativos e agendamentos. Cada aba ajusta um aspecto do comportamento da IA.',
+          'Comece pelo modo simples: 3 perguntas e um teste. As abas completas ficam em Configurações avançadas.',
         placement: 'bottom',
+        allowMissingTarget: true,
       },
       {
         id: 'ia:channels',
         tourId: 'ia',
         selector: '[data-tour="ia-channels"]',
-        title: 'Ative a IA por canal',
+        title: 'Ligue a IA em cada número ou conta',
         description:
-          'A IA pode ficar ligada em uns canais e desligada em outros. Use isso para testar com cuidado antes de soltar para todo mundo.',
+          'A IA pode ficar ligada em um número e desligada em outro. Use isso para testar com calma antes de liberar para todos os clientes.',
         placement: 'top',
       },
     ],
@@ -251,7 +207,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Sua base de contatos completa',
         description:
-          'Esta é a central de todo mundo que já interagiu com a sua marca. Os contatos do WhatsApp você pode importar da sua agenda, e os do Instagram entram automaticamente aqui assim que alguém envia uma DM — não precisa cadastrar manualmente. Você pode editar, organizar por tags e usar essa base inteira nas campanhas e nos grupos.',
+          'Aqui fica todo mundo que já conversou com o seu negócio. Os contatos do WhatsApp você pode trazer da sua agenda, e os do Instagram entram sozinhos assim que alguém manda uma mensagem no Direct. Você pode editar, organizar por tags e usar esses contatos nas campanhas e nos grupos.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -261,16 +217,16 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="sidebar-contacts"]',
         title: 'Fila "Quero falar com humano"',
         description:
-          'Repare no número vermelho que aparece no menu Contatos: ele mostra quantas pessoas pediram para o bot transferir o atendimento pra uma pessoa real. Esses contatos ficam em destaque no topo da lista para você (ou um colaborador) assumir a conversa rapidinho, sem ninguém ficar esperando.',
+          'Repare no número vermelho no menu Contatos: ele mostra quantas pessoas pediram para falar com alguém de verdade em vez da automação. Esses contatos ficam no topo da lista para você ou sua equipe assumir a conversa rapidinho, sem ninguém ficar esperando.',
         placement: 'right',
       },
       {
         id: 'contacts:sync',
         tourId: 'contacts',
         selector: '[data-tour="contacts-sync"]',
-        title: 'Sincronize com o WhatsApp',
+        title: 'Traga os contatos do WhatsApp',
         description:
-          'Importe contatos diretamente da agenda do seu WhatsApp conectado, sem precisar digitar um por um. Os do Instagram, como falei, já chegam sozinhos conforme as pessoas conversam com você.',
+          'Puxe os contatos da agenda do seu WhatsApp conectado, sem digitar um por um. Os do Instagram já chegam sozinhos conforme as pessoas conversam com você.',
         placement: 'left',
       },
     ],
@@ -288,7 +244,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Grupos de contatos',
         description:
-          'Use grupos para segmentar quem recebe cada campanha. Manuais (você escolhe) ou dinâmicos (por tags/critérios).',
+          'Use grupos para separar quem recebe cada campanha, como clientes fiéis, novos clientes ou quem ainda não comprou.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -316,7 +272,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Agendamentos integrados à IA',
         description:
-          'A IA consulta sua agenda e pode até marcar horários com o cliente direto pelo chat. Configure horários, serviços e disponibilidade.',
+          'A IA consulta sua agenda e pode até marcar horários com o cliente direto na conversa. Configure seus horários, serviços e dias livres.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -326,7 +282,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="scheduling-tabs"]',
         title: 'Calendário e configurações',
         description:
-          'Veja sua agenda no calendário, e configure os horários de funcionamento e duração dos serviços nas outras abas.',
+          'Veja sua agenda no calendário e ajuste os horários de funcionamento e a duração dos serviços nas outras abas.',
         placement: 'bottom',
       },
     ],
@@ -344,7 +300,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Recupere vendas perdidas no automático',
         description:
-          'Sempre que um cliente abandonar o checkout na Hotmart, Kiwify, Eduzz, Monetizze ou PerfectPay, o Synq dispara uma sequência de mensagens no WhatsApp ou Instagram pra trazer ele de volta. Tudo configurado uma vez e rodando sozinho.',
+          'Sempre que um cliente desistir da compra na Hotmart, Kiwify, Eduzz, Monetizze ou PerfectPay, o Synq manda mensagens no WhatsApp ou no Instagram para trazer ele de volta. Você configura uma vez e o resto acontece sozinho.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -354,7 +310,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="cart-recovery-tabs"]',
         title: 'Acompanhe e configure',
         description:
-          'Em "Carrinhos" você vê em tempo real quem abandonou, o valor perdido e os recuperados. Em "Integrações" você cadastra os webhooks de cada plataforma de venda (Hotmart, Kiwify, Eduzz…) que vai alimentar o sistema com esses dados. Cada plano permite uma quantidade diferente de integrações ativas.',
+          'Em "Carrinhos" você vê na hora quem desistiu, o valor que ficou para trás e as vendas recuperadas. Em "Integrações" você liga cada plataforma de venda (Hotmart, Kiwify, Eduzz…) ao Synq. Cada plano permite um número diferente de integrações ativas.',
         placement: 'bottom',
       },
     ],
@@ -371,7 +327,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: null,
         title: 'Ajustes da sua conta',
         description:
-          'Conta, segurança (2FA), notificações, faturamento, colaboradores e o botão pra refazer este tour ficam todos aqui dentro.',
+          'Conta, segurança (verificação em duas etapas), notificações, faturamento, equipe e o botão para refazer o tour guiado ficam todos aqui.',
         placement: 'center',
         allowMissingTarget: true,
       },
@@ -381,7 +337,7 @@ const ALL_TOURS: TourConfig[] = [
         selector: '[data-tour="settings-nav"]',
         title: 'Navegue pelas seções',
         description:
-          'Cada aba é uma área diferente de configuração. Donos veem mais opções (faturamento, notificações, membros) do que colaboradores.',
+          'Cada aba cuida de uma parte das configurações. O dono da conta vê mais opções (faturamento, membros e atendimento) do que os colaboradores.',
         placement: 'bottom',
       },
     ],
@@ -397,14 +353,7 @@ const HIDDEN_TOUR_IDS = new Set<string>([
   ...(HIDDEN_FEATURES.cartRecovery ? ['cart-recovery'] : []),
 ]);
 
-/** Steps individuais ocultos dentro de tours que continuam visiveis. */
-const HIDDEN_STEP_IDS = new Set<string>([
-  ...(HIDDEN_FEATURES.cartRecovery ? ['dashboard:cart-recovery-nav'] : []),
-]);
-
-export const TOURS: TourConfig[] = ALL_TOURS
-  .filter((tour) => !HIDDEN_TOUR_IDS.has(tour.id))
-  .map((tour) => ({ ...tour, steps: tour.steps.filter((step) => !HIDDEN_STEP_IDS.has(step.id)) }));
+export const TOURS: TourConfig[] = ALL_TOURS.filter((tour) => !HIDDEN_TOUR_IDS.has(tour.id));
 
 export function findTourByPathname(pathname: string): TourConfig | undefined {
   return TOURS.find((t) => pathname === t.pathname || pathname.startsWith(`${t.pathname}/`));

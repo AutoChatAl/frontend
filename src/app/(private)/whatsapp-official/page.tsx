@@ -77,7 +77,7 @@ export default function WhatsAppOfficialDashboardPage() {
       );
       setMetaBilled(billedResults.flat());
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao carregar o painel.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível carregar o painel. Atualize a página e tente de novo.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,7 +103,7 @@ export default function WhatsAppOfficialDashboardPage() {
       await loadData(selectedChannelId, days, usagePage);
     } catch (error) {
       setRefreshing(false);
-      addToast('error', error instanceof Error ? error.message : 'Erro ao atualizar a conta.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível atualizar os dados com a Meta. Tente de novo em alguns instantes.');
     }
   };
 
@@ -189,9 +189,9 @@ export default function WhatsAppOfficialDashboardPage() {
     <div className="w-full max-w-full space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">API Oficial do WhatsApp</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">WhatsApp Oficial</h1>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Status da conta, qualidade do número, consumo e custos
+            Situação da conta, qualidade do número, mensagens enviadas e custos
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -209,9 +209,9 @@ export default function WhatsAppOfficialDashboardPage() {
       {channels.length === 0 ? (
         <EmptyState
           icon={<ShieldCheck size={28} />}
-          title="Nenhuma conta oficial conectada"
-          description="Conecte sua conta do WhatsApp Business Platform para acompanhar qualidade, consumo e custos por aqui."
-          action={{ label: 'Conectar API Oficial', onClick: () => router.push('/channels') }}
+          title="Nenhum número do WhatsApp Oficial conectado"
+          description="Conecte seu número do WhatsApp Oficial para acompanhar a qualidade, as mensagens enviadas e os custos por aqui."
+          action={{ label: 'Conectar WhatsApp Oficial', onClick: () => router.push('/channels') }}
         />
       ) : (
         <>
@@ -242,10 +242,10 @@ export default function WhatsAppOfficialDashboardPage() {
                   const quality = QUALITY_BADGE[config.qualityRating ?? 'UNKNOWN'] ?? QUALITY_BADGE.UNKNOWN!;
                   const pendencies: string[] = [];
                   if (config.businessVerificationStatus && config.businessVerificationStatus !== 'verified') {
-                    pendencies.push('Verificação da empresa pendente na Meta — limite inicial de 250 destinatários/24h.');
+                    pendencies.push('A Meta ainda não verificou sua empresa. Enquanto isso, você pode chamar até 250 clientes novos a cada 24h.');
                   }
                   if (config.qualityRating === 'RED') {
-                    pendencies.push('Qualidade baixa: reduza envios de marketing para evitar restrições.');
+                    pendencies.push('Qualidade baixa: envie menos promoções por um tempo para a Meta não limitar o seu número.');
                   }
                   return (
                     <div key={channel.id} className="py-3 first:pt-0 last:pb-0">
@@ -290,8 +290,8 @@ export default function WhatsAppOfficialDashboardPage() {
             <Card className="p-4 sm:p-5 flex flex-col">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Templates</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">Modelos aprovados pela Meta</p>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Modelos de mensagem</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">Textos aprovados pela Meta</p>
                 </div>
                 <Link href="/templates" className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
                   Ver todos
@@ -313,9 +313,9 @@ export default function WhatsAppOfficialDashboardPage() {
               </div>
 
               {recentTemplates.length === 0 ? (
-                <CardEmptyState message="Nenhum template ainda." action={
+                <CardEmptyState message="Nenhum modelo de mensagem ainda." action={
                   <Link href="/templates" className="text-[13px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
-                    Criar template
+                    Criar modelo
                   </Link>
                 }/>
               ) : (
@@ -333,7 +333,7 @@ export default function WhatsAppOfficialDashboardPage() {
                   ))}
                   {templateTotals.total > recentTemplates.length && (
                     <Link href="/templates" className="pt-2 text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-center">
-                      + {(templateTotals.total - recentTemplates.length).toLocaleString('pt-BR')} outros templates
+                      + {(templateTotals.total - recentTemplates.length).toLocaleString('pt-BR')} outros modelos
                     </Link>
                   )}
                 </div>
@@ -356,7 +356,7 @@ export default function WhatsAppOfficialDashboardPage() {
                     </div>
                   ))}
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                    Mensagens livres na janela de 24h e templates de utilidade na janela são gratuitos. A cobrança real é feita pela Meta diretamente na sua conta.
+                    Quando o cliente falou com você nas últimas 24h, as respostas e os modelos de Utilidade são grátis. A cobrança de verdade é feita pela Meta, direto na sua conta.
                   </p>
                 </div>
               ) : (
@@ -391,11 +391,11 @@ export default function WhatsAppOfficialDashboardPage() {
                     </div>
                   ))}
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                    Valores retornados pela própria Meta (pricing_analytics do WABA), na moeda de cobrança da conta — pode levar algumas horas para refletir aqui.
+                    Valores informados pela própria Meta, na moeda da sua conta. Pode levar algumas horas para aparecerem aqui.
                   </p>
                 </div>
               ) : (
-                <CardEmptyState message="Nenhuma cobrança da Meta no período — mensagens na janela de atendimento de 24h são gratuitas."/>
+                <CardEmptyState message="Nenhuma cobrança da Meta no período. Responder quem falou com você nas últimas 24h é grátis."/>
               )}
             </Card>
           </div>
@@ -403,7 +403,7 @@ export default function WhatsAppOfficialDashboardPage() {
           <Card className="p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Histórico de utilização</h2>
             {usageHistory.length === 0 ? (
-              <CardEmptyState message="Nenhuma mensagem enviada pela API Oficial ainda."/>
+              <CardEmptyState message="Nenhuma mensagem enviada pelo WhatsApp Oficial ainda."/>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-left text-[13px]">
@@ -423,7 +423,7 @@ export default function WhatsAppOfficialDashboardPage() {
                           {new Date(record.sentAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="py-2.5 pr-4 text-slate-700 dark:text-slate-300">
-                          {record.kind === 'TEMPLATE' ? `Template${record.templateName ? `: ${record.templateName}` : ''}` : 'Mensagem livre'}
+                          {record.kind === 'TEMPLATE' ? `Modelo de mensagem${record.templateName ? `: ${record.templateName}` : ''}` : 'Mensagem livre'}
                         </td>
                         <td className="py-2.5 pr-4">
                           <Badge type={record.category === 'marketing' ? 'instagram' : record.category === 'service' ? 'success' : 'processing'} text={CATEGORY_LABELS[record.category] ?? record.category} pill />
