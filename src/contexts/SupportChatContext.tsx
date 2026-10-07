@@ -31,8 +31,12 @@ interface VisitorIdentity {
     name: string;
     email: string;
 }
+export type SupportChatView = 'help' | 'chat';
 interface SupportChatContextValue {
     isOpen: boolean;
+    view: SupportChatView;
+    setView: (view: SupportChatView) => void;
+    openChat: () => void;
     loading: boolean;
     sending: boolean;
     conversation: SupportChatPublicConversation | null;
@@ -56,6 +60,8 @@ export function SupportChatProvider({ children }: {
     children: ReactNode;
 }) {
   const [isOpen, setIsOpenState] = useState(false);
+  const [view, setViewState] = useState<SupportChatView>('help');
+  const chatVisible = isOpen && view === 'chat';
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [conversation, setConversation] = useState<SupportChatPublicConversation | null>(null);
@@ -146,7 +152,7 @@ export function SupportChatProvider({ children }: {
       setConversation(activeConversation);
       const nextMessages = await supportChatService.listPublicMessages(conversation.id, conversation.visitorToken);
       setMessages(nextMessages);
-      if (isOpen) {
+      if (chatVisible) {
         await supportChatService.markPublicRead(conversation.id, conversation.visitorToken);
         setConversation((prev) => (prev ? { ...prev, unreadByVisitorCount: 0 } : prev));
       }
@@ -163,7 +169,7 @@ export function SupportChatProvider({ children }: {
       }
       throw error;
     }
-  }, [clearStaleConversation, conversation?.closedAt, conversation?.id, conversation?.visitorToken, handleClosedConversation, isOpen]);
+  }, [chatVisible, clearStaleConversation, conversation?.closedAt, conversation?.id, conversation?.visitorToken, handleClosedConversation]);
   useEffect(() => {
     if (!conversation?.id || !conversation.visitorToken)
       return;
@@ -209,7 +215,7 @@ export function SupportChatProvider({ children }: {
         imageMimeType?: string;
     }) => {
     if (!workspaceId) {
-      setError('Workspace de suporte não configurado. Defina NEXT_PUBLIC_SUPPORT_WORKSPACE_ID.');
+      setError('O chat com a nossa equipe está indisponível no momento.');
       return;
     }
     if (!visitor.name.trim() || !visitor.email.trim()) {
@@ -255,7 +261,7 @@ export function SupportChatProvider({ children }: {
       try {
         const nextMessages = await supportChatService.listPublicMessages(activeConversation.id, activeConversation.visitorToken);
         setMessages(nextMessages);
-        if (isOpen) {
+        if (chatVisible) {
           await supportChatService.markPublicRead(activeConversation.id, activeConversation.visitorToken);
           setConversation((prev) => (prev ? { ...prev, unreadByVisitorCount: 0 } : prev));
         }
@@ -283,19 +289,40 @@ export function SupportChatProvider({ children }: {
     finally {
       setSending(false);
     }
-  }, [clearStaleConversation, conversation, handleClosedConversation, isOpen, visitor.email, visitor.name, workspaceId]);
+  }, [chatVisible, clearStaleConversation, conversation, handleClosedConversation, visitor.email, visitor.name, workspaceId]);
+  const markConversationRead = useCallback(() => {
+    if (!conversation?.id || !conversation.visitorToken)
+      return;
+    supportChatService.markPublicRead(conversation.id, conversation.visitorToken).catch(() => { });
+    setConversation((prev) => (prev ? { ...prev, unreadByVisitorCount: 0 } : prev));
+  }, [conversation?.id, conversation?.visitorToken]);
   const setIsOpen = useCallback((open: boolean) => {
     setIsOpenState(open);
-    if (open && conversation?.id && conversation.visitorToken) {
-      supportChatService.markPublicRead(conversation.id, conversation.visitorToken).catch(() => { });
-      setConversation((prev) => (prev ? { ...prev, unreadByVisitorCount: 0 } : prev));
-    }
-  }, [conversation?.id, conversation?.visitorToken]);
+    if (!open)
+      return;
+    const hasUnread = (conversation?.unreadByVisitorCount ?? 0) > 0;
+    setViewState(hasUnread ? 'chat' : 'help');
+    if (hasUnread)
+      markConversationRead();
+  }, [conversation?.unreadByVisitorCount, markConversationRead]);
+  const setView = useCallback((nextView: SupportChatView) => {
+    setViewState(nextView);
+    if (nextView === 'chat' && isOpen)
+      markConversationRead();
+  }, [isOpen, markConversationRead]);
+  const openChat = useCallback(() => {
+    setViewState('chat');
+    setIsOpenState(true);
+    markConversationRead();
+  }, [markConversationRead]);
   const setVisitor = (nextVisitor: VisitorIdentity) => {
     setVisitorState(nextVisitor);
   };
   const value = useMemo<SupportChatContextValue>(() => ({
     isOpen,
+    view,
+    setView,
+    openChat,
     loading,
     sending,
     conversation,
@@ -309,7 +336,7 @@ export function SupportChatProvider({ children }: {
     startNewConversation,
     sendMessage,
     refreshMessages,
-  }), [closedConversationMessage, conversation, error, isOpen, loading, messages, refreshMessages, sendMessage, sending, setIsOpen, startNewConversation, visitor, workspaceId]);
+  }), [closedConversationMessage, conversation, error, isOpen, loading, messages, openChat, refreshMessages, sendMessage, sending, setIsOpen, setView, startNewConversation, view, visitor, workspaceId]);
   return <SupportChatContext.Provider value={value}>{children}</SupportChatContext.Provider>;
 }
 export function useSupportChat() {
