@@ -14,8 +14,8 @@ interface AISchedulingSectionProps {
     onToggleQuery: (enabled: boolean) => void;
     onToggleBooking: (enabled: boolean) => void;
 }
-const QUERY_LOCK = 'Seu plano de IA atual não inclui consulta de disponibilidade. Faça upgrade para liberar.';
-const BOOKING_LOCK = 'Seu plano de IA atual não inclui criação de agendamentos. Faça upgrade para liberar.';
+const QUERY_LOCK = 'Seu plano de IA atual não inclui consulta de disponibilidade. Mude de plano para liberar.';
+const BOOKING_LOCK = 'Seu plano de IA atual não inclui criação de agendamentos. Mude de plano para liberar.';
 
 export default function AISchedulingSection({ schedulingQueryEnabled, schedulingBookingEnabled, schedulingQueryAllowed, schedulingBookingAllowed, onToggleQuery, onToggleBooking }: AISchedulingSectionProps) {
   return (

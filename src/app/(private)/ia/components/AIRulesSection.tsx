@@ -26,18 +26,18 @@ export default function AIRulesSection({ customRules, followUpMinutes, followUpM
     <div className="space-y-3">
       <Card className="p-4">
         <SectionHeader
-          title="Retomada automática"
+          title="Retomar conversa parada"
           hint="Se o cliente sumir depois da última resposta da IA, ela manda uma mensagem curta puxando o assunto de volta."
         />
         <Select
-          label="Enviar follow-up após"
+          label="Mandar a mensagem depois de"
           value={String(followUpMinutes)}
           onChange={(value) => onFollowUpMinutesChange(Number(value))}
           options={AI_FOLLOW_UP_OPTIONS.map((option) => ({
             value: String(option.value),
             label: option.label,
           }))}
-          hint="Só uma mensagem por silêncio, com trava de 2h antes da próxima. Nunca em conversa que já foi para atendimento humano, que terminou com agendamento fechado ou com despedida do cliente. No Instagram e na API Oficial a Meta só permite mensagem livre por 24h após a fala do cliente — prazos que caem fora dessa janela não são agendados nesses canais."
+          hint="Só uma mensagem por silêncio, com trava de 2h antes da próxima. Nunca em conversa que já foi para atendimento humano, que terminou com agendamento fechado ou com despedida do cliente. No Instagram e no WhatsApp Oficial, se o cliente não fala com você há mais de 24h, só dá para chamar de novo com um modelo aprovado. Por isso, nesses canais, a mensagem não é enviada quando o prazo escolhido passa de 24h."
         />
 
         {followUpMinutes > 0 && (

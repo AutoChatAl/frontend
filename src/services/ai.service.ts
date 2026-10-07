@@ -1,10 +1,18 @@
-import type { AiCatalogScope, AiProfile, AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
+import type { AiCatalogScope, AiProfile, AiSimulationPayload, AiSimulationResponse, AiTriggerSettings, InstagramProductLayout, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import { defaultAiTriggerSettings } from '@/types/AI';
 import { getErrorMessage } from '@/types/ErrorCode';
 import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@/utils/ApiClient';
 
 const IMPORT_TIMEOUT_MS = 120000;
+const SIMULATION_TIMEOUT_MS = 45000;
+const SIMULATION_ERROR_MESSAGES: Record<string, string> = {
+  AI_SIMULATION_NEEDS_CUSTOMER_MESSAGE: 'Escreva uma mensagem como se fosse o cliente para a IA responder.',
+  AI_SIMULATION_UNAVAILABLE: 'A IA não conseguiu responder agora. Tente de novo em instantes.',
+  AI_SIMULATION_RATE_LIMITED: 'Você fez muitos testes seguidos. Espere alguns minutos e tente de novo.',
+  AI_PLAN_REQUIRED: 'Para testar a IA, você precisa de um plano de IA ativo.',
+  VALIDATION_ERROR: 'A mensagem de teste é muito longa ou a conversa ficou grande demais. Reinicie a conversa e tente de novo.',
+};
 export interface AiConfig {
     id: string;
     profileName?: string;
@@ -293,6 +301,20 @@ class AiService {
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsDataURL(file);
     });
+  }
+
+  public async simulate(payload: AiSimulationPayload): Promise<string> {
+    const response = await apiClient.post<AiSimulationResponse>('/ai/simulate', payload, { timeoutMs: SIMULATION_TIMEOUT_MS });
+    const data = response.data as (AiSimulationResponse & { reason?: string }) | undefined;
+    if (!response.success || !data?.reply) {
+      const reason = data?.reason;
+      const knownMessage = reason ? SIMULATION_ERROR_MESSAGES[reason] : undefined;
+      if (knownMessage) {
+        throw new Error(knownMessage);
+      }
+      throw new Error(reason ? getErrorMessage(reason) : 'Não foi possível testar a IA agora. Tente de novo em instantes.');
+    }
+    return data.reply;
   }
 
   public async exportProfilesCsv(): Promise<TransferExport> {

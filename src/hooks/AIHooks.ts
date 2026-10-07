@@ -7,7 +7,7 @@ import { funnelService } from '@/services/funnel.service';
 import type { AiCatalogScope, AIChannel, AiProfile } from '@/types/AI';
 import type { InstagramProductLayout, Product, ProductImportMode, ProductImportReport, ProductPayload } from '@/types/AI';
 import type { AiTriggerSettings } from '@/types/AI';
-import { defaultAiTriggerSettings } from '@/types/AI';
+import { AI_SIMPLE_FOLLOW_UP_MINUTES, defaultAiTriggerSettings } from '@/types/AI';
 import type { FunnelStageDefinition } from '@/types/Funnel';
 
 const PRODUCTS_PAGE_SIZE = 20;
@@ -162,6 +162,42 @@ export function useAIConfig() {
       setSaving(false);
     }
   }, [segment, businessName, assistantName, tone, customRules, triggerSettings, followUpMinutes, followUpMessage, funnelAutoMoveEnabled, addToast]);
+  const saveSimpleSetup = useCallback(async (data: { businessName: string; customRules: string }): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ businessName: data.businessName, customRules: data.customRules }, activeProfileRef.current);
+      setBusinessName(data.businessName);
+      setCustomRules(data.customRules);
+      addToast('success', 'Pronto! A IA já usa essas informações nas respostas.');
+      return true;
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao salvar as informações do negócio.');
+      return false;
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast]);
+  const toggleFollowUp = useCallback(async (enabled: boolean) => {
+    const previousMinutes = followUpMinutes;
+    const nextMinutes = enabled ? AI_SIMPLE_FOLLOW_UP_MINUTES : 0;
+    setFollowUpMinutes(nextMinutes);
+    setSaving(true);
+    try {
+      await aiService.updateConfig({ followUpMinutes: nextMinutes, followUpMessage }, activeProfileRef.current);
+      addToast('success', enabled
+        ? 'A IA vai puxar a conversa de volta quando o cliente sumir.'
+        : 'A IA não vai mais retomar conversas paradas.');
+    }
+    catch (err) {
+      setFollowUpMinutes(previousMinutes);
+      addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar a retomada de conversa.');
+    }
+    finally {
+      setSaving(false);
+    }
+  }, [addToast, followUpMinutes, followUpMessage]);
   const toggleSchedulingQuery = useCallback(async (enabled: boolean) => {
     setSchedulingQueryEnabled(enabled);
     setSaving(true);
@@ -551,6 +587,8 @@ export function useAIConfig() {
     toasts,
     removeToast,
     saveConfig,
+    saveSimpleSetup,
+    toggleFollowUp,
     toggleChannel,
     addProduct,
     updateProduct,

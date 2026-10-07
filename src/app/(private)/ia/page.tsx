@@ -3,10 +3,12 @@ import { Bot } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { completeSetupStep } from '@/app/get-started/setupSteps';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import ImportExportMenu from '@/components/ImportExportMenu';
+import SegmentedControl from '@/components/SegmentedControl';
 import { SkeletonForm, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -26,10 +28,23 @@ import AIProfileSwitcher from './components/AIProfileSwitcher';
 import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AISchedulingSection from './components/AISchedulingSection';
+import AISimpleMode from './components/AISimpleMode';
+import AISimulator from './components/AISimulator';
 import AITabs, { resolveAiTabs } from './components/AITabs';
 
 /** Abas cujos campos ficam em rascunho até o usuário salvar. As outras gravam a cada clique. */
 const TABS_WITH_DRAFT = ['general', 'triggers'];
+
+type AiViewMode = 'simple' | 'advanced';
+
+function markAiTested(): void {
+  void completeSetupStep('ai-test');
+}
+
+const VIEW_MODE_OPTIONS: ReadonlyArray<{ value: AiViewMode; label: string }> = [
+  { value: 'simple', label: 'Modo simples' },
+  { value: 'advanced', label: 'Configurações avançadas' },
+];
 
 export default function IAPage() {
   const searchParams = useSearchParams();
@@ -40,9 +55,10 @@ export default function IAPage() {
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');
+  const [viewMode, setViewMode] = useState<AiViewMode | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [clearCatalogOpen, setClearCatalogOpen] = useState(false);
-  const { addToast, reloadConfig, segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, knowledgeEnabled, toggleKnowledge, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, loading, saving, saveConfig, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
+  const { addToast, reloadConfig, segment, setSegment, businessName, setBusinessName, assistantName, setAssistantName, tone, setTone, customRules, setCustomRules, followUpMinutes, setFollowUpMinutes, followUpMessage, setFollowUpMessage, schedulingQueryEnabled, schedulingBookingEnabled, funnelAutoMoveEnabled, crossSellEnabled, knowledgeEnabled, toggleKnowledge, funnelStages, products, productsTotal, productsLoading, productSearch, productPage, productsPageSize, maxProducts, setProductSearch, goToProductPage, clearProducts, importProducts, channels, activeChannelId: _activeChannelId, enabled, loading, saving, saveConfig, saveSimpleSetup, toggleFollowUp, toggleChannel, toggleSchedulingQuery, toggleSchedulingBooking, toggleFunnelAutoMove, toggleCrossSell, addProduct, updateProduct, deleteProduct, instagramProductLayout, changeProductLayout, uploadProductImage, removeProductImage, toasts, removeToast, visibleTabs, profiles, activeProfileId, maxProfiles, switchingProfile, switchProfile, createProfile, renameProfile, deleteProfile, catalogScope, changeCatalogScope, maxCustomRulesChars } = useAIConfig();
   const customRulesLimit = maxCustomRulesChars > 0 ? maxCustomRulesChars : (status?.limits?.maxCustomRulesChars ?? 0);
   // Passar do limite é erro 422 garantido no backend — o botão trava antes de gastar a ida.
   const customRulesOverLimit = customRulesLimit > 0 && customRules.length > customRulesLimit;
@@ -51,8 +67,16 @@ export default function IAPage() {
   useEffect(() => {
     if (tabParam && tabIds.includes(tabParam)) {
       setActiveTab(tabParam);
+      setViewMode('advanced');
     }
   }, [tabParam, tabIds]);
+  useEffect(() => {
+    if (loading || viewMode) {
+      return;
+    }
+    const configured = enabled || !!(businessName.trim() || segment.trim() || customRules.trim());
+    setViewMode(configured ? 'advanced' : 'simple');
+  }, [loading, viewMode, enabled, businessName, segment, customRules]);
   // Papel sem acesso à aba selecionada cai na primeira liberada em vez de ver a área vazia.
   useEffect(() => {
     const [firstTab] = tabIds;
@@ -60,7 +84,7 @@ export default function IAPage() {
       setActiveTab(firstTab);
     }
   }, [tabIds, activeTab]);
-  if (subLoading || loading) {
+  if (subLoading || loading || (hasAiPlan && !viewMode)) {
     return <SkeletonPage><SkeletonForm fields={5}/></SkeletonPage>;
   }
   if (!hasAiPlan) {
@@ -88,22 +112,50 @@ export default function IAPage() {
       <div className="min-w-0">
         <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Inteligência Artificial</h1>
         <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-          Quem é o assistente, o que ele pode oferecer e até onde ele age sozinho
+          {viewMode === 'simple'
+            ? 'Responda 3 perguntas, ligue no seu WhatsApp ou Instagram e teste antes de liberar'
+            : 'Quem é o assistente, o que ele pode oferecer e até onde ele age sozinho'}
         </p>
       </div>
-      {/* Leva identidade, tom e prompt de treinamento. Canal, catálogo e base de
-          conhecimento ficam de fora — cada um é um acervo próprio. */}
-      <ImportExportMenu
-        resourceLabel="perfis de IA"
-        onExport={() => aiService.exportProfilesCsv()}
-        onImport={(csv) => aiService.importProfilesCsv(csv)}
-        onImported={() => { void reloadConfig(); }}
-        onError={(message) => addToast('error', message)}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <div data-tour={viewMode === 'simple' ? 'ia-tabs' : undefined}>
+          <SegmentedControl
+            ariaLabel="Como configurar a IA"
+            options={VIEW_MODE_OPTIONS}
+            value={viewMode ?? 'simple'}
+            onChange={setViewMode}
+          />
+        </div>
+        {viewMode === 'advanced' && (
+          <ImportExportMenu
+            resourceLabel="perfis de IA"
+            onExport={() => aiService.exportProfilesCsv()}
+            onImport={(csv) => aiService.importProfilesCsv(csv)}
+            onImported={() => { void reloadConfig(); }}
+            onError={(message) => addToast('error', message)}
+          />
+        )}
+      </div>
     </div>
 
-    {/* Nav à esquerda e conteúdo ao lado; no mobile a nav vira uma fila rolável em cima. */}
-    <div className="flex flex-col gap-4 lg:flex-row">
+    {viewMode === 'simple' && (
+      <AISimpleMode
+        businessName={businessName}
+        customRules={customRules}
+        maxCustomRulesChars={customRulesLimit}
+        followUpMinutes={followUpMinutes}
+        followUpMessage={followUpMessage}
+        channels={channels}
+        activeProfileId={activeProfileId}
+        {...(profiles.length > 1 ? { profileName: profiles.find((profile) => profile.id === activeProfileId)?.name ?? '' } : {})}
+        saving={saving}
+        onSave={saveSimpleSetup}
+        onToggleFollowUp={toggleFollowUp}
+        onToggleChannel={toggleChannel}
+      />
+    )}
+
+    {viewMode === 'advanced' && (<div className="flex flex-col gap-4 lg:flex-row">
       <div data-tour="ia-tabs" className="lg:w-52 lg:shrink-0">
         <AITabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs}/>
         <AIProfileSwitcher
@@ -140,6 +192,8 @@ export default function IAPage() {
 
         {activeTab === 'funnel' && (<AIFunnelSection funnelAutoMoveEnabled={funnelAutoMoveEnabled} stages={funnelStages} onToggle={toggleFunnelAutoMove}/>)}
 
+        {activeTab === 'test' && (<AISimulator {...(activeProfileId ? { profileId: activeProfileId } : {})} onReply={markAiTested}/>)}
+
         {TABS_WITH_DRAFT.includes(activeTab) && (<div className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
           <p className="text-xs text-slate-400 dark:text-slate-500">
             {activeTab === 'triggers' && customRulesOverLimit
@@ -151,7 +205,7 @@ export default function IAPage() {
           </Button>
         </div>)}
       </div>
-    </div>
+    </div>)}
 
     <AIProductsImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={importProducts}/>
 
