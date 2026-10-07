@@ -388,6 +388,10 @@ Usadas via classes `animate-in` do Tailwind (plugin `tailwindcss-animate`):
 | Backdrop do modal | `animate-in fade-in duration-200` |
 | Conteúdo do modal | `animate-in zoom-in-95 duration-200` |
 | Toast notification | `animate-in slide-in-from-right-4 duration-300` |
+| Bolha nova no chat de teste da IA | `animate-bubble-in` (utilitário em `globals.css`) |
+| Três pontinhos de "digitando" | `animate-typing`, com `[animation-delay:170ms]` e `[animation-delay:340ms]` no 2º e 3º ponto |
+
+As duas animações do chat ficam desligadas quando o sistema pede menos movimento (`prefers-reduced-motion`), já tratado em `globals.css`.
 
 ### 6.4 Loading State
 
@@ -597,6 +601,15 @@ Aceita `className` para extensão. Usado como container padrão de seções.
 <Badge type="beta" text="BETA" pill />
 ```
 
+**Selos do menu lateral (`Sidebar.tsx`):** marcam o item do menu sem competir com o texto. Ficam logo depois do nome, somem no modo recolhido e usam o mesmo formato compacto (`rounded-full px-1.5 text-[9px] font-semibold leading-4 tracking-wide`).
+
+| Selo | Classes de cor | Quando usar |
+|---|---|---|
+| `BETA` | `bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400` | Recurso novo, ainda em teste |
+| `AVANÇADO` | `bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400` | Recurso para depois dos primeiros passos (Fluxos e Funil). Aparece só enquanto o usuário não concluiu os primeiros passos e traz `title` explicando o motivo |
+
+O `AVANÇADO` é neutro de propósito: avisa sem desencorajar nem parecer erro. Ative pela flag `advanced` do `MenuItem` (calculada no `SidebarContext`), nunca escrevendo o selo direto na página.
+
 ---
 
 ### 8.5 Modal
@@ -695,7 +708,7 @@ text-slate-500 dark:text-slate-400
 
 **Arquivo:** `src/components/AudioPlayer.tsx`
 
-Player de áudio com forma de onda, usado no `AudioPicker` (auto-respostas) e nos balões de áudio da inbox. Substitui o `<audio controls>` nativo, que não acompanha o tema.
+Player de áudio com forma de onda, usado no `AudioPicker` (Automações) e nos balões de áudio da inbox. Substitui o `<audio controls>` nativo, que não acompanha o tema.
 
 - Botão circular de play/pause `h-8 w-8`, tempo `atual / total` em `tabular-nums`
 - A onda vem dos picos reais do áudio; quando o CDN barra o fetch por CORS, cai numa onda genérica
@@ -713,6 +726,122 @@ Player de áudio com forma de onda, usado no `AudioPicker` (auto-respostas) e no
 <AudioPlayer src={src} />
 <AudioPlayer src={src} variant="accent" className="w-64 max-w-full" />
 ```
+
+---
+
+### 8.9 Passo a passo numerado
+
+**Arquivos:** `channels/components/ConnectStepList.tsx` (Canais), `GuideStep` em `cart-recovery/components/ConnectionGuide.tsx` (Recuperação) e a lista de passos do `HelpArticleView` (widget de ajuda).
+
+É **um padrão só**: toda instrução em sequência para o usuário fazer fora do Synq (no celular, no Instagram, no painel da plataforma de vendas) vira uma lista `<ol>` com número em círculo. Nunca use parágrafo corrido nem lista com marcador para passos.
+
+| Parte | Classes |
+|---|---|
+| Lista | `<ol className="space-y-2.5">` |
+| Item | `flex items-start gap-3` |
+| Número | `flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold` + tom (abaixo), com `aria-hidden` |
+| Texto | `pt-0.5 text-sm text-slate-600 dark:text-slate-300` (ou `text-slate-700 dark:text-slate-300` quando o passo tem conteúdo extra, como botão ou campo) |
+| Destaque de botão/menu citado | `StepHighlight`: `font-semibold text-slate-900 dark:text-white` |
+
+| Tom do número | Classes | Quando usar |
+|---|---|---|
+| Plataforma — WhatsApp | `bg-emerald-500 dark:bg-emerald-600 text-white` | Conectar WhatsApp (QR Code ou código) |
+| Plataforma — Instagram | `bg-fuchsia-500 dark:bg-fuchsia-600 text-white` | Mudar para conta profissional |
+| Primária | `bg-indigo-600 dark:bg-indigo-500 text-white` | Passo a passo de ligação com a plataforma de vendas |
+| Suave | `bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400` | Artigos de ajuda (leitura, não ação imediata) |
+
+O nome do botão ou menu citado no passo é exatamente o texto que aparece na tela (ex.: "Aparelhos conectados", "Conectar um aparelho").
+
+```tsx
+<ConnectStepList tone="emerald" steps={[
+  'Abra o WhatsApp no seu celular.',
+  <>Entre em <StepHighlight>Aparelhos conectados</StepHighlight> e toque em <StepHighlight>Conectar um aparelho</StepHighlight>.</>,
+]}/>
+```
+
+---
+
+### 8.10 Cartões de escolha (WhatsAppKindChooser)
+
+**Arquivo:** `channels/components/WhatsAppKindChooser.tsx`
+
+Usado quando o usuário precisa escolher entre caminhos diferentes antes de começar (ex.: "Qual WhatsApp é para mim?"). O título do cartão é o **objetivo** do usuário ("Quero enviar promoções para muitos contatos"), e o nome técnico do recurso vai num selo neutro.
+
+- Grade: `grid gap-2 sm:gap-3`, com `md:grid-cols-2` quando há duas opções
+- Cartão (`<button>`): `group flex w-full min-w-0 flex-col gap-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-left transition-colors hover:border-indigo-300 dark:hover:border-indigo-500/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5`
+- Ícone: `h-9 w-9 rounded-lg border` na cor da plataforma (emerald para QR Code, teal para WhatsApp Oficial, ex.: `border-teal-100 dark:border-teal-500/20 bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400`); vira `Loader2 animate-spin` durante o carregamento
+- Título `text-sm font-semibold text-slate-900 dark:text-white` + `<Badge type="neutral" pill/>` com o nome do recurso
+- Seta à direita: `ArrowRight` 16, `text-slate-300 dark:text-slate-600`, `group-hover:text-indigo-500 dark:group-hover:text-indigo-400`
+- Descrição: `text-xs text-slate-500 dark:text-slate-400`
+- Exigência importante (opcional) no rodapé: faixa `rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-300` com `TriangleAlert` 13
+
+Aparece embutido na página quando ainda não há nenhuma conexão e, depois, dentro de um `Modal size="md"` aberto pelo botão "Qual WhatsApp é para mim?".
+
+---
+
+### 8.11 Cartão de receita / modelo pronto
+
+**Arquivos:** `auto-replies/components/RecipeGallery.tsx` (Automações) e `flows/components/FlowTemplatePicker.tsx` (Fluxos)
+
+Ponto de partida para quem não sabe por onde começar: o usuário escolhe um **objetivo** e recebe a automação ou o fluxo já montado para revisar.
+
+| Parte | Classes |
+|---|---|
+| Grade | `grid gap-2 sm:grid-cols-2 lg:grid-cols-3` (receitas) · `grid gap-2 sm:grid-cols-2` (fluxos) |
+| Cartão (`<button>`) | `group flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5` |
+| Ícone | `flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400`, ícone 18 |
+| Título / descrição | `text-sm font-semibold text-slate-900 dark:text-white` / `mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400` |
+| Destino (onde vai funcionar) | `text-[11px] font-medium text-indigo-600 dark:text-indigo-400` + `ArrowRight` 11 com `group-hover:translate-x-0.5` |
+| Selo "Indicado para você" | `rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400` |
+| Opção "Começar do zero" | mesmo cartão com `border-dashed border-slate-300 bg-transparent dark:border-slate-600`, ícone neutro `bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400` e `sm:col-span-2` |
+
+Regras: os cartões que combinam com o tipo de negócio do usuário vêm primeiro; mostre os 6 primeiros e esconda o resto atrás de "Ver todas (N)" (`text-[13px] font-medium text-indigo-600 dark:text-indigo-400` + `ChevronDown` que gira). Abaixo da galeria, o campo "Ou descreva o que você quer" monta a automação a partir de um texto livre — nada é ativado sem confirmação.
+
+---
+
+### 8.12 Chat de teste da IA (AISimulator)
+
+**Arquivo:** `ia/components/AISimulator.tsx`
+
+Conversa de mentira para o usuário testar a IA como se fosse um cliente. Nada é enviado para ninguém.
+
+| Parte | Classes |
+|---|---|
+| Área da conversa | `flex h-80 flex-col gap-2 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50 p-3 sm:h-96 dark:border-slate-700 dark:bg-slate-900` |
+| Bolha do cliente (direita) | `max-w-[85%] whitespace-pre-wrap break-words rounded-lg rounded-tr-none px-3 py-2 text-sm shadow-xs dark:shadow-none bg-indigo-600 text-white dark:bg-indigo-500` |
+| Bolha da IA (esquerda) | mesma base com `rounded-tl-none border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white` |
+| Avatar da IA | `h-6 w-6 rounded-full bg-violet-50 dark:bg-violet-500/10` + `Bot` 14 `text-violet-600 dark:text-violet-400` |
+| Digitando | bolha da IA com três pontos `h-1.5 w-1.5 animate-typing rounded-full bg-slate-400 dark:bg-slate-500` (atrasos 170ms e 340ms) e `aria-label="A IA está digitando"` |
+| Entrada de bolha | `animate-bubble-in` |
+| Chips de sugestão (conversa vazia, dentro do `action` de um `CardEmptyState`) | `rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-400 dark:hover:text-indigo-400` |
+| Campo em pílula | `min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-base sm:text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white` (`text-base` no celular evita o zoom do iOS) |
+| Botão de enviar | `h-10 w-10 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 dark:bg-indigo-500 dark:hover:bg-indigo-600` |
+
+Falhas aparecem num `Callout tone="warning"` abaixo da conversa com o botão "Tentar de novo"; o rótulo do campo existe só para leitor de tela (`sr-only`).
+
+---
+
+### 8.13 Widget de ajuda
+
+**Arquivos:** `components/support-chat/SupportChatWidget.tsx`, `HelpPanel.tsx`, `HelpArticleView.tsx`, `HelpContactCard.tsx`
+
+O botão flutuante abre um painel com duas abas (`SegmentedControl`): **Ajuda** (artigos) e a conversa com o suporte. Os artigos vivem em `helpArticles.ts` e sempre citam os nomes exatos de menus e botões.
+
+- **Painel:** tela cheia no celular; a partir de `sm`, janela `sm:h-140 sm:w-105 sm:rounded-t-lg sm:border sm:border-b-0 sm:border-slate-200 sm:shadow-xl sm:dark:border-slate-700` presa ao canto inferior direito, fundo `bg-white dark:bg-slate-800`
+- **Rótulo de seção** ("Sugestões para esta tela", "Todos os assuntos"): `text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400`
+- **Cartão de artigo:** `group flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5`; ícone `h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400`; título `text-sm font-medium`; resumo `line-clamp-2 text-xs text-slate-500 dark:text-slate-400`; `ChevronRight` 16 que fica indigo no hover
+- **Lista por assunto:** grupo `overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800`, cabeçalho com ícone 14 indigo e `divide-y divide-slate-100 dark:divide-slate-700` entre os artigos
+- **Leitor de artigo:** botão "voltar" discreto (`text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700`), categoria `text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400`, título `text-base font-semibold`, passos no padrão 8.9 (tom suave), dica em `Callout tone="info"` com `Lightbulb` 14 e botão primário de largura total para ir à tela. Se o usuário já está na tela do artigo, o botão vira `Callout tone="success"` ("Você já está na tela certa").
+- **Cartão "Ainda precisa de ajuda?":** `rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800`, com o botão primário de falar com o suporte e, quando houver número, o **botão de WhatsApp verde**:
+
+```tsx
+<a className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white
+  shadow-sm shadow-emerald-200 transition-all hover:scale-105 hover:bg-emerald-700 active:scale-95 dark:shadow-none">
+  <MessageCircle size={14}/> Falar no WhatsApp
+</a>
+```
+
+O verde (`emerald-600`) é reservado a ações que abrem o WhatsApp de verdade; não use em botões comuns.
 
 ---
 
@@ -839,6 +968,126 @@ com `edge="top"` e/ou `edge="bottom"` conforme a vizinhança.
 
 **Destaque de headline:** cor sólida do sistema (`text-indigo-600`). Texto em gradiente fica
 reservado a destaques sobre fundo escuro.
+
+### 9.7 Teste grátis — barra de uso, fim do teste e faixa de aviso
+
+**Arquivos:** `components/TrialBanner.tsx` e `components/TrialEndedScreen.tsx`
+
+**Faixa do teste (`TrialBanner`):** fica acima do conteúdo, `mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:shadow-none`, com ícone `h-8 w-8 rounded-lg`, botão "Escolher plano" (`size="sm"`) e um `X` discreto para fechar. Quando o uso de IA ou de mensagens passa de 80% do limite do teste, a faixa troca a contagem de dias pela **barra de uso**:
+
+| Parte | Classes |
+|---|---|
+| Trilho | `mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700`, com `role="progressbar"` e `aria-valuenow` |
+| Preenchimento (perto do limite) | `h-full rounded-full bg-amber-500 dark:bg-amber-400` |
+| Preenchimento (limite atingido) | `h-full rounded-full bg-red-500 dark:bg-red-400` |
+| Ícone (perto do limite) | `bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400` |
+| Ícone (limite atingido) | `bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400` |
+
+Nesse modo o botão vira "Assinar agora". O texto fala do resultado ("Sua IA já respondeu 80 de 100 mensagens do teste"), não do limite técnico. Com o limite atingido a faixa não pode ser fechada.
+
+**Tela de fim do teste (`TrialEndedScreen`):** substitui o conteúdo das páginas quando o teste acabou (exceto `/plans` e `/settings`). Centralizada em `mx-auto w-full max-w-xl py-6 sm:py-12`, dentro de um `Card` com `overflow-hidden`:
+
+- Topo: `border-b border-slate-100 bg-slate-50 px-6 py-8 text-center dark:border-slate-700 dark:bg-slate-900/40 sm:px-8`, ícone `Hourglass` em `h-12 w-12 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400`, título `text-xl sm:text-2xl font-semibold`
+- Lista do que ficou guardado: título com `CheckCircle2` `text-emerald-500 dark:text-emerald-400` e itens com ícone em `h-7 w-7 rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300`. A mensagem central é sempre "nada foi apagado"
+- Aviso do que está parado: faixa `rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 dark:border-violet-500/20 dark:bg-violet-500/10` com texto `text-xs text-violet-700 dark:text-violet-300`
+- Ações: `flex flex-col gap-2 sm:flex-row`, "Escolher um plano" (`size="lg"` primário) e "Falar com o suporte" (`variant="secondary"`, abre direto a conversa do widget). Para quem não pode assinar, as ações viram um aviso neutro pedindo ao responsável pela conta
+
+**Faixa de fim de teste (`TrialEndedNotice`):** em Configurações, no lugar da tela inteira: `mb-4 flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/20 dark:bg-amber-500/10`, texto `text-sm text-amber-700 dark:text-amber-300`, `Hourglass` 16 e botão "Escolher um plano" `size="sm"`.
+
+### 9.8 Canais — status, selo de atenção e "Reconectar"
+
+**Arquivo:** `channels/components/ChannelTypeCard.tsx`
+
+Cada conexão da lista mostra um ponto no avatar e um selo de status. Conexão que caiu e precisa do usuário recebe o tom de **atenção** (âmbar), diferente de uma conexão apenas desligada (cinza).
+
+| Estado | Ponto no avatar | Selo (`rounded-full px-2 py-0.5 text-[10px] font-semibold`, oculto no celular) |
+|---|---|---|
+| Ativo | `bg-emerald-500` | `bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400` |
+| Precisa de atenção (ex.: "Desconectado") | `bg-amber-500` | `bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400` |
+| Parado | `bg-slate-300 dark:bg-slate-600` | `bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400` |
+
+O ponto fica em `absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800`.
+
+**Ação "Reconectar":** quando a conexão não está ativa, o ícone de ligar dá lugar a um botão com texto — mais fácil de achar do que um ícone sozinho:
+
+```tsx
+'shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer
+ text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+// + <RotateCcw size={12}/> Reconectar
+```
+
+As demais ações da linha (sincronizar, renomear, remover) seguem como `h-7 w-7` só com ícone. No topo do cartão, a barra `h-1` mostra quantas conexões estão "no ar" (`{ativas}/{total} no ar`).
+
+### 9.9 Linha de resultados do cartão de automação
+
+**Arquivo:** `auto-replies/components/AutomationCard.tsx`
+
+Rodapé do cartão que mostra se a automação está trazendo resultado. Fica separado por `border-t border-slate-100 pt-2.5 dark:border-slate-700/60`, em `text-xs`.
+
+- Com disparos: `flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400`, cada métrica com ícone 12 — `Zap` e `Send` em `text-indigo-500 dark:text-indigo-400`, `MousePointerClick` (cliques) em `text-emerald-500 dark:text-emerald-400`. O número principal ("12 disparos") vai em `font-semibold text-slate-900 dark:text-white`; "última vez hoje/ontem/há N dias" fecha a linha em `text-slate-400 dark:text-slate-500`
+- Sem disparos: uma linha só, "Ainda não disparou", em `text-slate-400 dark:text-slate-500` com `Zap` 12
+- Enquanto os números carregam, a linha não aparece (nada de "0" provisório)
+
+Textos sempre no plural certo ("1 clique", "3 cliques") e falando de pessoas ("5 pessoas receberam o link").
+
+### 9.10 Seção recolhível "Mais opções"
+
+**Arquivo:** `auto-replies/components/AutomationModal.tsx`
+
+Esconde ajustes finos que já vêm no valor que funciona melhor, para o formulário principal ficar curto.
+
+```tsx
+<section className="border-t border-slate-100 pt-5 dark:border-slate-700/60">
+  <button type="button" aria-expanded={open} className="flex w-full cursor-pointer items-center justify-between gap-3 text-left">
+    <span>
+      <span className="block text-sm font-semibold text-slate-900 dark:text-white">Mais opções</span>
+      <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">Já vem configurado do jeito que funciona melhor. Só mexa se precisar.</span>
+    </span>
+    <ChevronDown size={16} className={`shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}/>
+  </button>
+  {open && <div className="mt-4 space-y-4">…</div>}
+</section>
+```
+
+Regras: começa fechada; nada obrigatório pode ficar aqui dentro; quando um valor escondido muda o comportamento (ex.: resposta com formato especial ou mensagens extras sorteadas), o formulário principal avisa e manda o usuário para "Mais opções".
+
+### 9.11 Seletor "Modo simples" / "Configurações avançadas"
+
+**Arquivo:** `ia/page.tsx` (usa `SegmentedControl`)
+
+Páginas com muitas configurações oferecem um caminho curto e um completo. O seletor fica no cabeçalho da página, à direita do título (`flex flex-wrap items-center gap-2`), com as opções "Modo simples" e "Configurações avançadas".
+
+- Trilho: `inline-flex flex-wrap rounded-xl border border-slate-200 bg-slate-100/70 p-1 dark:border-slate-700 dark:bg-slate-800`
+- Opção ativa: `rounded-lg font-semibold bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white`
+- Opção inativa: `text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200`
+
+Quem ainda não configurou nada abre no modo simples; quem já configurou abre no avançado. Links diretos para uma aba (`?tab=`) sempre abrem o avançado. A descrição abaixo do título muda junto com o modo.
+
+### 9.12 Indicador de espera (teste de conexão)
+
+**Arquivo:** `cart-recovery/components/ConnectionGuide.tsx`
+
+Usado quando o Synq está esperando algo que o usuário vai fazer em outro lugar (ex.: uma compra de teste na plataforma de vendas). Diz o que está esperando e que a janela pode ficar aberta.
+
+| Estado | Classes |
+|---|---|
+| Esperando | `flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300` + `Loader2` 14 `animate-spin` |
+| Recebido | `flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300` + `CheckCircle2` 16 |
+
+Azul é o tom de "processando" (seção 2.3); a confirmação usa verde e texto um pouco maior, porque é o momento de alívio do usuário.
+
+### 9.13 Métrica em destaque (valor recuperado)
+
+**Arquivo:** `cart-recovery/components/SummaryCards.tsx`
+
+Quando uma página tem **um** número que prova o valor do Synq (ex.: "R$ recuperados este mês"), ele aparece acima dos `MetricCard` comuns, num bloco próprio:
+
+- Bloco: `flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 sm:items-center sm:p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10`
+- Ícone: `h-10 w-10 rounded-lg bg-white text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400`, ícone 20
+- Valor: `text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-300`, com o complemento ("recuperados este mês") na mesma linha em `ml-2 text-base sm:text-lg font-semibold`
+- Frase de apoio: `mt-1 text-sm text-emerald-700 dark:text-emerald-300`, explicando o número em linguagem simples; com zero, diz o que vai aparecer ali
+
+Use no máximo um bloco desses por página.
 
 ---
 
