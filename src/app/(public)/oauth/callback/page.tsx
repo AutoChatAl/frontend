@@ -1,135 +1,216 @@
 'use client';
-import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
+
+import InstagramProfessionalSteps from '@/app/(private)/channels/components/InstagramProfessionalSteps';
+import Button from '@/components/Button';
+import Callout from '@/components/Callout';
+import { channelsService } from '@/services/channels.service';
 
 export const dynamic = 'force-dynamic';
+
 type Status = 'loading' | 'success' | 'error';
 type Provider = 'instagram' | 'google';
-const ERROR_MESSAGES: Record<string, string> = {
-  subscription_inactive: 'Sua assinatura está inativa. Reative seu plano para usar esta conexão.',
-  missing_params: 'Parâmetros inválidos na conexão.',
-  instance_limit: 'Limite de canais do seu plano atingido (somando WhatsApp e Instagram). Remova um canal existente ou adicione uma instância extra para conectar outro.',
-};
-function friendlyError(code: string): string {
-  return ERROR_MESSAGES[code] ?? code;
+type InstagramFailure =
+  | 'subscription_inactive'
+  | 'missing_params'
+  | 'access_denied'
+  | 'session_expired'
+  | 'instance_limit'
+  | 'personal_account'
+  | 'connect_failed';
+
+interface FailureCopy {
+    title: string;
+    description: string;
+    showProfessionalSteps: boolean;
 }
+
+const INSTAGRAM_FAILURES: Record<InstagramFailure, FailureCopy> = {
+  subscription_inactive: {
+    title: 'Sua assinatura está inativa',
+    description: 'Reative o seu plano em Configurações > Faturamento e depois tente conectar de novo.',
+    showProfessionalSteps: false,
+  },
+  missing_params: {
+    title: 'A conexão foi interrompida',
+    description: 'Parece que a janela do Instagram foi fechada ou o acesso não foi permitido. Tente de novo e, no fim, toque em permitir.',
+    showProfessionalSteps: false,
+  },
+  access_denied: {
+    title: 'A conexão foi cancelada',
+    description: 'O acesso não foi permitido no Instagram. Para conectar, tente de novo e, no fim, toque em permitir.',
+    showProfessionalSteps: false,
+  },
+  session_expired: {
+    title: 'O tempo para conectar acabou',
+    description: 'A tela de login do Instagram ficou aberta por muito tempo. Tente de novo e conclua o login sem fechar a janela.',
+    showProfessionalSteps: false,
+  },
+  instance_limit: {
+    title: 'Você já usou todos os canais do seu plano',
+    description: 'O limite soma WhatsApp e Instagram. Remova um canal que não usa mais ou contrate uma conexão extra para conectar este.',
+    showProfessionalSteps: false,
+  },
+  personal_account: {
+    title: 'Sua conta do Instagram ainda é pessoal',
+    description: 'O Instagram só deixa conectar contas do tipo Comercial ou Criador de conteúdo. Mude em 3 passos e tente de novo:',
+    showProfessionalSteps: true,
+  },
+  connect_failed: {
+    title: 'Não conseguimos conectar o seu Instagram',
+    description: 'Tente de novo em alguns minutos. Se continuar, confira se a conta é do tipo Comercial ou Criador de conteúdo.',
+    showProfessionalSteps: false,
+  },
+};
+
+const GOOGLE_FAILURE: FailureCopy = {
+  title: 'Não conseguimos conectar o seu Google Agenda',
+  description: 'A conexão foi interrompida ou o acesso não foi permitido. Tente de novo e, no fim, toque em permitir.',
+  showProfessionalSteps: false,
+};
+
+function isInstagramFailure(code: string): code is InstagramFailure {
+  return Object.prototype.hasOwnProperty.call(INSTAGRAM_FAILURES, code);
+}
+
+function toInstagramFailure(code: string): InstagramFailure {
+  return isInstagramFailure(code) ? code : 'connect_failed';
+}
+
+function hasOpener(): boolean {
+  try {
+    return !!window.opener && !window.opener.closed;
+  }
+  catch {
+    return false;
+  }
+}
+
+function IconCircle({ tone, children }: { tone: 'success' | 'error'; children: ReactNode }) {
+  const classes = tone === 'success'
+    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+    : 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400';
+  return (<div className="flex justify-center">
+    <div className={`flex h-16 w-16 items-center justify-center rounded-full ${classes}`}>
+      {children}
+    </div>
+  </div>);
+}
+
 export default function OAuthCallbackPage() {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>('loading');
   const [provider, setProvider] = useState<Provider>('instagram');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [failure, setFailure] = useState<FailureCopy>(INSTAGRAM_FAILURES.connect_failed);
+  const [isPopup, setIsPopup] = useState(false);
   const [countdown, setCountdown] = useState(3);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState('');
+
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const igConnected = params.get('ig_connected');
-      const igError = params.get('ig_error');
-      const gcalConnected = params.get('gcal_connected');
-      const gcalError = params.get('gcal_error');
-      if (gcalConnected === 'true' || gcalError) {
-        setProvider('google');
-      }
-      const connected = igConnected === 'true' || gcalConnected === 'true';
-      const errorParam = igError || gcalError;
-      if (connected) {
-        setStatus('success');
-      }
-      else if (errorParam) {
-        setStatus('error');
-        try {
-          setErrorMessage(friendlyError(decodeURIComponent(errorParam)));
-        }
-        catch {
-          setErrorMessage(friendlyError(errorParam));
-        }
-      }
-      else {
-        setStatus('error');
-        setErrorMessage('Parâmetros inválidos');
-      }
-    }
-    catch {
-      setStatus('error');
-      setErrorMessage('Erro inesperado ao processar a conexão.');
-    }
-  }, []);
-  useEffect(() => {
-    if (status === 'loading')
+    setIsPopup(hasOpener());
+    const params = new URLSearchParams(window.location.search);
+    const igError = params.get('ig_error');
+    const gcalError = params.get('gcal_error');
+    const isGoogle = params.get('gcal_connected') === 'true' || !!gcalError;
+    setProvider(isGoogle ? 'google' : 'instagram');
+    if (params.get('ig_connected') === 'true' || params.get('gcal_connected') === 'true') {
+      setStatus('success');
       return;
+    }
+    setStatus('error');
+    if (isGoogle) {
+      setFailure(GOOGLE_FAILURE);
+      return;
+    }
+    setFailure(INSTAGRAM_FAILURES[toInstagramFailure(igError ?? '')]);
+  }, []);
+
+  useEffect(() => {
+    if (status !== 'success' || !isPopup) {
+      return;
+    }
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          try {
-            window.close();
-          }
-          catch {
-          }
+          window.close();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [status]);
-  return (<div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6">
-      <div className="h-1.5 w-full rounded-full bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 -mt-8 mb-6"/>
+  }, [status, isPopup]);
 
+  const backPath = provider === 'google' ? '/scheduling' : '/channels';
+  const backLabel = provider === 'google' ? 'Voltar para a agenda' : 'Voltar aos canais';
+
+  const goBack = () => {
+    if (isPopup) {
+      window.close();
+      return;
+    }
+    router.push(backPath);
+  };
+
+  const retryInstagram = async () => {
+    setRetrying(true);
+    setRetryError('');
+    try {
+      const { url } = await channelsService.getInstagramOAuthUrl();
+      window.location.href = url;
+    }
+    catch {
+      setRetryError('Não foi possível abrir o login do Instagram. Volte aos canais e tente por lá.');
+      setRetrying(false);
+    }
+  };
+
+  return (<div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+    <div className="w-full max-w-md space-y-5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 sm:p-8 text-center shadow-xl dark:shadow-none">
       {status === 'loading' && (<>
         <div className="flex justify-center">
-          <Loader2 size={56} className="text-purple-500 animate-spin"/>
+          <Loader2 size={48} className="text-indigo-500 dark:text-indigo-400 animate-spin"/>
         </div>
-        <h1 className="text-xl font-semibold text-slate-800">Conectando...</h1>
-        <p className="text-slate-500">Aguarde enquanto processamos a conexão.</p>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Conectando...</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Aguarde só um instante.</p>
       </>)}
 
       {status === 'success' && (<>
-        <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center">
-            <CheckCircle2 size={48} className="text-green-500"/>
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-800">Conta conectada!</h1>
-        <p className="text-slate-500">
+        <IconCircle tone="success"><CheckCircle2 size={36}/></IconCircle>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Conta conectada!</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {provider === 'google'
-            ? 'Seu Google Agenda foi conectado com sucesso ao Synq.'
-            : 'Sua conta do Instagram foi conectada com sucesso ao Synq.'}
+            ? 'Seu Google Agenda foi conectado ao Synq.'
+            : 'Sua conta do Instagram foi conectada ao Synq. Já dá para criar respostas automáticas para ela.'}
         </p>
-        <p className="text-sm text-slate-400">
-              Esta janela será fechada em {countdown}s...
-        </p>
-        <button type="button" onClick={() => { try {
-          window.close();
-        }
-        catch { } }} className="mt-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity">
-              Fechar janela
-        </button>
+        {isPopup && (<p className="text-xs text-slate-400 dark:text-slate-500">
+          Esta janela fecha sozinha em {countdown}s.
+        </p>)}
+        <Button variant="primary" onClick={goBack} className="w-full justify-center">
+          {isPopup ? 'Fechar esta janela' : (provider === 'google' ? 'Ir para a agenda' : 'Ir para os canais')}
+        </Button>
       </>)}
 
       {status === 'error' && (<>
-        <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
-            <XCircle size={48} className="text-red-500"/>
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-800">Erro na conexão</h1>
-        <p className="text-slate-500">
-          {provider === 'google'
-            ? 'Não foi possível conectar seu Google Agenda.'
-            : 'Não foi possível conectar sua conta do Instagram.'}
-        </p>
-        {errorMessage && (<div className="bg-red-50 border border-red-100 rounded-lg p-3">
-          <p className="text-sm text-red-600">{errorMessage}</p>
+        <IconCircle tone="error"><XCircle size={36}/></IconCircle>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">{failure.title}</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{failure.description}</p>
+        {failure.showProfessionalSteps && (<div className="text-left">
+          <InstagramProfessionalSteps/>
         </div>)}
-        <p className="text-sm text-slate-400">
-              Esta janela será fechada em {countdown}s...
-        </p>
-        <button type="button" onClick={() => { try {
-          window.close();
-        }
-        catch { } }} className="mt-2 px-6 py-2.5 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors">
-              Fechar janela
-        </button>
+        {retryError && (<Callout tone="warning" className="text-left">{retryError}</Callout>)}
+        <div className="flex flex-col gap-2 pt-1">
+          {provider === 'instagram' && (<Button variant="primary" onClick={() => void retryInstagram()} loading={retrying} loadingText="Abrindo o Instagram..." icon={<RotateCcw size={16}/>} className="w-full justify-center">
+            Tentar de novo
+          </Button>)}
+          <Button variant="secondary" onClick={goBack} icon={<ArrowLeft size={16}/>} className="w-full justify-center">
+            {backLabel}
+          </Button>
+        </div>
       </>)}
     </div>
   </div>);

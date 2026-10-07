@@ -44,7 +44,7 @@ export default function WhatsAppOfficialInstances() {
       const data = await whatsappOfficialService.getInstances();
       setInstances(data);
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao carregar canais oficiais.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível carregar os números do WhatsApp Oficial. Atualize a página e tente de novo.');
     } finally {
       setLoading(false);
     }
@@ -98,10 +98,10 @@ export default function WhatsAppOfficialInstances() {
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Falha ao carregar o SDK da Meta. Verifique bloqueadores de anúncio.'));
+      script.onerror = () => reject(new Error('Não conseguimos abrir a janela da Meta. Se você usa bloqueador de anúncios, desligue nesta página e tente de novo.'));
       document.body.appendChild(script);
     });
-    if (!window.FB) throw new Error('SDK da Meta indisponível.');
+    if (!window.FB) throw new Error('A janela da Meta não abriu. Atualize a página e tente de novo.');
     window.FB.init({ appId, autoLogAppEvents: true, xfbml: false, version: graphVersion });
     sdkLoadedRef.current = true;
     return window.FB;
@@ -114,7 +114,7 @@ export default function WhatsAppOfficialInstances() {
         const data = await whatsappOfficialService.getInstances();
         if (data.length > previousCount) {
           setInstances(data);
-          addToast('success', 'Conta oficial conectada com sucesso!');
+          addToast('success', 'Número oficial conectado!');
           return true;
         }
       } catch {
@@ -129,7 +129,7 @@ export default function WhatsAppOfficialInstances() {
 
   const handleConnect = useCallback(async (mode: ConnectMode) => {
     if (isInactive) {
-      addToast('error', 'Sua assinatura está inativa. Reative seu plano para conectar canais.');
+      addToast('error', 'Seu plano não está ativo. Renove o plano para conectar números.');
       return;
     }
     setModeChooserOpen(false);
@@ -151,11 +151,11 @@ export default function WhatsAppOfficialInstances() {
           if (code) codeReceivedRef.current = true;
           if (!code) {
             if (signupFinishedRef.current) {
-              addToast('success', 'Cadastro concluído na Meta — sincronizando o canal...');
+              addToast('success', 'Tudo certo na Meta. Estamos terminando de conectar o número...');
               (async () => {
                 const found = await pollForNewInstance(previousCount);
                 if (!found) {
-                  addToast('error', 'O canal não apareceu ainda. Recarregue a página em instantes.');
+                  addToast('error', 'O número ainda não apareceu aqui. Atualize a página em alguns instantes.');
                   await fetchInstances();
                 }
                 setConnecting(false);
@@ -163,7 +163,7 @@ export default function WhatsAppOfficialInstances() {
               return;
             }
             setConnecting(false);
-            addToast('error', 'Conexão cancelada antes de concluir o cadastro na Meta.');
+            addToast('error', 'A conexão foi interrompida antes de terminar na Meta. Comece de novo quando quiser.');
             return;
           }
           (async () => {
@@ -172,10 +172,10 @@ export default function WhatsAppOfficialInstances() {
               if (signupDataRef.current.wabaId) payload.wabaId = signupDataRef.current.wabaId;
               if (signupDataRef.current.phoneNumberId) payload.phoneNumberId = signupDataRef.current.phoneNumberId;
               await whatsappOfficialService.connect(payload);
-              addToast('success', 'Conta oficial conectada com sucesso!');
+              addToast('success', 'Número oficial conectado!');
               await fetchInstances();
             } catch (error) {
-              addToast('error', error instanceof Error ? error.message : 'Erro ao concluir a conexão.');
+              addToast('error', error instanceof Error ? error.message : 'Não foi possível terminar a conexão. Tente de novo.');
               await pollForNewInstance(previousCount);
             } finally {
               setConnecting(false);
@@ -190,7 +190,7 @@ export default function WhatsAppOfficialInstances() {
         },
       );
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao iniciar a conexão com a Meta.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível começar a conexão com a Meta. Tente de novo.');
       setConnecting(false);
     }
   }, [isInactive, addToast, loadFacebookSdk, fetchInstances, instances.length, pollForNewInstance]);
@@ -199,9 +199,9 @@ export default function WhatsAppOfficialInstances() {
     try {
       await whatsappOfficialService.refreshHealth(String(id));
       await fetchInstances();
-      addToast('success', 'Informações da conta atualizadas.');
+      addToast('success', 'Informações do número atualizadas.');
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao atualizar a conta.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível atualizar as informações do número. Tente de novo.');
     }
   }, [fetchInstances, addToast]);
 
@@ -210,10 +210,10 @@ export default function WhatsAppOfficialInstances() {
     setDeleting(true);
     try {
       await whatsappOfficialService.deleteInstance(deleteTarget);
-      addToast('success', 'Conta oficial desconectada.');
+      addToast('success', 'Número oficial desconectado.');
       await fetchInstances();
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao desconectar a conta.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível desconectar o número. Tente de novo.');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -233,8 +233,8 @@ export default function WhatsAppOfficialInstances() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isOwner && (
           <AddChannelCard
-            title="Conectar API Oficial"
-            subtitle="WhatsApp Business Platform (Meta)"
+            title="Conectar WhatsApp Oficial"
+            subtitle="Número aprovado pela Meta"
             colorClass="emerald"
             icon={<ShieldCheck size={24} className="text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />}
             onClick={() => setModeChooserOpen(true)}
@@ -258,7 +258,7 @@ export default function WhatsAppOfficialInstances() {
               title={config.verifiedName || instance.name}
               subtitle={config.displayPhoneNumber || 'Número oficial'}
               status={instance.status === 'CONNECTED' ? 'connected' : 'disconnected'}
-              statusLabel={`${qualityLabel}${config.messagingLimitTier ? ` · ${config.messagingLimitTier.replace('TIER_', 'Tier ')}` : ''}`}
+              statusLabel={`${qualityLabel}${config.messagingLimitTier ? ` · ${config.messagingLimitTier.replace('TIER_', 'Nível ')}` : ''}`}
               colorClass="emerald"
               createdBy={instance.createdBy}
               ownerName={instance.ownerName}
@@ -281,9 +281,9 @@ export default function WhatsAppOfficialInstances() {
               <Sparkles size={18} className="text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-slate-800 dark:text-white text-sm">Número novo na Cloud API</p>
+              <p className="font-semibold text-slate-800 dark:text-white text-sm">Um número novo, que não está no WhatsApp</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Para números que não estão em uso no aplicativo do WhatsApp. Registro direto na API Oficial, com throughput máximo.
+                Para um chip que ainda não usa o aplicativo do WhatsApp. Ele vai funcionar só pelo Synq, com a maior velocidade de envio.
               </p>
             </div>
           </button>
@@ -297,10 +297,10 @@ export default function WhatsAppOfficialInstances() {
               <Smartphone size={18} className="text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-slate-800 dark:text-white text-sm">Número que já uso no app WhatsApp Business</p>
+              <p className="font-semibold text-slate-800 dark:text-white text-sm">Um número que já uso no WhatsApp Business</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Coexistência: o número continua funcionando no aplicativo e passa a funcionar também pela API Oficial.
-                Requer app WhatsApp Business atualizado — o fluxo pedirá a leitura de um QR code no celular.
+                O número continua funcionando no aplicativo do celular e passa a enviar também pelo Synq.
+                Deixe o app atualizado: no meio do caminho vamos pedir para você ler um QR Code com o celular.
               </p>
             </div>
           </button>
@@ -311,7 +311,7 @@ export default function WhatsAppOfficialInstances() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
-        message="Deseja desconectar esta conta oficial? Os templates sincronizados serão removidos do sistema (permanecem na Meta)."
+        message="Deseja desconectar este número oficial? Os modelos de mensagem dele saem do Synq, mas continuam salvos na sua conta da Meta."
         confirmLabel="Desconectar"
         loading={deleting}
       />

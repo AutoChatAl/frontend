@@ -1,5 +1,5 @@
 'use client';
-import { Loader2, Pencil, Plus, Power, PowerOff, RefreshCw, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Plus, PowerOff, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import Card from '@/components/Card';
@@ -19,6 +19,8 @@ export interface ChannelRow {
      * `undefined` = a origem não informa; cai no `canManage` do card.
      */
     canManage?: boolean | undefined;
+    statusLabel?: string | undefined;
+    attention?: boolean | undefined;
 }
 
 export type ChannelAccent = 'emerald' | 'teal' | 'fuchsia';
@@ -78,6 +80,8 @@ interface ChannelTypeCardProps {
     /** Falha ao carregar a lista — substitui o estado vazio, que mentiria aqui. */
     errorMessage?: string | null;
 }
+
+const RECONNECT_BUTTON = 'shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10';
 
 const ACTION_BUTTON = 'flex h-7 w-7 items-center justify-center rounded-md border border-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer';
 
@@ -147,7 +151,7 @@ export default function ChannelTypeCard({
               {renderAvatar ? renderAvatar(row) : (<span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${palette.tile}`}>
                 {icon}
               </span>)}
-              <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800 ${row.connected ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden/>
+              <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-800 ${row.connected ? 'bg-emerald-500' : row.attention ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden/>
             </span>
 
             <div className="min-w-0 flex-1">
@@ -160,8 +164,10 @@ export default function ChannelTypeCard({
 
             <span className={`shrink-0 hidden sm:inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${row.connected
               ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-              : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}>
-              {row.connected ? 'Ativo' : 'Parado'}
+              : row.attention
+                ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}>
+              {row.connected ? 'Ativo' : (row.statusLabel ?? 'Parado')}
             </span>
 
             {rowCanManage && (<div className="flex shrink-0 items-center gap-0.5">
@@ -175,13 +181,14 @@ export default function ChannelTypeCard({
                   ? onDeactivate && (<button type="button" onClick={() => onDeactivate(row)} title="Desativar" aria-label={`Desativar ${row.name}`} className={`${ACTION_BUTTON} text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10`}>
                     <PowerOff size={14}/>
                   </button>)
-                  : onActivate && (<button type="button" onClick={() => onActivate(row)} title="Ativar" aria-label={`Ativar ${row.name}`} className={`${ACTION_BUTTON} text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10`}>
-                    <Power size={14}/>
+                  : onActivate && (<button type="button" onClick={() => onActivate(row)} aria-label={`Reconectar ${row.name}`} className={`${RECONNECT_BUTTON} mr-1`}>
+                    <RotateCcw size={12}/>
+                    Reconectar
                   </button>)}
                 <button type="button" onClick={() => onRename(row)} title="Renomear" aria-label={`Renomear ${row.name}`} className={`${ACTION_BUTTON} text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10`}>
                   <Pencil size={14}/>
                 </button>
-                <button type="button" onClick={() => onDelete(row)} title="Deletar" aria-label={`Deletar ${row.name}`} className={`${ACTION_BUTTON} text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10`}>
+                <button type="button" onClick={() => onDelete(row)} title="Remover" aria-label={`Remover ${row.name}`} className={`${ACTION_BUTTON} text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10`}>
                   <Trash2 size={14}/>
                 </button>
               </>)}
