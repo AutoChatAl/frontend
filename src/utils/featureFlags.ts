@@ -17,6 +17,6 @@ export const LOCKED_FEATURES: { campaigns: boolean; iaTriggers: boolean } = {
 //   canais continua intacta no front e no back — a campanha apenas não consegue mais
 //   selecioná-los, então só sobra a API Oficial (que exige template aprovado da Meta).
 export const HIDDEN_FEATURES: { cartRecovery: boolean; campaignNonOfficialChannels: boolean } = {
-  cartRecovery: true,
+  cartRecovery: false,
   campaignNonOfficialChannels: true,
 };

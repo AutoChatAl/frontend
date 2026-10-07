@@ -14,7 +14,9 @@ import { cartRecoveryService } from '@/services/cart-recovery.service';
 import {
   ATTEMPT_STATUS_LABELS,
   PLATFORM_LABELS,
+  REASON_LABELS,
   STATUS_LABELS,
+  describeDeliveryError,
   type AbandonedCart,
   type AbandonedCartStatus,
   type CartRecoveryIntegration,
@@ -33,10 +35,10 @@ interface Props {
 }
 
 const MATCH_LABELS: Record<NonNullable<AbandonedCart['matchReason']>, string> = {
-  SCK: 'SCK (link)',
+  SCK: 'Link rastreado',
   PHONE: 'Telefone',
   EMAIL: 'E-mail',
-  IG_USERNAME: 'Usuário IG',
+  IG_USERNAME: 'Usuário do Instagram',
   NONE: 'Sem contato',
 };
 
@@ -65,7 +67,15 @@ const STATUS_TONE: Record<AbandonedCartStatus, string> = {
   RECOVERED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
   EXPIRED: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
   CANCELED: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300',
+  PURCHASED: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
 };
+
+function channelLabel(type: AbandonedCart['matchedChannelType']): string {
+  if (type === 'INSTAGRAM') return 'Instagram';
+  if (type === 'WHATSAPP_OFFICIAL') return 'WhatsApp Oficial';
+  if (type === 'WHATSAPP') return 'WhatsApp';
+  return '—';
+}
 
 const ATTEMPT_STATUS_TONE: Record<RecoveryAttemptStatus, string> = {
   PENDING: 'text-amber-600 dark:text-amber-400',
@@ -141,7 +151,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
       setDeleteTarget(null);
       await onReload();
     } catch {
-      onToast('error', 'Erro ao remover carrinho');
+      onToast('error', 'Não foi possível remover o carrinho. Tente de novo.');
     } finally {
       setDeleting(false);
     }
@@ -178,6 +188,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
               { value: 'RECOVERED', label: 'Recuperado', badge: '●', badgeTone: 'success' },
               { value: 'EXPIRED', label: 'Expirado', badge: '●', badgeTone: 'default' },
               { value: 'CANCELED', label: 'Cancelado', badge: '●', badgeTone: 'danger' },
+              { value: 'PURCHASED', label: 'Compra direta', description: 'Compras com boas-vindas', badge: '●', badgeTone: 'info' },
             ]}
           />
         </div>
@@ -223,7 +234,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
         <EmptyState
           icon={<ShoppingCart size={20} />}
           title="Nenhum carrinho encontrado"
-          description="Quando uma plataforma enviar um carrinho abandonado, ele aparecerá aqui."
+          description="Quando alguém sair do pagamento sem comprar ou deixar um Pix ou boleto sem pagar, aparece aqui."
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
@@ -279,7 +290,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                           {cart.matchReason && cart.matchReason !== 'NONE' && (
                             <span className="inline-flex w-fit items-center gap-1 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
                               <Tag size={10} />
-                              Match: {MATCH_LABELS[cart.matchReason]}
+                              Achado por: {MATCH_LABELS[cart.matchReason]}
                             </span>
                           )}
                         </div>
@@ -293,6 +304,14 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[cart.status]}`}>
                           {STATUS_LABELS[cart.status]}
                         </span>
+                        {cart.reason === 'PAYMENT_PENDING' && (
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{REASON_LABELS.PAYMENT_PENDING}</div>
+                        )}
+                        {cart.buyerWelcome && (
+                          <div className={`mt-1 text-xs ${ATTEMPT_STATUS_TONE[cart.buyerWelcome.status]}`}>
+                            Boas-vindas: {ATTEMPT_STATUS_LABELS[cart.buyerWelcome.status].toLowerCase()}
+                          </div>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
                         {sent}/{attempts.length} enviadas
@@ -373,16 +392,22 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Match</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Como achamos o contato</p>
                 <p className="text-slate-700 dark:text-slate-300">
                   {detailTarget.matchReason ? MATCH_LABELS[detailTarget.matchReason] : '—'}
                 </p>
               </div>
+              {detailTarget.reason && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Motivo</p>
+                  <p className="text-slate-700 dark:text-slate-300">{REASON_LABELS[detailTarget.reason]}</p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Parâmetros UTM
+                De onde o cliente veio (UTM)
               </p>
               {detailTarget.utmParameters && Object.values(detailTarget.utmParameters).some(Boolean) ? (
                 <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -403,7 +428,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 italic">Nenhum UTM capturado neste carrinho.</p>
+                <p className="text-xs text-slate-500 italic">Este carrinho não trouxe a informação de qual anúncio ou link o cliente usou.</p>
               )}
             </div>
 
@@ -411,7 +436,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
               <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Tentativas de recuperação</p>
               <div className="space-y-1">
                 {(detailTarget.recoveryAttempts ?? []).map((a, i) => {
-                  const channelLabel = a.channelType === 'INSTAGRAM' ? 'Instagram' : a.channelType === 'WHATSAPP_OFFICIAL' ? 'API Oficial' : a.channelType === 'WHATSAPP' ? 'WhatsApp' : '—';
+                  const attemptChannel = channelLabel(a.channelType);
                   const statusLabel = ATTEMPT_STATUS_LABELS[a.status];
                   const whenLabel = a.sentAt
                     ? `em ${formatDate(a.sentAt)}`
@@ -421,7 +446,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                   return (
                     <div key={i} className="flex items-center justify-between gap-3 rounded border border-slate-200 px-3 py-1.5 text-xs dark:border-slate-700">
                       <span className="text-slate-600 dark:text-slate-300">
-                        Passo {a.stepIndex + 1} · {channelLabel}
+                        Mensagem {a.stepIndex + 1} · {attemptChannel}
                       </span>
                       <span className={`flex flex-col items-end gap-0.5 text-right font-medium ${ATTEMPT_STATUS_TONE[a.status]}`}>
                         <span className="flex items-center gap-1">
@@ -429,17 +454,39 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                           {whenLabel && <span className="font-normal text-slate-500 dark:text-slate-400">· {whenLabel}</span>}
                         </span>
                         {a.error && (a.status === 'SKIPPED' || a.status === 'FAILED') && (
-                          <span className="font-normal text-slate-400 dark:text-slate-500">{a.error}</span>
+                          <span className="font-normal text-slate-500 dark:text-slate-400">{describeDeliveryError(a.error)}</span>
                         )}
                       </span>
                     </div>
                   );
                 })}
                 {(detailTarget.recoveryAttempts ?? []).length === 0 && (
-                  <p className="text-xs italic text-slate-400">Nenhuma tentativa registrada.</p>
+                  <p className="text-xs italic text-slate-400 dark:text-slate-500">Nenhuma mensagem de recuperação para este pedido.</p>
                 )}
               </div>
             </div>
+
+            {detailTarget.buyerWelcome && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Boas-vindas ao comprador</p>
+                <div className="flex items-start justify-between gap-3 rounded border border-slate-200 px-3 py-1.5 text-xs dark:border-slate-700">
+                  <span className="text-slate-600 dark:text-slate-300">{channelLabel(detailTarget.buyerWelcome.channelType)}</span>
+                  <span className={`flex flex-col items-end gap-0.5 text-right font-medium ${ATTEMPT_STATUS_TONE[detailTarget.buyerWelcome.status]}`}>
+                    <span className="flex items-center gap-1">
+                      <span>{ATTEMPT_STATUS_LABELS[detailTarget.buyerWelcome.status]}</span>
+                      <span className="font-normal text-slate-500 dark:text-slate-400">
+                        · {detailTarget.buyerWelcome.sentAt
+                          ? `em ${formatDate(detailTarget.buyerWelcome.sentAt)}`
+                          : `agendada para ${formatDate(detailTarget.buyerWelcome.scheduledFor)}`}
+                      </span>
+                    </span>
+                    {detailTarget.buyerWelcome.error && (detailTarget.buyerWelcome.status === 'SKIPPED' || detailTarget.buyerWelcome.status === 'FAILED') && (
+                      <span className="font-normal text-slate-500 dark:text-slate-400">{describeDeliveryError(detailTarget.buyerWelcome.error)}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

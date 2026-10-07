@@ -9,6 +9,19 @@ import type {
 } from '@/types/CartRecovery';
 import { apiClient } from '@/utils/ApiClient';
 
+const INTEGRATION_ERRORS: Record<string, string> = {
+  CART_RECOVERY_INTEGRATION_LIMIT_EXCEEDED: 'Você atingiu o limite de integrações de recuperação do seu plano. Mude de plano para criar mais.',
+  CHANNEL_NOT_FOUND: 'O número ou conta escolhido não foi encontrado.',
+  CHANNEL_TYPE_MISMATCH: 'O número ou conta escolhido não combina com o tipo de envio.',
+  INTEGRATION_NOT_FOUND: 'Esta integração não existe mais. Atualize a página.',
+  VALIDATION_ERROR: 'Confira os campos: alguma mensagem está vazia ou com tempo fora do permitido.',
+};
+
+function integrationError(data: { reason?: string } | undefined, fallback: string): Error {
+  const reason = data?.reason;
+  return new Error((reason && INTEGRATION_ERRORS[reason]) || fallback);
+}
+
 class CartRecoveryService {
   public async listIntegrations(): Promise<CartRecoveryIntegration[]> {
     const response = await apiClient.get<{ data: CartRecoveryIntegration[] }>('/cart-recovery/integrations');
@@ -25,24 +38,16 @@ class CartRecoveryService {
   public async createIntegration(input: CreateIntegrationInput): Promise<CartRecoveryIntegration> {
     const response = await apiClient.post<CartRecoveryIntegration & { reason?: string }>('/cart-recovery/integrations', input);
     if (!response.success || !response.data) {
-      const reason = (response.data as { reason?: string } | undefined)?.reason;
-      if (reason === 'CART_RECOVERY_INTEGRATION_LIMIT_EXCEEDED') {
-        throw new Error('Você atingiu o limite de integrações de recuperação do seu plano. Faça upgrade para criar mais.');
-      }
-      if (reason === 'CHANNEL_NOT_FOUND') {
-        throw new Error('Canal selecionado não foi encontrado.');
-      }
-      if (reason === 'CHANNEL_TYPE_MISMATCH') {
-        throw new Error('O canal selecionado não corresponde ao tipo escolhido.');
-      }
-      throw new Error('Falha ao criar integração.');
+      throw integrationError(response.data, 'Falha ao criar integração.');
     }
     return response.data;
   }
 
   public async updateIntegration(id: string, input: UpdateIntegrationInput): Promise<CartRecoveryIntegration> {
-    const response = await apiClient.put<CartRecoveryIntegration>(`/cart-recovery/integrations/${id}`, input);
-    if (!response.success || !response.data) throw new Error('Falha ao atualizar integração.');
+    const response = await apiClient.put<CartRecoveryIntegration & { reason?: string }>(`/cart-recovery/integrations/${id}`, input);
+    if (!response.success || !response.data) {
+      throw integrationError(response.data, 'Falha ao atualizar integração.');
+    }
     return response.data;
   }
 
@@ -62,6 +67,7 @@ class CartRecoveryService {
     if (params?.status) qs.append('status', params.status);
     if (params?.integrationId) qs.append('integrationId', params.integrationId);
     if (params?.platform) qs.append('platform', params.platform);
+    if (params?.contactId) qs.append('contactId', params.contactId);
     if (params?.search) qs.append('search', params.search);
     if (params?.skip != null) qs.append('skip', String(params.skip));
     if (params?.limit != null) qs.append('limit', String(params.limit));
