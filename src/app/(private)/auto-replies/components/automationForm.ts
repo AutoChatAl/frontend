@@ -63,6 +63,20 @@ export interface AutomationDraft {
 export const LINK_LABEL_MAX = 100;
 export const LINK_DESCRIPTION_MAX = 80;
 export const MESSAGE_MAX: Record<AutomationKind, number> = { DM: 4000, COMMENT: 1000, LIVE: 1000 };
+/**
+ * A DM de comentário/live sai como private reply, que só aceita uma mensagem até a pessoa
+ * responder. Com botão, texto e botão vão juntos no button template do Instagram, que corta
+ * o texto em 640 caracteres — e a descrição do link entra nesse mesmo texto.
+ */
+export const IG_BUTTON_MESSAGE_MAX = 640;
+
+export function messageMaxFor(draft: AutomationDraft, kind: AutomationKind): number {
+  if (!isCommentLike(kind) || draft.channelType !== 'INSTAGRAM' || !draft.linkUrl.trim()) {
+    return MESSAGE_MAX[kind];
+  }
+  const description = draft.linkDescription.trim();
+  return IG_BUTTON_MESSAGE_MAX - (description ? description.length + 2 : 0);
+}
 export const COMMENT_REPLY_MAX = 300;
 /** Teto de variações da resposta pública. Acima disso a tela vira uma lista sem fim. */
 export const COMMENT_REPLY_OPTIONS_MAX = 5;
@@ -357,6 +371,8 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind): Rec
 
   if (hasText(draft.replyType) && !draft.message.trim()) {
     errors.message = isCommentLike(kind) ? 'Informe a mensagem da DM' : 'Informe a mensagem de resposta';
+  } else if (hasText(draft.replyType) && draft.message.trim().length > messageMaxFor(draft, kind)) {
+    errors.message = `Com botão, o Instagram aceita até ${messageMaxFor(draft, kind)} caracteres nesta mensagem`;
   }
   if (!isCommentLike(kind) && hasAudio(draft.replyType) && !draft.audioBase64) {
     errors.audio = 'Envie um arquivo de áudio';

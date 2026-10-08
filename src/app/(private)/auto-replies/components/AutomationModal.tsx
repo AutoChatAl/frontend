@@ -42,7 +42,7 @@ import {
   LINK_DESCRIPTION_MAX,
   LINK_LABEL_MAX,
   MATCH_MODE_OPTIONS,
-  MESSAGE_MAX,
+  messageMaxFor,
   replyTypeOptions,
   toAutoReplyInput,
   toCommentAutomationInput,
@@ -124,7 +124,7 @@ export default function AutomationModal({
   );
 
   const isInstagram = draft.channelType === 'INSTAGRAM';
-  const messageMax = MESSAGE_MAX[kind];
+  const messageMax = messageMaxFor(draft, kind);
   const typeOptions = replyTypeOptions(draft.channelType, kind);
 
   // Publicações da conta, para o seletor de post. Só carrega quando a seção
@@ -669,7 +669,9 @@ export default function AutomationModal({
                           patch({ linkDescription: event.target.value });
                           clearError('linkDescription');
                         }}
-                        placeholder="Aparece acima do botão, no card do Instagram"
+                        placeholder={isCommentLike(kind)
+                          ? 'Aparece no fim da mensagem, acima do botão'
+                          : 'Aparece acima do botão, no card do Instagram'}
                         rows={2}
                         error={errors.linkDescription}
                       />
