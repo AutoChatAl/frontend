@@ -5,6 +5,8 @@ interface Props {
     sent: number;
     received: number;
     read: number;
+    /** Dias cobertos pelo período, para a média diária. */
+    days: number;
 }
 
 interface StatDef {
@@ -21,11 +23,12 @@ interface StatDef {
  * Resumo textual de mensagens (sem gráfico): enviadas, recebidas e lidas
  * lado a lado, com uma linha de contexto sob cada número.
  */
-export default function MessagesSummaryCard({ sent, received, read }: Props) {
+export default function MessagesSummaryCard({ sent, received, read, days }: Props) {
   const readRate = sent > 0 ? Math.round((read / sent) * 100) : null;
+  const perDay = Math.max(days, 1);
   const stats: StatDef[] = [
-    { label: 'Enviadas', value: sent, hint: `média de ${Math.round(sent / 7).toLocaleString('pt-BR')}/dia`, justify: 'justify-start', textAlign: 'text-left' },
-    { label: 'Recebidas', value: received, hint: `média de ${Math.round(received / 7).toLocaleString('pt-BR')}/dia`, justify: 'justify-center', textAlign: 'text-center' },
+    { label: 'Enviadas', value: sent, hint: `média de ${Math.round(sent / perDay).toLocaleString('pt-BR')}/dia`, justify: 'justify-start', textAlign: 'text-left' },
+    { label: 'Recebidas', value: received, hint: `média de ${Math.round(received / perDay).toLocaleString('pt-BR')}/dia`, justify: 'justify-center', textAlign: 'text-center' },
     { label: 'Lidas', value: read, hint: readRate === null ? 'sem envios no período' : `${Math.min(readRate, 100)}% das enviadas`, justify: 'justify-end', textAlign: 'text-left' },
   ];
 

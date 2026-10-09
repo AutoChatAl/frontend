@@ -125,7 +125,7 @@ export default function DashboardPage() {
       </div>
     </div>);
   }
-  const daily7 = metrics.daily.slice(-7);
+  const { daily } = metrics;
   const originTotals: Record<MessageSeriesKey, number> = {
     aiSent: metrics.aiSent ?? 0,
     manualSent: metrics.manualSent ?? 0,
@@ -143,12 +143,12 @@ export default function DashboardPage() {
         </p>
       </div>
       <span className="hidden sm:inline-flex items-center shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-md px-2.5 py-1">
-        Últimos 7 dias
+        Últimos {metrics.periodDays ?? 7} dias
       </span>
     </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 sm:gap-3">
-      {MESSAGE_SERIES.map((s) => (<MetricCard key={s.key} title={s.label} value={originTotals[s.key]} spark={daily7.map((d) => d[s.key] ?? 0)} sparkColor={seriesColor(s, darkMode)}/>))}
+      {MESSAGE_SERIES.map((s) => (<MetricCard key={s.key} title={s.label} value={originTotals[s.key]} spark={daily.map((d) => d[s.key] ?? 0)} sparkColor={seriesColor(s, darkMode)}/>))}
       <div className="lg:col-span-2">
         <AiUsageCard />
       </div>
@@ -176,11 +176,11 @@ export default function DashboardPage() {
           })}
         </div>
       </div>
-      <MessagesAreaChart data={daily7} height={240} visibleKeys={activeSeries}/>
+      <MessagesAreaChart data={daily} height={240} visibleKeys={activeSeries}/>
     </Card>
 
     <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
-      <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0}/>
+      <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0} days={daily.length}/>
       <UpcomingCampaignsCard />
     </div>
 

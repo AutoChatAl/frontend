@@ -11,6 +11,9 @@ export interface DashboardMetrics {
     aiSent?: number;
     automatedSent?: number;
     manualSent?: number;
+    /** Janela das métricas (início em ISO e duração). Opcionais para tolerar respostas antigas em cache. */
+    periodStart?: string;
+    periodDays?: number;
     daily: {
         date: string;
         sent: number;
