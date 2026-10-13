@@ -16,7 +16,6 @@ export interface SetupStepAction {
 
 interface SetupStepCardProps {
   step: number;
-  icon: ReactNode;
   accent: SetupStepAccent;
   title: string;
   description: string;
@@ -30,34 +29,24 @@ interface SetupStepCardProps {
   children?: ReactNode;
 }
 
-const ACCENTS: Record<SetupStepAccent, { iconBg: string; label: string; btn: string; outline: string }> = {
+const ACCENTS: Record<SetupStepAccent, { btn: string; outline: string }> = {
   emerald: {
-    iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
-    label: 'text-emerald-600 dark:text-emerald-400',
     btn: 'bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500',
     outline: 'border border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-400 dark:hover:bg-emerald-500/10',
   },
   fuchsia: {
-    iconBg: 'bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/15 dark:text-fuchsia-400',
-    label: 'text-fuchsia-600 dark:text-fuchsia-400',
     btn: 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white dark:bg-fuchsia-600 dark:hover:bg-fuchsia-500',
     outline: 'border border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50 dark:border-fuchsia-500/30 dark:text-fuchsia-400 dark:hover:bg-fuchsia-500/10',
   },
   indigo: {
-    iconBg: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400',
-    label: 'text-indigo-600 dark:text-indigo-400',
     btn: 'bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500',
     outline: 'border border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/30 dark:text-indigo-400 dark:hover:bg-indigo-500/10',
   },
   violet: {
-    iconBg: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400',
-    label: 'text-violet-600 dark:text-violet-400',
     btn: 'bg-violet-600 hover:bg-violet-700 text-white dark:bg-violet-600 dark:hover:bg-violet-500',
     outline: 'border border-violet-200 text-violet-700 hover:bg-violet-50 dark:border-violet-500/30 dark:text-violet-400 dark:hover:bg-violet-500/10',
   },
   amber: {
-    iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',
-    label: 'text-amber-600 dark:text-amber-400',
     btn: 'bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400',
     outline: 'border border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10',
   },
@@ -65,7 +54,6 @@ const ACCENTS: Record<SetupStepAccent, { iconBg: string; label: string; btn: str
 
 export default function SetupStepCard({
   step,
-  icon,
   accent,
   title,
   description,
@@ -78,12 +66,11 @@ export default function SetupStepCard({
   doneAction,
   children,
 }: SetupStepCardProps) {
-  const accentStyles = ACCENTS[accent];
   const blocked = locked && !done;
 
   return (
     <div
-      className={`relative flex gap-4 rounded-lg border bg-white p-4 shadow-xs transition-all dark:bg-slate-800 dark:shadow-none sm:p-5 ${
+      className={`relative rounded-lg border bg-white p-4 shadow-xs transition-all dark:bg-slate-800 dark:shadow-none sm:p-5 ${
         done
           ? 'border-emerald-200 dark:border-emerald-500/30'
           : current
@@ -91,17 +78,9 @@ export default function SetupStepCard({
             : 'border-slate-200 dark:border-slate-700'
       } ${blocked ? 'opacity-75' : ''}`}
     >
-      <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 ${
-          done ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400' : accentStyles.iconBg
-        }`}
-      >
-        {done ? <CheckCircle2 size={22} /> : icon}
-      </div>
-
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={`text-xs font-semibold uppercase tracking-wider ${done ? 'text-emerald-600 dark:text-emerald-400' : accentStyles.label}`}>
+          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
             Passo {step}
           </span>
           {done && (

@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, ArrowRight, Bot, Instagram, Lock, MessageCircle, MessagesSquare, PartyPopper, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Instagram, Lock, MessageCircle, PartyPopper, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -309,7 +309,6 @@ export default function GetStartedPage() {
             <div className="mt-6 space-y-3">
               <SetupStepCard
                 step={1}
-                icon={<MessagesSquare size={22} />}
                 accent="emerald"
                 title={SETUP_STEP_TITLES.channel}
                 description="Um canal basta para começar. É por ele que a IA e as automações vão conversar com seus clientes."
@@ -322,7 +321,6 @@ export default function GetStartedPage() {
 
               <SetupStepCard
                 step={2}
-                icon={<Bot size={22} />}
                 accent="violet"
                 title={SETUP_STEP_TITLES.ai}
                 description="Responda 3 perguntas rápidas: o que você vende, o horário de atendimento e onde estão os preços. A IA usa isso para atender sozinha."
@@ -346,7 +344,6 @@ export default function GetStartedPage() {
 
               <SetupStepCard
                 step={3}
-                icon={<MessageCircle size={22} />}
                 accent="indigo"
                 title={SETUP_STEP_TITLES['ai-test']}
                 description="Faça de conta que é um cliente e veja como a IA responde. Nada é enviado para ninguém."
@@ -361,7 +358,6 @@ export default function GetStartedPage() {
 
               <SetupStepCard
                 step={4}
-                icon={<Zap size={22} />}
                 accent="amber"
                 title={SETUP_STEP_TITLES.recipe}
                 description="Escolhemos uma automação pronta para o seu tipo de negócio. É só revisar e salvar."
