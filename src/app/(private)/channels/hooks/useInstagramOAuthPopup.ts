@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { listenOAuthSuccess } from '@/utils/oauthResult';
+
 interface UseInstagramOAuthPopupOptions {
     getOAuthUrl: () => Promise<string>;
     onFinished: () => void;
@@ -30,11 +32,23 @@ export function useInstagramOAuthPopup({ getOAuthUrl, onFinished, onError }: Use
     callbacksRef.current = { getOAuthUrl, onFinished, onError };
   });
 
-  useEffect(() => () => {
+  const stopWatching = useCallback(() => {
     if (watcherRef.current) {
       clearInterval(watcherRef.current);
+      watcherRef.current = null;
     }
   }, []);
+
+  useEffect(() => stopWatching, [stopWatching]);
+
+  // O `popup.closed` sozinho não basta: o vínculo com o popup cai assim que ele passa
+  // pela tela do Instagram, e o "fechou" chega antes de a conta estar conectada. O
+  // aviso do callback é o que confirma a conexão.
+  useEffect(() => listenOAuthSuccess('instagram', () => {
+    stopWatching();
+    setConnecting(false);
+    callbacksRef.current.onFinished();
+  }), [stopWatching]);
 
   const start = useCallback(async () => {
     const popup = openBlankPopup();
@@ -46,17 +60,12 @@ export function useInstagramOAuthPopup({ getOAuthUrl, onFinished, onError }: Use
         return;
       }
       popup.location.href = url;
-      if (watcherRef.current) {
-        clearInterval(watcherRef.current);
-      }
+      stopWatching();
       watcherRef.current = setInterval(() => {
         if (!popup.closed) {
           return;
         }
-        if (watcherRef.current) {
-          clearInterval(watcherRef.current);
-          watcherRef.current = null;
-        }
+        stopWatching();
         setConnecting(false);
         callbacksRef.current.onFinished();
       }, 500);
@@ -66,7 +75,7 @@ export function useInstagramOAuthPopup({ getOAuthUrl, onFinished, onError }: Use
       setConnecting(false);
       callbacksRef.current.onError(error instanceof Error ? error.message : 'Não foi possível abrir o login do Instagram. Tente de novo.');
     }
-  }, []);
+  }, [stopWatching]);
 
   return { connecting, start };
 }

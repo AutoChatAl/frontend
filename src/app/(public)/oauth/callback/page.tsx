@@ -7,6 +7,7 @@ import InstagramProfessionalSteps from '@/app/(private)/channels/components/Inst
 import Button from '@/components/Button';
 import Callout from '@/components/Callout';
 import { channelsService } from '@/services/channels.service';
+import { announceOAuthSuccess } from '@/utils/oauthResult';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,13 +80,15 @@ function toInstagramFailure(code: string): InstagramFailure {
   return isInstagramFailure(code) ? code : 'connect_failed';
 }
 
-function hasOpener(): boolean {
-  try {
-    return !!window.opener && !window.opener.closed;
-  }
-  catch {
-    return false;
-  }
+/**
+ * O `window.opener` não diz se esta é a janela do OAuth: a tela de login do Instagram
+ * e do Google corta esse vínculo no caminho. Então só tenta fechar — o navegador
+ * fecha a janela aberta por script e ignora numa aba comum (popup bloqueado), que
+ * segue mostrando a página.
+ */
+function tryCloseWindow(): boolean {
+  window.close();
+  return window.closed;
 }
 
 function IconCircle({ tone, children }: { tone: 'success' | 'error'; children: ReactNode }) {
@@ -104,13 +107,10 @@ export default function OAuthCallbackPage() {
   const [status, setStatus] = useState<Status>('loading');
   const [provider, setProvider] = useState<Provider>('instagram');
   const [failure, setFailure] = useState<FailureCopy>(INSTAGRAM_FAILURES.connect_failed);
-  const [isPopup, setIsPopup] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
 
   useEffect(() => {
-    setIsPopup(hasOpener());
     const params = new URLSearchParams(window.location.search);
     const igError = params.get('ig_error');
     const gcalError = params.get('gcal_error');
@@ -118,6 +118,8 @@ export default function OAuthCallbackPage() {
     setProvider(isGoogle ? 'google' : 'instagram');
     if (params.get('ig_connected') === 'true' || params.get('gcal_connected') === 'true') {
       setStatus('success');
+      announceOAuthSuccess(isGoogle ? 'google' : 'instagram');
+      tryCloseWindow();
       return;
     }
     setStatus('error');
@@ -128,32 +130,13 @@ export default function OAuthCallbackPage() {
     setFailure(INSTAGRAM_FAILURES[toInstagramFailure(igError ?? '')]);
   }, []);
 
-  useEffect(() => {
-    if (status !== 'success' || !isPopup) {
-      return;
-    }
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          window.close();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [status, isPopup]);
-
   const backPath = provider === 'google' ? '/scheduling' : '/channels';
   const backLabel = provider === 'google' ? 'Voltar para a agenda' : 'Voltar aos canais';
 
   const goBack = () => {
-    if (isPopup) {
-      window.close();
-      return;
+    if (!tryCloseWindow()) {
+      router.push(backPath);
     }
-    router.push(backPath);
   };
 
   const retryInstagram = async () => {
@@ -187,11 +170,8 @@ export default function OAuthCallbackPage() {
             ? 'Seu Google Agenda foi conectado ao Synq.'
             : 'Sua conta do Instagram foi conectada ao Synq. Já dá para criar respostas automáticas para ela.'}
         </p>
-        {isPopup && (<p className="text-xs text-slate-400 dark:text-slate-500">
-          Esta janela fecha sozinha em {countdown}s.
-        </p>)}
         <Button variant="primary" onClick={goBack} className="w-full justify-center">
-          {isPopup ? 'Fechar esta janela' : (provider === 'google' ? 'Ir para a agenda' : 'Ir para os canais')}
+          {provider === 'google' ? 'Ir para a agenda' : 'Ir para os canais'}
         </Button>
       </>)}
 

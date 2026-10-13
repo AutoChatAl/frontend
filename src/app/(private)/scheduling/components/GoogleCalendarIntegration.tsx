@@ -7,6 +7,7 @@ import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { googleCalendarService } from '@/services/google-calendar.service';
 import type { GoogleCalendarStatus } from '@/types/GoogleCalendar';
+import { listenOAuthSuccess } from '@/utils/oauthResult';
 
 interface GoogleCalendarIntegrationProps {
     onToast: (type: 'success' | 'error', message: string) => void;
@@ -34,6 +35,10 @@ export default function GoogleCalendarIntegration({ onToast }: GoogleCalendarInt
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
+  useEffect(() => listenOAuthSuccess('google', () => {
+    setConnecting(false);
+    void loadStatus();
+  }), [loadStatus]);
   const handleConnect = async () => {
     try {
       setConnecting(true);
