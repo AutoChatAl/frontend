@@ -111,7 +111,6 @@ async function hasPendingSetupStep(hasAiPlan: boolean): Promise<boolean> {
   const saved = new Set(state.completedSteps);
   const savedDone = (step: SetupStepId): boolean => saved.has(step) || LEGACY_STEP_IDS[step].some((id) => saved.has(id));
   const steps = activeSetupSteps(hasAiPlan);
-  if (steps.includes('ai-test') && !savedDone('ai-test')) return true;
   const detectors: Array<[SetupStepId, () => Promise<boolean>]> = [
     ['channel', hasConnectedChannel],
     ['ai', hasConfiguredAi],

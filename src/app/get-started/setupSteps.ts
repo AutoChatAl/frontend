@@ -11,21 +11,19 @@ import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { AiConfig } from '@/types/AI';
 import type { BusinessType } from '@/types/BusinessType';
 
-export type SetupStepId = 'channel' | 'ai' | 'ai-test' | 'recipe';
+export type SetupStepId = 'channel' | 'ai' | 'recipe';
 
-export const SETUP_STEP_IDS: SetupStepId[] = ['channel', 'ai', 'ai-test', 'recipe'];
+export const SETUP_STEP_IDS: SetupStepId[] = ['channel', 'ai', 'recipe'];
 
 export const SETUP_STEP_TITLES: Record<SetupStepId, string> = {
   channel: 'Conecte seu WhatsApp ou Instagram',
   ai: 'Conte para a IA sobre seu negócio',
-  'ai-test': 'Teste a IA agora',
   recipe: 'Ative a primeira automação do seu negócio',
 };
 
 export const LEGACY_STEP_IDS: Record<SetupStepId, string[]> = {
   channel: ['whatsapp', 'instagram'],
   ai: [],
-  'ai-test': [],
   recipe: ['auto-reply', 'comment-automation'],
 };
 
@@ -93,7 +91,7 @@ export function trackStepCompleted(step: SetupStepId, businessType: BusinessType
   window.dataLayer?.push({ event: 'onboarding_step_completed', step, businessType });
 }
 
-export const AI_SETUP_STEP_IDS: SetupStepId[] = ['ai', 'ai-test'];
+export const AI_SETUP_STEP_IDS: SetupStepId[] = ['ai'];
 
 export function activeSetupSteps(hasAiPlan: boolean): SetupStepId[] {
   return hasAiPlan ? SETUP_STEP_IDS : SETUP_STEP_IDS.filter((step) => !AI_SETUP_STEP_IDS.includes(step));

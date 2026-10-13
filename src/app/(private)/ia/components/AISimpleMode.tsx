@@ -2,7 +2,6 @@
 import { Building2, CheckCircle2, Clock, Link2, Save } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { completeSetupStep } from '@/app/get-started/setupSteps';
 import Button from '@/components/Button';
 import Callout from '@/components/Callout';
 import Card from '@/components/Card';
@@ -15,7 +14,6 @@ import { AI_FOLLOW_UP_OPTIONS, DEFAULT_AI_FOLLOW_UP_MESSAGE, type AIChannel, typ
 
 import { composeCustomRules, hasSimpleAnswers, isValidPriceLink, parseCustomRules } from '../simpleSetup';
 import AIChannelsList from './AIChannelsList';
-import AISimulator from './AISimulator';
 
 interface AISimpleModeProps {
     businessName: string;
@@ -41,10 +39,6 @@ const ABOUT_MAX_CHARS = 600;
 const HOURS_MAX_CHARS = 200;
 const PRICE_LINK_MAX_CHARS = 300;
 const PRICE_LIST_MAX_CHARS = 1500;
-
-function markAiTested(): void {
-  void completeSetupStep('ai-test');
-}
 
 function sameAnswers(a: AiSimpleSetupAnswers, b: AiSimpleSetupAnswers): boolean {
   return a.about === b.about
@@ -101,7 +95,7 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
       )}
       {!answeredSaved && (
         <Callout tone="info">
-          Responda as 3 perguntas abaixo, ligue a IA no seu WhatsApp ou Instagram e faça um teste. Leva menos de 2 minutos.
+          Responda as 3 perguntas abaixo e ligue a IA no seu WhatsApp ou Instagram. Leva menos de 2 minutos.
         </Callout>
       )}
       {answeredSaved && activeChannels === 0 && (
@@ -199,7 +193,7 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
               <p className={`min-w-0 text-xs ${overLimit ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                 {overLimit
                   ? `As respostas passaram do limite de ${maxCustomRulesChars.toLocaleString('pt-BR')} letras do seu plano. Encurte o texto para salvar.`
-                  : dirty ? 'Salve as respostas para a IA usar no atendimento e no teste.' : 'Tudo salvo.'}
+                  : dirty ? 'Salve as respostas para a IA usar no atendimento.' : 'Tudo salvo.'}
               </p>
               <Button
                 onClick={() => { void handleSave(); }}
@@ -213,7 +207,9 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
               </Button>
             </div>
           </Card>
+        </div>
 
+        <div className="min-w-0 space-y-3">
           <Card className="p-4">
             <SectionHeader
               title="Retomar conversa parada"
@@ -239,10 +235,6 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
           <div data-tour="ia-channels">
             <AIChannelsList channels={channels} onToggle={onToggleChannel} activeProfileId={activeProfileId}/>
           </div>
-        </div>
-
-        <div className="min-w-0 xl:sticky xl:top-4">
-          <AISimulator {...(activeProfileId ? { profileId: activeProfileId } : {})} onReply={markAiTested}/>
         </div>
       </div>
     </div>

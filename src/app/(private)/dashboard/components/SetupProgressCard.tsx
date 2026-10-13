@@ -9,7 +9,6 @@ import Card from '@/components/Card';
 const SHORT_TITLES: Record<SetupStepId, string> = {
   channel: 'Conectar um canal',
   ai: 'Contar para a IA sobre o negócio',
-  'ai-test': 'Testar a IA',
   recipe: 'Ativar a primeira automação',
 };
 

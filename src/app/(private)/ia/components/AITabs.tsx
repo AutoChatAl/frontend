@@ -1,5 +1,5 @@
 'use client';
-import { Ban, BookOpen, CalendarDays, MessagesSquare, Settings, Share2, ShieldCheck, ShoppingBag, Trello, Zap } from 'lucide-react';
+import { Ban, BookOpen, CalendarDays, Settings, Share2, ShieldCheck, ShoppingBag, Trello, Zap } from 'lucide-react';
 
 import type { AITab } from '@/types/AI';
 
@@ -18,7 +18,6 @@ const ALL_TABS: AITab[] = [
   { id: 'blocklist', label: 'Bloqueio', icon: Ban },
   { id: 'scheduling', label: 'Agendamento', icon: CalendarDays },
   { id: 'funnel', label: 'Funil', icon: Trello },
-  { id: 'test', label: 'Testar conversa', icon: MessagesSquare },
 ];
 
 /** Ids liberados, na ordem do menu. Usado também para validar o `?tab=` da URL. */
@@ -34,7 +33,6 @@ export function resolveAiTabs(visibleTabs?: string[]): AITab[] {
     allowed.add('knowledge');
     allowed.add('guardrails');
     allowed.add('blocklist');
-    allowed.add('test');
   }
   return ALL_TABS.filter((tab) => allowed.has(tab.id));
 }

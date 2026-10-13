@@ -3,7 +3,6 @@ import { Bot } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { completeSetupStep } from '@/app/get-started/setupSteps';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
@@ -30,17 +29,12 @@ import AIPromptPreview from './components/AIPromptPreview';
 import AIRulesSection from './components/AIRulesSection';
 import AISchedulingSection from './components/AISchedulingSection';
 import AISimpleMode from './components/AISimpleMode';
-import AISimulator from './components/AISimulator';
 import AITabs, { resolveAiTabs } from './components/AITabs';
 
 /** Abas cujos campos ficam em rascunho até o usuário salvar. As outras gravam a cada clique. */
 const TABS_WITH_DRAFT = ['general', 'triggers'];
 
 type AiViewMode = 'simple' | 'advanced';
-
-function markAiTested(): void {
-  void completeSetupStep('ai-test');
-}
 
 const VIEW_MODE_OPTIONS: ReadonlyArray<{ value: AiViewMode; label: string }> = [
   { value: 'simple', label: 'Modo simples' },
@@ -194,8 +188,6 @@ export default function IAPage() {
         {activeTab === 'scheduling' && (<AISchedulingSection schedulingQueryEnabled={schedulingQueryEnabled} schedulingBookingEnabled={schedulingBookingEnabled} schedulingQueryAllowed={schedulingQueryAllowed} schedulingBookingAllowed={schedulingBookingAllowed} onToggleQuery={toggleSchedulingQuery} onToggleBooking={toggleSchedulingBooking}/>)}
 
         {activeTab === 'funnel' && (<AIFunnelSection funnelAutoMoveEnabled={funnelAutoMoveEnabled} stages={funnelStages} onToggle={toggleFunnelAutoMove}/>)}
-
-        {activeTab === 'test' && (<AISimulator {...(activeProfileId ? { profileId: activeProfileId } : {})} onReply={markAiTested}/>)}
 
         {TABS_WITH_DRAFT.includes(activeTab) && (<div className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
           <p className="text-xs text-slate-400 dark:text-slate-500">

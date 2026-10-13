@@ -18,7 +18,7 @@ import {
 
 export type SetupStepFlags = Record<SetupStepId, boolean>;
 
-const NONE: SetupStepFlags = { channel: false, ai: false, 'ai-test': false, recipe: false };
+const NONE: SetupStepFlags = { channel: false, ai: false, recipe: false };
 
 interface UseSetupProgressOptions {
   liveDone?: Partial<SetupStepFlags>;
@@ -84,7 +84,7 @@ export function useSetupProgress({ liveDone }: UseSetupProgressOptions = {}): Us
       setFinished(!!state.finishedAt);
       loadedRef.current = true;
     }
-    setDetected({ channel, ai, 'ai-test': savedDone('ai-test'), recipe });
+    setDetected({ channel, ai, recipe });
     setLoading(false);
   }, []);
 
@@ -94,15 +94,13 @@ export function useSetupProgress({ liveDone }: UseSetupProgressOptions = {}): Us
 
   const liveChannel = liveDone?.channel === true;
   const liveAi = liveDone?.ai === true;
-  const liveAiTest = liveDone?.['ai-test'] === true;
   const liveRecipe = liveDone?.recipe === true;
 
   const done = useMemo<SetupStepFlags>(() => ({
     channel: detected.channel || manual.channel || liveChannel,
     ai: detected.ai || manual.ai || liveAi,
-    'ai-test': detected['ai-test'] || manual['ai-test'] || liveAiTest,
     recipe: detected.recipe || manual.recipe || liveRecipe,
-  }), [detected, manual, liveChannel, liveAi, liveAiTest, liveRecipe]);
+  }), [detected, manual, liveChannel, liveAi, liveRecipe]);
 
   useEffect(() => {
     if (loading) return;

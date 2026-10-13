@@ -218,23 +218,6 @@ const ALL_HELP_ARTICLES: HelpArticle[] = [
     featured: true,
   },
   {
-    id: 'ia-testar-simulador',
-    title: 'Testar a IA antes de liberar para os clientes',
-    summary: 'Converse com a sua IA como se você fosse um cliente. Nada é enviado de verdade para ninguém.',
-    category: 'ai',
-    steps: [
-      'Abra Inteligência Artificial no menu.',
-      'No Modo simples, use o quadro Teste sua IA, ao lado das perguntas. Nas Configurações avançadas, abra a aba Testar conversa.',
-      'Escreva uma pergunta como um cliente escreveria, por exemplo: “Quanto custa?” ou “Vocês abrem sábado?”.',
-      'Veja a resposta. Se algo estiver errado, ajuste as respostas sobre o seu negócio e salve.',
-      'Toque em Recomeçar para testar uma conversa nova do zero.',
-    ],
-    tip: 'Teste as 5 perguntas que você mais recebe no dia a dia. Se a IA acertar essas, ela já está pronta para atender.',
-    link: { href: '/ia', label: 'Inteligência Artificial' },
-    keywords: ['testar', 'teste', 'simulador', 'simular', 'conversa de teste', 'ia', 'inteligencia artificial', 'experimentar', 'ver resposta'],
-    routes: ['/ia'],
-  },
-  {
     id: 'ia-ensinar-negocio',
     title: 'Ensinar mais sobre o seu negócio para a IA',
     summary: 'Cadastre produtos, preços e as dúvidas mais comuns. A IA usa isso para responder com mais precisão.',

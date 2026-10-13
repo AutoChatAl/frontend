@@ -94,28 +94,6 @@ export const AI_LEGACY_SEGMENT_OPTIONS: ReadonlyArray<string> = [
   'Varejo / E-commerce',
 ];
 
-export type AiSimulationRole = 'user' | 'assistant';
-
-export interface AiSimulationMessage {
-    role: AiSimulationRole;
-    text: string;
-}
-
-export interface AiSimulationPayload {
-    profileId?: string;
-    messages: AiSimulationMessage[];
-}
-
-export interface AiSimulationResponse {
-    reply: string;
-}
-
-export const AI_SIMULATION_MAX_MESSAGES = 20;
-
-export const AI_SIMULATION_MAX_CHARS = 1000;
-
-export const AI_SIMULATION_MAX_ASSISTANT_CHARS = 4000;
-
 export type AiPriceSource = 'link' | 'list';
 
 export interface AiSimpleSetupAnswers {

@@ -21,7 +21,6 @@ import { BUSINESS_TYPE_LABELS, type BusinessType } from '@/types/BusinessType';
 import type { WhatsAppInstance } from '@/types/Channel';
 
 import AiSetupModal from './components/AiSetupModal';
-import AiTestModal from './components/AiTestModal';
 import BusinessTypePicker from './components/BusinessTypePicker';
 import NextSteps from './components/NextSteps';
 import SetupStepCard, { type SetupStepAction } from './components/SetupStepCard';
@@ -64,7 +63,6 @@ export default function GetStartedPage() {
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [instagramCheckOpen, setInstagramCheckOpen] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(false);
-  const [aiTestOpen, setAiTestOpen] = useState(false);
   const [recipeModal, setRecipeModal] = useState<RecipeModalRequest | null>(null);
   const [leaving, setLeaving] = useState(false);
 
@@ -130,14 +128,6 @@ export default function GetStartedPage() {
     setAiSetupOpen(false);
     void refresh();
   }, [refresh]);
-
-  const closeAiTest = useCallback(() => {
-    setAiTestOpen(false);
-  }, []);
-
-  const handleAiReplied = useCallback(() => {
-    markStepDone('ai-test');
-  }, [markStepDone]);
 
   const openAiSetup = useCallback(() => {
     if (!subscriptionLoading && !hasAiPlan) {
@@ -344,20 +334,6 @@ export default function GetStartedPage() {
 
               <SetupStepCard
                 step={3}
-                accent="indigo"
-                title={SETUP_STEP_TITLES['ai-test']}
-                description="Faça de conta que é um cliente e veja como a IA responde. Nada é enviado para ninguém."
-                done={done['ai-test']}
-                current={nextStep === 'ai-test'}
-                locked={aiLocked}
-                lockedHint="Disponível quando a IA estiver ativa no seu plano."
-                actions={[{ label: 'Testar a IA', accent: 'indigo', icon: <MessageCircle size={16} />, onClick: () => setAiTestOpen(true) }]}
-                doneHint="Você já viu a IA em ação. Teste de novo sempre que mudar as respostas."
-                doneAction={{ label: 'Testar de novo', onClick: () => setAiTestOpen(true) }}
-              />
-
-              <SetupStepCard
-                step={4}
                 accent="amber"
                 title={SETUP_STEP_TITLES.recipe}
                 description="Escolhemos uma automação pronta para o seu tipo de negócio. É só revisar e salvar."
@@ -444,8 +420,6 @@ export default function GetStartedPage() {
       />
 
       {aiSetupOpen && <AiSetupModal onClose={closeAiSetup} />}
-
-      {aiTestOpen && <AiTestModal onClose={closeAiTest} onReplied={handleAiReplied} />}
 
       {recipeModal && recipeModal.recipe.target.type === 'automation' && (
         <AutomationModal
