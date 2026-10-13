@@ -89,9 +89,6 @@ export default function IAPage() {
     return canManageBilling
       ? <AiPlanGate />
       : (<Card className="mx-auto mt-10 max-w-lg p-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10">
-          <Bot size={24} className="text-violet-600 dark:text-violet-400"/>
-        </div>
         <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
           A IA ainda não está ativa nesta conta
         </h1>

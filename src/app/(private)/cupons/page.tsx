@@ -1,5 +1,5 @@
 'use client';
-import { Plus, TicketPercent, Users } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -261,7 +261,7 @@ export default function CouponsPage() {
     </div>
 
     {loading ? (<SkeletonCards count={4}/>)
-      : coupons.length === 0 ? (<EmptyState icon={<TicketPercent size={22}/>} title="Nenhum cupom criado ainda" description="Crie um cupom de desconto e compartilhe o código com seus clientes." action={{
+      : coupons.length === 0 ? (<EmptyState title="Nenhum cupom criado ainda" description="Crie um cupom de desconto e compartilhe o código com seus clientes." action={{
         label: 'Criar primeiro cupom',
         icon: <Plus size={16}/>,
         onClick: () => setIsCreateOpen(true),
@@ -269,21 +269,16 @@ export default function CouponsPage() {
         : (<div className="space-y-3">
           {coupons.map((coupon) => (<Card key={coupon.id} className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                  <TicketPercent size={18}/>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-bold text-slate-800 dark:text-white">{coupon.code}</p>
+                  <Badge type={coupon.isActive ? 'success' : 'neutral'} text={coupon.isActive ? 'Ativo' : 'Inativo'}/>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-slate-800 dark:text-white">{coupon.code}</p>
-                    <Badge type={coupon.isActive ? 'success' : 'neutral'} text={coupon.isActive ? 'Ativo' : 'Inativo'}/>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {discountLabel(coupon)}
-                    {coupon.expiresAt ? ` · válido até ${formatDate(coupon.expiresAt)}` : ''}
-                  </p>
-                  {coupon.note && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{coupon.note}</p>)}
-                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {discountLabel(coupon)}
+                  {coupon.expiresAt ? ` · válido até ${formatDate(coupon.expiresAt)}` : ''}
+                </p>
+                {coupon.note && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{coupon.note}</p>)}
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                 <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">

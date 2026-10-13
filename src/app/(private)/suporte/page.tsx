@@ -1,5 +1,5 @@
 'use client';
-import { ImagePlus, Loader2, MessageCircle, Search, Send, ShieldCheck, Trash2, XCircle } from 'lucide-react';
+import { ImagePlus, Loader2, Search, Send, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -379,7 +379,6 @@ export default function SupportPage() {
 
       <section className="flex h-[70vh] min-h-0 max-h-[70vh] flex-col rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
         {!selectedConversation ? (<div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-slate-500 dark:text-slate-400">
-          <MessageCircle size={28}/>
           <p>Selecione uma conversa para iniciar o atendimento.</p>
         </div>) : (<>
           <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">

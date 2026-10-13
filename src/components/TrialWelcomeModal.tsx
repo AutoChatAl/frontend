@@ -1,5 +1,4 @@
 'use client';
-import { Bot, MonitorSmartphone, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -74,17 +73,14 @@ export default function TrialWelcomeModal() {
 
   const destaques = [
     {
-      icon: Bot,
       titulo: 'IA respondendo seus clientes',
       texto: aiText,
     },
     {
-      icon: MonitorSmartphone,
       titulo: 'WhatsApp e Instagram',
       texto: 'Suas conversas dos dois canais num só lugar.',
     },
     {
-      icon: Zap,
       titulo: 'Automações',
       texto: 'Respostas automáticas, mensagens para quem comenta nos seus posts e campanhas.',
     },
@@ -92,18 +88,13 @@ export default function TrialWelcomeModal() {
 
   return (<Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Seu teste está chegando ao fim" size="sm">
     <div className="space-y-5">
-      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-          <Sparkles size={18}/>
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Restam {restante} de teste</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {trialEnd
-              ? `Termina em ${new Date(trialEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`
-              : 'Assine antes do fim para não parar o atendimento.'}
-          </p>
-        </div>
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/40">
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">Restam {restante} de teste</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {trialEnd
+            ? `Termina em ${new Date(trialEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`
+            : 'Assine antes do fim para não parar o atendimento.'}
+        </p>
       </div>
 
       <div>
@@ -111,15 +102,10 @@ export default function TrialWelcomeModal() {
           Tudo isto já está liberado no seu teste. Assinando um plano, continua funcionando sem parar:
         </p>
         <ul className="space-y-3">
-          {destaques.map(({ icon: Icon, titulo, texto }) => (
-            <li key={titulo} className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                <Icon size={14}/>
-              </span>
-              <div>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{titulo}</p>
-                <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{texto}</p>
-              </div>
+          {destaques.map(({ titulo, texto }) => (
+            <li key={titulo}>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">{titulo}</p>
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{texto}</p>
             </li>
           ))}
         </ul>

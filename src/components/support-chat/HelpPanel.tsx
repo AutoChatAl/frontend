@@ -1,22 +1,13 @@
 'use client';
-import { Bot, ChevronRight, Search, Settings, ShoppingCart, Smartphone, Users, X, Zap, type LucideIcon } from 'lucide-react';
+import { ChevronRight, Search, X } from 'lucide-react';
 
 import CardEmptyState from '@/components/CardEmptyState';
 import Input from '@/components/Input';
 
-import type { HelpArticle, HelpCategory } from './helpArticles';
+import type { HelpArticle } from './helpArticles';
 import HelpArticleView from './HelpArticleView';
 import HelpContactCard from './HelpContactCard';
 import type { HelpCategoryGroup } from './useHelpCenter';
-
-const CATEGORY_ICONS: Record<HelpCategory, LucideIcon> = {
-  channels: Smartphone,
-  automations: Zap,
-  ai: Bot,
-  sales: ShoppingCart,
-  contacts: Users,
-  account: Settings,
-};
 
 const SECTION_LABEL = 'text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400';
 
@@ -37,16 +28,12 @@ interface HelpPanelProps {
 }
 
 function ArticleCard({ article, onOpen }: { article: HelpArticle; onOpen: (id: string) => void }) {
-  const Icon = CATEGORY_ICONS[article.category];
   return (
     <button
       type="button"
       onClick={() => onOpen(article.id)}
       className="group flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-        <Icon size={16}/>
-      </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-slate-900 dark:text-white">{article.title}</span>
         <span className="mt-0.5 line-clamp-2 block text-xs text-slate-500 dark:text-slate-400">{article.summary}</span>
@@ -166,11 +153,9 @@ export default function HelpPanel({
           <section className="space-y-3">
             <p className={SECTION_LABEL}>Todos os assuntos</p>
             {groups.map((group) => {
-              const Icon = CATEGORY_ICONS[group.id];
               return (
                 <div key={group.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
-                  <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-700">
-                    <Icon size={14} className="text-indigo-600 dark:text-indigo-400"/>
+                  <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-700">
                     <h5 className="text-sm font-semibold text-slate-900 dark:text-white">{group.label}</h5>
                   </div>
                   <ul className="divide-y divide-slate-100 dark:divide-slate-700">

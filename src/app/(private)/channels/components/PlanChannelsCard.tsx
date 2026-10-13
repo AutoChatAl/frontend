@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 import Card from '@/components/Card';
@@ -33,8 +33,7 @@ export default function PlanChannelsCard({ planName, limit, counts }: PlanChanne
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Canais no seu plano</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cota compartilhada entre os tipos</p>
       </div>
-      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-        <Sparkles size={10}/>
+      <span className="shrink-0 rounded-full border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
         {planName}
       </span>
     </div>

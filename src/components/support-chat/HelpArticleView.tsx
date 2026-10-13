@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, ArrowRight, CheckCircle2, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 import Button from '@/components/Button';
 import Callout from '@/components/Callout';
@@ -52,12 +52,7 @@ export default function HelpArticleView({ article, pathname, onBack, onNavigate 
       </ol>
 
       {article.tip && (
-        <Callout tone="info">
-          <span className="flex items-start gap-2">
-            <Lightbulb size={14} className="mt-0.5 shrink-0"/>
-            <span>{article.tip}</span>
-          </span>
-        </Callout>
+        <Callout tone="info">{article.tip}</Callout>
       )}
 
       {alreadyThere ? (

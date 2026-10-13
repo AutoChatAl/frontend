@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Pencil, Trash2, Copy, Check, Plug, AlertCircle, MessageCircle, Instagram, Lock, PlugZap, ShieldAlert, Gift, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Check, MessageCircle, Instagram, Lock, PlugZap, ShieldAlert, Gift, CheckCircle2, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -152,8 +152,7 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
       )}
 
       {hasNoChannels && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
           <p>
             Você ainda não tem nenhum WhatsApp ou Instagram conectado. Conecte um em <strong>Canais</strong> para que as
             mensagens possam ser enviadas.
@@ -164,7 +163,6 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
       {integrations.length === 0 ? (
         <div data-tour="cart-recovery-empty">
           <EmptyState
-            icon={<Plug size={20} />}
             title="Nenhuma plataforma ligada ainda"
             description="Ligue a Hotmart, Kiwify, Eduzz, Monetizze ou PerfectPay para recuperar vendas perdidas e dar boas-vindas a quem comprou."
             {...(!isAtLimit && {

@@ -1,5 +1,5 @@
 'use client';
-import { LayoutTemplate, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -148,7 +148,6 @@ export default function TemplatesPage() {
 
       {channels.length === 0 ? (
         <EmptyState
-          icon={<LayoutTemplate size={56} />}
           title="Conecte o WhatsApp Oficial para criar modelos de mensagem"
           description="Modelos de mensagem são textos aprovados pela Meta. Eles são obrigatórios para enviar campanhas e para chamar clientes que não falam com você há mais de 24h pelo WhatsApp Oficial."
           action={{ label: 'Conectar WhatsApp Oficial', onClick: () => router.push('/channels') }}
@@ -163,7 +162,6 @@ export default function TemplatesPage() {
 
           {templates.length === 0 ? (
             <EmptyState
-              icon={<LayoutTemplate size={56} />}
               title="Nenhum modelo de mensagem ainda"
               description="Crie seu primeiro modelo ou clique em Atualizar com a Meta para trazer os que você já tem lá."
             />

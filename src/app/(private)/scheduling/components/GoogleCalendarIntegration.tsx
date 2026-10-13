@@ -1,5 +1,5 @@
 'use client';
-import { AlertTriangle, Calendar, CheckCircle, Loader2, RefreshCw, Unlink } from 'lucide-react';
+import { Calendar, CheckCircle, Loader2, RefreshCw, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import Badge from '@/components/Badge';
@@ -115,8 +115,7 @@ export default function GoogleCalendarIntegration({ onToast }: GoogleCalendarInt
       </div>
 
       {!status?.connected && (<div className="space-y-4">
-        <div className="flex max-w-5xl items-center gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 rounded-lg p-3">
-          <AlertTriangle size={16} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5"/>
+        <div className="max-w-5xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 rounded-lg p-3">
           <p className="text-sm text-violet-700 dark:text-violet-500">
                 Esta integração está em fase beta. Para usar, envie o e-mail da sua conta do Google Agenda para o nosso suporte e aguarde a liberação antes de conectar.
           </p>

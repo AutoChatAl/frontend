@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, ArrowRight, Instagram, Lock, MessageCircle, PartyPopper, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Instagram, Lock, MessageCircle, Sparkles, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -195,8 +195,6 @@ export default function GetStartedPage() {
     ]
     : [{ label: 'Escolher uma automação', accent: 'amber', icon: <Zap size={16} />, onClick: () => router.push('/auto-replies') }];
 
-  const RecipeIcon = starterRecipe?.icon;
-
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
@@ -242,20 +240,15 @@ export default function GetStartedPage() {
           <>
             <header className="mt-8">
               {allDone ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
-                    <PartyPopper size={24} />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-                      Tudo pronto{firstName ? `, ${firstName}` : ''}!
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
-                      {aiLocked
-                        ? 'Seu canal está conectado e a primeira automação já está ativa.'
-                        : 'Seu canal está conectado, a IA conhece o seu negócio e a primeira automação já está ativa.'}
-                    </p>
-                  </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+                    Tudo pronto{firstName ? `, ${firstName}` : ''}!
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 sm:text-base">
+                    {aiLocked
+                      ? 'Seu canal está conectado e a primeira automação já está ativa.'
+                      : 'Seu canal está conectado, a IA conhece o seu negócio e a primeira automação já está ativa.'}
+                  </p>
                 </div>
               ) : (
                 <>
@@ -345,20 +338,15 @@ export default function GetStartedPage() {
                 doneHint="Sua primeira automação já está funcionando."
                 doneAction={{ label: 'Ver minhas automações', onClick: () => router.push('/auto-replies') }}
               >
-                {!done.recipe && starterRecipe && RecipeIcon && (
-                  <div className="flex items-start gap-3 rounded-lg border border-amber-100 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-500/5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 dark:bg-slate-800 dark:text-amber-400">
-                      <RecipeIcon size={18} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                        {starterRecipe.title}
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
-                          {RECIPE_DESTINATION_LABEL[starterRecipe.target.type]}
-                        </span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{starterRecipe.description}</p>
-                    </div>
+                {!done.recipe && starterRecipe && (
+                  <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-3 dark:border-amber-500/20 dark:bg-amber-500/5">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                      {starterRecipe.title}
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                        {RECIPE_DESTINATION_LABEL[starterRecipe.target.type]}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{starterRecipe.description}</p>
                   </div>
                 )}
               </SetupStepCard>

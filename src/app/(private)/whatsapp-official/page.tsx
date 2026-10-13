@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, BadgeCheck, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -208,7 +208,6 @@ export default function WhatsAppOfficialDashboardPage() {
 
       {channels.length === 0 ? (
         <EmptyState
-          icon={<ShieldCheck size={28} />}
           title="Nenhum número do WhatsApp Oficial conectado"
           description="Conecte seu número do WhatsApp Oficial para acompanhar a qualidade, as mensagens enviadas e os custos por aqui."
           action={{ label: 'Conectar WhatsApp Oficial', onClick: () => router.push('/channels') }}
@@ -250,14 +249,9 @@ export default function WhatsAppOfficialDashboardPage() {
                   return (
                     <div key={channel.id} className="py-3 first:pt-0 last:pb-0">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-md bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
-                            <BadgeCheck size={16} className="text-emerald-600 dark:text-emerald-400"/>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-slate-900 dark:text-white truncate">{config.verifiedName || channel.name}</p>
-                            <p className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500 truncate">{config.displayPhoneNumber ?? '—'}</p>
-                          </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-slate-900 dark:text-white truncate">{config.verifiedName || channel.name}</p>
+                          <p className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500 truncate">{config.displayPhoneNumber ?? '—'}</p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge type={quality.type} text={quality.text} pill/>
@@ -275,8 +269,8 @@ export default function WhatsAppOfficialDashboardPage() {
                       {pendencies.length > 0 && (
                         <div className="space-y-1 mt-2">
                           {pendencies.map((pendency, i) => (
-                            <p key={i} className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-md px-2.5 py-1.5">
-                              <ShieldAlert size={12} className="shrink-0 mt-0.5"/> {pendency}
+                            <p key={i} className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-md px-2.5 py-1.5">
+                              {pendency}
                             </p>
                           ))}
                         </div>

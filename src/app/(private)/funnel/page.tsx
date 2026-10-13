@@ -1,5 +1,4 @@
 'use client';
-import { AlertCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -275,10 +274,7 @@ export default function FunnelPage() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 text-red-500">
-            <AlertCircle size={20} />
-            <span className="text-sm font-medium">{error}</span>
-          </div>
+          <p className="text-sm font-medium text-red-500">{error}</p>
           <Button size="sm" onClick={() => loadBoard()}>
             Tentar novamente
           </Button>

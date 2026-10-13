@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -246,10 +246,7 @@ export default function AutoRepliesPage() {
   if (error && rows.length === 0) {
     return (<div className="flex h-64 items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle size={20}/>
-          <span className="text-sm font-medium">{error}</span>
-        </div>
+        <p className="text-sm font-medium text-red-500">{error}</p>
         <Button onClick={fetchRows} size="sm">Tentar novamente</Button>
       </div>
     </div>);

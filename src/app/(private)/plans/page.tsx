@@ -1,5 +1,5 @@
 'use client';
-import { Check, Crown, Sparkles, Zap } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import BillingCycleSelector from '@/components/BillingCycleSelector';
@@ -25,16 +25,6 @@ function formatNumber(n: number) {
 function formatPricePerMsg(cents: number) {
   return `R$ ${(cents / 100).toFixed(3).replace('.', ',')}`;
 }
-const PLAN_ICONS: Record<string, typeof Zap> = {
-  impulso: Zap,
-  crescimento: Sparkles,
-  dominio: Crown,
-};
-const PLAN_COLORS: Record<string, string> = {
-  impulso: 'from-blue-500 to-indigo-600',
-  crescimento: 'from-indigo-500 to-violet-600',
-  dominio: 'from-violet-500 to-purple-700',
-};
 export default function PlansPage() {
   const { status, isTrialing, isCanceled, refresh, refreshAfterPurchase } = useSubscription();
   const { toasts, addToast, removeToast } = useToast();
@@ -85,16 +75,10 @@ export default function PlansPage() {
       {plans.map((plan) => {
         const isCurrent = !isCanceled && plan.id === currentPlanId && cycle === currentCycle;
         const isHighlighted = plan.slug === 'crescimento';
-        const Icon = PLAN_ICONS[plan.slug] ?? Sparkles;
-        const gradient = PLAN_COLORS[plan.slug] ?? 'from-indigo-500 to-violet-600';
         return (<Card key={plan.id} className={`relative p-6 flex flex-col ${isHighlighted ? 'ring-2 ring-indigo-500 dark:ring-indigo-400' : ''}`}>
           {isHighlighted && (<span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
                   Mais Popular
           </span>)}
-
-          <div className={`w-10 h-10 rounded-xl bg-linear-to-br ${gradient} flex items-center justify-center mb-4`}>
-            <Icon size={20} className="text-white"/>
-          </div>
 
           <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.description}</p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, Search, ExternalLink, Phone, Mail, ShoppingCart, User, Instagram, Tag } from 'lucide-react';
+import { Trash2, Search, ExternalLink, Phone, Mail, User, Instagram, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -232,7 +232,6 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
 
       {carts.length === 0 ? (
         <EmptyState
-          icon={<ShoppingCart size={20} />}
           title="Nenhum carrinho encontrado"
           description="Quando alguém sair do pagamento sem comprar ou deixar um Pix ou boleto sem pagar, aparece aqui."
         />

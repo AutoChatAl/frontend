@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCircle2, Copy, Loader2, RotateCcw, ShieldAlert } from 'lucide-react';
+import { Check, Copy, Loader2, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import Button from '@/components/Button';
@@ -193,20 +193,16 @@ export default function ConnectionGuide({ integration, secret, onSecretChange, o
           )}
 
           {testState === 'received' && (
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-              <CheckCircle2 size={16} className="shrink-0" />
-              <span>Recebemos! Sua integração está funcionando.</span>
-            </div>
+            <p className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+              Recebemos! Sua integração está funcionando.
+            </p>
           )}
 
           {testState === 'rejected' && (
             <div className="space-y-2">
-              <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-                <ShieldAlert size={14} className="mt-0.5 shrink-0" />
-                <span>
-                  Chegou um aviso da {platformLabel}, mas o código de segurança não confere. Confira o código do passo {codeStepNumber} e teste de novo.
-                </span>
-              </div>
+              <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                Chegou um aviso da {platformLabel}, mas o código de segurança não confere. Confira o código do passo {codeStepNumber} e teste de novo.
+              </p>
               <Button variant="secondary" size="sm" icon={<RotateCcw size={14} />} onClick={startTest} loading={preparing}>
                 Testar de novo
               </Button>

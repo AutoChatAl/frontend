@@ -1,5 +1,4 @@
 'use client';
-import { MessagesSquare } from 'lucide-react';
 
 import Card from '@/components/Card';
 
@@ -31,7 +30,6 @@ export default function MessagesSummaryCard({ sent, received, read, emptyAction 
     return (<Card className="p-4 sm:p-5 h-full flex flex-col">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Mensagens</h2>
       <DashboardEmptyHint
-        icon={MessagesSquare}
         message="Quantas mensagens você enviou, recebeu e quantas foram lidas nos últimos 7 dias. Os números aparecem assim que seus clientes começarem a conversar com você."
         actionLabel={emptyAction.label}
         href={emptyAction.href}

@@ -1,5 +1,5 @@
 'use client';
-import { Bot, Clock, MessageCircle, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -102,32 +102,23 @@ export default function TrialBanner() {
 
   if (usageAlert && (!usageDismissed || usageAlert.reachedLimit)) {
     const { title, description } = usageCopy(usageAlert);
-    const Icon = usageAlert.kind === 'ai' ? Bot : MessageCircle;
-    const accent = usageAlert.reachedLimit
-      ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
-      : 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400';
     const percentage = Math.min(100, Math.round((usageAlert.used / usageAlert.limit) * 100));
     const barColor = usageAlert.reachedLimit
       ? 'bg-red-500 dark:bg-red-400'
       : 'bg-amber-500 dark:bg-amber-400';
     return (<div className="mb-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
-      <div className="flex min-w-0 items-start gap-3 sm:items-center">
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accent}`}>
-          <Icon size={16}/>
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
-          <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>
-          <div
-            className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percentage}
-            aria-label="Uso do teste"
-          >
-            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }}/>
-          </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{description}</p>
+        <div
+          className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percentage}
+          aria-label="Uso do teste"
+        >
+          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }}/>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
@@ -153,11 +144,6 @@ export default function TrialBanner() {
 
   const isUrgent = trialDaysRemaining <= 3;
   const isCritical = trialDaysRemaining <= 1;
-  const accent = isCritical
-    ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
-    : isUrgent
-      ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
-      : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400';
   const countdownColor = isCritical
     ? 'text-red-600 dark:text-red-400'
     : isUrgent
@@ -167,20 +153,15 @@ export default function TrialBanner() {
     ? 'menos de um dia'
     : `${trialDaysRemaining} ${trialDaysRemaining === 1 ? 'dia' : 'dias'}`;
   return (<div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
-    <div className="flex min-w-0 items-center gap-3">
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accent}`}>
-        <Clock size={16}/>
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
-          Teste grátis: restam <span className={`font-semibold ${countdownColor}`}>{restante}</span>
-        </p>
-        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-          {trialEnd
-            ? `Termina em ${new Date(trialEnd).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-            : 'Assine um plano para não perder o acesso.'}
-        </p>
-      </div>
+    <div className="min-w-0">
+      <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
+        Teste grátis: restam <span className={`font-semibold ${countdownColor}`}>{restante}</span>
+      </p>
+      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+        {trialEnd
+          ? `Termina em ${new Date(trialEnd).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+          : 'Assine um plano para não perder o acesso.'}
+      </p>
     </div>
     <div className="flex shrink-0 items-center gap-1">
       <Button size="sm" onClick={() => router.push('/plans')}>

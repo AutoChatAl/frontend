@@ -1,5 +1,5 @@
 'use client';
-import { Bot, CheckCircle2, Hourglass, MessageCircle, Settings2, Users, Zap } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -12,9 +12,9 @@ import Card from './Card';
 const ALLOWED_PREFIXES = ['/plans', '/settings'];
 
 const GUARDADOS = [
-  { icon: Settings2, texto: 'Configurações da IA e do seu negócio' },
-  { icon: Users, texto: 'Contatos e etiquetas' },
-  { icon: Zap, texto: 'Automações e respostas automáticas' },
+  'Configurações da IA e do seu negócio',
+  'Contatos e etiquetas',
+  'Automações e respostas automáticas',
 ];
 
 interface TrialEndedScreenProps {
@@ -29,10 +29,7 @@ export function TrialEndedScreen({ canChoosePlan = true, showSupport = true }: T
   return (<div className="mx-auto w-full max-w-xl py-6 sm:py-12">
     <Card className="overflow-hidden">
       <div className="border-b border-slate-100 bg-slate-50 px-6 py-8 text-center dark:border-slate-700 dark:bg-slate-900/40 sm:px-8">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-          <Hourglass size={22}/>
-        </span>
-        <h1 className="mt-4 text-xl font-semibold text-slate-900 dark:text-white sm:text-2xl">Seu teste terminou</h1>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-white sm:text-2xl">Seu teste terminou</h1>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           A IA e as automações estão pausadas. Escolha um plano para o Synq voltar a atender seus clientes na hora.
         </p>
@@ -40,18 +37,12 @@ export function TrialEndedScreen({ canChoosePlan = true, showSupport = true }: T
 
       <div className="space-y-5 px-6 py-6 sm:px-8">
         <div>
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-            <CheckCircle2 size={16} className="text-emerald-500 dark:text-emerald-400"/>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">
             Suas configurações, contatos e automações estão guardados
           </p>
-          <ul className="mt-3 space-y-2">
-            {GUARDADOS.map(({ icon: Icon, texto }) => (
-              <li key={texto} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
-                  <Icon size={14}/>
-                </span>
-                {texto}
-              </li>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600 marker:text-slate-300 dark:text-slate-300 dark:marker:text-slate-600">
+            {GUARDADOS.map((texto) => (
+              <li key={texto}>{texto}</li>
             ))}
           </ul>
           <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
@@ -59,12 +50,9 @@ export function TrialEndedScreen({ canChoosePlan = true, showSupport = true }: T
           </p>
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 dark:border-violet-500/20 dark:bg-violet-500/10">
-          <Bot size={16} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400"/>
-          <p className="text-xs leading-relaxed text-violet-700 dark:text-violet-300">
-            Enquanto a conta está pausada, mensagens que chegarem no WhatsApp e no Instagram não recebem resposta automática.
-          </p>
-        </div>
+        <p className="rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 text-xs leading-relaxed text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+          Enquanto a conta está pausada, mensagens que chegarem no WhatsApp e no Instagram não recebem resposta automática.
+        </p>
 
         {canChoosePlan
           ? (<div className="flex flex-col gap-2 sm:flex-row">
@@ -92,12 +80,9 @@ export function TrialEndedScreen({ canChoosePlan = true, showSupport = true }: T
 function TrialEndedNotice() {
   const router = useRouter();
   return (<div className="mb-4 flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/20 dark:bg-amber-500/10">
-    <div className="flex min-w-0 items-start gap-3 sm:items-center">
-      <Hourglass size={16} className="mt-0.5 shrink-0 text-amber-600 sm:mt-0 dark:text-amber-400"/>
-      <p className="text-sm text-amber-700 dark:text-amber-300">
-        Seu teste terminou. Suas configurações estão guardadas e voltam a funcionar quando você assinar.
-      </p>
-    </div>
+    <p className="min-w-0 text-sm text-amber-700 dark:text-amber-300">
+      Seu teste terminou. Suas configurações estão guardadas e voltam a funcionar quando você assinar.
+    </p>
     <Button size="sm" className="shrink-0 self-start sm:self-auto" onClick={() => router.push('/plans')}>
       Escolher um plano
     </Button>

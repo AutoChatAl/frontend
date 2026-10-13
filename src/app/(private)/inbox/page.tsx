@@ -1,5 +1,5 @@
 'use client';
-import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Inbox, Link2, Lock, Maximize2, MessageCircle, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, Check, CheckCheck, Clock, Link2, Lock, Maximize2, Mic, Paperclip, PanelRight, PanelRightClose, Reply, Search, Send, Square, Trash2, UserCheck, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
@@ -980,7 +980,6 @@ export default function InboxPage() {
               </div>
             ) : conversations.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 text-center">
-                <Inbox size={22} className="text-slate-300 dark:text-slate-600" />
                 <p className="text-[13px] text-slate-600 dark:text-slate-400">
                   {search.trim()
                     ? 'Nenhuma conversa encontrada'
@@ -1079,9 +1078,6 @@ export default function InboxPage() {
         <section className={`${PANEL} min-w-0 flex-1 ${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'}`}>
           {!chatEnabled ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500">
-                <MessageCircle size={22} />
-              </span>
               <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Conversas desligadas</p>
               <p className="max-w-xs text-[11px] text-slate-400 dark:text-slate-500">
                 Abra as configurações no rodapé da lista para ligar o recebimento de mensagens.
@@ -1089,9 +1085,6 @@ export default function InboxPage() {
             </div>
           ) : !selectedConversation ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500">
-                <MessageCircle size={22} />
-              </span>
               <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Selecione uma conversa</p>
               <p className="max-w-xs text-[11px] text-slate-400 dark:text-slate-500">
                 WhatsApp e Instagram na mesma lista, em tempo real.

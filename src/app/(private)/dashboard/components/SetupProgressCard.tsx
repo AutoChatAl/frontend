@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight, CheckCircle2, Circle, Rocket } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle } from 'lucide-react';
 import Link from 'next/link';
 
 import { useSetupProgress } from '@/app/get-started/hooks/useSetupProgress';
@@ -23,21 +23,16 @@ export default function SetupProgressCard() {
   return (
     <Card className="relative overflow-hidden p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <Rocket size={20} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Primeiros passos {completedCount} de {total}
-            </p>
-            <h2 className="mt-0.5 text-base font-semibold text-slate-900 dark:text-white">
-              Próximo: {SHORT_TITLES[nextStep]}
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
-              {remaining === 1 ? 'Falta 1 passo' : `Faltam ${remaining} passos`} para o Synq atender e vender por você.
-            </p>
-          </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            Primeiros passos {completedCount} de {total}
+          </p>
+          <h2 className="mt-0.5 text-base font-semibold text-slate-900 dark:text-white">
+            Próximo: {SHORT_TITLES[nextStep]}
+          </h2>
+          <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+            {remaining === 1 ? 'Falta 1 passo' : `Faltam ${remaining} passos`} para o Synq atender e vender por você.
+          </p>
         </div>
         <Link
           href="/get-started"

@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, BadgeCheck, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
+import { BadgeCheck, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -248,10 +248,7 @@ function CampaignsPageContent() {
   if (error) {
     return (<div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle size={20}/>
-          <span className="text-sm font-medium">{error}</span>
-        </div>
+        <p className="text-sm font-medium text-red-500">{error}</p>
         <Button onClick={loadCampaigns} size="sm">Tentar novamente</Button>
       </div>
     </div>);
@@ -280,7 +277,7 @@ function CampaignsPageContent() {
       <MetricCard title="Disparos Hoje" value={campaignStats.dispatchesToday.toLocaleString('pt-BR')} hint="executados ou agendados"/>
     </div>)}
 
-    {campaigns.length === 0 ? (<div data-tour="campaigns-new"><EmptyState icon={<Play size={20}/>} title="Nenhuma campanha criada ainda" action={{
+    {campaigns.length === 0 ? (<div data-tour="campaigns-new"><EmptyState title="Nenhuma campanha criada ainda" action={{
       label: 'Criar primeira campanha',
       icon: <Plus size={16}/>,
       onClick: () => setIsCreateModalOpen(true),

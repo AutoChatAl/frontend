@@ -723,7 +723,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
 
         {formData.sourceType === 'CHANNEL' && (<>
           {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-            <MessageCircle size={24} className="text-slate-300 dark:text-slate-600"/>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
               {HIDDEN_FEATURES.campaignNonOfficialChannels
                 ? 'Nenhum número do WhatsApp Oficial conectado'
@@ -779,7 +778,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
 
         {formData.sourceType === 'GROUP' && (<>
           {groups.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-            <Users size={24} className="text-slate-300 dark:text-slate-600"/>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                       Nenhum grupo disponível
             </p>
@@ -1071,7 +1069,6 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
 
           <div className="max-h-56 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800/80">
             {filteredContacts.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 gap-2 text-slate-400">
-              <Users size={20} className="opacity-50"/>
               <p className="text-sm">Nenhum contato encontrado</p>
             </div>) : (filteredContacts.map((contact) => {
               const isChecked = formData.contactIds.includes(contact.id);

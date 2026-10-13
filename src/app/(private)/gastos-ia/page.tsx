@@ -1,5 +1,4 @@
 'use client';
-import { BarChart3, Bot } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -153,21 +152,15 @@ export default function AiSpendsPage() {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 sm:space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-          <BarChart3 size={20} />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white sm:text-2xl">Gastos com IA</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Consumo por usuário. Clique em uma linha para ver a distribuição.
-          </p>
-        </div>
+      <div>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white sm:text-2xl">Gastos com IA</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Consumo por usuário. Clique em uma linha para ver a distribuição.
+        </p>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
-          icon={<Bot size={40} />}
           title="Nenhum gasto registrado"
           description="Os gastos aparecem aqui conforme os usuários consomem IA em respostas, transcrições e no funil."
         />

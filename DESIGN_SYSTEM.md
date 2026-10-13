@@ -829,9 +829,9 @@ O botão flutuante abre um painel com duas abas (`SegmentedControl`): **Ajuda** 
 
 - **Painel:** tela cheia no celular; a partir de `sm`, janela `sm:h-140 sm:w-105 sm:rounded-t-lg sm:border sm:border-b-0 sm:border-slate-200 sm:shadow-xl sm:dark:border-slate-700` presa ao canto inferior direito, fundo `bg-white dark:bg-slate-800`
 - **Rótulo de seção** ("Sugestões para esta tela", "Todos os assuntos"): `text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400`
-- **Cartão de artigo:** `group flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5`; ícone `h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400`; título `text-sm font-medium`; resumo `line-clamp-2 text-xs text-slate-500 dark:text-slate-400`; `ChevronRight` 16 que fica indigo no hover
-- **Lista por assunto:** grupo `overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800`, cabeçalho com ícone 14 indigo e `divide-y divide-slate-100 dark:divide-slate-700` entre os artigos
-- **Leitor de artigo:** botão "voltar" discreto (`text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700`), categoria `text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400`, título `text-base font-semibold`, passos no padrão 8.9 (tom suave), dica em `Callout tone="info"` com `Lightbulb` 14 e botão primário de largura total para ir à tela. Se o usuário já está na tela do artigo, o botão vira `Callout tone="success"` ("Você já está na tela certa").
+- **Cartão de artigo:** `group flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5`; título `text-sm font-medium`; resumo `line-clamp-2 text-xs text-slate-500 dark:text-slate-400`; `ChevronRight` 16 que fica indigo no hover
+- **Lista por assunto:** grupo `overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800`, cabeçalho só com o nome do assunto e `divide-y divide-slate-100 dark:divide-slate-700` entre os artigos
+- **Leitor de artigo:** botão "voltar" discreto (`text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700`), categoria `text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400`, título `text-base font-semibold`, passos no padrão 8.9 (tom suave), dica em `Callout tone="info"` e botão primário de largura total para ir à tela. Se o usuário já está na tela do artigo, o botão vira `Callout tone="success"` ("Você já está na tela certa").
 - **Cartão "Ainda precisa de ajuda?":** `rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800`, com o botão primário de falar com o suporte e, quando houver número, o **botão de WhatsApp verde**:
 
 ```tsx
@@ -924,7 +924,7 @@ Usado para ações irreversíveis (excluir conta, cancelar plano).
 
 ```tsx
 // Arquivo: src/components/EmptyState.tsx
-// Centralizado, ícone grande, título e descrição + CTA opcional
+// Centralizado, título e descrição + CTA opcional (sem ícone)
 flex flex-col items-center justify-center py-12
 text-center space-y-3
 ```
@@ -973,26 +973,24 @@ reservado a destaques sobre fundo escuro.
 
 **Arquivos:** `components/TrialBanner.tsx` e `components/TrialEndedScreen.tsx`
 
-**Faixa do teste (`TrialBanner`):** fica acima do conteúdo, `mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:shadow-none`, com ícone `h-8 w-8 rounded-lg`, botão "Escolher plano" (`size="sm"`) e um `X` discreto para fechar. Quando o uso de IA ou de mensagens passa de 80% do limite do teste, a faixa troca a contagem de dias pela **barra de uso**:
+**Faixa do teste (`TrialBanner`):** fica acima do conteúdo, `mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:shadow-none`, botão "Escolher plano" (`size="sm"`) e um `X` discreto para fechar. Quando o uso de IA ou de mensagens passa de 80% do limite do teste, a faixa troca a contagem de dias pela **barra de uso**:
 
 | Parte | Classes |
 |---|---|
 | Trilho | `mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700`, com `role="progressbar"` e `aria-valuenow` |
 | Preenchimento (perto do limite) | `h-full rounded-full bg-amber-500 dark:bg-amber-400` |
 | Preenchimento (limite atingido) | `h-full rounded-full bg-red-500 dark:bg-red-400` |
-| Ícone (perto do limite) | `bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400` |
-| Ícone (limite atingido) | `bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400` |
 
 Nesse modo o botão vira "Assinar agora". O texto fala do resultado ("Sua IA já respondeu 80 de 100 mensagens do teste"), não do limite técnico. Com o limite atingido a faixa não pode ser fechada.
 
 **Tela de fim do teste (`TrialEndedScreen`):** substitui o conteúdo das páginas quando o teste acabou (exceto `/plans` e `/settings`). Centralizada em `mx-auto w-full max-w-xl py-6 sm:py-12`, dentro de um `Card` com `overflow-hidden`:
 
-- Topo: `border-b border-slate-100 bg-slate-50 px-6 py-8 text-center dark:border-slate-700 dark:bg-slate-900/40 sm:px-8`, ícone `Hourglass` em `h-12 w-12 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400`, título `text-xl sm:text-2xl font-semibold`
-- Lista do que ficou guardado: título com `CheckCircle2` `text-emerald-500 dark:text-emerald-400` e itens com ícone em `h-7 w-7 rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300`. A mensagem central é sempre "nada foi apagado"
+- Topo: `border-b border-slate-100 bg-slate-50 px-6 py-8 text-center dark:border-slate-700 dark:bg-slate-900/40 sm:px-8`, título `text-xl sm:text-2xl font-semibold`
+- Lista do que ficou guardado: título `text-sm font-semibold` e itens em `list-disc pl-5 marker:text-slate-300 dark:marker:text-slate-600`. A mensagem central é sempre "nada foi apagado"
 - Aviso do que está parado: faixa `rounded-lg border border-violet-100 bg-violet-50 px-4 py-3 dark:border-violet-500/20 dark:bg-violet-500/10` com texto `text-xs text-violet-700 dark:text-violet-300`
 - Ações: `flex flex-col gap-2 sm:flex-row`, "Escolher um plano" (`size="lg"` primário) e "Falar com o suporte" (`variant="secondary"`, abre direto a conversa do widget). Para quem não pode assinar, as ações viram um aviso neutro pedindo ao responsável pela conta
 
-**Faixa de fim de teste (`TrialEndedNotice`):** em Configurações, no lugar da tela inteira: `mb-4 flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/20 dark:bg-amber-500/10`, texto `text-sm text-amber-700 dark:text-amber-300`, `Hourglass` 16 e botão "Escolher um plano" `size="sm"`.
+**Faixa de fim de teste (`TrialEndedNotice`):** em Configurações, no lugar da tela inteira: `mb-4 flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/20 dark:bg-amber-500/10`, texto `text-sm text-amber-700 dark:text-amber-300` e botão "Escolher um plano" `size="sm"`.
 
 ### 9.8 Canais — status, selo de atenção e "Reconectar"
 
@@ -1082,8 +1080,7 @@ Azul é o tom de "processando" (seção 2.3); a confirmação usa verde e texto 
 
 Quando uma página tem **um** número que prova o valor do Synq (ex.: "R$ recuperados este mês"), ele aparece acima dos `MetricCard` comuns, num bloco próprio:
 
-- Bloco: `flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 sm:items-center sm:p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10`
-- Ícone: `h-10 w-10 rounded-lg bg-white text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400`, ícone 20
+- Bloco: `rounded-xl border border-emerald-100 bg-emerald-50 p-4 sm:p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10`, sem ícone
 - Valor: `text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-300`, com o complemento ("recuperados este mês") na mesma linha em `ml-2 text-base sm:text-lg font-semibold`
 - Frase de apoio: `mt-1 text-sm text-emerald-700 dark:text-emerald-300`, explicando o número em linguagem simples; com zero, diz o que vai aparecer ali
 
@@ -1103,12 +1100,10 @@ Use no máximo um bloco desses por página.
 | Texto body / input | `size={14}` – `size={16}` |
 | Botão de ação | `size={16}` |
 | Header de modal / fechar | `size={20}` |
-| Empty state / destaque | `size={48}` – `size={64}` |
 
-**Cor dos ícones:** sempre herda a cor do texto pai. Para ícones decorativos:
-```tsx
-className="text-slate-400 dark:text-slate-500"
-```
+**Cor dos ícones:** sempre herda a cor do texto pai.
+
+**Sem ícone decorativo.** Cards, banners, avisos coloridos e estados vazios, de erro e de sucesso não levam ícone, nem o quadradinho colorido com ícone ao lado do título. Hierarquia vem do texto e a urgência vem da cor da faixa. Ícone fica só onde informa ou age: botões e menus, logo/identidade de canal (WhatsApp, Instagram), avatar, tipo de arquivo, status (check de passo concluído, cadeado de bloqueado) e opções de seletor.
 
 ---
 

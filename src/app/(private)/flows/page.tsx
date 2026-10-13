@@ -1,5 +1,5 @@
 'use client';
-import { Lightbulb, Lock, X } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -541,7 +541,6 @@ export default function FlowsPage() {
 
       {active && templateHint?.flowId === active._id && (
         <Callout tone="info" className="flex items-start gap-2">
-          <Lightbulb size={14} className="mt-0.5 shrink-0" />
           <span className="flex-1">
             <strong className="font-semibold">Próximo passo:</strong> {templateHint.text}
           </span>

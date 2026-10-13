@@ -1,5 +1,4 @@
 'use client';
-import { AlertCircle, Bot, CalendarCheck, MessagesSquare, Zap, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Card from '@/components/Card';
@@ -46,7 +45,6 @@ interface MetricCardProps {
     empty?: EmptyTeaching;
 }
 interface EmptyTeaching {
-    icon: LucideIcon;
     message: string;
     actionLabel: string;
     href: string;
@@ -55,7 +53,7 @@ function MetricCard({ title, value, spark, sparkColor, reserveSpark, hint, class
   if (empty) {
     return (<Card className={`p-3 sm:p-3.5 min-w-0 flex flex-col ${className ?? ''}`}>
       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{title}</p>
-      <DashboardEmptyHint compact icon={empty.icon} message={empty.message} actionLabel={empty.actionLabel} href={empty.href}/>
+      <DashboardEmptyHint compact message={empty.message} actionLabel={empty.actionLabel} href={empty.href}/>
     </Card>);
   }
   return (<Card className={`p-3 sm:p-3.5 min-w-0 flex flex-col ${className ?? ''}`}>
@@ -73,19 +71,16 @@ function MetricCard({ title, value, spark, sparkColor, reserveSpark, hint, class
 }
 const SERIES_EMPTY: Record<MessageSeriesKey, EmptyTeaching> = {
   aiSent: {
-    icon: Bot,
     message: 'Quando a IA responder seus clientes sozinha, as mensagens dela aparecem aqui.',
     actionLabel: 'Configurar a IA',
     href: '/ia',
   },
   manualSent: {
-    icon: MessagesSquare,
     message: 'Aqui aparecem as mensagens que você e sua equipe enviam pela tela Conversas.',
     actionLabel: 'Abrir Conversas',
     href: '/inbox',
   },
   automatedSent: {
-    icon: Zap,
     message: 'Aqui aparecem as respostas enviadas pelas suas automações.',
     actionLabel: 'Criar uma automação',
     href: '/auto-replies',
@@ -143,8 +138,7 @@ export default function DashboardPage() {
   if (error || !metrics) {
     return (<div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <AlertCircle size={40} className="text-red-400 mx-auto"/>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{error || 'Erro desconhecido'}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Erro desconhecido'}</p>
         <button onClick={loadMetrics} className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
             Tentar novamente
         </button>
@@ -154,8 +148,7 @@ export default function DashboardPage() {
   if (!metrics.daily || !Array.isArray(metrics.daily)) {
     return (<div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <AlertCircle size={40} className="text-red-400 mx-auto"/>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Dados de métricas inválidos</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Dados de métricas inválidos</p>
         <button onClick={loadMetrics} className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
             Tentar novamente
         </button>
@@ -174,8 +167,8 @@ export default function DashboardPage() {
   const originSum = originTotals.aiSent + originTotals.manualSent + originTotals.automatedSent;
   const noActivity = metrics.messagesSent === 0 && metrics.messagesReceived === 0 && originSum === 0;
   const firstAction = metrics.activeChannels === 0
-    ? { icon: MessagesSquare, actionLabel: 'Conectar um canal', href: '/channels' }
-    : { icon: Bot, actionLabel: 'Configurar a IA', href: '/ia' };
+    ? { actionLabel: 'Conectar um canal', href: '/channels' }
+    : { actionLabel: 'Configurar a IA', href: '/ia' };
   return (<div className="w-full max-w-full space-y-3">
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
@@ -223,7 +216,6 @@ export default function DashboardPage() {
       {noActivity
         ? (<div className="flex h-60 flex-col rounded-md border border-dashed border-slate-200 px-4 dark:border-slate-700">
           <DashboardEmptyHint
-            icon={firstAction.icon}
             message="Aqui você vai ver, dia a dia, quantas mensagens a IA, sua equipe e as automações enviaram para seus clientes."
             actionLabel={firstAction.actionLabel}
             href={firstAction.href}
@@ -237,16 +229,13 @@ export default function DashboardPage() {
       <UpcomingCampaignsCard />
     </div>
 
-    {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5 flex items-start gap-3">
-      <AlertCircle size={16} className="text-red-500 dark:text-red-400 mt-0.5 shrink-0"/>
-      <div className="min-w-0">
-        <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
-          {metrics.messagesFailed.toLocaleString('pt-BR')} mensagens falharam no envio
-        </p>
-        <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">
-            Verifique a conexão dos canais e tente reenviar as campanhas afetadas.
-        </p>
-      </div>
+    {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5">
+      <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
+        {metrics.messagesFailed.toLocaleString('pt-BR')} mensagens falharam no envio
+      </p>
+      <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">
+          Verifique a conexão dos canais e tente reenviar as campanhas afetadas.
+      </p>
     </div>)}
 
     {billing && (() => {
@@ -281,7 +270,6 @@ export default function DashboardPage() {
             {hasRevenue ? (<RevenueAreaChart data={revenue30} height={148}/>) : (<div className="h-37 flex flex-col rounded-md border border-dashed border-slate-200 dark:border-slate-700 px-4">
               <DashboardEmptyHint
                 compact
-                icon={CalendarCheck}
                 message="Quando um agendamento com produto ou serviço for concluído, o valor entra aqui e você acompanha quanto vendeu no mês."
                 actionLabel="Abrir Agendamentos"
                 href="/scheduling"

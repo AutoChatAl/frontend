@@ -171,7 +171,6 @@ export default function NotificationDropdown() {
         {loading ? (<div className="flex items-center justify-center py-8">
           <Loader2 size={20} className="animate-spin text-slate-400"/>
         </div>) : notifications.length === 0 ? (<div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500">
-          <Bell size={24} className="mb-2 opacity-50"/>
           <p className="text-sm">Nenhuma notificação</p>
         </div>) : (notifications.map((notification) => (<div key={notification.id} className="px-4 py-3 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
           <div className="space-y-1.5">
