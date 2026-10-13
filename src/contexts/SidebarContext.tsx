@@ -83,11 +83,11 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Templates saiu da sidebar: a listagem vive na página da API Oficial, e a
   // rota /templates segue acessível por lá (card "Templates" → Ver todos).
   { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'funnel', group: 'engagement' },
-  { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'cart-recovery', group: 'engagement' },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
-  // Automação — respostas e IA.
+  // Automação — respostas, recuperação de vendas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Automações', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
   { id: 'flows', icon: Workflow, text: 'Fluxos', href: '/flows', permission: 'auto-replies', group: 'automation' },
+  { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'cart-recovery', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'Inteligência Artificial', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },

@@ -180,7 +180,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     description: 'Mensagens automáticas para quem abandonou o carrinho ou não pagou',
     href: '/cart-recovery',
     icon: ShoppingCart,
-    section: 'Engajamento',
+    section: 'Automação',
     menuId: 'cart-recovery',
     keywords: ['recuperacao', 'carrinho', 'abandonado', 'boleto', 'pix', 'hotmart', 'kiwify', 'loja', 'venda'],
   },
