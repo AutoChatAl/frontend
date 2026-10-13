@@ -82,15 +82,6 @@ const TITLES: Record<AutomationKind, { create: string; edit: string }> = {
   LIVE: { create: 'Nova automação de live', edit: 'Editar automação de live' },
 };
 
-type Attachment = 'NONE' | 'IMAGE' | 'AUDIO' | 'DOCUMENT';
-
-const SIMPLE_REPLY_TYPES: { value: Attachment; type: ReplyType; label: string }[] = [
-  { value: 'NONE', type: 'TEXT', label: 'Só texto' },
-  { value: 'IMAGE', type: 'TEXT_AND_IMAGE', label: 'Com imagem' },
-  { value: 'AUDIO', type: 'TEXT_AND_AUDIO', label: 'Com áudio' },
-  { value: 'DOCUMENT', type: 'TEXT_AND_DOCUMENT', label: 'Com documento' },
-];
-
 const ADVANCED_ERROR_FIELDS = ['linkDescription'];
 
 /**
@@ -125,10 +116,6 @@ function readAsBase64(file: File, onDone: (base64: string) => void): void {
     onDone((reader.result as string).split(',')[1] ?? '');
   };
   reader.readAsDataURL(file);
-}
-
-function isSimpleReplyType(replyType: ReplyType): boolean {
-  return SIMPLE_REPLY_TYPES.some((option) => option.type === replyType);
 }
 
 export default function AutomationModal({
@@ -175,7 +162,7 @@ export default function AutomationModal({
     else if (editing?.kind === 'LIVE') next = draftFromLiveAutomation(editing.rule);
     else next = { ...emptyDraft(kind), ...initialDraft };
     setDraft(next);
-    setMoreOpen(!!editing && (hasAdvancedMatching(next) || !isSimpleReplyType(next.replyType)));
+    setMoreOpen(!!editing && hasAdvancedMatching(next));
   }, [isOpen, editing, kind, initialDraft]);
 
   const pickableChannels = useMemo(
@@ -326,8 +313,6 @@ export default function AutomationModal({
   const matchMode = MATCH_MODE_OPTIONS.find((option) => option.value === draft.matchMode);
   const needKeyword = !(commentLike && draft.triggerOnAnyComment);
   const lockedToContains = draft.keywords.length > 1 && draft.keywordLogic === 'ALL';
-  const simpleOptions = SIMPLE_REPLY_TYPES.filter((option) => typeOptions.some((entry) => entry.value === option.type));
-  const simpleValue = SIMPLE_REPLY_TYPES.find((option) => option.type === draft.replyType)?.value;
   const extraReplies = draft.commentReplyMessages.slice(1);
   const summary = triggerSummary(draft, kind);
   const simulation = simulateTrigger(draft, kind, testText);
@@ -447,6 +432,19 @@ export default function AutomationModal({
             </div>
           )}
 
+          {/* O formato vem antes dos campos: é ele que decide quais aparecem, e um campo que some
+              acima do seletor ao trocar de formato desorienta. */}
+          <div>
+            <FieldLabel>Formato da resposta</FieldLabel>
+            <TileGroup options={typeOptions} value={draft.replyType} onChange={handleReplyType} />
+            {commentLike && !hasText(draft.replyType) && (
+              <Callout tone="success" className="mt-2">
+                A mídia chega no Direct de quem comentou, mesmo que a pessoa não siga você, desde que o comentário
+                seja dos últimos 7 dias.
+              </Callout>
+            )}
+          </div>
+
           {hasText(draft.replyType) && (
             <div id={fieldAnchor('message')}>
               <FieldLabel required>{messageLabel}</FieldLabel>
@@ -525,25 +523,6 @@ export default function AutomationModal({
               )}
             </div>
           )}
-
-          {simpleValue && simpleOptions.length > 1 ? (
-            <div>
-              <FieldLabel>Anexo</FieldLabel>
-              <TileGroup
-                columns={2}
-                options={simpleOptions.map((option) => ({ value: option.value, label: option.label }))}
-                value={simpleValue}
-                onChange={(value) => {
-                  const picked = SIMPLE_REPLY_TYPES.find((option) => option.value === value);
-                  if (picked) handleReplyType(picked.type);
-                }}
-              />
-            </div>
-          ) : !simpleValue ? (
-            <Callout tone="info">
-              Esta resposta usa um formato especial (sem texto ou com mais de um anexo). Para mudar, abra Mais opções.
-            </Callout>
-          ) : null}
 
           {hasAudio(draft.replyType) && (
             <div id={fieldAnchor('audio')}>
@@ -766,17 +745,6 @@ export default function AutomationModal({
                   )}
                 </div>
               )}
-
-              <div>
-                <FieldLabel>Formato da resposta</FieldLabel>
-                <TileGroup options={typeOptions} value={draft.replyType} onChange={handleReplyType} />
-                {commentLike && !hasText(draft.replyType) && (
-                  <Callout tone="success" className="mt-2">
-                    A mídia chega no Direct de quem comentou, mesmo que a pessoa não siga você, desde que o comentário
-                    seja dos últimos 7 dias.
-                  </Callout>
-                )}
-              </div>
 
               {isInstagram && hasText(draft.replyType) && draft.linkUrl.trim() && (
                 <div id={fieldAnchor('linkDescription')}>
