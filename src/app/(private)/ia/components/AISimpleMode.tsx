@@ -196,7 +196,7 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
             </div>
 
             <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
-              <p className={`text-xs ${overLimit ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
+              <p className={`min-w-0 text-xs ${overLimit ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                 {overLimit
                   ? `As respostas passaram do limite de ${maxCustomRulesChars.toLocaleString('pt-BR')} letras do seu plano. Encurte o texto para salvar.`
                   : dirty ? 'Salve as respostas para a IA usar no atendimento e no teste.' : 'Tudo salvo.'}
@@ -207,7 +207,7 @@ export default function AISimpleMode({ businessName, customRules, maxCustomRules
                 loadingText="Salvando..."
                 disabled={!dirty || overLimit}
                 icon={<Save size={16}/>}
-                className="w-full justify-center sm:w-auto"
+                className="w-full shrink-0 justify-center whitespace-nowrap sm:w-auto"
               >
                 Salvar respostas
               </Button>
