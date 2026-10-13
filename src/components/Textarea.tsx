@@ -1,12 +1,14 @@
 'use client';
 import { AlertCircle } from 'lucide-react';
-import type { TextareaHTMLAttributes } from 'react';
+import type { Ref, TextareaHTMLAttributes } from 'react';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
     label?: string | undefined;
     error?: string | undefined;
     hint?: string | undefined;
     wrapperClassName?: string;
+    /** React 19 entrega `ref` como prop; segue no spread até o `<textarea>`. */
+    ref?: Ref<HTMLTextAreaElement> | undefined;
 }
 export default function Textarea({ label, error, hint, wrapperClassName = '', className: _, id, required, ...props }: TextareaProps) {
   const textareaId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);

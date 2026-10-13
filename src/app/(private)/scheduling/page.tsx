@@ -5,18 +5,19 @@ import { useState, useEffect, useCallback } from 'react';
 import Button from '@/components/Button';
 import { SkeletonPage, SkeletonRows, SkeletonStats } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { aiService } from '@/services/ai.service';
 import type { Product } from '@/services/ai.service';
 import { contactService } from '@/services/contact.service';
 import { schedulingService } from '@/services/scheduling.service';
 import type { Contact } from '@/types/Contact';
-import type { Appointment, BusinessHours } from '@/types/Scheduling';
-import { apiClient } from '@/utils/ApiClient';
+import type { Appointment, BusinessHours, SchedulingReminderKey, SchedulingReminders } from '@/types/Scheduling';
 
 import AppointmentModal from './components/AppointmentModal';
 import BusinessHoursConfig from './components/BusinessHoursConfig';
 import CalendarView from './components/CalendarView';
 import GoogleCalendarIntegration from './components/GoogleCalendarIntegration';
+import SchedulingRemindersConfig from './components/SchedulingRemindersConfig';
 import SchedulingTabs from './components/SchedulingTabs';
 
 interface ToastItem {
@@ -25,12 +26,14 @@ interface ToastItem {
     message: string;
 }
 export default function SchedulingPage() {
+  const user = useAuthUser();
+  const canManageReminders = user?.role === 'owner' || user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('calendar');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [schedulingReminderEnabled, setSchedulingReminderEnabled] = useState(false);
+  const [reminders, setReminders] = useState<SchedulingReminders | null>(null);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -58,7 +61,7 @@ export default function SchedulingPage() {
       setLoading(true);
       const weekEnd = new Date(currentWeekStart);
       weekEnd.setDate(weekEnd.getDate() + 42);
-      const [appointmentsData, businessHoursData, firstContactPage, aiData, notificationsData] = await Promise.all([
+      const [appointmentsData, businessHoursData, firstContactPage, aiData, remindersData] = await Promise.all([
         schedulingService.listAppointments({
           startDate: new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
           endDate: weekEnd.toISOString(),
@@ -66,9 +69,7 @@ export default function SchedulingPage() {
         schedulingService.getBusinessHours(),
         contactService.listContacts({ limit: 100, skip: 0 }),
         aiService.getConfig(),
-        apiClient.get<{
-                    schedulingReminder?: boolean;
-                }>('/auth/workspace/notifications'),
+        schedulingService.getReminders().catch(() => null),
       ]);
       let allContacts = firstContactPage.data || [];
       const totalContacts = firstContactPage.total || 0;
@@ -83,12 +84,7 @@ export default function SchedulingPage() {
       setBusinessHours(businessHoursData);
       setContacts(allContacts);
       setProducts(aiData.products || []);
-      if (notificationsData.success && notificationsData.data) {
-        const notif = notificationsData.data as {
-                    schedulingReminder?: boolean;
-                };
-        setSchedulingReminderEnabled(notif.schedulingReminder ?? false);
-      }
+      setReminders(remindersData);
     }
     catch {
       addToast('error', 'Erro ao carregar dados de agendamento.');
@@ -170,14 +166,26 @@ export default function SchedulingPage() {
       addToast('error', 'Erro ao salvar horários.');
     }
   };
-  const handleSchedulingReminderChange = async (value: boolean) => {
-    setSchedulingReminderEnabled(value);
+  const handleReminderToggle = async (key: SchedulingReminderKey, enabled: boolean) => {
+    const previous = reminders;
+    setReminders((prev) => (prev ? { ...prev, [key]: { ...prev[key], enabled } } : prev));
     try {
-      await apiClient.put('/auth/workspace/notifications', { schedulingReminder: value });
+      setReminders(await schedulingService.updateReminders({ [key]: { enabled } }));
     }
     catch {
       addToast('error', 'Erro ao salvar configuração de lembrete.');
-      setSchedulingReminderEnabled(!value);
+      setReminders(previous);
+    }
+  };
+  const handleReminderMessageSave = async (key: SchedulingReminderKey, message: string) => {
+    try {
+      setReminders(await schedulingService.updateReminders({ [key]: { message } }));
+      addToast('success', 'Mensagem do lembrete salva!');
+      return true;
+    }
+    catch {
+      addToast('error', 'Erro ao salvar a mensagem do lembrete.');
+      return false;
     }
   };
   if (loading) {
@@ -205,7 +213,9 @@ export default function SchedulingPage() {
       <div className="min-w-0 flex-1 space-y-3">
         {activeTab === 'calendar' && (<CalendarView appointments={appointments} businessHours={businessHours} contacts={contacts} products={products} currentWeekStart={currentWeekStart} onWeekChange={setCurrentWeekStart} onCreateAppointment={handleCreateAppointment} onEditAppointment={handleEditAppointment} onUpdateStatus={handleUpdateStatus}/>)}
 
-        {activeTab === 'business-hours' && businessHours && (<BusinessHoursConfig businessHours={businessHours} onSave={handleSaveBusinessHours} schedulingReminderEnabled={schedulingReminderEnabled} onSchedulingReminderChange={handleSchedulingReminderChange}/>)}
+        {activeTab === 'business-hours' && businessHours && (<BusinessHoursConfig businessHours={businessHours} onSave={handleSaveBusinessHours}/>)}
+
+        {activeTab === 'reminders' && reminders && (<SchedulingRemindersConfig reminders={reminders} canEdit={canManageReminders} onToggle={handleReminderToggle} onSaveMessage={handleReminderMessageSave}/>)}
 
         {activeTab === 'integrations' && (<GoogleCalendarIntegration onToast={addToast}/>)}
       </div>

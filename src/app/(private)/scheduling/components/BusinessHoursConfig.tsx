@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Ban, Calendar, Clock, MessageSquare, Plus, Save, Trash2 } from 'lucide-react';
+import { AlertCircle, Ban, Calendar, Clock, Plus, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import Button from '@/components/Button';
@@ -8,15 +8,12 @@ import DatePicker from '@/components/DatePicker';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
 import TimePicker from '@/components/TimePicker';
-import ToggleSwitch from '@/components/ToggleSwitch';
 import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
 import { DAY_NAMES } from '@/types/Scheduling';
 
 interface BusinessHoursConfigProps {
   businessHours: BusinessHours;
   onSave: (data: Partial<BusinessHours>) => void;
-  schedulingReminderEnabled: boolean;
-  onSchedulingReminderChange: (value: boolean) => void;
 }
 
 /**
@@ -39,8 +36,6 @@ function SectionHeader({ title, hint }: { icon: typeof Clock; title: string; hin
 export default function BusinessHoursConfig({
   businessHours,
   onSave,
-  schedulingReminderEnabled,
-  onSchedulingReminderChange,
 }: BusinessHoursConfigProps) {
   const [weeklySchedule, setWeeklySchedule] = useState<DaySchedule[]>(businessHours.weeklySchedule);
   const [exceptions, setExceptions] = useState<DateException[]>(businessHours.exceptions);
@@ -94,32 +89,17 @@ export default function BusinessHoursConfig({
 
   return (
     <div className="space-y-3">
-      {/* Dois ajustes curtos lado a lado em vez de dois cards altos quase vazios. */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Card className="p-4">
-          <SectionHeader icon={Clock} title="Duração do slot" hint="Intervalo padrão entre horários disponíveis." />
-          <div className="w-40">
-            <Select
-              size="sm"
-              value={String(slotDuration)}
-              onChange={(v) => setSlotDuration(Number(v))}
-              options={[15, 20, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} minutos` }))}
-            />
-          </div>
-        </Card>
-
-        <Card className="flex flex-col p-4">
-          <SectionHeader
-            icon={MessageSquare}
-            title="Lembrete via WhatsApp"
-            hint="Mensagem automática ao contato 1 hora antes do horário agendado."
+      <Card className="p-4">
+        <SectionHeader icon={Clock} title="Duração do slot" hint="Intervalo padrão entre horários disponíveis." />
+        <div className="w-40">
+          <Select
+            size="sm"
+            value={String(slotDuration)}
+            onChange={(v) => setSlotDuration(Number(v))}
+            options={[15, 20, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} minutos` }))}
           />
-          <div className="mt-auto flex items-center justify-between gap-3">
-            <span className="text-[13px] text-slate-600 dark:text-slate-300">Enviar lembrete 1 hora antes</span>
-            <ToggleSwitch checked={schedulingReminderEnabled} onChange={onSchedulingReminderChange} />
-          </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       <Card className="p-4">
         <SectionHeader
