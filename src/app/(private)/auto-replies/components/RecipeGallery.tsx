@@ -128,7 +128,7 @@ export default function RecipeGallery({
               onDescribeChange?.();
             }}
             placeholder="Ex.: Quando alguém comentar QUERO no meu post, mandar o link do curso no Direct."
-            rows={2}
+            rows={1}
             maxLength={DESCRIPTION_MAX}
             aria-label="Descreva o que você quer automatizar"
             error={localError || describeError || undefined}
