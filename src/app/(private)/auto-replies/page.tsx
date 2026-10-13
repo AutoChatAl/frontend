@@ -355,6 +355,7 @@ export default function AutoRepliesPage() {
         setCreating(null);
         afterSave('Automação criada e ativada!');
       }}
+      onError={(message) => addToast('error', message)}
     />)}
 
     {editTarget && (<AutomationModal
@@ -368,6 +369,7 @@ export default function AutoRepliesPage() {
         setEditTarget(null);
         afterSave('Automação atualizada!');
       }}
+      onError={(message) => addToast('error', message)}
     />)}
 
     {deleteTarget && (<ConfirmDeleteModal

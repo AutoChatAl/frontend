@@ -23,6 +23,8 @@ export const FIELD_HEIGHT = 'h-[42px]';
 const TILE_BASE = 'flex cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-sm font-medium transition-colors';
 const TILE_ON = 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-slate-800 dark:text-indigo-300';
 const TILE_OFF = 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600';
+/** Campo obrigatório sem escolha: a borda vermelha aponta onde falta, além do texto embaixo. */
+const TILE_ERROR = 'border-red-400 bg-white text-slate-600 dark:border-red-500/60 dark:bg-slate-800 dark:text-slate-300';
 
 export function FieldLabel({ children, required, optional, htmlFor }: {
   children: ReactNode;
@@ -163,7 +165,7 @@ export function ChannelPicker({ channels, loading, value, onChange, emptyMessage
           return (
             <label
               key={channel.id}
-              className={`flex cursor-pointer select-none items-center gap-3 rounded-xl border p-3 transition-colors ${selected ? TILE_ON : TILE_OFF}`}
+              className={`flex cursor-pointer select-none items-center gap-3 rounded-xl border p-3 transition-colors ${selected ? TILE_ON : error ? TILE_ERROR : TILE_OFF}`}
             >
               <input
                 type="radio"
@@ -240,7 +242,9 @@ export function FileField({ label, accept, hint, fileName, onPick, onRemove, err
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 p-4 text-slate-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-600 dark:text-slate-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400"
+          className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-slate-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400 ${
+            error ? 'border-red-400 dark:border-red-500/60' : 'border-slate-300 dark:border-slate-600'
+          }`}
         >
           <Upload size={16} />
           <span className="text-sm font-medium">{hint}</span>
@@ -399,7 +403,9 @@ export function PostPicker({ posts, loading, failed, selected, onChange, error }
 
   return (
     <div>
-      <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto rounded-xl border border-slate-200 p-2 sm:grid-cols-4 dark:border-slate-700">
+      <div className={`grid max-h-64 grid-cols-3 gap-2 overflow-y-auto rounded-xl border p-2 sm:grid-cols-4 ${
+        error ? 'border-red-400 dark:border-red-500/60' : 'border-slate-200 dark:border-slate-700'
+      }`}>
         {posts.map((post) => {
           const active = selected.includes(post.id);
           return (

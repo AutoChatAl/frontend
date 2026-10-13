@@ -468,6 +468,7 @@ export default function GetStartedPage() {
             markStepDone('recipe');
             addToast('success', 'Automação criada e ativada!');
           }}
+          onError={(message) => addToast('error', message)}
         />
       )}
 

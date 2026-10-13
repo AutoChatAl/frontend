@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, ChevronDown, FlaskConical, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronDown, FlaskConical, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import AudioPicker from '@/components/AudioPicker';
@@ -71,6 +71,7 @@ interface AutomationModalProps {
   channelsLoading: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onError: (message: string) => void;
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -91,6 +92,32 @@ const SIMPLE_REPLY_TYPES: { value: Attachment; type: ReplyType; label: string }[
 ];
 
 const ADVANCED_ERROR_FIELDS = ['linkDescription'];
+
+/**
+ * Ordem em que os campos aparecem na tela. O primeiro com erro é o que vai para o
+ * toast e para onde a tela rola — num modal comprido, o campo vermelho costuma
+ * estar fora de vista e o clique em salvar parecia não fazer nada.
+ */
+const FIELD_ORDER = [
+  'keywords',
+  'commentReplyMessage',
+  'message',
+  'linkUrl',
+  'linkLabel',
+  'audio',
+  'image',
+  'document',
+  'channelId',
+  'postIds',
+  'linkDescription',
+];
+
+const fieldAnchor = (field: string) => `automation-field-${field}`;
+
+function fieldPosition(field: string): number {
+  const index = FIELD_ORDER.indexOf(field);
+  return index === -1 ? FIELD_ORDER.length : index;
+}
 
 function readAsBase64(file: File, onDone: (base64: string) => void): void {
   const reader = new FileReader();
@@ -117,6 +144,7 @@ export default function AutomationModal({
   channelsLoading,
   onClose,
   onSuccess,
+  onError,
 }: AutomationModalProps) {
   const editing = automation ?? null;
   const kind: AutomationKind = editing?.kind ?? kindProp;
@@ -126,6 +154,15 @@ export default function AutomationModal({
   const [saving, setSaving] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [testText, setTestText] = useState('');
+  const [focusRequest, setFocusRequest] = useState<{ field: string } | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const target = document.getElementById(fieldAnchor(focusRequest.field));
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.querySelector<HTMLElement>('textarea, input[type="text"], input[type="url"]')?.focus({ preventScroll: true });
+  }, [focusRequest]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -251,9 +288,15 @@ export default function AutomationModal({
 
   const handleSubmit = async () => {
     const found = validateDraft(draft, kind, { requireLink });
-    if (Object.keys(found).length > 0) {
+    const invalid = Object.keys(found).sort((a, b) => fieldPosition(a) - fieldPosition(b));
+    const [firstField] = invalid;
+    if (firstField) {
       setErrors(found);
       if (ADVANCED_ERROR_FIELDS.some((field) => found[field])) setMoreOpen(true);
+      onError(invalid.length > 1
+        ? `${found[firstField]}. Os outros campos que faltam estão marcados em vermelho.`
+        : `${found[firstField]}.`);
+      setFocusRequest({ field: firstField });
       return;
     }
     setSaving(true);
@@ -274,7 +317,7 @@ export default function AutomationModal({
       onSuccess();
       onClose();
     } catch (err) {
-      setErrors({ general: err instanceof Error ? err.message : 'Não foi possível salvar a automação. Tente novamente.' });
+      onError(err instanceof Error ? err.message : 'Não foi possível salvar a automação. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -315,13 +358,6 @@ export default function AutomationModal({
           </Callout>
         )}
 
-        {errors.general && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3.5 dark:border-red-800 dark:bg-red-900/20">
-            <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-500" />
-            <p className="flex-1 text-sm text-red-700 dark:text-red-400">{errors.general}</p>
-          </div>
-        )}
-
         <FormSection
           title="1. Quando responder?"
           description={commentLike
@@ -343,7 +379,7 @@ export default function AutomationModal({
           )}
 
           {needKeyword && (
-            <div>
+            <div id={fieldAnchor('keywords')}>
               <FieldLabel required>Palavras</FieldLabel>
               <KeywordsInput
                 values={draft.keywords}
@@ -384,7 +420,7 @@ export default function AutomationModal({
               />
 
               {draft.commentReplyEnabled && (
-                <div>
+                <div id={fieldAnchor('commentReplyMessage')}>
                   <Textarea
                     value={draft.commentReplyMessages[0] ?? ''}
                     onChange={(event) => updateReply(0, event.target.value)}
@@ -412,7 +448,7 @@ export default function AutomationModal({
           )}
 
           {hasText(draft.replyType) && (
-            <div>
+            <div id={fieldAnchor('message')}>
               <FieldLabel required>{messageLabel}</FieldLabel>
               {isInstagram ? (
                 <Textarea
@@ -452,7 +488,7 @@ export default function AutomationModal({
 
           {hasText(draft.replyType) && (
             <div className="space-y-3">
-              <div>
+              <div id={fieldAnchor('linkUrl')}>
                 <FieldLabel htmlFor="automation-link-url" {...(requireLink ? { required: true } : { optional: true })}>
                   Link
                 </FieldLabel>
@@ -471,7 +507,7 @@ export default function AutomationModal({
               </div>
 
               {draft.linkUrl.trim() && (
-                <div>
+                <div id={fieldAnchor('linkLabel')}>
                   <FieldLabel htmlFor="automation-link-label">Texto do botão</FieldLabel>
                   <Input
                     id="automation-link-label"
@@ -510,49 +546,55 @@ export default function AutomationModal({
           ) : null}
 
           {hasAudio(draft.replyType) && (
-            <AudioPicker
-              value={draft.audioBase64
-                ? { base64: draft.audioBase64, mimeType: draft.audioMimeType || 'audio/wav', fileName: draft.audioFileName || 'audio' }
-                : null}
-              onChange={(value) => {
-                if (!value) {
-                  patch({ audioBase64: '', audioMimeType: '', audioFileName: '' });
-                  return;
-                }
-                patch({ audioBase64: value.base64, audioMimeType: value.mimeType, audioFileName: value.fileName });
-                clearError('audio');
-              }}
-              maxBytes={commentLike ? AUDIO_UPLOAD.comment.maxBytes : AUDIO_UPLOAD.autoReply.maxBytes}
-              accept={commentLike ? AUDIO_UPLOAD.comment.accept : AUDIO_UPLOAD.autoReply.accept}
-              validateUpload={commentLike ? validateCommentAudioFile : validateAudioFile}
-              error={errors.audio}
-            />
+            <div id={fieldAnchor('audio')}>
+              <AudioPicker
+                value={draft.audioBase64
+                  ? { base64: draft.audioBase64, mimeType: draft.audioMimeType || 'audio/wav', fileName: draft.audioFileName || 'audio' }
+                  : null}
+                onChange={(value) => {
+                  if (!value) {
+                    patch({ audioBase64: '', audioMimeType: '', audioFileName: '' });
+                    return;
+                  }
+                  patch({ audioBase64: value.base64, audioMimeType: value.mimeType, audioFileName: value.fileName });
+                  clearError('audio');
+                }}
+                maxBytes={commentLike ? AUDIO_UPLOAD.comment.maxBytes : AUDIO_UPLOAD.autoReply.maxBytes}
+                accept={commentLike ? AUDIO_UPLOAD.comment.accept : AUDIO_UPLOAD.autoReply.accept}
+                validateUpload={commentLike ? validateCommentAudioFile : validateAudioFile}
+                error={errors.audio}
+              />
+            </div>
           )}
 
           {hasImage(draft.replyType) && (
-            <FileField
-              label="Imagem"
-              accept={commentLike ? '.png,.jpg,.jpeg,image/png,image/jpeg' : 'image/png,image/jpeg,image/webp'}
-              hint={commentLike
-                ? 'Toque para enviar uma imagem (PNG ou JPEG, até 10MB)'
-                : 'Toque para enviar uma imagem (até 10MB)'}
-              fileName={draft.imageFileName}
-              onPick={handleImage}
-              onRemove={() => patch({ imageBase64: '', imageMimeType: '', imageFileName: '' })}
-              error={errors.image}
-            />
+            <div id={fieldAnchor('image')}>
+              <FileField
+                label="Imagem"
+                accept={commentLike ? '.png,.jpg,.jpeg,image/png,image/jpeg' : 'image/png,image/jpeg,image/webp'}
+                hint={commentLike
+                  ? 'Toque para enviar uma imagem (PNG ou JPEG, até 10MB)'
+                  : 'Toque para enviar uma imagem (até 10MB)'}
+                fileName={draft.imageFileName}
+                onPick={handleImage}
+                onRemove={() => patch({ imageBase64: '', imageMimeType: '', imageFileName: '' })}
+                error={errors.image}
+              />
+            </div>
           )}
 
           {hasDocument(draft.replyType) && (
-            <FileField
-              label="Documento"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
-              hint="Toque para enviar um documento (até 10MB)"
-              fileName={draft.documentName}
-              onPick={handleDocument}
-              onRemove={() => patch({ documentBase64: '', documentMimeType: '', documentName: '' })}
-              error={errors.document}
-            />
+            <div id={fieldAnchor('document')}>
+              <FileField
+                label="Documento"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+                hint="Toque para enviar um documento (até 10MB)"
+                fileName={draft.documentName}
+                onPick={handleDocument}
+                onRemove={() => patch({ documentBase64: '', documentMimeType: '', documentName: '' })}
+                error={errors.document}
+              />
+            </div>
           )}
         </FormSection>
 
@@ -562,16 +604,18 @@ export default function AutomationModal({
             ? 'A conta do Instagram em que a automação fica de olho.'
             : 'O número de WhatsApp ou a conta do Instagram em que a automação responde.'}
         >
-          <ChannelPicker
-            channels={pickableChannels}
-            loading={channelsLoading}
-            value={draft.channelId}
-            onChange={handleChannel}
-            emptyMessage={commentLike
-              ? 'Nenhuma conta do Instagram conectada. Conecte uma em Canais.'
-              : 'Nenhum número ou conta conectada. Conecte um em Canais.'}
-            error={errors.channelId}
-          />
+          <div id={fieldAnchor('channelId')}>
+            <ChannelPicker
+              channels={pickableChannels}
+              loading={channelsLoading}
+              value={draft.channelId}
+              onChange={handleChannel}
+              emptyMessage={commentLike
+                ? 'Nenhuma conta do Instagram conectada. Conecte uma em Canais.'
+                : 'Nenhum número ou conta conectada. Conecte um em Canais.'}
+              error={errors.channelId}
+            />
+          </div>
 
           {kind === 'COMMENT' && (
             <>
@@ -588,17 +632,19 @@ export default function AutomationModal({
               />
 
               {draft.postFilter === 'SPECIFIC' && (
-                <PostPicker
-                  posts={posts}
-                  loading={postsLoading}
-                  failed={postsFailed}
-                  selected={draft.postIds}
-                  onChange={(postIds) => {
-                    patch({ postIds });
-                    clearError('postIds');
-                  }}
-                  error={errors.postIds}
-                />
+                <div id={fieldAnchor('postIds')}>
+                  <PostPicker
+                    posts={posts}
+                    loading={postsLoading}
+                    failed={postsFailed}
+                    selected={draft.postIds}
+                    onChange={(postIds) => {
+                      patch({ postIds });
+                      clearError('postIds');
+                    }}
+                    error={errors.postIds}
+                  />
+                </div>
               )}
             </>
           )}
@@ -733,7 +779,7 @@ export default function AutomationModal({
               </div>
 
               {isInstagram && hasText(draft.replyType) && draft.linkUrl.trim() && (
-                <div>
+                <div id={fieldAnchor('linkDescription')}>
                   <FieldLabel optional htmlFor="automation-link-description">Descrição do link</FieldLabel>
                   <Textarea
                     id="automation-link-description"
