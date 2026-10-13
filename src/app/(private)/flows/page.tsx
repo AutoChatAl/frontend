@@ -48,7 +48,7 @@ export default function FlowsPage() {
   const [channelsOpen, setChannelsOpen] = useState(false);
   const channelsRef = useRef<HTMLDivElement>(null);
   const { channels } = useWorkspaceChannels();
-  const { hasAiPlan, loading: subscriptionLoading } = useSubscription();
+  const { hasAiPlan, loading: subscriptionLoading, usage } = useSubscription();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -113,21 +113,43 @@ export default function FlowsPage() {
     void collaboratorService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
 
+  // A contagem vem da lista da tela, que já inclui o fluxo recém-criado; o uso do
+  // plano só fornece o teto. Sem o teto carregado, quem decide é o servidor.
+  const flowLimit = usage?.flows?.limit;
+  const atFlowLimit = flowLimit !== undefined && flowLimit !== -1 && flows.length >= flowLimit;
+  const flowLimitMessage = `Você chegou ao limite de ${flowLimit ?? 0} ${flowLimit === 1 ? 'fluxo' : 'fluxos'} do seu plano. Exclua um fluxo ou mude de plano para criar outro.`;
+
+  const openCreate = () => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
+    setTemplatesOpen(true);
+  };
+
   const handleCreateFlow = async () => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
     setCreatingFrom('blank');
     try {
       const flow = await flowService.create({ name: `Fluxo ${flows.length + 1}` });
       setFlows((prev) => [flow, ...prev]);
       openFlow(flow);
       setTemplatesOpen(false);
-    } catch {
-      addToast('error', 'Não foi possível criar o fluxo.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível criar o fluxo.');
     } finally {
       setCreatingFrom(null);
     }
   };
 
   const handleCreateFromTemplate = useCallback(async (template: FlowTemplate) => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
     setCreatingFrom(template.id);
     try {
       const { nodes: templateNodes, edges: templateEdges } = template.build({ hasAiPlan });
@@ -142,12 +164,12 @@ export default function FlowsPage() {
       setTemplatesOpen(false);
       setTemplateHint({ flowId: flow._id, text: template.nextStep });
       addToast('success', 'Modelo pronto! Confira os blocos antes de ativar.');
-    } catch {
-      addToast('error', 'Não foi possível criar o fluxo a partir do modelo. Tente novamente.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível criar o fluxo a partir do modelo. Tente novamente.');
     } finally {
       setCreatingFrom(null);
     }
-  }, [hasAiPlan, openFlow, addToast]);
+  }, [atFlowLimit, flowLimitMessage, hasAiPlan, openFlow, addToast]);
 
   useEffect(() => {
     if (loading || subscriptionLoading || templateHandled.current) return;
@@ -390,7 +412,7 @@ export default function FlowsPage() {
                   type="button"
                   onClick={() => {
                     setPickerOpen(false);
-                    setTemplatesOpen(true);
+                    openCreate();
                   }}
                   className="w-full cursor-pointer border-t border-slate-100 px-3 py-2 text-left text-[13px] font-medium text-indigo-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-indigo-400 dark:hover:bg-slate-700/50"
                 >
@@ -617,6 +639,7 @@ export default function FlowsPage() {
       <Modal isOpen={templatesOpen} onClose={() => setTemplatesOpen(false)} title="Criar fluxo" size="lg">
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
           Comece de um modelo pronto ou monte do zero.
+          {flowLimit !== undefined && flowLimit !== -1 && ` Seu plano permite ${flowLimit} ${flowLimit === 1 ? 'fluxo' : 'fluxos'} e você já tem ${flows.length}.`}
         </p>
         <FlowTemplatePicker
           busyId={creatingFrom}

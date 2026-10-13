@@ -128,6 +128,10 @@ export default function PlansPage() {
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
               {plan.limits.maxAutoReplies} auto respostas
             </li>
+            <li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
+              {plan.limits.maxFlows ?? 0} {(plan.limits.maxFlows ?? 0) === 1 ? 'fluxo' : 'fluxos'}
+            </li>
             {!HIDDEN_FEATURES.cartRecovery && (<li className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Check size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
               {plan.limits.maxCartRecoveryIntegrations ?? 0} integraç{(plan.limits.maxCartRecoveryIntegrations ?? 0) === 1 ? 'ão' : 'ões'} de recuperação de carrinho
