@@ -133,7 +133,7 @@ export const ERROR_MESSAGES: Record<ErrorReason, string> = {
   RECIPIENT_REQUIRED: 'Escolha um contato ou digite o telefone de quem vai receber.',
   INVALID_PHONE: 'Telefone inválido. Digite o número com DDD, por exemplo: (11) 99999-9999.',
   AUTOMATION_DRAFT_FAILED: 'Não conseguimos montar a automação a partir do seu texto. Tente descrever de outro jeito, dizendo onde a pessoa vai escrever (comentário, live ou mensagem) e o que ela deve receber.',
-  AUTOMATION_DRAFT_RATE_LIMITED: 'Você fez muitos pedidos seguidos. Aguarde alguns minutos e tente de novo.',
+  AUTOMATION_DRAFT_RATE_LIMITED: 'Você já usou as 10 automações montadas pela IA de hoje. Amanhã libera de novo — enquanto isso, dá para criar do zero ou usar um modelo pronto.',
   AI_BLOCKLIST_LIMIT_EXCEEDED: 'A lista de bloqueio da IA chegou ao limite de 500 contatos. Tire alguém da lista para bloquear outro.',
   NO_SUBSCRIPTION: 'Sua conta ainda não tem um plano ativo. Escolha um plano para continuar usando o Synq.',
   SUBSCRIPTION_INACTIVE: 'Seu plano não está ativo. Renove ou escolha um plano para continuar usando o Synq.',
