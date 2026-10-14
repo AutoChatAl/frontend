@@ -9,8 +9,9 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import TimePicker from '@/components/TimePicker';
 import ToggleSwitch from '@/components/ToggleSwitch';
-import type { BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
+import type { BusinessHours, DaySchedule, DateException, TimeSlot } from '@/types/Scheduling';
 import { DAY_NAMES } from '@/types/Scheduling';
+import { generateWindowSlots, isWindowValid } from '@/utils/schedulingSlots';
 
 interface BusinessHoursConfigProps {
   businessHours: BusinessHours;
@@ -24,6 +25,33 @@ interface BusinessHoursConfigProps {
  * levam a altura na mão para os quatro campos da linha ficarem alinhados.
  */
 const FIELD_HEIGHT = 'h-[42px]';
+
+/**
+ * O que cada turno vira na agenda da IA. Fica embaixo do turno para o cliente
+ * enxergar na hora o efeito da duração do slot: antes, um turno de 18:00–18:30
+ * com slot de 60 min sumia da agenda sem aviso nenhum.
+ */
+function WindowSlotsHint({ range, slotDuration }: { range: TimeSlot; slotDuration: number }) {
+  if (!isWindowValid(range)) {
+    return (
+      <p className="mt-1 px-0.5 text-[11px] leading-snug text-red-500">
+        O fim precisa ser depois do início. Este turno não gera horário.
+      </p>
+    );
+  }
+  const slots = generateWindowSlots(range, slotDuration);
+  const describe = (slot: (typeof slots)[number]) => (slot.durationMinutes === slotDuration ? slot.time : `${slot.time} (${slot.durationMinutes} min)`);
+  const [first] = slots;
+  const last = slots.at(-1);
+  const summary = slots.length <= 3 || !first || !last
+    ? slots.map(describe).join(', ')
+    : `de ${first.time} a ${last.time}`;
+  return (
+    <p className="mt-1 px-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+      {slots.length === 1 ? '1 horário' : `${slots.length} horários`}: {summary}
+    </p>
+  );
+}
 
 function SectionHeader({ title, hint }: { icon: typeof Clock; title: string; hint: string }) {
   return (
@@ -97,7 +125,7 @@ export default function BusinessHoursConfig({
       {/* Dois ajustes curtos lado a lado em vez de dois cards altos quase vazios. */}
       <div className="grid gap-3 lg:grid-cols-2">
         <Card className="p-4">
-          <SectionHeader icon={Clock} title="Duração do slot" hint="Intervalo padrão entre horários disponíveis." />
+          <SectionHeader icon={Clock} title="Duração do slot" hint="Intervalo padrão entre horários disponíveis. Turno menor que isso vira um único horário, do tamanho do turno." />
           <div className="w-40">
             <Select
               size="sm"
@@ -192,6 +220,7 @@ export default function BusinessHoursConfig({
                         onChange={(v) => updateSlot(day.dayOfWeek, idx, 'end', v)}
                         ariaLabel={`Fim do turno ${idx + 1} de ${DAY_NAMES[day.dayOfWeek]}`}
                       />
+                      <WindowSlotsHint range={slot} slotDuration={slotDuration} />
                     </div>
                   ))}
                   <button
