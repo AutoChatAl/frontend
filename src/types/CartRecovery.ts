@@ -42,7 +42,6 @@ export interface CartRecoveryIntegration {
   channelType?: IntegrationChannelType;
   enabled: boolean;
   recoverySteps: RecoveryStep[];
-  paymentPendingSteps?: RecoveryStep[];
   buyerWelcome?: BuyerWelcome;
   webhookUrl: string;
   lastEventAt?: string;
@@ -120,7 +119,6 @@ export interface CreateIntegrationInput {
   channelType?: IntegrationChannelType;
   enabled?: boolean;
   recoverySteps?: RecoveryStep[];
-  paymentPendingSteps?: RecoveryStep[];
   buyerWelcome?: BuyerWelcome;
 }
 
@@ -131,7 +129,6 @@ export interface UpdateIntegrationInput {
   channelType?: IntegrationChannelType;
   enabled?: boolean;
   recoverySteps?: RecoveryStep[];
-  paymentPendingSteps?: RecoveryStep[];
   buyerWelcome?: BuyerWelcome;
 }
 

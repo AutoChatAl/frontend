@@ -78,27 +78,6 @@ export const DEFAULT_CART_STEPS: RecoveryStep[] = [
   },
 ];
 
-export const DEFAULT_PAYMENT_PENDING_STEPS: RecoveryStep[] = [
-  {
-    delayMinutes: 30,
-    messageTemplate:
-      'Oi {first_name}! Vi que você gerou o Pix ou boleto do {product_name}, mas o pagamento ainda não caiu. Se precisar, o link para pagar está aqui: {checkout_url}',
-    enabled: true,
-  },
-  {
-    delayMinutes: 720,
-    messageTemplate:
-      '{first_name}, seu Pix ou boleto do {product_name} ({value}) ainda está esperando pagamento. Lembrando que o Pix vence rápido. Se ele expirou, é só gerar outro por aqui: {checkout_url}',
-    enabled: true,
-  },
-  {
-    delayMinutes: 1440,
-    messageTemplate:
-      'Último lembrete, {first_name}: o pagamento do {product_name} ainda não foi confirmado. Ficou alguma dúvida? Responda esta mensagem que eu te ajudo. Link: {checkout_url}',
-    enabled: true,
-  },
-];
-
 export const DEFAULT_BUYER_WELCOME: BuyerWelcome = {
   enabled: false,
   message:

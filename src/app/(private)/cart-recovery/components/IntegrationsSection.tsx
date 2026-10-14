@@ -177,7 +177,6 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
             const ChannelIcon = integration.channelType === 'INSTAGRAM' ? Instagram : MessageCircle;
             const missingCode = PLATFORM_GUIDES[integration.platform].codeRequired && !integration.secret?.trim();
             const rejected = hasRecentRejection(integration);
-            const pixCount = integration.paymentPendingSteps?.length ?? 0;
             return (
               <div
                 key={integration.id}
@@ -193,8 +192,7 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
                       <p className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
                         <ChannelIcon size={12} className="shrink-0" />
                         <span className="truncate">
-                          {integration.recoverySteps.length} mensagem(ns) de carrinho
-                          {pixCount > 0 ? ` · ${pixCount} de Pix/boleto` : ''} · {channel?.name ?? 'sem número escolhido'}
+                          {integration.recoverySteps.length} mensagem(ns) de carrinho · {channel?.name ?? 'sem número escolhido'}
                         </span>
                       </p>
                     </div>

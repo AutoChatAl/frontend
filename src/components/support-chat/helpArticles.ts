@@ -261,7 +261,7 @@ const ALL_HELP_ARTICLES: HelpArticle[] = [
       'Abra Recuperação no menu e vá para a aba Integrações.',
       'Toque em Nova integração e, em Plataforma de vendas, escolha a sua: Hotmart, Kiwify, Eduzz, Monetizze ou PerfectPay.',
       'Ainda na aba Conexão, em Enviar as mensagens por, escolha WhatsApp, WhatsApp Oficial ou Instagram e o número ou a conta.',
-      'Nas abas Carrinho abandonado e Pix ou boleto pendente, confira as mensagens e o tempo de espera de cada uma. Elas já vêm prontas.',
+      'Na aba Carrinho abandonado, confira as mensagens e o tempo de espera de cada uma. Elas já vêm prontas e também valem para quem gerou Pix ou boleto e não pagou.',
       'Toque em Criar e ver o passo a passo. Siga os passos numerados: copie o endereço, cole no painel da sua plataforma e toque em Começar o teste.',
       'Quando aparecer Recebemos! Sua integração está funcionando., toque em Concluir. Na aba Carrinhos você acompanha quem desistiu e quanto foi recuperado.',
     ],

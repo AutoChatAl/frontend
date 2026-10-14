@@ -9,7 +9,6 @@ import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import SegmentedControl from '@/components/SegmentedControl';
 import Select from '@/components/Select';
-import ToggleRow from '@/components/ToggleRow';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import {
   PLATFORM_LABELS,
@@ -25,7 +24,6 @@ import ConnectionGuide from './ConnectionGuide';
 import {
   DEFAULT_BUYER_WELCOME,
   DEFAULT_CART_STEPS,
-  DEFAULT_PAYMENT_PENDING_STEPS,
   PLATFORM_GUIDES,
 } from './platformGuides';
 import RecoveryStepsEditor, { MessageVariablesHint } from './RecoveryStepsEditor';
@@ -37,7 +35,7 @@ export interface IntegrationChannelOption {
   type: IntegrationChannelType;
 }
 
-export type IntegrationFormTab = 'connection' | 'cart' | 'payment' | 'welcome';
+export type IntegrationFormTab = 'connection' | 'cart' | 'welcome';
 
 interface Props {
   isOpen: boolean;
@@ -54,7 +52,6 @@ const PLATFORMS: SalesPlatform[] = ['HOTMART', 'KIWIFY', 'EDUZZ', 'MONETIZZE', '
 const TAB_OPTIONS: ReadonlyArray<{ value: IntegrationFormTab; label: string }> = [
   { value: 'connection', label: 'Conexão' },
   { value: 'cart', label: 'Carrinho abandonado' },
-  { value: 'payment', label: 'Pix ou boleto pendente' },
   { value: 'welcome', label: 'Boas-vindas ao comprador' },
 ];
 
@@ -80,7 +77,6 @@ const CHANNEL_CHOICES: ReadonlyArray<{ type: IntegrationChannelType; label: stri
 ];
 
 const NEW_CART_STEP = 'Oi {first_name}, seu {product_name} ainda está te esperando: {checkout_url}';
-const NEW_PAYMENT_STEP = 'Oi {first_name}, seu Pix ou boleto do {product_name} ainda não foi pago. Link para pagar: {checkout_url}';
 
 interface ValidationIssue {
   message: string;
@@ -103,12 +99,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
   const [channelId, setChannelId] = useState(integration?.channelId ?? '');
   const [cartSteps, setCartSteps] = useState<RecoveryStep[]>(
     integration?.recoverySteps?.length ? integration.recoverySteps : DEFAULT_CART_STEPS,
-  );
-  const [paymentEnabled, setPaymentEnabled] = useState<boolean>(
-    integration ? (integration.paymentPendingSteps?.length ?? 0) > 0 : true,
-  );
-  const [paymentSteps, setPaymentSteps] = useState<RecoveryStep[]>(
-    integration?.paymentPendingSteps?.length ? integration.paymentPendingSteps : DEFAULT_PAYMENT_PENDING_STEPS,
   );
   const [welcome, setWelcome] = useState<BuyerWelcome>({ ...DEFAULT_BUYER_WELCOME, ...integration?.buyerWelcome });
   const [saving, setSaving] = useState(false);
@@ -139,11 +129,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
     if (cartSteps.length === 0) return { message: 'Adicione pelo menos uma mensagem de carrinho abandonado.', tab: 'cart' };
     const emptyCart = findEmptyStep(cartSteps);
     if (emptyCart >= 0) return { message: `Mensagem ${emptyCart + 1} do carrinho abandonado: escreva o texto e um tempo de pelo menos 1 minuto.`, tab: 'cart' };
-    if (paymentEnabled) {
-      if (paymentSteps.length === 0) return { message: 'Adicione pelo menos uma mensagem para Pix ou boleto, ou desligue essa opção.', tab: 'payment' };
-      const emptyPayment = findEmptyStep(paymentSteps);
-      if (emptyPayment >= 0) return { message: `Mensagem ${emptyPayment + 1} de Pix ou boleto: escreva o texto e um tempo de pelo menos 1 minuto.`, tab: 'payment' };
-    }
     if (welcome.enabled && !welcome.message.trim()) return { message: 'Escreva a mensagem de boas-vindas ou desligue essa opção.', tab: 'welcome' };
     if (isSaved && guide.codeRequired && !secret.trim()) {
       return { message: `Cole o código de segurança da ${platformLabel} no passo a passo antes de concluir.`, tab: 'connection' };
@@ -157,7 +142,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
     channelType,
     channelId: channelId || undefined,
     recoverySteps: cartSteps,
-    paymentPendingSteps: paymentEnabled ? paymentSteps : [],
     buyerWelcome: { ...welcome, message: welcome.message.trim() || DEFAULT_BUYER_WELCOME.message },
   });
 
@@ -328,31 +312,10 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
         {tab === 'cart' && (
           <div className="space-y-3">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Mensagens para quem entrou na página de pagamento e saiu sem comprar. O tempo conta a partir do aviso da plataforma.
+              Mensagens para quem entrou na página de pagamento e saiu sem comprar, ou gerou um Pix ou boleto e não pagou. O tempo conta a partir do aviso da plataforma.
             </p>
             <MessageVariablesHint />
             <RecoveryStepsEditor steps={cartSteps} onChange={setCartSteps} newStepTemplate={NEW_CART_STEP} />
-          </div>
-        )}
-
-        {tab === 'payment' && (
-          <div className="space-y-4">
-            <ToggleRow
-              title="Mensagens próprias para Pix e boleto"
-              description="Quando o cliente gera um Pix ou boleto e não paga, ele recebe estas mensagens no lugar das de carrinho abandonado."
-              checked={paymentEnabled}
-              onChange={setPaymentEnabled}
-            />
-            {paymentEnabled ? (
-              <div className="space-y-3">
-                <MessageVariablesHint />
-                <RecoveryStepsEditor steps={paymentSteps} onChange={setPaymentSteps} newStepTemplate={NEW_PAYMENT_STEP} />
-              </div>
-            ) : (
-              <Callout tone="info">
-                Desligado: quem gerar Pix ou boleto e não pagar recebe as mesmas mensagens do carrinho abandonado.
-              </Callout>
-            )}
           </div>
         )}
 
