@@ -336,8 +336,8 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       if (hasRecipients) {
         const run = await campaignService.runCampaign(campaign.id);
         const stats = await campaignService.processJobs({ runId: run.id });
-        onSuccess();
         // Mostra o resultado em vez de fechar: um disparo que não enviou nada precisa aparecer.
+        // A lista só recarrega quando o resultado é fechado (ver handleClose).
         setDispatchResult({
           jobsCreated: stats.jobsCreated ?? stats.sent + stats.skipped + stats.failed,
           sent: stats.sent,
@@ -362,6 +362,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   const handleClose = () => {
     if (loading)
       return;
+    const closingDispatchResult = dispatchResult !== null;
     setFormData(INITIAL_FORM);
     setErrors({});
     setContactFilter('');
@@ -373,6 +374,10 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     if (documentInputRef.current)
       documentInputRef.current.value = '';
     onClose();
+    // Recarregar a lista com o resultado ainda aberto troca a página pelo spinner, desmonta
+    // este modal e ele volta montado e aberto com um formulário em branco.
+    if (closingDispatchResult)
+      onSuccess();
   };
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
