@@ -316,7 +316,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         : formData.contactIds.length > 0;
       if (hasRecipients) {
         const run = await campaignService.runCampaign(campaign.id);
-        await campaignService.processJobs({ runId: run.id });
+        const stats = await campaignService.processJobs({ runId: run.id });
+        onSuccess();
+        // Mostra o resultado em vez de fechar: um disparo que não enviou nada precisa aparecer.
+        setDispatchResult({ jobsCreated: 0, sent: stats.sent, skipped: stats.skipped, failed: stats.failed });
+        return;
       }
       onSuccess();
       handleClose();
@@ -623,16 +627,22 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   if (dispatchResult) {
     return (<Modal isOpen={isOpen} onClose={handleClose} title="Campanha Disparada" size="sm">
       <div className="flex flex-col items-center gap-6 py-2">
-        <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+        {dispatchResult.sent > 0 ? (<div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
           <CheckCircle2 className="text-green-500" size={32}/>
-        </div>
+        </div>) : (<div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <AlertCircle className="text-amber-500" size={32}/>
+        </div>)}
 
         <div className="text-center">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
-              Mensagens disparadas!
+            {dispatchResult.sent > 0 ? 'Mensagens disparadas!' : 'Nenhuma mensagem enviada agora'}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-              A campanha foi criada e os disparos foram iniciados.
+            {dispatchResult.sent > 0
+              ? 'A campanha foi criada e os disparos foram iniciados.'
+              : dispatchResult.failed + dispatchResult.skipped > 0
+                ? 'A campanha foi criada, mas os envios falharam ou foram ignorados.'
+                : 'A campanha foi criada, mas nenhum envio foi gerado para os contatos selecionados.'}
           </p>
         </div>
 
