@@ -7,7 +7,7 @@ import Dropdown from '@/components/Dropdown';
 import Modal from '@/components/Modal';
 import WhatsAppEditor from '@/components/WhatsAppEditor';
 import WhatsAppPreview from '@/components/WhatsAppPreview';
-import { campaignService } from '@/services/campaign.service';
+import { campaignService, type DispatchIssue } from '@/services/campaign.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
@@ -17,7 +17,7 @@ import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
-import { isUnlinkedContact } from '@/types/Contact';
+import { contactPhone, isUnlinkedContact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
@@ -35,6 +35,28 @@ interface DispatchResult {
     sent: number;
     failed: number;
     skipped: number;
+    pending: number;
+    issues: DispatchIssue[];
+}
+const DISPATCH_ERROR_LABELS: Record<string, string> = {
+  NO_PHONE: 'Contato sem telefone.',
+  WA_TEMPLATE_REQUIRED: 'A campanha está sem modelo de mensagem.',
+  WA_TEMPLATE_NOT_APPROVED: 'O modelo de mensagem não está aprovado na Meta.',
+  WA_MARKETING_OPT_OUT: 'O contato recusou mensagens de marketing.',
+  WA_OUTSIDE_SERVICE_WINDOW: 'Fora da janela de 24h de atendimento.',
+  WA_MARKETING_LIMIT_REACHED: 'A Meta limitou mensagens de marketing para este número (131049).',
+  WA_UNDELIVERABLE: 'O número não pode receber a mensagem: sem WhatsApp ou indisponível (131026).',
+  WA_BILLING_ISSUE: 'Problema de pagamento na conta da Meta (131042).',
+  WA_RATE_LIMITED: 'Limite de envio da Meta atingido. Tente novamente mais tarde.',
+};
+function describeDispatchError(error: string): string {
+  const known = DISPATCH_ERROR_LABELS[error];
+  if (known)
+    return known;
+  const graph = error.match(/^WA_GRAPH_ERROR_(\w+)(?::\s*(.*))?$/);
+  if (graph)
+    return `Erro da Meta (${graph[1]})${graph[2] ? `: ${graph[2]}` : ''}`;
+  return error;
 }
 interface CreateCampaignModalProps {
     isOpen: boolean;
@@ -51,12 +73,9 @@ function getInitials(name: string): string {
     .join('');
 }
 function getContactIdentifier(contact: Contact): string {
-  if (!contact.identities || contact.identities.length === 0)
-    return 'Sem identificador';
-  const [identity] = contact.identities;
-  if (!identity)
-    return 'Sem identificador';
-  return identity.phoneE164 || identity.igUsername || 'N/A';
+  const [identity] = contact.identities ?? [];
+  // Contato importado por planilha não tem identidade no canal, só o telefone do contato.
+  return contactPhone(contact) || identity?.igUsername || 'Sem identificador';
 }
 function normalizeText(value: string): string {
   return value
@@ -319,7 +338,14 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         const stats = await campaignService.processJobs({ runId: run.id });
         onSuccess();
         // Mostra o resultado em vez de fechar: um disparo que não enviou nada precisa aparecer.
-        setDispatchResult({ jobsCreated: 0, sent: stats.sent, skipped: stats.skipped, failed: stats.failed });
+        setDispatchResult({
+          jobsCreated: stats.jobsCreated ?? stats.sent + stats.skipped + stats.failed,
+          sent: stats.sent,
+          skipped: stats.skipped,
+          failed: stats.failed,
+          pending: stats.pending ?? 0,
+          issues: stats.issues ?? [],
+        });
         return;
       }
       onSuccess();
@@ -640,9 +666,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {dispatchResult.sent > 0
               ? 'A campanha foi criada e os disparos foram iniciados.'
-              : dispatchResult.failed + dispatchResult.skipped > 0
-                ? 'A campanha foi criada, mas os envios falharam ou foram ignorados.'
-                : 'A campanha foi criada, mas nenhum envio foi gerado para os contatos selecionados.'}
+              : dispatchResult.jobsCreated === 0
+                ? 'A campanha foi criada, mas nenhum envio foi gerado para os contatos selecionados.'
+                : dispatchResult.failed + dispatchResult.skipped > 0
+                  ? 'A campanha foi criada, mas os envios falharam ou foram ignorados. O motivo está abaixo.'
+                  : 'A campanha foi criada e os envios estão na fila.'}
           </p>
         </div>
 
@@ -667,8 +695,25 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
           </div>
         </div>
 
+        {dispatchResult.issues.length > 0 && (<div className="w-full rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-900/10 p-3 space-y-2">
+          <p className="text-xs font-semibold text-red-700 dark:text-red-400">Motivo</p>
+          <ul className="space-y-1.5 max-h-40 overflow-y-auto">
+            {dispatchResult.issues.map((issue) => {
+              const contact = contacts.find((c) => c.id === issue.contactId);
+              const who = contact ? (contact.displayName || getContactIdentifier(contact)) : 'Contato';
+              return (<li key={`${issue.contactId}-${issue.error}`} className="text-xs text-slate-700 dark:text-slate-300 break-words">
+                <span className="font-medium">{who}:</span> {describeDispatchError(issue.error)}
+              </li>);
+            })}
+          </ul>
+        </div>)}
+
+        {dispatchResult.pending > 0 && (<p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          {dispatchResult.pending} envio{dispatchResult.pending !== 1 ? 's' : ''} ainda na fila. Eles saem no próximo horário de disparo configurado.
+        </p>)}
+
         {dispatchResult.jobsCreated > 0 && (<p className="text-xs text-slate-400 text-center">
-          {dispatchResult.jobsCreated} job{dispatchResult.jobsCreated !== 1 ? 's' : ''} gerado
+          {dispatchResult.jobsCreated} envio{dispatchResult.jobsCreated !== 1 ? 's' : ''} gerado
           {dispatchResult.jobsCreated !== 1 ? 's' : ''} no total
         </p>)}
 

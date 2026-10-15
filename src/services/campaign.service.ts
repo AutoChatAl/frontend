@@ -3,6 +3,20 @@ import type { WaCampaignEstimate } from '@/types/WhatsAppOfficial';
 import { apiClient } from '@/utils/ApiClient';
 import { getErrorFromResponse } from '@/utils/ErrorHandling';
 
+export interface DispatchIssue {
+    contactId: string;
+    status: string;
+    error: string;
+}
+/** Com `runId`, o backend também devolve o retrato do run: envios gerados, restantes e falhas. */
+export interface ProcessJobsResult {
+    sent: number;
+    failed: number;
+    skipped: number;
+    jobsCreated?: number;
+    pending?: number;
+    issues?: DispatchIssue[];
+}
 interface BackendResponse<T> {
     data: T;
 }
@@ -71,27 +85,15 @@ export class CampaignService {
   public async processJobs(opts?: {
         limit?: number;
         runId?: string;
-    }): Promise<{
-        sent: number;
-        failed: number;
-        skipped: number;
-    }> {
+    }): Promise<ProcessJobsResult> {
     const params = new URLSearchParams();
     if (opts?.limit !== undefined)
       params.set('limit', String(opts.limit));
     if (opts?.runId)
       params.set('runId', opts.runId);
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await apiClient.post<BackendResponse<{
-            sent: number;
-            failed: number;
-            skipped: number;
-        }>>(`/campaigns/jobs/process${queryString}`);
-    return extractData<{
-            sent: number;
-            failed: number;
-            skipped: number;
-        }>(response, 'Falha ao processar jobs. Tente novamente.');
+    const response = await apiClient.post<BackendResponse<ProcessJobsResult>>(`/campaigns/jobs/process${queryString}`);
+    return extractData<ProcessJobsResult>(response, 'Falha ao processar jobs. Tente novamente.');
   }
   public async estimateOfficialCost(input: {
         templateId: string;
