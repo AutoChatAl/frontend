@@ -1,6 +1,6 @@
 'use client';
 import { LifeBuoy, MessageCircle, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
 import { whatsappHref } from '@/app/(public)/components/whatsappContact';
@@ -20,12 +20,19 @@ function isSmallScreen(): boolean {
 
 export default function SupportChatWidget() {
   const router = useRouter();
+  const pathname = usePathname();
   const { isOpen, view, setView, openChat, conversation, workspaceConfigured, setIsOpen } = useSupportChat();
   const { isTrialing } = useSubscription();
   const help = useHelpCenter(isOpen);
   const [draft, setDraft] = useState('');
   const [focusComposer, setFocusComposer] = useState(false);
   const unreadBadge = conversation?.unreadByVisitorCount ?? 0;
+  // O X esconde o balão até recarregar a página. Guardamos quantas mensagens não lidas
+  // havia ao fechar: se o suporte responder depois, o balão volta para o aviso não se perder.
+  const [dismissedAtUnread, setDismissedAtUnread] = useState<number | null>(null);
+  const launcherHidden = dismissedAtUnread !== null && unreadBadge <= dismissedAtUnread;
+  // Na aba Conversas, no celular, o balão vai para a esquerda para não cobrir o botão Enviar.
+  const launcherOnLeft = pathname.startsWith('/inbox');
 
   const whatsappLinkFor = useCallback((topic: string | null) => {
     if (!isTrialing) return null;
@@ -61,12 +68,15 @@ export default function SupportChatWidget() {
   ];
 
   return (<>
-    {!isOpen && (<div className="fixed bottom-6 right-6 z-40">
+    {!isOpen && !launcherHidden && (<div className={`fixed bottom-6 z-40 ${launcherOnLeft ? 'left-6 md:left-auto md:right-6' : 'right-6'}`}>
       <button type="button" onClick={() => setIsOpen(true)} aria-label="Abrir ajuda e suporte" title="Ajuda e suporte" className="relative flex h-13 w-13 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-700 dark:shadow-none">
         <MessageCircle size={22}/>
         {unreadBadge > 0 && (<span className="absolute -top-1 -right-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-500 px-1.5 text-center text-xs font-bold text-white ring-2 ring-white dark:ring-slate-900">
           {unreadBadge > 9 ? '9+' : unreadBadge}
         </span>)}
+      </button>
+      <button type="button" onClick={() => setDismissedAtUnread(unreadBadge)} aria-label="Esconder botão de ajuda" title="Esconder até recarregar a página" className="absolute -top-1.5 -left-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:shadow-none dark:hover:text-white">
+        <X size={12}/>
       </button>
     </div>)}
 
