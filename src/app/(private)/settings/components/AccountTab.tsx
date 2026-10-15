@@ -128,7 +128,7 @@ export default function AccountTab() {
           },
           {
             label: 'Excluir conta',
-            description: 'Encerra a assinatura e remove todos os acessos do workspace.',
+            description: 'Encerra a assinatura e remove o acesso de todas as pessoas da empresa.',
             buttonLabel: 'Excluir conta',
             destructive: true,
             onClick: () => setDeleteModalOpen(true),

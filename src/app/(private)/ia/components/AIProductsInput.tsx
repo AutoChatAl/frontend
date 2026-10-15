@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, ImagePlus, Loader2, Plus, Search, ShoppingBag, Star, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, ImagePlus, Loader2, Plus, Search, Star, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 import type { Product, ProductPayload } from '@/types/AI';
@@ -89,8 +89,7 @@ export default function AIProductsInput({ products, total, maxProducts, loading,
     </p>)}
 
     {products.length === 0 && !loading && (<div className="rounded-lg border border-dashed border-slate-200 py-10 text-center dark:border-slate-700">
-      <ShoppingBag size={24} className="mx-auto text-slate-300 dark:text-slate-600"/>
-      <p className="mt-2 text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
         {search ? 'Nenhum item encontrado para essa busca' : 'Seu catálogo está vazio'}
       </p>
       <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500 dark:text-slate-400">

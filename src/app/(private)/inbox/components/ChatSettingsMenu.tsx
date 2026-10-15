@@ -32,7 +32,7 @@ export default function ChatSettingsMenu({
 }: ChatSettingsMenuProps) {
   const retentionDisabled = !loaded || !canToggle || savingRetention;
 
-  return (<PopoverMenu side="up" align="start" widthClassName="w-72" label="Configurações do chat" trigger={(open) => (<span className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${open
+  return (<PopoverMenu side="up" align="start" widthClassName="w-72" label="Configurações das conversas" trigger={(open) => (<span className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${open
     ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
     : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
     <Settings size={15}/>
@@ -74,13 +74,13 @@ export default function ChatSettingsMenu({
           })}
         </div>
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-          Responder pelo chat fica bloqueado 24h após a última mensagem do contato, até ele escrever de novo.
+          Se o cliente não fala com você há mais de 24h, a resposta por aqui fica bloqueada até ele mandar uma nova mensagem.
         </p>
       </div>
 
       {!canToggle && (<p className="flex items-start gap-1.5 rounded-md bg-slate-50 dark:bg-slate-900/60 px-2 py-1.5 text-[11px] text-slate-500 dark:text-slate-400">
         <Lock size={11} className="mt-0.5 shrink-0"/>
-          Só o dono do workspace pode alterar.
+          Só o administrador da conta pode alterar.
       </p>)}
 
       {error && (<p className="text-[11px] text-rose-500">{error}</p>)}

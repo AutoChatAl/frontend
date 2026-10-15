@@ -1,5 +1,5 @@
 'use client';
-import { Headset, MessageCircle, MessageSquarePlus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /** Canal de origem, só para o selo do cartão. Mesmos valores do tipo da inbox, sem importá-lo. */
@@ -32,19 +32,7 @@ const KIND_LABEL: Record<AttendantAlertKind, string> = {
   handoff: 'Transferida para atendimento humano',
 };
 
-const KIND_ICON: Record<AttendantAlertKind, typeof MessageCircle> = {
-  message: MessageCircle,
-  'new-conversation': MessageSquarePlus,
-  handoff: Headset,
-};
-
 /** O repasse para humano é urgência e ganha o tom âmbar; o resto segue a cor primária. */
-const KIND_TONE: Record<AttendantAlertKind, string> = {
-  message: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300',
-  'new-conversation': 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300',
-  handoff: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300',
-};
-
 const CHANNEL_LABEL: Record<AttendantAlertChannel, string> = {
   WHATSAPP: 'WhatsApp',
   INSTAGRAM: 'Instagram',
@@ -73,7 +61,6 @@ export default function AttendantAlertStack({ alerts, onOpen, onDismiss, header 
     >
       {header}
       {alerts.map((alert) => {
-        const Icon = KIND_ICON[alert.kind];
         return (
           <div
             key={alert.id}
@@ -84,9 +71,6 @@ export default function AttendantAlertStack({ alerts, onOpen, onDismiss, header 
               onClick={() => onOpen(alert)}
               className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 text-left"
             >
-              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${KIND_TONE[alert.kind]}`}>
-                <Icon size={16}/>
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-x-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                   {KIND_LABEL[alert.kind]}

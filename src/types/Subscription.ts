@@ -20,6 +20,7 @@ export interface PlanLimits {
     maxAutoReplies: number;
     maxCommentAutomations: number;
     maxCartRecoveryIntegrations: number;
+    maxFlows: number;
     maxMessagesPerMonth: number;
     extraMessagePriceCents: number;
     extraAiMessagePriceCents: number;
@@ -93,6 +94,7 @@ export interface EffectiveLimits {
     maxAutoRepliesPerWorkspace: number;
     maxCommentAutomations: number;
     maxCartRecoveryIntegrations: number;
+    maxFlows: number;
     maxWhatsappInstances: number;
     maxInstagramInstances: number;
     maxTotalInstances: number;
@@ -151,6 +153,10 @@ export interface UsageSummary {
         limit: number;
     };
     cartRecoveryIntegrations: {
+        used: number;
+        limit: number;
+    };
+    flows: {
         used: number;
         limit: number;
     };

@@ -32,18 +32,18 @@ interface PermissionOption {
  * `Permission` (services/auth.service.ts) e no backend.
  */
 const PERMISSION_OPTIONS: PermissionOption[] = [
-  { value: 'dashboard', label: 'Visão Geral', hint: 'Painel com métricas do workspace' },
-  { value: 'channels', label: 'Canais', hint: 'WhatsApp por QR Code e contas do Instagram' },
-  { value: 'whatsapp-official', label: 'API Oficial', hint: 'Números oficiais da Meta, templates e consumo' },
-  { value: 'inbox', label: 'Chat', hint: 'Atender conversas na caixa de entrada' },
+  { value: 'dashboard', label: 'Visão Geral', hint: 'Painel com os resultados da empresa' },
+  { value: 'channels', label: 'Canais', hint: 'Números de WhatsApp por QR Code e contas do Instagram' },
+  { value: 'whatsapp-official', label: 'WhatsApp Oficial', hint: 'Números oficiais da Meta, modelos de mensagem e custos' },
+  { value: 'inbox', label: 'Conversas', hint: 'Atender clientes na caixa de entrada' },
   { value: 'contacts', label: 'Contatos', hint: 'Base de contatos e fila de atendimento' },
   { value: 'groups', label: 'Grupos', hint: 'Segmentações e listas' },
-  { value: 'campaigns', label: 'Campanhas', hint: 'Disparos e templates' },
+  { value: 'campaigns', label: 'Campanhas', hint: 'Envios em massa e modelos de mensagem' },
   { value: 'funnel', label: 'Funil', hint: 'Quadro de estágios e leads' },
   { value: 'cart-recovery', label: 'Recuperação', hint: 'Recuperação de carrinhos abandonados', hidden: HIDDEN_FEATURES.cartRecovery },
   { value: 'scheduling', label: 'Agendamentos', hint: 'Agenda, serviços e horários' },
-  { value: 'auto-replies', label: 'Auto-Respostas', hint: 'Respostas automáticas e automação de comentários' },
-  { value: 'ia', label: 'IA', hint: 'Configuração do agente de inteligência artificial' },
+  { value: 'auto-replies', label: 'Automações', hint: 'Respostas automáticas no Direct, no WhatsApp e nos comentários' },
+  { value: 'ia', label: 'IA', hint: 'Configuração do atendente de inteligência artificial' },
 ];
 
 const VISIBLE_PERMISSION_OPTIONS = PERMISSION_OPTIONS.filter((opt) => !opt.hidden);
@@ -124,7 +124,7 @@ export default function MembersTab() {
   const usedCollaboratorSlots = members.filter((m) => !m.fullAccess).length + invites.length;
   const atCollaboratorLimit = !isUnlimitedCollaborators && usedCollaboratorSlots >= collaboratorLimit;
   const collaboratorLimitMessage = collaboratorLimit === 0
-    ? `O plano ${planName} não inclui colaboradores. Faça upgrade para convidar.`
+    ? `O plano ${planName} não inclui colaboradores. Mude de plano para convidar.`
     : `Limite de ${collaboratorLimit} colaborador${collaboratorLimit === 1 ? '' : 'es'} do plano ${planName} atingido.`;
   async function loadData() {
     try {

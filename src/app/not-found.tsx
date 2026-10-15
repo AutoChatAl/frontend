@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, Compass, Home } from 'lucide-react';
+import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import BrandLogo from '@/components/BrandLogo';
@@ -12,12 +12,6 @@ export default function NotFound() {
       <div className="flex items-center justify-center gap-2">
         <BrandLogo size={36}/>
         <span className="font-bold text-xl text-slate-800 dark:text-white tracking-tight">Synq</span>
-      </div>
-
-      <div className="flex items-center justify-center">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-          <Compass size={32} className="text-indigo-600 dark:text-indigo-400"/>
-        </div>
       </div>
 
       <div className="space-y-2">

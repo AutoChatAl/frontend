@@ -146,6 +146,7 @@ export default function AudioPicker({ value, onChange, maxBytes, accept, validat
   };
 
   const shownError = internalError || error;
+  const pickBorder = shownError ? 'border-red-400 dark:border-red-500/60' : 'border-slate-300 dark:border-slate-600';
 
   return (
     <div>
@@ -194,7 +195,7 @@ export default function AudioPicker({ value, onChange, maxBytes, accept, validat
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+            className={`${pickBorder} flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors`}
           >
             <Upload size={18} />
             <span className="text-sm font-medium">Enviar arquivo</span>
@@ -202,7 +203,7 @@ export default function AudioPicker({ value, onChange, maxBytes, accept, validat
           <button
             type="button"
             onClick={startRecording}
-            className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+            className={`${pickBorder} flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-xl text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors`}
           >
             <Mic size={18} />
             <span className="text-sm font-medium">Gravar áudio</span>

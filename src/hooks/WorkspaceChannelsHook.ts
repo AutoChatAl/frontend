@@ -47,7 +47,7 @@ export function useWorkspaceChannels() {
           name: channel.whatsappOfficial.verifiedName
             || channel.whatsappOfficial.displayPhoneNumber
             || channel.name
-            || 'API Oficial',
+            || 'WhatsApp Oficial',
           type: 'WHATSAPP_OFFICIAL',
           status: channel.status,
         })),

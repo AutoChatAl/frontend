@@ -1,5 +1,5 @@
 'use client';
-import { Plus, Users } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import Button from '@/components/Button';
@@ -131,7 +131,6 @@ export default function GroupsPage() {
     </div>)}
 
     {groups.length === 0 ? (<EmptyState
-      icon={<Users size={20}/>}
       title="Nenhum grupo criado ainda"
       description="Agrupe contatos para disparar campanhas para uma lista inteira de uma vez."
       action={{ label: 'Criar primeiro grupo', icon: <Plus size={16}/>, onClick: () => setCreateModalOpen(true) }}

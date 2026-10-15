@@ -150,7 +150,6 @@ export default function EditContactModal({ isOpen, contact, onClose, onSuccess }
         </div>
 
         {allTags.length === 0 && !showNewTagInput ? (<div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-          <Tag size={20} className="text-slate-300 dark:text-slate-600"/>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                   Nenhuma tag criada ainda
           </p>

@@ -45,6 +45,8 @@ export interface Appointment {
 export interface AvailabilitySlot {
     time: string;
     available: boolean;
+    /** Duração padrão, ou o tamanho do turno quando ele é mais curto que ela. */
+    durationMinutes?: number;
 }
 export interface AvailabilityResponse {
     date: string;

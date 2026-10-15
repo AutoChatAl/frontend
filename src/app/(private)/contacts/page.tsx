@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload, Users } from 'lucide-react';
+import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -336,10 +336,7 @@ export default function ContactsPage() {
   if (error && contacts.length === 0) {
     return (<div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-2 text-red-500">
-          <AlertCircle size={20}/>
-          <span className="text-sm font-medium">{error}</span>
-        </div>
+        <p className="text-sm font-medium text-red-500">{error}</p>
         <Button onClick={() => fetchContacts('', 0, false)} size="sm">Tentar novamente</Button>
       </div>
     </div>);
@@ -388,7 +385,7 @@ export default function ContactsPage() {
       </Card>
     </>)}
 
-    {contacts.length === 0 && !query ? (<EmptyState icon={<Users size={22}/>} title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
+    {contacts.length === 0 && !query ? (<EmptyState title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
       label: 'Importar Planilha',
       icon: <Upload size={15}/>,
       onClick: () => setIsImportModalOpen(true),

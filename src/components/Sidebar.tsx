@@ -25,6 +25,7 @@ interface SidebarItemProps {
     tourId?: string;
     locked?: boolean | undefined;
     beta?: boolean | undefined;
+    advanced?: boolean | undefined;
 }
 interface SidebarProps {
     brandName?: string;
@@ -32,7 +33,7 @@ interface SidebarProps {
     userRole?: string;
     userInitials?: string;
 }
-const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked, beta }: SidebarItemProps) => {
+const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount, tourId, locked, beta, advanced }: SidebarItemProps) => {
   return (<button onClick={locked ? undefined : onClick} aria-disabled={locked || undefined} title={locked ? 'Em breve — indisponível' : undefined} {...(tourId ? { 'data-tour': tourId } : {})} className={`
         flex items-center gap-2.5 w-full px-2.5 py-[7px] rounded-md transition-colors duration-150 relative
         ${locked
@@ -48,6 +49,9 @@ const SidebarItem = ({ icon: Icon, text, active, onClick, collapsed, badgeCount,
         <span className={`text-[13px] truncate ${active && !locked ? 'font-semibold' : 'font-medium'}`}>{text}</span>
         {beta && (<span className="shrink-0 rounded-full bg-violet-50 dark:bg-violet-500/10 px-1.5 text-[9px] font-semibold leading-4 tracking-wide text-violet-700 dark:text-violet-400">
             BETA
+        </span>)}
+        {advanced && (<span title="Recomendado depois de concluir os primeiros passos" className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-700/60 px-1.5 text-[9px] font-semibold leading-4 tracking-wide text-slate-500 dark:text-slate-400">
+            AVANÇADO
         </span>)}
         {locked
           ? (<Lock size={12} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500"/>)
@@ -84,7 +88,7 @@ const SidebarSections = ({ items, activeTab, collapsed, collapsedGroups, onItemC
             <span>{group.label}</span>
             <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${groupCollapsed ? '-rotate-90' : ''}`}/>
           </button>))}
-        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked} beta={item.beta}/>))}
+        {!groupCollapsed && groupItems.map((item) => (<SidebarItem key={item.id} icon={item.icon} text={item.text} active={activeTab === item.id} onClick={() => onItemClick(item)} collapsed={collapsed} badgeCount={item.badgeCount} tourId={`sidebar-${item.id}`} locked={item.locked} beta={item.beta} advanced={item.advanced}/>))}
       </div>);
     })}
   </>);

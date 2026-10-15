@@ -1,11 +1,13 @@
 'use client';
-import { Lock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Lock, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
+import Callout from '@/components/Callout';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import ImportExportMenu from '@/components/ImportExportMenu';
+import Modal from '@/components/Modal';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -18,7 +20,9 @@ import type { FunnelStageDefinition } from '@/types/Funnel';
 
 import { ACTION_BLOCKS, TRIGGER_BLOCKS, blockMeta, defaultNodeFields, outputHandles, requiresAiPlan, type BlockMeta } from './components/blocks';
 import FlowCanvas from './components/FlowCanvas';
+import FlowTemplatePicker from './components/FlowTemplatePicker';
 import NodeInspector from './components/NodeInspector';
+import { getFlowTemplate, type FlowTemplate } from './components/templates';
 
 function createId(): string {
   return `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -44,8 +48,13 @@ export default function FlowsPage() {
   const [channelsOpen, setChannelsOpen] = useState(false);
   const channelsRef = useRef<HTMLDivElement>(null);
   const { channels } = useWorkspaceChannels();
-  const { hasAiPlan } = useSubscription();
+  const { hasAiPlan, loading: subscriptionLoading, usage } = useSubscription();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [creatingFrom, setCreatingFrom] = useState<string | null>(null);
+  const [templateHint, setTemplateHint] = useState<{ flowId: string; text: string } | null>(null);
+  const templateHandled = useRef(false);
   // Alimentam os blocos de funil e de atribuição. Falha aqui não impede montar o
   // fluxo: os outros blocos seguem editáveis e só esses dois ficam sem opção.
   const [stages, setStages] = useState<FunnelStageDefinition[]>([]);
@@ -104,15 +113,72 @@ export default function FlowsPage() {
     void collaboratorService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
 
+  // A contagem vem da lista da tela, que já inclui o fluxo recém-criado; o uso do
+  // plano só fornece o teto. Sem o teto carregado, quem decide é o servidor.
+  const flowLimit = usage?.flows?.limit;
+  const atFlowLimit = flowLimit !== undefined && flowLimit !== -1 && flows.length >= flowLimit;
+  const flowLimitMessage = `Você chegou ao limite de ${flowLimit ?? 0} ${flowLimit === 1 ? 'fluxo' : 'fluxos'} do seu plano. Exclua um fluxo ou mude de plano para criar outro.`;
+
+  const openCreate = () => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
+    setTemplatesOpen(true);
+  };
+
   const handleCreateFlow = async () => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
+    setCreatingFrom('blank');
     try {
       const flow = await flowService.create({ name: `Fluxo ${flows.length + 1}` });
       setFlows((prev) => [flow, ...prev]);
       openFlow(flow);
-    } catch {
-      addToast('error', 'Não foi possível criar o fluxo.');
+      setTemplatesOpen(false);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível criar o fluxo.');
+    } finally {
+      setCreatingFrom(null);
     }
   };
+
+  const handleCreateFromTemplate = useCallback(async (template: FlowTemplate) => {
+    if (atFlowLimit) {
+      addToast('error', flowLimitMessage);
+      return;
+    }
+    setCreatingFrom(template.id);
+    try {
+      const { nodes: templateNodes, edges: templateEdges } = template.build({ hasAiPlan });
+      const flow = await flowService.create({
+        name: template.name,
+        description: template.description,
+        nodes: templateNodes,
+        edges: templateEdges,
+      });
+      setFlows((prev) => [flow, ...prev]);
+      openFlow(flow);
+      setTemplatesOpen(false);
+      setTemplateHint({ flowId: flow._id, text: template.nextStep });
+      addToast('success', 'Modelo pronto! Confira os blocos antes de ativar.');
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível criar o fluxo a partir do modelo. Tente novamente.');
+    } finally {
+      setCreatingFrom(null);
+    }
+  }, [atFlowLimit, flowLimitMessage, hasAiPlan, openFlow, addToast]);
+
+  useEffect(() => {
+    if (loading || subscriptionLoading || templateHandled.current) return;
+    const template = getFlowTemplate(searchParams.get('template'));
+    if (!template) return;
+    templateHandled.current = true;
+    router.replace('/flows');
+    void handleCreateFromTemplate(template);
+  }, [loading, subscriptionLoading, searchParams, router, handleCreateFromTemplate]);
 
   const handleRename = async (name: string) => {
     if (!active || !name.trim() || name === active.name) return;
@@ -346,7 +412,7 @@ export default function FlowsPage() {
                   type="button"
                   onClick={() => {
                     setPickerOpen(false);
-                    void handleCreateFlow();
+                    openCreate();
                   }}
                   className="w-full cursor-pointer border-t border-slate-100 px-3 py-2 text-left text-[13px] font-medium text-indigo-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-indigo-400 dark:hover:bg-slate-700/50"
                 >
@@ -473,6 +539,22 @@ export default function FlowsPage() {
         </div>
       </div>
 
+      {active && templateHint?.flowId === active._id && (
+        <Callout tone="info" className="flex items-start gap-2">
+          <span className="flex-1">
+            <strong className="font-semibold">Próximo passo:</strong> {templateHint.text}
+          </span>
+          <button
+            type="button"
+            onClick={() => setTemplateHint(null)}
+            aria-label="Fechar dica"
+            className="shrink-0 cursor-pointer opacity-70 transition-opacity hover:opacity-100"
+          >
+            <X size={14} />
+          </button>
+        </Callout>
+      )}
+
       {active && (
         <div className="flex min-h-0 flex-1 gap-3">
           <aside className="hidden w-56 shrink-0 flex-col gap-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3 lg:flex dark:border-slate-700 dark:bg-slate-800">
@@ -535,20 +617,35 @@ export default function FlowsPage() {
       )}
 
       {!active && (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-          <div className="max-w-sm text-center">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Nenhum fluxo ainda</p>
-            <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
-              Crie um fluxo para começar a montar a automação.
-            </p>
-            <div className="mt-4 flex justify-center">
-              <Button variant="primary" size="sm" onClick={handleCreateFlow}>
-                Criar fluxo
-              </Button>
+        <div className="flex flex-1 items-start justify-center overflow-y-auto rounded-lg border border-dashed border-slate-300 p-4 sm:items-center sm:p-6 dark:border-slate-700">
+          <div className="w-full max-w-2xl">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Nenhum fluxo ainda</p>
+              <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                Comece de um modelo pronto: os blocos já vêm ligados e com as mensagens escritas.
+              </p>
             </div>
+            <FlowTemplatePicker
+              className="mt-4"
+              busyId={creatingFrom}
+              onPick={(template) => { void handleCreateFromTemplate(template); }}
+              onBlank={() => { void handleCreateFlow(); }}
+            />
           </div>
         </div>
       )}
+
+      <Modal isOpen={templatesOpen} onClose={() => setTemplatesOpen(false)} title="Criar fluxo" size="lg">
+        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+          Comece de um modelo pronto ou monte do zero.
+          {flowLimit !== undefined && flowLimit !== -1 && ` Seu plano permite ${flowLimit} ${flowLimit === 1 ? 'fluxo' : 'fluxos'} e você já tem ${flows.length}.`}
+        </p>
+        <FlowTemplatePicker
+          busyId={creatingFrom}
+          onPick={(template) => { void handleCreateFromTemplate(template); }}
+          onBlank={() => { void handleCreateFlow(); }}
+        />
+      </Modal>
 
       <ConfirmDeleteModal
         isOpen={confirmDelete}

@@ -1,5 +1,5 @@
 'use client';
-import { Bot, Check, Info, Loader2, Plus, TrendingDown, TrendingUp, UserMinus, X } from 'lucide-react';
+import { Check, Info, Loader2, Plus, TrendingDown, TrendingUp, UserMinus, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import Button from '@/components/Button';
@@ -242,8 +242,7 @@ export default function LeadDetailDrawer({
               options={stages.map((stage) => ({ value: stage.id, label: stage.name }))}
             />
             {lead.stageMovedBy === 'AI' && (
-              <div className="flex items-start gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 dark:border-indigo-500/20 dark:bg-indigo-500/10">
-                <Bot size={13} className="mt-0.5 shrink-0 text-indigo-500 dark:text-indigo-400" />
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 dark:border-indigo-500/20 dark:bg-indigo-500/10">
                 <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
                   Movido pela IA {formatRelative(lead.stageEnteredAt)}
                   {lead.stageMoveReason ? `: ${lead.stageMoveReason}` : '.'}

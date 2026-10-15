@@ -1,5 +1,5 @@
 'use client';
-import { Bot, MessageSquare, Calendar, Package, Check, Sparkles, CreditCard } from 'lucide-react';
+import { Check, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import Button from '@/components/Button';
@@ -53,9 +53,6 @@ export default function AiPlanGate() {
   return (<div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
 
     <div className="text-center py-8">
-      <div className="w-16 h-16 bg-linear-to-br from-violet-500 to-purple-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-200 dark:shadow-none">
-        <Bot size={32} className="text-white"/>
-      </div>
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
           Desbloqueie o poder da IA para seu negócio
       </h1>
@@ -66,14 +63,11 @@ export default function AiPlanGate() {
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[
-        { icon: MessageSquare, label: 'Respostas Automáticas', desc: 'IA responde seus clientes 24h' },
-        { icon: Sparkles, label: 'Qualificação de Leads', desc: 'Identifica e prioriza oportunidades' },
-        { icon: Calendar, label: 'Agendamento', desc: 'Marca compromissos automaticamente' },
-        { icon: Package, label: 'Catálogo de Produtos', desc: 'Apresenta seus produtos e serviços' },
-      ].map(({ icon: Icon, label, desc }) => (<Card key={label} className="p-4 text-center">
-        <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center mx-auto mb-2">
-          <Icon size={20} className="text-violet-600 dark:text-violet-400"/>
-        </div>
+        { label: 'Respostas Automáticas', desc: 'IA responde seus clientes 24h' },
+        { label: 'Qualificação de Leads', desc: 'Identifica e prioriza oportunidades' },
+        { label: 'Agendamento', desc: 'Marca compromissos automaticamente' },
+        { label: 'Catálogo de Produtos', desc: 'Apresenta seus produtos e serviços' },
+      ].map(({ label, desc }) => (<Card key={label} className="p-4 text-center">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</p>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{desc}</p>
       </Card>))}

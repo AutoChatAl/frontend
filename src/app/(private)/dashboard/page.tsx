@@ -1,18 +1,19 @@
 'use client';
-import { AlertCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import Card from '@/components/Card';
 import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
 import Sparkline from '@/components/Sparkline';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { dashboardService, type DashboardMetrics, type BillingMetrics } from '@/services/dashboard.service';
 
 import AiUsageCard from './components/AiUsageCard';
+import DashboardEmptyHint from './components/DashboardEmptyHint';
 import MessagesAreaChart, { MESSAGE_SERIES, seriesColor, type MessageSeriesKey } from './components/MessagesAreaChart';
 import MessagesSummaryCard from './components/MessagesSummaryCard';
 import RevenueAreaChart, { type RevenuePoint } from './components/RevenueAreaChart';
+import SetupProgressCard from './components/SetupProgressCard';
 import UpcomingCampaignsCard from './components/UpcomingCampaignsCard';
 
 /** Preenche os últimos `n` dias (chave YYYY-MM-DD local) com os dados existentes. */
@@ -41,8 +42,20 @@ interface MetricCardProps {
     hint?: string;
     /** Classes extras (ex.: col-span no grid). */
     className?: string;
+    empty?: EmptyTeaching;
 }
-function MetricCard({ title, value, spark, sparkColor, reserveSpark, hint, className }: MetricCardProps) {
+interface EmptyTeaching {
+    message: string;
+    actionLabel: string;
+    href: string;
+}
+function MetricCard({ title, value, spark, sparkColor, reserveSpark, hint, className, empty }: MetricCardProps) {
+  if (empty) {
+    return (<Card className={`p-3 sm:p-3.5 min-w-0 flex flex-col ${className ?? ''}`}>
+      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{title}</p>
+      <DashboardEmptyHint compact message={empty.message} actionLabel={empty.actionLabel} href={empty.href}/>
+    </Card>);
+  }
   return (<Card className={`p-3 sm:p-3.5 min-w-0 flex flex-col ${className ?? ''}`}>
     <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{title}</p>
     {spark && sparkColor
@@ -56,11 +69,30 @@ function MetricCard({ title, value, spark, sparkColor, reserveSpark, hint, class
     {hint && (<p className="mt-0.5 text-[11px] tabular-nums text-slate-400 dark:text-slate-500 truncate">{hint}</p>)}
   </Card>);
 }
+const SERIES_EMPTY: Record<MessageSeriesKey, EmptyTeaching> = {
+  aiSent: {
+    message: 'Quando a IA responder seus clientes sozinha, as mensagens dela aparecem aqui.',
+    actionLabel: 'Configurar a IA',
+    href: '/ia',
+  },
+  manualSent: {
+    message: 'Aqui aparecem as mensagens que você e sua equipe enviam pela tela Conversas.',
+    actionLabel: 'Abrir Conversas',
+    href: '/inbox',
+  },
+  automatedSent: {
+    message: 'Aqui aparecem as respostas enviadas pelas suas automações.',
+    actionLabel: 'Criar uma automação',
+    href: '/auto-replies',
+  },
+};
 function formatCurrency(cents: number) {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 export default function DashboardPage() {
   const { darkMode } = useTheme();
+  const user = useAuthUser();
+  const showSetup = user?.role !== 'collaborator';
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [billing, setBilling] = useState<BillingMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,8 +138,7 @@ export default function DashboardPage() {
   if (error || !metrics) {
     return (<div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <AlertCircle size={40} className="text-red-400 mx-auto"/>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{error || 'Erro desconhecido'}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Erro desconhecido'}</p>
         <button onClick={loadMetrics} className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
             Tentar novamente
         </button>
@@ -117,8 +148,7 @@ export default function DashboardPage() {
   if (!metrics.daily || !Array.isArray(metrics.daily)) {
     return (<div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <AlertCircle size={40} className="text-red-400 mx-auto"/>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Dados de métricas inválidos</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Dados de métricas inválidos</p>
         <button onClick={loadMetrics} className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
             Tentar novamente
         </button>
@@ -134,12 +164,17 @@ export default function DashboardPage() {
   const toggleSeries = (key: MessageSeriesKey) => {
     setActiveSeries((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   };
+  const originSum = originTotals.aiSent + originTotals.manualSent + originTotals.automatedSent;
+  const noActivity = metrics.messagesSent === 0 && metrics.messagesReceived === 0 && originSum === 0;
+  const firstAction = metrics.activeChannels === 0
+    ? { actionLabel: 'Conectar um canal', href: '/channels' }
+    : { actionLabel: 'Configurar a IA', href: '/ia' };
   return (<div className="w-full max-w-full space-y-3">
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
         <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Visão Geral</h1>
         <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Métricas do seu workspace
+            Como estão as conversas e as vendas do seu negócio
         </p>
       </div>
       <span className="hidden sm:inline-flex items-center shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-md px-2.5 py-1">
@@ -147,8 +182,10 @@ export default function DashboardPage() {
       </span>
     </div>
 
+    {showSetup && <SetupProgressCard />}
+
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 sm:gap-3">
-      {MESSAGE_SERIES.map((s) => (<MetricCard key={s.key} title={s.label} value={originTotals[s.key]} spark={daily.map((d) => d[s.key] ?? 0)} sparkColor={seriesColor(s, darkMode)}/>))}
+      {MESSAGE_SERIES.map((s) => (<MetricCard key={s.key} title={s.label} value={originTotals[s.key]} spark={daily.map((d) => d[s.key] ?? 0)} sparkColor={seriesColor(s, darkMode)} {...(noActivity ? { empty: SERIES_EMPTY[s.key] } : {})}/>))}
       <div className="lg:col-span-2">
         <AiUsageCard />
       </div>
@@ -176,24 +213,29 @@ export default function DashboardPage() {
           })}
         </div>
       </div>
-      <MessagesAreaChart data={daily} height={240} visibleKeys={activeSeries}/>
+      {noActivity
+        ? (<div className="flex h-60 flex-col rounded-md border border-dashed border-slate-200 px-4 dark:border-slate-700">
+          <DashboardEmptyHint
+            message="Aqui você vai ver, dia a dia, quantas mensagens a IA, sua equipe e as automações enviaram para seus clientes."
+            actionLabel={firstAction.actionLabel}
+            href={firstAction.href}
+          />
+        </div>)
+        : <MessagesAreaChart data={daily} height={240} visibleKeys={activeSeries}/>}
     </Card>
 
     <div className="grid gap-2 sm:gap-3 lg:grid-cols-2">
-      <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0} days={daily.length}/>
+      <MessagesSummaryCard sent={metrics.messagesSent} received={metrics.messagesReceived} read={metrics.messagesRead ?? 0} days={daily.length} {...(noActivity ? { emptyAction: metrics.activeChannels === 0 ? { label: 'Conectar um canal', href: '/channels' } : { label: 'Abrir Conversas', href: '/inbox' } } : {})}/>
       <UpcomingCampaignsCard />
     </div>
 
-    {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5 flex items-start gap-3">
-      <AlertCircle size={16} className="text-red-500 dark:text-red-400 mt-0.5 shrink-0"/>
-      <div className="min-w-0">
-        <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
-          {metrics.messagesFailed.toLocaleString('pt-BR')} mensagens falharam no envio
-        </p>
-        <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">
-            Verifique a conexão dos canais e tente reenviar as campanhas afetadas.
-        </p>
-      </div>
+    {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5">
+      <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
+        {metrics.messagesFailed.toLocaleString('pt-BR')} mensagens falharam no envio
+      </p>
+      <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">
+          Verifique a conexão dos canais e tente reenviar as campanhas afetadas.
+      </p>
     </div>)}
 
     {billing && (() => {
@@ -225,12 +267,13 @@ export default function DashboardPage() {
             média de {formatCurrency(Math.round(billing.totalRevenueCents / 30))}/dia
           </p>)}
           <div className="mt-3">
-            {hasRevenue ? (<RevenueAreaChart data={revenue30} height={148}/>) : (<div className="h-[148px] flex flex-col items-center justify-center gap-1 rounded-md border border-dashed border-slate-200 dark:border-slate-700 text-center px-4">
-              <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Nenhuma receita nos últimos 30 dias</p>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">Agendamentos concluídos com produto aparecem aqui automaticamente.</p>
-              <Link href="/scheduling" className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
-                  Ver agendamentos
-              </Link>
+            {hasRevenue ? (<RevenueAreaChart data={revenue30} height={148}/>) : (<div className="h-37 flex flex-col rounded-md border border-dashed border-slate-200 dark:border-slate-700 px-4">
+              <DashboardEmptyHint
+                compact
+                message="Quando um agendamento com produto ou serviço for concluído, o valor entra aqui e você acompanha quanto vendeu no mês."
+                actionLabel="Abrir Agendamentos"
+                href="/scheduling"
+              />
             </div>)}
           </div>
         </Card>

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/types/ErrorCode';
 import type { CreateFlowPayload, Flow, UpdateFlowPayload } from '@/types/Flow';
 import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@lib/ApiClient';
@@ -22,7 +23,8 @@ class FlowService {
   public async create(payload: CreateFlowPayload): Promise<Flow> {
     const response = await apiClient.post<{ flow: Flow }>('/flows', payload);
     if (!response.success || !response.data) {
-      throw new Error('Falha ao criar o fluxo.');
+      const reason = (response.data as { reason?: string } | undefined)?.reason;
+      throw new Error(reason === 'FLOW_LIMIT_EXCEEDED' ? getErrorMessage(reason) : 'Falha ao criar o fluxo.');
     }
     return response.data.flow;
   }

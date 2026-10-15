@@ -3,7 +3,6 @@
 import {
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Wand2,
   X,
 } from 'lucide-react';
@@ -156,36 +155,34 @@ function WelcomeModal({
           {/* Marca no centro */}
           <div className="relative w-20 h-20 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/15 flex items-center justify-center shadow-2xl shadow-emerald-500/20">
             <BrandLogo size={40} on="dark"/>
-            <Sparkles size={12} className="absolute -top-1 -right-1 text-emerald-300 animate-pulse" />
           </div>
         </div>
 
         <div className="p-7 bg-slate-950 text-white">
           <h2 className="text-2xl font-bold text-white mb-1.5 tracking-tight">
-            Bem-vindo ao Synq! 🚀
+            Bem-vindo ao Synq!
           </h2>
           <p className="text-sm text-slate-400 leading-relaxed">
             Em poucos passos você vai conhecer tudo que dá pra fazer aqui: conectar Instagram e
-            WhatsApp, disparar campanhas em massa, criar auto-respostas inteligentes, responder
+            WhatsApp, disparar campanhas em massa, criar automações inteligentes, responder
             comentários no Instagram{HIDDEN_FEATURES.cartRecovery ? '' : ', recuperar carrinhos abandonados no automático'} e configurar
             um chatbot com IA que conversa por você 24/7.
           </p>
 
           <div className="mt-5 grid grid-cols-2 gap-2.5">
             {[
-              { icon: '📡', label: 'Conectar canais' },
-              { icon: '📨', label: 'Disparos em massa' },
-              { icon: '⚡', label: 'Auto-respostas' },
-              { icon: '💬', label: 'Responder comentários' },
-              ...(HIDDEN_FEATURES.cartRecovery ? [] : [{ icon: '🛒', label: 'Recuperar carrinhos' }]),
-              { icon: '🤖', label: 'IA conversacional' },
-            ].map((it) => (
+              'Conectar canais',
+              'Disparos em massa',
+              'Automações',
+              'Responder comentários',
+              ...(HIDDEN_FEATURES.cartRecovery ? [] : ['Recuperar carrinhos']),
+              'IA conversacional',
+            ].map((label) => (
               <div
-                key={it.label}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10"
+                key={label}
+                className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-xs font-medium text-slate-200"
               >
-                <span className="text-lg leading-none">{it.icon}</span>
-                <span className="text-xs font-medium text-slate-200">{it.label}</span>
+                {label}
               </div>
             ))}
           </div>
@@ -459,14 +456,9 @@ function StepCard({ step, index, total, onNext, onPrev, onSkip }: StepCardProps)
         {/* Cabeçalho (passo X de Y + fechar) */}
         <div className="px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-linear-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-md">
-                <Sparkles size={14} className="text-white" />
-              </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                Passo {index + 1} de {total}
-              </span>
-            </div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              Passo {index + 1} de {total}
+            </span>
             <button
               onClick={onSkip}
               className="text-slate-300 hover:text-slate-500 dark:text-slate-500 dark:hover:text-slate-300 transition-colors shrink-0"

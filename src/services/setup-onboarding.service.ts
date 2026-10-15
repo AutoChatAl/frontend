@@ -1,8 +1,11 @@
+import { isBusinessType, type BusinessType } from '@/types/BusinessType';
 import { apiClient } from '@/utils/ApiClient';
 
 export interface SetupOnboardingState {
   completedSteps: string[];
   skippedSteps: string[];
+  stepCompletedAt: Record<string, string>;
+  businessType: BusinessType | null;
   startedAt: string | null;
   finishedAt: string | null;
 }
@@ -12,11 +15,14 @@ interface UpdatePayload {
   skipStep?: string;
   started?: boolean;
   finished?: boolean;
+  businessType?: BusinessType;
 }
 
 const EMPTY_STATE: SetupOnboardingState = {
   completedSteps: [],
   skippedSteps: [],
+  stepCompletedAt: {},
+  businessType: null,
   startedAt: null,
   finishedAt: null,
 };
@@ -44,6 +50,8 @@ class SetupOnboardingService {
     return {
       completedSteps: Array.isArray(state.completedSteps) ? state.completedSteps : [],
       skippedSteps: Array.isArray(state.skippedSteps) ? state.skippedSteps : [],
+      stepCompletedAt: state.stepCompletedAt && typeof state.stepCompletedAt === 'object' ? state.stepCompletedAt : {},
+      businessType: isBusinessType(state.businessType) ? state.businessType : null,
       startedAt: state.startedAt ?? null,
       finishedAt: state.finishedAt ?? null,
     };

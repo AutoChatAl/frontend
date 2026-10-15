@@ -107,11 +107,6 @@ const ALL_COLUMNS = [
     render?: (value: unknown, row: Contact) => ReactNode;
 }>;
 
-/**
- * Colunas ligadas a Recuperacao de Carrinhos ("Vendas" e "Carrinhos"), que
- * linkam para /cart-recovery. Ficam ocultas enquanto HIDDEN_FEATURES.cartRecovery
- * estiver ligada -- a definicao continua em ALL_COLUMNS acima.
- */
 const HIDDEN_COLUMN_HEADERS = new Set<string>(
   HIDDEN_FEATURES.cartRecovery ? ['Vendas', 'Carrinhos'] : [],
 );

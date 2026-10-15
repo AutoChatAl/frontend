@@ -1,13 +1,18 @@
 'use client';
-import { RefreshCw, CheckCircle } from 'lucide-react';
-import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { CheckCircle, KeyRound, Loader2, QrCode, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import Button from '@/components/Button';
+import Callout from '@/components/Callout';
+import Input from '@/components/Input';
 import Modal from '@/components/Modal';
 import { useToast, ToastContainer } from '@/components/Toast';
-import { authService } from '@/services/auth.service';
-import type { WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
+import { channelsService } from '@/services/channels.service';
+import type { WhatsappConnectResponse, WhatsAppStatusResponse, WhatsAppQRCodeRawResponse } from '@/types/Channel';
+import { extractPhoneDigits, formatPhoneNumber } from '@/utils/phone';
+
+import WhatsAppConnectGuide from './WhatsAppConnectGuide';
+import { useIsMobileDevice } from '../hooks/useIsMobileDevice';
 
 interface WhatsAppQRModalProps {
     isOpen: boolean;
@@ -15,200 +20,227 @@ interface WhatsAppQRModalProps {
     channelId: string;
     onGetQRCode: (channelId: string) => Promise<WhatsAppQRCodeRawResponse>;
     onCheckStatus: (channelId: string) => Promise<WhatsAppStatusResponse>;
+    onConnect?: (channelId: string, phone?: string) => Promise<WhatsappConnectResponse>;
+    phoneNumber?: string | undefined;
 }
-export default function WhatsAppQRModal({ isOpen, onClose, channelId, onGetQRCode, onCheckStatus }: WhatsAppQRModalProps) {
+
+type View = 'qr' | 'phone';
+
+const PHONE_MIN_DIGITS = 12;
+const DEFAULT_COUNTRY_CODE = '55';
+
+function pickText(value: string | null | undefined): string | null {
+  return value && value.trim() !== '' ? value : null;
+}
+
+function isConnectedStatus(response: WhatsAppStatusResponse): boolean {
+  return response.ok && (response.connected === true || response.status?.state === 'open' || !!response.status?.jid);
+}
+
+export default function WhatsAppQRModal({ isOpen, onClose, channelId, onGetQRCode, onCheckStatus, onConnect, phoneNumber }: WhatsAppQRModalProps) {
+  const isMobile = useIsMobileDevice();
+  const canUseCode = !!onConnect;
+  const [view, setView] = useState<View>(isMobile && canUseCode ? 'phone' : 'qr');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [phone, setPhone] = useState(() => extractPhoneDigits(phoneNumber ?? '') || DEFAULT_COUNTRY_CODE);
+  const [phoneError, setPhoneError] = useState('');
   const { toasts, addToast, removeToast } = useToast();
-  const esRef = useRef<EventSource | null>(null);
+  const onCloseRef = useRef(onClose);
+  const onGetQRCodeRef = useRef(onGetQRCode);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (isOpen && channelId) {
-      loadQRCode();
+    onCloseRef.current = onClose;
+    onGetQRCodeRef.current = onGetQRCode;
+  });
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
     }
-    if (!isOpen) {
-      esRef.current?.close();
-      esRef.current = null;
+  }, []);
+
+  const markConnected = useCallback(() => {
+    setIsConnected(true);
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
     }
-  }, [isOpen, channelId]);
-  useEffect(() => {
-    if (!isOpen || !channelId || isConnected)
-      return;
-    const token = authService.getToken();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const url = `${apiUrl}/channels/whatsapp/${channelId}/events?token=${encodeURIComponent(token || '')}`;
-    const es = new EventSource(url);
-    esRef.current = es;
-    es.addEventListener('connected', () => {
-      setIsConnected(true);
-      es.close();
-      setTimeout(() => onClose(), 2000);
-    });
-    return () => {
-      es.close();
-      esRef.current = null;
-    };
-  }, [isOpen, channelId, isConnected, onClose]);
-  const loadQRCode = async () => {
+    closeTimerRef.current = setTimeout(() => onCloseRef.current(), 2000);
+  }, []);
+
+  const loadQRCode = useCallback(async () => {
+    setLoading(true);
+    setFailed(false);
+    setPairingCode(null);
     try {
-      setLoading(true);
-      setFailed(false);
-      const response = await onGetQRCode(channelId);
-      if (response.ok) {
-        const qr = response.qr || response.raw?.instance?.qrcode || null;
-        const paircode = response.raw?.instance?.paircode || response.raw?.paircode;
-        setQrCode(qr);
-        setPairingCode(typeof paircode === 'string' && paircode.trim() !== ''
-          ? paircode
-          : null);
-        const status = response.raw?.instance?.status || response.raw?.status;
-        setIsConnected(status === 'open');
-      }
-      else {
-        addToast('error', 'Erro ao obter QR Code');
+      const response = await onGetQRCodeRef.current(channelId);
+      if (!response.ok) {
         setFailed(true);
+        return;
+      }
+      setQrCode(pickText(response.qr) ?? pickText(response.raw?.instance?.qrcode));
+      const status = response.raw?.instance?.status ?? response.raw?.status;
+      if (status === 'open') {
+        markConnected();
       }
     }
     catch (err) {
-      addToast('error', err instanceof Error ? err.message : 'Erro ao obter QR Code');
+      addToast('error', err instanceof Error ? err.message : 'Não foi possível gerar o QR Code.');
       setFailed(true);
     }
     finally {
       setLoading(false);
     }
-  };
-  const checkStatus = async () => {
+  }, [channelId, markConnected, addToast]);
+
+  useEffect(() => {
+    if (isOpen && channelId && view === 'qr') {
+      void loadQRCode();
+    }
+  }, [isOpen, channelId, view, loadQRCode]);
+
+  useEffect(() => {
+    if (!isOpen || !channelId || isConnected) {
+      return;
+    }
+    const es = new EventSource(channelsService.getWhatsAppEventsUrl(channelId));
+    es.addEventListener('connected', () => {
+      es.close();
+      markConnected();
+    });
+    return () => es.close();
+  }, [isOpen, channelId, isConnected, markConnected]);
+
+  const requestPairingCode = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!onConnect) {
+      return;
+    }
+    if (phone.length < PHONE_MIN_DIGITS) {
+      setPhoneError('Digite o número completo, com DDD. Ex.: +55 (11) 99999-9999');
+      return;
+    }
+    setPhoneError('');
+    setLoading(true);
+    setFailed(false);
     try {
-      setCheckingStatus(true);
-      const response = await onCheckStatus(channelId);
-      if (response.ok) {
-        if (response.connected) {
-          setIsConnected(true);
-          setTimeout(() => {
-            onClose();
-          }, 2000);
-        }
-        else if (response.status) {
-          const { state } = response.status;
-          if (state === 'open' || response.status.jid) {
-            setIsConnected(true);
-            setTimeout(() => {
-              onClose();
-            }, 2000);
-          }
-        }
+      const response = await onConnect(channelId, phone);
+      const instance = response.ok ? response.result?.raw?.instance : undefined;
+      const code = pickText(instance?.paircode);
+      if (!code) {
+        addToast('error', 'Não conseguimos gerar o código. Confira o número e tente de novo.');
+        return;
+      }
+      setQrCode(null);
+      setPairingCode(code);
+      if (instance?.status === 'open' || response.result?.raw?.connected === true) {
+        markConnected();
       }
     }
-    catch (_err) {
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Não foi possível gerar o código.');
+    }
+    finally {
+      setLoading(false);
+    }
+  };
+
+  const checkStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      const response = await onCheckStatus(channelId);
+      if (isConnectedStatus(response)) {
+        markConnected();
+      }
+      else {
+        addToast('error', 'Ainda não recebemos a confirmação. Siga os passos no celular e tente de novo.');
+      }
+    }
+    catch {
+      addToast('error', 'Não foi possível verificar a conexão agora.');
     }
     finally {
       setCheckingStatus(false);
     }
   };
-  const handleRefresh = () => {
-    loadQRCode();
+
+  const switchView = (next: View) => {
+    setView(next);
+    setPairingCode(null);
+    setQrCode(null);
+    setFailed(false);
   };
-  return (<Modal isOpen={isOpen} onClose={onClose} title="Conectar WhatsApp">
-    <div className="px-2 pb-2">
-      {isConnected ? (<div className="flex flex-col items-center justify-center py-6">
-        <CheckCircle className="w-16 h-16 text-emerald-500 mb-4"/>
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              Conectado com sucesso!
+
+  const renderBody = () => {
+    if (isConnected) {
+      return (<div className="flex flex-col items-center justify-center py-6 text-center">
+        <CheckCircle className="mb-4 h-14 w-14 text-emerald-500"/>
+        <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">
+          WhatsApp conectado de novo!
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 text-center max-w-sm text-sm">
-              Sua instância do WhatsApp está conectada e pronta para uso.
+        <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
+          Tudo pronto. As mensagens e automações desse número voltaram a funcionar.
         </p>
-      </div>) : (<>
-        <ToastContainer toasts={toasts} onRemove={removeToast}/>
-        {loading ? (<div className="flex flex-col items-center justify-center py-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"/>
-          <p className="text-gray-600 dark:text-gray-400 mt-4 text-sm font-medium">Carregando...</p>
-        </div>) : failed ? (<div className="text-center py-8">
-          <Button onClick={handleRefresh} variant="primary">
-                  Tentar Novamente
+      </div>);
+    }
+    if (loading) {
+      return (<div className="flex flex-col items-center justify-center py-10">
+        <Loader2 className="h-10 w-10 text-emerald-500 animate-spin"/>
+        <p className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-300">
+          {view === 'qr' ? 'Gerando o QR Code...' : 'Gerando o código...'}
+        </p>
+      </div>);
+    }
+    if (view === 'phone' && !pairingCode) {
+      return (<form onSubmit={requestPairingCode} className="space-y-5">
+        <Input id="reconnect-phone" label="Qual é o número do WhatsApp?" type="tel" inputMode="numeric" autoComplete="tel" value={formatPhoneNumber(phone)} onChange={(event) => {
+          setPhone(extractPhoneDigits(event.target.value));
+          setPhoneError('');
+        }} placeholder="+55 (11) 99999-9999" hint="Com DDD. Use o mesmo número que estava conectado." error={phoneError} required/>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
+          <Button type="button" variant="secondary" icon={<QrCode size={16}/>} onClick={() => switchView('qr')} className="justify-center">
+            Usar QR Code
           </Button>
-        </div>) : (<div className="flex flex-col items-center">
-          {qrCode && (<div className="w-full max-w-sm mb-5">
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-              <div className="bg-white dark:bg-slate-950 p-3 rounded-lg mb-4 border border-slate-200 dark:border-slate-800">
-                <Image src={qrCode} alt="QR Code" width={300} height={300} className="w-full h-auto"/>
-              </div>
-              <div className="space-y-2.5">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span></p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Conectar um aparelho</span> e escaneie o QR Code</p>
-                </div>
-              </div>
-            </div>
-          </div>)}
+          <Button type="submit" variant="primary" className="flex-1 justify-center">
+            Gerar código
+          </Button>
+        </div>
+      </form>);
+    }
+    if (failed) {
+      return (<div className="space-y-4 py-6 text-center">
+        <p className="text-sm text-slate-600 dark:text-slate-300">Não conseguimos gerar o QR Code agora.</p>
+        <Button onClick={() => void loadQRCode()} variant="primary" icon={<RefreshCw size={16}/>} className="mx-auto">
+          Tentar de novo
+        </Button>
+      </div>);
+    }
+    return (<div className="space-y-5">
+      {isMobile && view === 'qr' && canUseCode && (<Callout tone="warning">
+        Está no celular? Não dá para escanear a tela do próprio aparelho. Toque em &ldquo;Receber um código&rdquo;.
+      </Callout>)}
+      <WhatsAppConnectGuide qrCode={qrCode} pairingCode={pairingCode}/>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+        {view === 'qr' && canUseCode && (<Button variant="secondary" icon={<KeyRound size={16}/>} onClick={() => switchView('phone')} className="justify-center">
+          Receber um código
+        </Button>)}
+        <Button variant="secondary" icon={<RefreshCw size={16}/>} onClick={() => (view === 'qr' ? void loadQRCode() : switchView('phone'))} className="justify-center">
+          {view === 'qr' ? 'Gerar novo QR Code' : 'Gerar novo código'}
+        </Button>
+        <Button variant="primary" onClick={() => void checkStatus()} loading={checkingStatus} loadingText="Verificando..." className="justify-center">
+          Já conectei
+        </Button>
+      </div>
+    </div>);
+  };
 
-          {pairingCode && (<div className="w-full max-w-sm mb-6">
-            <div className={`bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 ${qrCode ? 'mt-3' : ''}`}>
-              <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 text-center">
-                {qrCode ? 'Ou use o código de pareamento' : 'Código de pareamento'}
-              </h4>
-              <div className="bg-white dark:bg-slate-950 px-4 py-3 rounded-lg mb-4 border border-blue-200 dark:border-blue-700">
-                <p className="text-3xl font-mono font-bold text-center text-blue-600 dark:text-blue-400 tracking-wider">
-                  {pairingCode}
-                </p>
-              </div>
-              <div className="space-y-2.5">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Abra o WhatsApp no seu celular</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Toque em <span className="font-semibold">Mais opções</span> ou <span className="font-semibold">Configurações</span></p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Selecione <span className="font-semibold">Aparelhos conectados</span> → <span className="font-semibold">Conectar um aparelho</span></p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Escolha <span className="font-semibold">&ldquo;Conectar com número de telefone&rdquo;</span></p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">5</div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">Digite o código: <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{pairingCode}</span></p>
-                </div>
-              </div>
-            </div>
-          </div>)}
-
-          <div className="flex gap-3 mt-3">
-            <Button onClick={handleRefresh} variant="secondary" icon={<RefreshCw size={16}/>} disabled={loading}>
-                    Atualizar
-            </Button>
-            <Button onClick={checkStatus} variant="primary" disabled={checkingStatus}>
-              {checkingStatus ? 'Verificando...' : 'Verificar Status'}
-            </Button>
-          </div>
-
-          {checkingStatus && (<div className="flex items-center gap-2 mt-4">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Verificando conexão...
-            </p>
-          </div>)}
-        </div>)}
-      </>)}
-    </div>
+  return (<Modal isOpen={isOpen} onClose={onClose} title="Reconectar WhatsApp" size="sm">
+    <ToastContainer toasts={toasts} onRemove={removeToast}/>
+    {renderBody()}
   </Modal>);
 }

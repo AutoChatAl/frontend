@@ -1,5 +1,5 @@
 'use client';
-import { AlertCircle, CalendarClock, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Card from '@/components/Card';
@@ -78,10 +78,7 @@ export default function ScheduleGrid({ refreshKey = 0 }: ScheduleGridProps) {
   const header = (
     <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-4">
       <div className="min-w-0">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-          <CalendarClock size={15} className="text-slate-400" />
-          Agenda de execuções
-        </h2>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Agenda de execuções</h2>
         <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
           Hoje e os próximos 4 dias, por hora de disparo
         </p>

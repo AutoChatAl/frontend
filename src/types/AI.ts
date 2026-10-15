@@ -33,6 +33,14 @@ export interface AIRule {
     description: string;
     enabled: boolean;
 }
+export interface AiBlockedContact {
+    id: string;
+    displayName: string | null;
+    phoneE164: string | null;
+    igUsername: string | null;
+    channels: Array<'WHATSAPP' | 'INSTAGRAM'>;
+    blockedAt: string | null;
+}
 export interface AITab {
     id: string;
     label: string;
@@ -55,7 +63,7 @@ export const defaultAiTriggerSettings: AiTriggerSettings = {
  * "Aguardar resposta" dos fluxos, para as duas telas falarem a mesma língua.
  */
 export const AI_FOLLOW_UP_OPTIONS: ReadonlyArray<{ value: number; label: string }> = [
-  { value: 0, label: 'Não enviar follow-up' },
+  { value: 0, label: 'Não retomar a conversa' },
   { value: 10, label: '10 minutos' },
   { value: 30, label: '30 minutos' },
   { value: 60, label: '1 hora' },
@@ -68,6 +76,33 @@ export const AI_FOLLOW_UP_OPTIONS: ReadonlyArray<{ value: number; label: string 
 export const DEFAULT_AI_FOLLOW_UP_MESSAGE = 'Ainda está por aí? Se preferir continuar depois, é só me chamar — vou encerrar este atendimento por enquanto.';
 
 export const AI_FOLLOW_UP_MESSAGE_MAX_CHARS = 500;
+
+export const AI_SIMPLE_FOLLOW_UP_MINUTES = 60;
+
+export const AI_SEGMENT_OPTIONS: ReadonlyArray<string> = [
+  'Loja virtual / E-commerce',
+  'Infoprodutor / Cursos online',
+  'Loja física / Varejo',
+  'Serviços Profissionais',
+  'Restaurante / Delivery',
+  'Saúde e Bem-estar',
+  'Educação e Cursos',
+  'Imobiliária',
+];
+
+export const AI_LEGACY_SEGMENT_OPTIONS: ReadonlyArray<string> = [
+  'Varejo / E-commerce',
+];
+
+export type AiPriceSource = 'link' | 'list';
+
+export interface AiSimpleSetupAnswers {
+    about: string;
+    hours: string;
+    priceSource: AiPriceSource;
+    priceLink: string;
+    priceList: string;
+}
 
 export const tonesOptions = [
   { value: '', label: 'Selecione um tom...' },

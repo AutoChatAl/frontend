@@ -55,10 +55,10 @@ export default function WhatsAppInstances() {
     try {
       await deleteInstance(deleteTarget);
       await refetchWhatsApp();
-      addToast('success', 'Instância deletada com sucesso.');
+      addToast('success', 'Conexão removida.');
     }
     catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Erro ao deletar instância.');
+      addToast('error', error instanceof Error ? error.message : 'Não foi possível remover a conexão.');
     }
     finally {
       setDeleting(false);
@@ -72,7 +72,7 @@ export default function WhatsAppInstances() {
   }
   return (<>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {isOwner && (<div data-tour="channels-add" className="h-full"><AddChannelCard title="Nova Instância" subtitle="Escanear QR Code" colorClass="emerald" onClick={handleOpenCreateModal}/></div>)}
+      {isOwner && (<div data-tour="channels-add" className="h-full"><AddChannelCard title="Conectar número" subtitle="QR Code ou código" colorClass="emerald" onClick={handleOpenCreateModal}/></div>)}
 
       {instances.map((inst) => (<ChannelInstanceCard key={inst.id} id={inst.id} icon={<div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
         <MessageCircle size={24}/>
@@ -92,7 +92,7 @@ export default function WhatsAppInstances() {
       refetchWhatsApp();
     }} channelId={selectedChannelId} onGetQRCode={getQRCode} onCheckStatus={getStatus}/>)}
 
-    <ConfirmDeleteModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteConfirm} message="Tem certeza que deseja deletar esta instância do WhatsApp? Esta ação não pode ser desfeita." loading={deleting}/>
+    <ConfirmDeleteModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDeleteConfirm} message="Tem certeza que deseja remover esta conexão do WhatsApp? Esta ação não pode ser desfeita." loading={deleting}/>
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </>);

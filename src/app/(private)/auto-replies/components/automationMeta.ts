@@ -61,7 +61,7 @@ export const KIND_META: Record<AutomationKind, {
 }> = {
   DM: {
     label: 'Mensagem direta',
-    plural: 'DMs',
+    plural: 'Mensagens',
     icon: MessageCircle,
     chip: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300',
     tile: 'text-indigo-600 dark:text-indigo-400',
@@ -97,7 +97,7 @@ export const CHANNEL_TYPE_META: Record<WorkspaceChannelType, {
     chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
   },
   WHATSAPP_OFFICIAL: {
-    label: 'API Oficial',
+    label: 'WhatsApp Oficial',
     icon: BadgeCheck,
     chip: 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-400',
   },
@@ -109,8 +109,8 @@ export const CHANNEL_TYPE_META: Record<WorkspaceChannelType, {
 };
 
 export const MATCH_MODE_LABELS: Record<string, string> = {
-  CONTAINS: 'Contém',
-  EXACT: 'Exata',
+  CONTAINS: 'Tem a palavra',
+  EXACT: 'Só a palavra',
   STARTS_WITH: 'Começa com',
 };
 

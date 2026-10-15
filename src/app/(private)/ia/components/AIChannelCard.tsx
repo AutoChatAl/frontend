@@ -45,7 +45,7 @@ export default function AIChannelCard({ channel, active, onToggle, blocked = fal
             <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{channel.name}</p>
             <Badge
               type={isWhatsApp ? 'whatsapp' : 'instagram'}
-              text={isOfficial ? 'WhatsApp oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
+              text={isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
               pill
             />
           </div>

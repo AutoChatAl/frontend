@@ -211,7 +211,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       {loading ? (<div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-200 border-t-indigo-600"/>
       </div>) : members.length === 0 ? (<div className="text-center py-12 text-slate-400 dark:text-slate-500">
-        <Users size={32} className="mx-auto mb-2 opacity-50"/>
         <p className="text-sm">Nenhum contato neste grupo</p>
         {group.type === 'MANUAL' && (<p className="text-xs mt-1">Clique em &ldquo;Adicionar Contatos&rdquo; para começar</p>)}
       </div>) : (<div className="divide-y divide-slate-100 dark:divide-slate-700/50">

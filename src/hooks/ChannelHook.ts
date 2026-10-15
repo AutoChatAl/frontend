@@ -26,7 +26,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       setInstances(data);
     }
     catch (err) {
-      setError(getErrorMessageFromCatch(err, 'Erro ao carregar instâncias'));
+      setError(getErrorMessageFromCatch(err, 'Não foi possível carregar seus números de WhatsApp.'));
     }
     finally {
       setLoading(false);
@@ -46,7 +46,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       return response;
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao criar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível preparar a conexão do WhatsApp.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -58,7 +58,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       return response;
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao conectar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível conectar o WhatsApp.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -68,7 +68,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       return await channelsService.getWhatsAppQRCode(channelId);
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao obter QR Code');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível gerar o QR Code.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -80,7 +80,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       return status;
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao verificar status');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível verificar a conexão.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -91,7 +91,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       await fetchInstances();
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao desativar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível desativar o WhatsApp.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -102,7 +102,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       setInstances((prev) => prev.map((inst) => (inst.id === id ? { ...inst, name } : inst)));
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível renomear o WhatsApp.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -113,7 +113,7 @@ export function useWhatsAppInstances(options: { enabled?: boolean } = {}) {
       setInstances((prev) => prev.filter((inst) => inst.id !== id));
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao deletar instância');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível remover o WhatsApp.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -151,7 +151,7 @@ export function useInstagramAccounts(options: { enabled?: boolean } = {}) {
       setAccounts(data);
     }
     catch (err) {
-      setError(getErrorMessageFromCatch(err, 'Erro ao carregar contas'));
+      setError(getErrorMessageFromCatch(err, 'Não foi possível carregar suas contas do Instagram.'));
     }
     finally {
       setLoading(false);
@@ -166,7 +166,7 @@ export function useInstagramAccounts(options: { enabled?: boolean } = {}) {
       setAccounts((prev) => prev.filter((acc) => acc.id !== id));
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao deletar conta');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível remover a conta do Instagram.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -177,7 +177,7 @@ export function useInstagramAccounts(options: { enabled?: boolean } = {}) {
       setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, name } : acc)));
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao renomear conta');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível renomear a conta do Instagram.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }
@@ -188,7 +188,7 @@ export function useInstagramAccounts(options: { enabled?: boolean } = {}) {
       return url;
     }
     catch (err) {
-      const errorMsg = getErrorMessageFromCatch(err, 'Erro ao obter URL de autenticação');
+      const errorMsg = getErrorMessageFromCatch(err, 'Não foi possível abrir o login do Instagram.');
       setError(errorMsg);
       throw new Error(errorMsg);
     }

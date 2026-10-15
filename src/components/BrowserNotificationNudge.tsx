@@ -1,5 +1,5 @@
 'use client';
-import { BellRing, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface BrowserNotificationNudgeProps {
   onEnable: () => void;
@@ -19,9 +19,6 @@ export default function BrowserNotificationNudge({ onEnable, onDismiss, requesti
       role="status"
       className="pointer-events-auto flex items-start gap-3 rounded-xl border border-indigo-200 bg-white p-3 shadow-lg dark:border-indigo-500/30 dark:bg-slate-800 animate-in slide-in-from-right-4 duration-300"
     >
-      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
-        <BellRing size={16}/>
-      </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-slate-900 dark:text-white">Receber avisos fora desta aba?</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">

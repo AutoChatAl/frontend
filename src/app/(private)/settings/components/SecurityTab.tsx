@@ -70,7 +70,7 @@ export default function SecurityTab() {
 
     <Card className="p-4">
       <SectionHeader
-        title="Autenticação de dois fatores"
+        title="Verificação em duas etapas"
         hint="Além da senha, o login passa a pedir um código do seu aplicativo autenticador."
         action={twoFactorEnabled
           ? <Badge type="success" text="Ativado" icon={ShieldCheck} pill/>
@@ -86,7 +86,7 @@ export default function SecurityTab() {
           <p className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
             {twoFactorEnabled
               ? 'Sua conta está protegida. Guarde os códigos de recuperação num lugar seguro — sem eles e sem o aplicativo, o acesso se perde.'
-              : 'Sem o segundo fator, quem descobrir sua senha entra direto na conta.'}
+              : 'Sem a segunda etapa, quem descobrir sua senha entra direto na conta.'}
           </p>
           <Button
             variant={twoFactorEnabled ? 'danger' : 'primary'}
@@ -103,7 +103,7 @@ export default function SecurityTab() {
 
     <TwoFactorModal isOpen={show2FAModal} enabled={twoFactorEnabled} onClose={() => setShow2FAModal(false)} onSuccess={(enabled) => {
       setTwoFactorEnabled(enabled);
-      addToast('success', enabled ? '2FA ativado com sucesso.' : '2FA desativado com sucesso.');
+      addToast('success', enabled ? 'Verificação em duas etapas ativada.' : 'Verificação em duas etapas desativada.');
     }}/>
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
