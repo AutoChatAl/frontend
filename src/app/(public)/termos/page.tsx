@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Termos de Uso — Synq',
-  description: 'Termos de Uso da plataforma Synq, operada por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01).',
+  description: 'Termos de Uso da plataforma Synq, operada por CODEDEV LTDA (CNPJ 55.985.583/0001-49).',
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://www.synq.app.br/termos' },
 };
@@ -20,7 +20,7 @@ export default function TermosPage() {
           Termos de Uso
       </h1>
       <p className="text-sm text-slate-500 mb-10">
-          Última atualização: 15 de setembro de 2026
+          Última atualização: 15 de outubro de 2026
       </p>
 
       <section className="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
@@ -46,10 +46,13 @@ export default function TermosPage() {
         </p>
         <ul className="list-disc pl-6 space-y-1">
           <li>
-            <strong>54.623.148 VINICIOS COELHO FELIPE DA COSTA</strong>
+            <strong>Razão social:</strong> CODEDEV LTDA
           </li>
           <li>
-            <strong>CNPJ:</strong> 54.623.148/0001-01
+            <strong>CNPJ:</strong> 55.985.583/0001-49
+          </li>
+          <li>
+            <strong>Nome fantasia:</strong> CODEDEV
           </li>
           <li>
             <strong>Contato:</strong>{' '}

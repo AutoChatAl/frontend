@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade — Synq',
-  description: 'Política de Privacidade da plataforma Synq, operada por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01). Como coletamos, usamos e protegemos seus dados, inclusive dados obtidos via Meta Platforms (Instagram, Facebook e WhatsApp) e via Google (Google Agenda / Google Calendar).',
+  description: 'Política de Privacidade da plataforma Synq, operada por CODEDEV LTDA (CNPJ 55.985.583/0001-49). Como coletamos, usamos e protegemos seus dados, inclusive dados obtidos via Meta Platforms (Instagram, Facebook e WhatsApp) e via Google (Google Agenda / Google Calendar).',
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://www.synq.app.br/privacidade' },
 };
@@ -20,7 +20,7 @@ export default function PrivacidadePage() {
           Política de Privacidade
       </h1>
       <p className="text-sm text-slate-500 mb-10">
-          Última atualização: 15 de setembro de 2026
+          Última atualização: 15 de outubro de 2026
         <br />
           Vigência: a partir de 15 de setembro de 2026
       </p>
@@ -35,14 +35,16 @@ export default function PrivacidadePage() {
         </p>
         <ul className="list-disc pl-6 space-y-1">
           <li>
-            <strong>Razão social:</strong> 54.623.148 VINICIOS COELHO FELIPE DA
-              COSTA
+            <strong>Razão social:</strong> CODEDEV LTDA
           </li>
           <li>
-            <strong>CNPJ:</strong> 54.623.148/0001-01
+            <strong>CNPJ:</strong> 55.985.583/0001-49
           </li>
           <li>
-            <strong>Nome fantasia / marca:</strong> Synq
+            <strong>Nome fantasia:</strong> CODEDEV
+          </li>
+          <li>
+            <strong>Marca do produto:</strong> Synq
           </li>
           <li>
             <strong>Site oficial:</strong>{' '}
@@ -497,8 +499,7 @@ export default function PrivacidadePage() {
             14. Contato e Encarregado pelo Tratamento de Dados (DPO)
         </h2>
         <p>
-          <strong>Controlador:</strong> 54.623.148 VINICIOS COELHO FELIPE DA
-            COSTA — CNPJ 54.623.148/0001-01
+          <strong>Controlador:</strong> CODEDEV LTDA — CNPJ 55.985.583/0001-49
           <br />
           <strong>Encarregado (DPO) / Contato de privacidade:</strong>{' '}
           <a href="mailto:suporte.synq@proton.me" className="text-indigo-600 hover:text-indigo-700">

@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Exclusão de Dados — Synq',
-  description: 'Instruções para remover os dados da sua conta Synq e revogar as integrações Meta (Instagram, Facebook, WhatsApp) e a integração com o Google Agenda. Operado por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01).',
+  description: 'Instruções para remover os dados da sua conta Synq e revogar as integrações Meta (Instagram, Facebook, WhatsApp) e a integração com o Google Agenda. Operado por CODEDEV LTDA (CNPJ 55.985.583/0001-49).',
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://www.synq.app.br/exclusao-de-dados' },
 };
@@ -26,8 +26,8 @@ export default function ExclusaoDeDadosPage() {
       <section className="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
         <p>
             A plataforma <strong>Synq</strong>, operada por{' '}
-          <strong>54.623.148 VINICIOS COELHO FELIPE DA COSTA</strong> — CNPJ{' '}
-          <strong>54.623.148/0001-01</strong>, respeita o direito do titular à
+          <strong>CODEDEV LTDA</strong> — CNPJ{' '}
+          <strong>55.985.583/0001-49</strong>, respeita o direito do titular à
             eliminação dos seus dados pessoais, nos termos da{' '}
           <strong>LGPD (Lei 13.709/2018)</strong> e dos{' '}
           <strong>Termos da Plataforma da Meta (seção 4.a / 5)</strong>.
@@ -212,8 +212,7 @@ export default function ExclusaoDeDadosPage() {
             Contato do Encarregado (DPO)
         </h2>
         <p>
-          <strong>Controlador:</strong> 54.623.148 VINICIOS COELHO FELIPE DA
-            COSTA — CNPJ 54.623.148/0001-01
+          <strong>Controlador:</strong> CODEDEV LTDA — CNPJ 55.985.583/0001-49
           <br />
           <strong>Encarregado (DPO):</strong>{' '}
           <a href="mailto:suporte.synq@proton.me" className="text-indigo-600 hover:text-indigo-700">

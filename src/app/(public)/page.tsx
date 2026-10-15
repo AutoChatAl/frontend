@@ -15,7 +15,6 @@ import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
 import InboxSection from './components/InboxSection';
-import OfficialApiSection from './components/OfficialApiSection';
 import PricingSection from './components/PricingSection';
 import SchedulingSection from './components/SchedulingSection';
 import TestimonialsSection from './components/TestimonialsSection';
@@ -39,7 +38,6 @@ export default function Home() {
         />
         <div className="relative">
           <HeroSection />
-          <OfficialApiSection />
           <HowItWorks />
           <CampaignSection />
           <FunnelSection />

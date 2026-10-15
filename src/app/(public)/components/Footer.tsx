@@ -82,6 +82,12 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between gap-4 text-xs text-slate-400">
           <p>&copy; {new Date().getFullYear()} Synq. Todos os direitos reservados.</p>
+          <p className="sm:text-right">
+            Synq é um produto da CODEDEV LTDA (nome fantasia CODEDEV) · CNPJ 55.985.583/0001-49 ·{' '}
+            <a href="mailto:suporte.synq@proton.me" className="hover:text-indigo-600 transition-colors">
+              suporte.synq@proton.me
+            </a>
+          </p>
         </div>
       </div>
     </footer>
