@@ -8,6 +8,8 @@ interface Props {
     sent: number;
     received: number;
     read: number;
+    /** Dias cobertos pelo período, para a média diária. */
+    days: number;
     emptyAction?: { label: string; href: string };
 }
 
@@ -25,21 +27,22 @@ interface StatDef {
  * Resumo textual de mensagens (sem gráfico): enviadas, recebidas e lidas
  * lado a lado, com uma linha de contexto sob cada número.
  */
-export default function MessagesSummaryCard({ sent, received, read, emptyAction }: Props) {
+export default function MessagesSummaryCard({ sent, received, read, days, emptyAction }: Props) {
   if (emptyAction && sent === 0 && received === 0) {
     return (<Card className="p-4 sm:p-5 h-full flex flex-col">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Mensagens</h2>
       <DashboardEmptyHint
-        message="Quantas mensagens você enviou, recebeu e quantas foram lidas nos últimos 7 dias. Os números aparecem assim que seus clientes começarem a conversar com você."
+        message="Quantas mensagens você enviou, recebeu e quantas foram lidas no período. Os números aparecem assim que seus clientes começarem a conversar com você."
         actionLabel={emptyAction.label}
         href={emptyAction.href}
       />
     </Card>);
   }
   const readRate = sent > 0 ? Math.round((read / sent) * 100) : null;
+  const perDay = Math.max(days, 1);
   const stats: StatDef[] = [
-    { label: 'Enviadas', value: sent, hint: `média de ${Math.round(sent / 7).toLocaleString('pt-BR')}/dia`, justify: 'justify-start', textAlign: 'text-left' },
-    { label: 'Recebidas', value: received, hint: `média de ${Math.round(received / 7).toLocaleString('pt-BR')}/dia`, justify: 'justify-center', textAlign: 'text-center' },
+    { label: 'Enviadas', value: sent, hint: `média de ${Math.round(sent / perDay).toLocaleString('pt-BR')}/dia`, justify: 'justify-start', textAlign: 'text-left' },
+    { label: 'Recebidas', value: received, hint: `média de ${Math.round(received / perDay).toLocaleString('pt-BR')}/dia`, justify: 'justify-center', textAlign: 'text-center' },
     { label: 'Lidas', value: read, hint: readRate === null ? 'sem envios no período' : `${Math.min(readRate, 100)}% das enviadas`, justify: 'justify-end', textAlign: 'text-left' },
   ];
 

@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Exclusão de Dados — Synq',
-  description: 'Instruções para remover os dados da sua conta Synq e revogar as integrações Meta (Instagram, Facebook, WhatsApp). Operado por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01).',
+  description: 'Instruções para remover os dados da sua conta Synq e revogar as integrações Meta (Instagram, Facebook, WhatsApp) e a integração com o Google Agenda. Operado por 54.623.148 VINICIOS COELHO FELIPE DA COSTA (CNPJ 54.623.148/0001-01).',
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://www.synq.app.br/exclusao-de-dados' },
 };
@@ -20,7 +20,7 @@ export default function ExclusaoDeDadosPage() {
           Exclusão de Dados
       </h1>
       <p className="text-sm text-slate-500 mb-10">
-          Última atualização: 23 de abril de 2026
+          Última atualização: 15 de setembro de 2026
       </p>
 
       <section className="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
@@ -183,6 +183,30 @@ export default function ExclusaoDeDadosPage() {
             imediatamente interrompido. Para apagar também os dados já
             armazenados na Synq, utilize qualquer uma das três opções acima.
         </p>
+
+        <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
+            Desconectando o Google Agenda
+        </h2>
+        <p>
+            Se você conectou o Google Agenda ao Synq, pode interromper a
+            sincronização e revogar o acesso a qualquer momento:
+        </p>
+        <ol className="list-decimal pl-6 space-y-1">
+          <li>
+              No Synq: <em>Agenda → Google Agenda</em> → clique em{' '}
+            <strong>Desconectar</strong>. O Synq revoga o token junto ao Google
+              e o apaga do nosso banco de dados; os agendamentos permanecem no
+              Synq, sem vínculo com o Google.
+          </li>
+          <li>
+              No Google: acesse{' '}
+            <a href="https://myaccount.google.com/permissions" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              myaccount.google.com/permissions
+            </a>
+              , localize <strong>Synq</strong> e clique em{' '}
+            <strong>Remover acesso</strong>.
+          </li>
+        </ol>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
             Contato do Encarregado (DPO)

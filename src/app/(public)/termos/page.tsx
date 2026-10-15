@@ -20,7 +20,7 @@ export default function TermosPage() {
           Termos de Uso
       </h1>
       <p className="text-sm text-slate-500 mb-10">
-          Última atualização: 23 de abril de 2026
+          Última atualização: 15 de setembro de 2026
       </p>
 
       <section className="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
@@ -124,7 +124,53 @@ export default function TermosPage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            6. Uso permitido
+            6. Integração com Google Agenda (Google Calendar)
+        </h2>
+        <p>
+            A conexão com o Google Agenda é opcional. Ao conectá-la, você:
+        </p>
+        <ul className="list-disc pl-6 space-y-1">
+          <li>
+              Declara ser titular da conta Google conectada ou possuir
+              autorização do titular.
+          </li>
+          <li>
+              Concede à Synq autorização para, em seu nome, criar, ler,
+              atualizar e excluir eventos do calendário conectado por meio da
+              Google Calendar API (escopo <code>calendar.events</code>), com a
+              única finalidade de sincronizar agendamentos entre o Synq e o
+              Google Agenda.
+          </li>
+          <li>
+              Reconhece que o uso dos dados do Google pela Synq segue a{' '}
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              Política de Dados do Usuário dos Serviços de API do Google
+            </a>
+              , incluindo os requisitos de Uso Limitado, conforme detalhado na
+              nossa{' '}
+            <Link href="/privacidade" className="text-indigo-600 hover:text-indigo-700">
+              Política de Privacidade
+            </Link>
+              .
+          </li>
+          <li>
+              Pode desconectar a integração a qualquer momento em{' '}
+            <em>Agenda → Google Agenda → Desconectar</em> ou em{' '}
+            <a href="https://myaccount.google.com/permissions" className="text-indigo-600 hover:text-indigo-700" target="_blank" rel="noopener noreferrer">
+              myaccount.google.com/permissions
+            </a>
+              ; os agendamentos já registrados permanecem no Synq.
+          </li>
+        </ul>
+        <p>
+            O Google Agenda e a Google Calendar API são serviços da Google LLC,
+            sujeitos aos termos e políticas do Google. A Synq não se
+            responsabiliza por indisponibilidade, alterações ou limitações
+            impostas pelo Google a esses serviços.
+        </p>
+
+        <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
+            7. Uso permitido
         </h2>
         <p>Você se compromete a <strong>não</strong>:</p>
         <ul className="list-disc pl-6 space-y-1">
@@ -132,7 +178,7 @@ export default function TermosPage() {
           <li>Praticar scraping, engenharia reversa ou circunvenção de controles técnicos.</li>
           <li>
               Coletar dados de usuários finais fora do escopo autorizado pelas
-              APIs da Meta.
+              APIs da Meta ou do Google.
           </li>
           <li>
               Revender, sublicenciar ou oferecer o serviço a terceiros sem
@@ -142,7 +188,7 @@ export default function TermosPage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            7. Planos, pagamento e cancelamento
+            8. Planos, pagamento e cancelamento
         </h2>
         <ul className="list-disc pl-6 space-y-1">
           <li>
@@ -168,7 +214,7 @@ export default function TermosPage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            8. Propriedade intelectual
+            9. Propriedade intelectual
         </h2>
         <p>
             Todos os direitos sobre o software, marca, interface, código-fonte e
@@ -179,7 +225,7 @@ export default function TermosPage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            9. Disponibilidade e limitação de responsabilidade
+            10. Disponibilidade e limitação de responsabilidade
         </h2>
         <p>
             Envidamos esforços razoáveis para manter a plataforma disponível,
@@ -187,8 +233,8 @@ export default function TermosPage() {
             por:
         </p>
         <ul className="list-disc pl-6 space-y-1">
-          <li>Indisponibilidade causada por APIs de terceiros (Meta, WhatsApp, etc.).</li>
-          <li>Bloqueios, suspensões ou restrições impostas pela Meta à conta do usuário.</li>
+          <li>Indisponibilidade causada por APIs de terceiros (Meta, WhatsApp, Google, etc.).</li>
+          <li>Bloqueios, suspensões ou restrições impostas pela Meta ou pelo Google à conta do usuário.</li>
           <li>
               Danos indiretos, lucros cessantes ou perda de oportunidade, na
               máxima extensão permitida pela lei brasileira.
@@ -196,7 +242,7 @@ export default function TermosPage() {
         </ul>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            10. Rescisão
+            11. Rescisão
         </h2>
         <p>
             A Synq pode encerrar ou suspender contas que descumpram estes
@@ -205,7 +251,7 @@ export default function TermosPage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            11. Proteção de dados
+            12. Proteção de dados
         </h2>
         <p>
             O tratamento de dados pessoais é regido pela nossa{' '}
@@ -216,7 +262,7 @@ export default function TermosPage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            12. Alterações
+            13. Alterações
         </h2>
         <p>
             Estes Termos podem ser atualizados; a versão em vigor é sempre a
@@ -225,7 +271,7 @@ export default function TermosPage() {
         </p>
 
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
-            13. Lei aplicável e foro
+            14. Lei aplicável e foro
         </h2>
         <p>
             Estes Termos são regidos pelas leis da República Federativa do

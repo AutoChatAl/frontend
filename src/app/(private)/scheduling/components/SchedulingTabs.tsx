@@ -3,6 +3,7 @@
 const TABS: { id: string; label: string }[] = [
   { id: 'calendar', label: 'Calendário' },
   { id: 'business-hours', label: 'Horários' },
+  { id: 'reminders', label: 'Lembretes' },
   { id: 'integrations', label: 'Integrações' },
 ];
 

@@ -1,4 +1,4 @@
-import type { Appointment, AvailabilityResponse, BusinessHours, DaySchedule, DateException } from '@/types/Scheduling';
+import type { Appointment, AvailabilityResponse, BusinessHours, DaySchedule, DateException, SchedulingReminders, SchedulingRemindersPatch } from '@/types/Scheduling';
 import { apiClient } from '@/utils/ApiClient';
 
 class SchedulingService {
@@ -70,6 +70,22 @@ class SchedulingService {
   }
   public async deleteAppointment(id: string): Promise<void> {
     await apiClient.delete(`/scheduling/appointments/${id}`);
+  }
+  /** Os lembretes vivem nos avisos do workspace, por isso a rota é a de notificações. */
+  public async getReminders(): Promise<SchedulingReminders> {
+    const response = await apiClient.get<{ schedulingReminders: SchedulingReminders }>('/auth/workspace/notifications');
+    if (!response.success || !response.data)
+      throw new Error('Falha ao buscar lembretes de agendamento.');
+    return response.data.schedulingReminders;
+  }
+  public async updateReminders(patch: SchedulingRemindersPatch): Promise<SchedulingReminders> {
+    const response = await apiClient.put<{ notifications: { schedulingReminders: SchedulingReminders } }>(
+      '/auth/workspace/notifications',
+      { schedulingReminders: patch },
+    );
+    if (!response.success || !response.data)
+      throw new Error('Falha ao salvar lembretes de agendamento.');
+    return response.data.notifications.schedulingReminders;
   }
   public async getBusinessHours(): Promise<BusinessHours> {
     const response = await apiClient.get<BusinessHours>('/scheduling/business-hours');

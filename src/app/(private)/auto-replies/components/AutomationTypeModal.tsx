@@ -14,7 +14,7 @@ interface AutomationTypeModalProps {
 const OPTIONS: { kind: AutomationKind; description: string }[] = [
   { kind: 'DM', description: 'Responde sozinho quando alguém manda uma palavra no WhatsApp ou no Direct do Instagram.' },
   { kind: 'COMMENT', description: 'Responde o comentário no post do Instagram e manda uma mensagem no Direct de quem comentou.' },
-  { kind: 'LIVE', description: 'Durante a live, responde no chat e manda uma mensagem no Direct de quem comentou.' },
+  { kind: 'LIVE', description: 'Durante a live, manda uma mensagem no Direct de quem comentar a palavra. Ative antes de começar a live.' },
 ];
 
 /** Um passo antes do formulário: cada tipo abre o modal que já existia. */

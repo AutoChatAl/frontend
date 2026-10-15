@@ -72,7 +72,8 @@ export default function AutomationPreview({ kind, draft, sampleText = '', fires 
   const showText = hasText(draft.replyType) && draft.message.trim().length > 0;
   const showLink = draft.linkUrl.trim().length > 0;
   const firstReply = draft.commentReplyMessages.find((entry) => entry.trim()) ?? draft.commentReplyMessage;
-  const commentReply = isCommentLike(kind) && draft.commentReplyEnabled && firstReply.trim().length > 0;
+  // Resposta pública só existe no post — na live o Instagram não aceita reply.
+  const commentReply = kind === 'COMMENT' && draft.commentReplyEnabled && firstReply.trim().length > 0;
   // No Instagram com botão a mensagem vira o `title` do generic template, e o
   // Instagram renderiza esse campo em negrito por conta própria.
   const isInstagramCard = draft.channelType === 'INSTAGRAM' && showLink;
@@ -142,7 +143,7 @@ export default function AutomationPreview({ kind, draft, sampleText = '', fires 
 
         {fires && commentReply && (
           <div>
-            <Caption>{kind === 'LIVE' ? 'Resposta no chat da live' : 'Resposta pública no comentário'}</Caption>
+            <Caption>Resposta pública no comentário</Caption>
             <div className={`${BUBBLE} ml-6 inline-block max-w-[85%]`}>
               <MessageBody text={withUsername(firstReply)} formatted={false} />
             </div>

@@ -9,17 +9,23 @@ import { SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import type { SchedulingReminderKey, SchedulingReminders, SchedulingRemindersPatch } from '@/types/Scheduling';
+import { SCHEDULING_REMINDER_OPTIONS } from '@/types/Scheduling';
 import { apiClient } from '@/utils/ApiClient';
 
 import AttendantAlertsCard from './AttendantAlertsCard';
 
 interface WorkspaceNotifications {
     emailCampaignDispatch: boolean;
-    schedulingReminder: boolean;
+    schedulingReminders: SchedulingReminders | null;
+}
+interface WorkspaceNotificationsPatch {
+    emailCampaignDispatch?: boolean;
+    schedulingReminders?: SchedulingRemindersPatch;
 }
 /**
- * Avisos ainda não implementados no backend — o workspace só persiste
- * `emailCampaignDispatch` e `schedulingReminder`. Ficam visíveis como roadmap,
+ * Avisos ainda não implementados no backend — o workspace só persiste o e-mail
+ * de campanha e os lembretes de agendamento. Ficam visíveis como roadmap,
  * mas marcados: switch ligado e travado prometia e-mail que nunca sai.
  */
 const UPCOMING_ITEMS = [
@@ -34,7 +40,7 @@ export default function NotificationsTab() {
   const canManageWorkspace = user?.role === 'owner' || user?.role === 'admin';
   const [notifications, setNotifications] = useState<WorkspaceNotifications>({
     emailCampaignDispatch: false,
-    schedulingReminder: false,
+    schedulingReminders: null,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,9 +54,8 @@ export default function NotificationsTab() {
       const response = await apiClient.get<WorkspaceNotifications>('/auth/workspace/notifications');
       if (response.success && response.data) {
         setNotifications({
-          emailCampaignDispatch: false,
-          schedulingReminder: false,
-          ...(response.data as Partial<WorkspaceNotifications>),
+          emailCampaignDispatch: response.data.emailCampaignDispatch ?? false,
+          schedulingReminders: response.data.schedulingReminders ?? null,
         });
       }
     }
@@ -63,7 +68,7 @@ export default function NotificationsTab() {
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
-  const updateNotification = useCallback(async (patch: Partial<WorkspaceNotifications>, message: string, errorMessage: string) => {
+  const updateNotification = useCallback(async (patch: WorkspaceNotificationsPatch, message: string, errorMessage: string) => {
     setSaving(true);
     try {
       const response = await apiClient.put<{
@@ -75,10 +80,10 @@ export default function NotificationsTab() {
                     ok: boolean;
                     notifications: WorkspaceNotifications;
                 };
-        setNotifications((prev) => ({
-          ...prev,
-          ...(data.notifications as Partial<WorkspaceNotifications>),
-        }));
+        setNotifications({
+          emailCampaignDispatch: data.notifications.emailCampaignDispatch,
+          schedulingReminders: data.notifications.schedulingReminders,
+        });
         addToast('success', message);
       }
       else {
@@ -97,8 +102,8 @@ export default function NotificationsTab() {
     checked ? 'Notificação por e-mail ativada.' : 'Notificação por e-mail desativada.',
     'Erro ao atualizar notificação.',
   );
-  const handleSchedulingReminderToggle = (checked: boolean) => updateNotification(
-    { schedulingReminder: checked },
+  const handleSchedulingReminderToggle = (key: SchedulingReminderKey, checked: boolean) => updateNotification(
+    { schedulingReminders: { [key]: { enabled: checked } } },
     checked ? 'Lembrete de agendamento ativado.' : 'Lembrete de agendamento desativado.',
     'Erro ao atualizar lembrete de agendamento.',
   );
@@ -122,13 +127,16 @@ export default function NotificationsTab() {
           onChange={handleEmailToggle}
           disabled={saving}
         />
-        <ToggleRow
-          title="Lembrete de agendamento"
-          description="Mensagem no WhatsApp do contato 1 hora antes do horário marcado. A verificação roda a cada 30 minutos."
-          checked={notifications.schedulingReminder}
-          onChange={handleSchedulingReminderToggle}
-          disabled={saving}
-        />
+        {notifications.schedulingReminders && SCHEDULING_REMINDER_OPTIONS.map((option) => (
+          <ToggleRow
+            key={option.key}
+            title={`Lembrete de agendamento — ${option.title}`}
+            description={`Mensagem ao contato ${option.leadTime} antes do horário marcado. O texto se personaliza em Agendamentos → Lembretes.`}
+            checked={notifications.schedulingReminders?.[option.key].enabled ?? false}
+            onChange={(checked) => handleSchedulingReminderToggle(option.key, checked)}
+            disabled={saving}
+          />
+        ))}
       </div>
     </Card>)}
 

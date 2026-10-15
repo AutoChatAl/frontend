@@ -70,6 +70,14 @@ function weekday(iso: string): string {
   return d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
 }
 
+function shortDay(iso: string): string {
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+/** Até uma semana o dia da semana basta; acima disso ele se repete e a data entra no lugar. */
+const WEEKDAY_LABEL_MAX_POINTS = 7;
+
 function fullDay(iso: string): string {
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
@@ -143,6 +151,9 @@ export default function MessagesAreaChart({ data, height = 240, visibleKeys }: P
     val: yMax - i * step,
   }));
 
+  const useWeekdayLabels = data.length <= WEEKDAY_LABEL_MAX_POINTS;
+  const labelEvery = useWeekdayLabels ? 1 : Math.max(1, Math.ceil(data.length / 6));
+
   const updateHover = (clientX: number) => {
     const el = containerRef.current;
     if (!el)
@@ -172,9 +183,9 @@ export default function MessagesAreaChart({ data, height = 240, visibleKeys }: P
         </text>
       </g>))}
 
-      {data.map((d, i) => (<text key={d.date} x={getX(i)} y={height - 6} textAnchor="middle" fontSize={10} className="fill-slate-400 dark:fill-slate-500 capitalize">
-        {weekday(d.date)}
-      </text>))}
+      {data.map((d, i) => (i % labelEvery === 0 ? (<text key={d.date} x={getX(i)} y={height - 6} textAnchor="middle" fontSize={10} className="fill-slate-400 dark:fill-slate-500 capitalize">
+        {useWeekdayLabels ? weekday(d.date) : shortDay(d.date)}
+      </text>) : null))}
 
       {series.map((s) => (<path key={`area-${s.key}`} d={areaPath(s.key)} fill={`url(#${gradientId}-${s.key})`} stroke="none"/>))}
 

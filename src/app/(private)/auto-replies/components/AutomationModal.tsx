@@ -1,5 +1,5 @@
 'use client';
-import { ChevronDown, FlaskConical, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronDown, FlaskConical, Plus, Radio, Sparkles, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import AudioPicker from '@/components/AudioPicker';
@@ -45,7 +45,7 @@ import {
   LINK_DESCRIPTION_MAX,
   LINK_LABEL_MAX,
   MATCH_MODE_OPTIONS,
-  MESSAGE_MAX,
+  messageMaxFor,
   replyTypeOptions,
   toAutoReplyInput,
   toCommentAutomationInput,
@@ -57,6 +57,7 @@ import {
 import { simulateTrigger, triggerSummary } from './automationMatcher';
 import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind, type AutomationRow } from './automationMeta';
 import AutomationPreview from './AutomationPreview';
+import LiveWebhookStatus from './LiveWebhookStatus';
 
 interface AutomationModalProps {
   isOpen: boolean;
@@ -171,7 +172,7 @@ export default function AutomationModal({
   );
 
   const isInstagram = draft.channelType === 'INSTAGRAM';
-  const messageMax = MESSAGE_MAX[kind];
+  const messageMax = messageMaxFor(draft, kind);
   const typeOptions = replyTypeOptions(draft.channelType, kind);
   const commentLike = isCommentLike(kind);
 
@@ -343,11 +344,49 @@ export default function AutomationModal({
           </Callout>
         )}
 
+        {/* A live tem regras que o resto da tela não deixa claro: o Instagram só avisa
+            dos comentários enquanto a transmissão está no ar, e a DM só sai nesse
+            intervalo. Quem cria a regra depois de começar a live, ou espera a DM sair
+            depois que ela acabou, acha que a automação falhou. */}
+        {kind === 'LIVE' && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                <Radio size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Como funciona na live</p>
+                <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">1.</span>
+                    <span>Deixe esta regra ativa <strong className="font-semibold text-slate-800 dark:text-slate-200">antes</strong> de iniciar a transmissão.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">2.</span>
+                    <span>Enquanto a live estiver no ar, quem comentar a palavra-chave recebe a DM na hora, ainda durante a transmissão.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="shrink-0 font-semibold text-rose-600 dark:text-rose-400">3.</span>
+                    <span>Quando a live termina, os comentários dela deixam de ser respondidos — o Instagram só avisa a automação durante a transmissão.</span>
+                  </li>
+                </ol>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                  A resposta sai <strong className="font-semibold text-slate-700 dark:text-slate-300">só por DM</strong>: o
+                  Instagram não permite que a automação escreva no chat da live. Requisitos: conta profissional
+                  (comercial ou criador de conteúdo) e pública.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <FormSection
           title="1. Quando responder?"
-          description={commentLike
-            ? 'Escolha se a automação responde a todo comentário ou só quando aparecer uma palavra.'
-            : 'Quando alguém mandar uma destas palavras, a automação responde sozinha.'}
+          description={kind === 'LIVE'
+            ? 'Escolha se a automação responde a todo comentário feito durante a live ou só quando aparecer uma palavra.'
+            : commentLike
+              ? 'Escolha se a automação responde a todo comentário ou só quando aparecer uma palavra.'
+              : 'Quando alguém mandar uma destas palavras, a automação responde sozinha.'}
         >
           {commentLike && (
             <SegmentedControl
@@ -388,11 +427,15 @@ export default function AutomationModal({
 
         <FormSection
           title="2. O que responder?"
-          description={commentLike
-            ? 'A pessoa recebe a mensagem no Direct. Se quiser, a automação também responde no comentário.'
-            : 'A mensagem que a pessoa recebe na hora.'}
+          description={kind === 'LIVE'
+            ? 'A pessoa recebe a mensagem no Direct ainda durante a transmissão. Na live, a resposta sai só por lá.'
+            : commentLike
+              ? 'A pessoa recebe a mensagem no Direct. Se quiser, a automação também responde no comentário.'
+              : 'A mensagem que a pessoa recebe na hora.'}
         >
-          {commentLike && (
+          {/* Só no post: a Graph API não aceita reply em comentário de live, então a
+              única resposta possível na transmissão é a DM. */}
+          {kind === 'COMMENT' && (
             <div className="space-y-2">
               <Checkbox
                 checked={draft.commentReplyEnabled}
@@ -400,7 +443,7 @@ export default function AutomationModal({
                   patch({ commentReplyEnabled: checked });
                   clearError('commentReplyMessage');
                 }}
-                label={kind === 'LIVE' ? 'Responder também no chat da live' : 'Responder também no comentário'}
+                label="Responder também no comentário"
                 description="Todo mundo vê. Assim quem comentou sabe que precisa olhar o Direct."
               />
 
@@ -439,8 +482,9 @@ export default function AutomationModal({
             <TileGroup options={typeOptions} value={draft.replyType} onChange={handleReplyType} />
             {commentLike && !hasText(draft.replyType) && (
               <Callout tone="success" className="mt-2">
-                A mídia chega no Direct de quem comentou, mesmo que a pessoa não siga você, desde que o comentário
-                seja dos últimos 7 dias.
+                {kind === 'LIVE'
+                  ? 'A mídia chega no Direct de quem comentou, mesmo que a pessoa não siga você — na live, apenas enquanto a transmissão está no ar.'
+                  : 'A mídia chega no Direct de quem comentou, mesmo que a pessoa não siga você, desde que o comentário seja dos últimos 7 dias.'}
               </Callout>
             )}
           </div>
@@ -579,9 +623,11 @@ export default function AutomationModal({
 
         <FormSection
           title="3. Onde vale?"
-          description={commentLike
-            ? 'A conta do Instagram em que a automação fica de olho.'
-            : 'O número de WhatsApp ou a conta do Instagram em que a automação responde.'}
+          description={kind === 'LIVE'
+            ? 'A conta do Instagram que vai fazer a live. Precisa ser uma conta profissional.'
+            : commentLike
+              ? 'A conta do Instagram em que a automação fica de olho.'
+              : 'O número de WhatsApp ou a conta do Instagram em que a automação responde.'}
         >
           <div id={fieldAnchor('channelId')}>
             <ChannelPicker
@@ -595,6 +641,12 @@ export default function AutomationModal({
               error={errors.channelId}
             />
           </div>
+          {/* Só na live: a conta precisa ter assinado `live_comments` na Meta, e conta
+              conectada antes da feature não assinou. Mostrar isso aqui, com o botão
+              que resolve, poupa descobrir pelo silêncio durante a transmissão. */}
+          {kind === 'LIVE' && draft.channelId && (
+            <LiveWebhookStatus channelId={draft.channelId} />
+          )}
 
           {kind === 'COMMENT' && (
             <>
@@ -695,7 +747,7 @@ export default function AutomationModal({
                 </>
               )}
 
-              {commentLike && draft.commentReplyEnabled && (
+              {kind === 'COMMENT' && draft.commentReplyEnabled && (
                 <div className="space-y-2">
                   <FieldLabel optional>Outras formas de responder no comentário</FieldLabel>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -757,7 +809,9 @@ export default function AutomationModal({
                       patch({ linkDescription: event.target.value });
                       clearError('linkDescription');
                     }}
-                    placeholder="Aparece acima do botão, no Instagram"
+                    placeholder={commentLike
+                      ? 'Aparece no fim da mensagem, acima do botão'
+                      : 'Aparece acima do botão, no Instagram'}
                     rows={2}
                     error={errors.linkDescription}
                   />
@@ -772,7 +826,9 @@ export default function AutomationModal({
                   checked={draft.oncePerUser}
                   onChange={(checked) => patch({ oncePerUser: checked })}
                   label="Mandar o Direct só uma vez por pessoa"
-                  description="Quem comentar várias vezes não recebe a mesma mensagem de novo. Recomendamos deixar ligado."
+                  description={kind === 'LIVE'
+                    ? 'Numa live a mesma pessoa comenta várias vezes — sem isso, ela receberia um Direct a cada comentário. Recomendamos deixar ligado.'
+                    : 'Quem comentar várias vezes não recebe a mesma mensagem de novo. Recomendamos deixar ligado.'}
                 />
               )}
             </div>
