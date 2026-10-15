@@ -3,7 +3,7 @@
 import Callout from '@/components/Callout';
 import Textarea from '@/components/Textarea';
 import ToggleRow from '@/components/ToggleRow';
-import type { BuyerWelcome, IntegrationChannelType } from '@/types/CartRecovery';
+import type { BuyerWelcome } from '@/types/CartRecovery';
 
 import { formatDelay } from './platformGuides';
 import { MessageVariablesHint } from './RecoveryStepsEditor';
@@ -13,27 +13,9 @@ const MAX_DELAY_MINUTES = 43200;
 interface BuyerWelcomeSectionProps {
   value: BuyerWelcome;
   onChange: (value: BuyerWelcome) => void;
-  channelType: IntegrationChannelType;
 }
 
-const CHANNEL_NOTES: Record<IntegrationChannelType, { tone: 'info' | 'warning'; text: string }> = {
-  WHATSAPP: {
-    tone: 'info',
-    text: 'Enviamos para o telefone que o comprador informou na compra.',
-  },
-  WHATSAPP_OFFICIAL: {
-    tone: 'warning',
-    text: 'No WhatsApp Oficial, a boas-vindas só chega se o comprador falou com você nas últimas 24h. Se ele não fala com você há mais de 24h, ela não é enviada e o motivo aparece nos detalhes da compra, na aba Carrinhos.',
-  },
-  INSTAGRAM: {
-    tone: 'warning',
-    text: 'No Instagram, só conseguimos mandar a boas-vindas para quem já conversou com sua conta. Para quem nunca falou com você, ela não é enviada e o motivo aparece nos detalhes da compra, na aba Carrinhos.',
-  },
-};
-
-export default function BuyerWelcomeSection({ value, onChange, channelType }: BuyerWelcomeSectionProps) {
-  const note = CHANNEL_NOTES[channelType];
-
+export default function BuyerWelcomeSection({ value, onChange }: BuyerWelcomeSectionProps) {
   return (
     <div className="space-y-4">
       <ToggleRow
@@ -70,9 +52,10 @@ export default function BuyerWelcomeSection({ value, onChange, channelType }: Bu
             <span className="text-xs text-slate-400 dark:text-slate-500">({formatDelay(value.delayMinutes)})</span>
           </div>
 
-          <Callout tone={note.tone}>{note.text}</Callout>
           <Callout tone="info">
-            Cada pedido recebe uma única boas-vindas, mesmo que a plataforma avise a aprovação mais de uma vez. Se a plataforma não mandar o telefone do comprador, não enviamos.
+            A boas-vindas sai uma vez por pedido, pelo canal em que o comprador já conversou com você. Quem nunca
+            mandou mensagem para você não recebe, para o seu número não correr risco de bloqueio. No WhatsApp Oficial
+            e no Instagram, ela só chega se a conversa foi nas últimas 24h.
           </Callout>
         </div>
       )}

@@ -11,8 +11,6 @@ import { apiClient } from '@/utils/ApiClient';
 
 const INTEGRATION_ERRORS: Record<string, string> = {
   CART_RECOVERY_INTEGRATION_LIMIT_EXCEEDED: 'Você atingiu o limite de integrações de recuperação do seu plano. Mude de plano para criar mais.',
-  CHANNEL_NOT_FOUND: 'O número ou conta escolhido não foi encontrado.',
-  CHANNEL_TYPE_MISMATCH: 'O número ou conta escolhido não combina com o tipo de envio.',
   INTEGRATION_NOT_FOUND: 'Esta integração não existe mais. Atualize a página.',
   VALIDATION_ERROR: 'Confira os campos: alguma mensagem está vazia ou com tempo fora do permitido.',
 };

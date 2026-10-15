@@ -17,7 +17,6 @@ import type {
 import type { InstagramAccount, WhatsAppInstance } from '@/types/Channel';
 
 import AbandonedCartsList from './components/AbandonedCartsList';
-import type { IntegrationChannelOption } from './components/IntegrationFormModal';
 import IntegrationsSection from './components/IntegrationsSection';
 import SummaryCards from './components/SummaryCards';
 
@@ -37,7 +36,7 @@ export default function CartRecoveryPage() {
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
   const [cartsTotal, setCartsTotal] = useState(0);
   const [integrations, setIntegrations] = useState<CartRecoveryIntegration[]>([]);
-  const [channelOptions, setChannelOptions] = useState<IntegrationChannelOption[]>([]);
+  const [hasChannels, setHasChannels] = useState(true);
   const [summary, setSummary] = useState<AbandonedCartsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,22 +70,7 @@ export default function CartRecoveryPage() {
       setIntegrations(integrationsRes);
       setSummary(summaryRes);
 
-      const opts: IntegrationChannelOption[] = [
-        ...waChannels.map((c) => ({ id: c.id, name: c.name, number: c.number, type: 'WHATSAPP' as const })),
-        ...waOfficialChannels.map((c) => ({
-          id: c.id,
-          name: c.whatsappOfficial.verifiedName || c.name,
-          number: c.whatsappOfficial.displayPhoneNumber ?? undefined,
-          type: 'WHATSAPP_OFFICIAL' as const,
-        })),
-        ...igChannels.map((c) => ({
-          id: c.id,
-          name: c.name,
-          number: c.instagram?.username ?? undefined,
-          type: 'INSTAGRAM' as const,
-        })),
-      ];
-      setChannelOptions(opts);
+      setHasChannels(waChannels.length + waOfficialChannels.length + igChannels.length > 0);
 
       if (initialContactFilter || initialStatusFilter) {
         setActiveTab('carts');
@@ -196,7 +180,7 @@ export default function CartRecoveryPage() {
       {activeTab === 'integrations' && (
         <IntegrationsSection
           integrations={integrations}
-          channels={channelOptions}
+          hasChannels={hasChannels}
           onReload={reloadIntegrations}
           onToast={addToast}
         />

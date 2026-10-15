@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Pencil, Trash2, Copy, Check, MessageCircle, Instagram, Lock, PlugZap, ShieldAlert, Gift, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Check, Lock, PlugZap, ShieldAlert, Gift, CheckCircle2, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -18,12 +18,13 @@ import {
   type SalesPlatform,
 } from '@/types/CartRecovery';
 
-import IntegrationFormModal, { type IntegrationChannelOption, type IntegrationFormTab } from './IntegrationFormModal';
+import IntegrationFormModal, { type IntegrationFormTab } from './IntegrationFormModal';
 import { PLATFORM_GUIDES } from './platformGuides';
 
 interface Props {
   integrations: CartRecoveryIntegration[];
-  channels: IntegrationChannelOption[];
+  /** Algum WhatsApp ou Instagram conectado — é por eles que as mensagens saem. */
+  hasChannels: boolean;
   onReload: () => Promise<void>;
   onToast: (type: 'success' | 'error' | 'info', msg: string) => void;
 }
@@ -46,7 +47,7 @@ function hasRecentRejection(integration: CartRecoveryIntegration): boolean {
   return new Date(integration.lastRejectedAt).getTime() > new Date(integration.lastEventAt).getTime();
 }
 
-export default function IntegrationsSection({ integrations, channels, onReload, onToast }: Props) {
+export default function IntegrationsSection({ integrations, hasChannels, onReload, onToast }: Props) {
   const router = useRouter();
   const { used, limit, isAtLimit } = usePlanLimitCheck('cartRecoveryIntegrations');
   const limitLabel = limit === -1 ? 'ilimitadas' : limit;
@@ -109,7 +110,7 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
     onToast('success', kind === 'created' ? 'Integração criada' : 'Integração atualizada');
   };
 
-  const hasNoChannels = channels.length === 0;
+  const hasNoChannels = !hasChannels;
 
   return (
     <div className="space-y-4">
@@ -173,8 +174,6 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {integrations.map((integration) => {
-            const channel = channels.find((c) => c.id === integration.channelId);
-            const ChannelIcon = integration.channelType === 'INSTAGRAM' ? Instagram : MessageCircle;
             const missingCode = PLATFORM_GUIDES[integration.platform].codeRequired && !integration.secret?.trim();
             const rejected = hasRecentRejection(integration);
             return (
@@ -189,11 +188,8 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
                     </span>
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-medium text-slate-900 dark:text-white">{integration.name}</h3>
-                      <p className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                        <ChannelIcon size={12} className="shrink-0" />
-                        <span className="truncate">
-                          {integration.recoverySteps.length} mensagem(ns) de carrinho · {channel?.name ?? 'sem número escolhido'}
-                        </span>
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        {integration.recoverySteps.length} mensagem(ns) de carrinho
                       </p>
                     </div>
                   </div>
@@ -263,7 +259,6 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
         <IntegrationFormModal
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}
-          channels={channels}
           onSaved={handleSaved}
           onChanged={onReload}
         />
@@ -273,7 +268,6 @@ export default function IntegrationsSection({ integrations, channels, onReload, 
         <IntegrationFormModal
           isOpen={!!editTarget}
           onClose={() => setEditTarget(null)}
-          channels={channels}
           integration={editTarget.integration}
           initialTab={editTarget.tab}
           onSaved={handleSaved}

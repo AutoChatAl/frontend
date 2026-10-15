@@ -1,7 +1,6 @@
 'use client';
 
-import { BadgeCheck, Instagram, MessageCircle } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
 import Callout from '@/components/Callout';
@@ -14,7 +13,6 @@ import {
   PLATFORM_LABELS,
   type BuyerWelcome,
   type CartRecoveryIntegration,
-  type IntegrationChannelType,
   type RecoveryStep,
   type SalesPlatform,
 } from '@/types/CartRecovery';
@@ -28,13 +26,6 @@ import {
 } from './platformGuides';
 import RecoveryStepsEditor, { MessageVariablesHint } from './RecoveryStepsEditor';
 
-export interface IntegrationChannelOption {
-  id: string;
-  name: string;
-  number?: string | undefined;
-  type: IntegrationChannelType;
-}
-
 export type IntegrationFormTab = 'connection' | 'cart' | 'welcome';
 
 interface Props {
@@ -42,7 +33,6 @@ interface Props {
   onClose: () => void;
   onSaved: (kind: 'created' | 'updated') => void | Promise<void>;
   onChanged: () => void | Promise<void>;
-  channels: IntegrationChannelOption[];
   integration?: CartRecoveryIntegration;
   initialTab?: IntegrationFormTab;
 }
@@ -53,27 +43,6 @@ const TAB_OPTIONS: ReadonlyArray<{ value: IntegrationFormTab; label: string }> =
   { value: 'connection', label: 'Conexão' },
   { value: 'cart', label: 'Carrinho abandonado' },
   { value: 'welcome', label: 'Boas-vindas ao comprador' },
-];
-
-const CHANNEL_CHOICES: ReadonlyArray<{ type: IntegrationChannelType; label: string; icon: typeof MessageCircle; active: string }> = [
-  {
-    type: 'WHATSAPP',
-    label: 'WhatsApp',
-    icon: MessageCircle,
-    active: 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300',
-  },
-  {
-    type: 'WHATSAPP_OFFICIAL',
-    label: 'WhatsApp Oficial',
-    icon: BadgeCheck,
-    active: 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300',
-  },
-  {
-    type: 'INSTAGRAM',
-    label: 'Instagram',
-    icon: Instagram,
-    active: 'border-fuchsia-500 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-500 dark:bg-fuchsia-950/40 dark:text-fuchsia-300',
-  },
 ];
 
 const NEW_CART_STEP = 'Oi {first_name}, seu {product_name} ainda está te esperando: {checkout_url}';
@@ -87,7 +56,7 @@ function findEmptyStep(steps: RecoveryStep[]): number {
   return steps.findIndex((step) => !step.messageTemplate.trim() || !Number.isFinite(step.delayMinutes) || step.delayMinutes < 1);
 }
 
-export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChanged, channels, integration, initialTab = 'connection' }: Props) {
+export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChanged, integration, initialTab = 'connection' }: Props) {
   const [savedIntegration, setSavedIntegration] = useState<CartRecoveryIntegration | undefined>(integration);
   const [justCreated, setJustCreated] = useState(false);
   const [tab, setTab] = useState<IntegrationFormTab>(initialTab);
@@ -95,8 +64,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
   const [platform, setPlatform] = useState<SalesPlatform>(integration?.platform ?? 'HOTMART');
   const [name, setName] = useState(integration?.name ?? '');
   const [secret, setSecret] = useState(integration?.secret ?? '');
-  const [channelType, setChannelType] = useState<IntegrationChannelType>(integration?.channelType ?? 'WHATSAPP');
-  const [channelId, setChannelId] = useState(integration?.channelId ?? '');
   const [cartSteps, setCartSteps] = useState<RecoveryStep[]>(
     integration?.recoverySteps?.length ? integration.recoverySteps : DEFAULT_CART_STEPS,
   );
@@ -113,17 +80,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
   const guide = PLATFORM_GUIDES[platform];
   const platformLabel = PLATFORM_LABELS[platform];
 
-  const filteredChannels = useMemo(
-    () => channels.filter((c) => c.type === channelType),
-    [channels, channelType],
-  );
-
-  const handleChannelTypeChange = (next: IntegrationChannelType) => {
-    setChannelType(next);
-    const available = channels.find((c) => c.type === next);
-    setChannelId(available?.id ?? '');
-  };
-
   const validate = (): ValidationIssue | null => {
     if (!name.trim()) return { message: 'Dê um nome para a integração.', tab: 'connection' };
     if (cartSteps.length === 0) return { message: 'Adicione pelo menos uma mensagem de carrinho abandonado.', tab: 'cart' };
@@ -139,8 +95,6 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
   const buildPayload = () => ({
     name: name.trim(),
     secret: secret.trim(),
-    channelType,
-    channelId: channelId || undefined,
     recoverySteps: cartSteps,
     buyerWelcome: { ...welcome, message: welcome.message.trim() || DEFAULT_BUYER_WELCOME.message },
   });
@@ -240,55 +194,13 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
               />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Enviar as mensagens por</p>
-              <div className="flex flex-wrap gap-2">
-                {CHANNEL_CHOICES.map((choice) => {
-                  const Icon = choice.icon;
-                  const active = channelType === choice.type;
-                  return (
-                    <button
-                      key={choice.type}
-                      type="button"
-                      onClick={() => handleChannelTypeChange(choice.type)}
-                      aria-pressed={active}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
-                        active
-                          ? choice.active
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600'
-                      }`}
-                    >
-                      <Icon size={14} />
-                      {choice.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <Select
-                value={channelId}
-                placeholder="Escolha o número ou a conta..."
-                onChange={(v) => setChannelId(v)}
-                clearable
-                onClear={() => setChannelId('')}
-                emptyMessage="Nenhum número ou conta deste tipo conectado. Conecte em Canais."
-                options={filteredChannels.map((c) => ({
-                  value: c.id,
-                  label: c.name,
-                  description: c.number ?? undefined,
-                  icon: c.type === 'INSTAGRAM' ? <Instagram size={14} /> : c.type === 'WHATSAPP_OFFICIAL' ? <BadgeCheck size={14} /> : <MessageCircle size={14} />,
-                }))}
-              />
-              {channelType === 'WHATSAPP_OFFICIAL' && (
-                <Callout tone="warning">
-                  No WhatsApp Oficial, se o cliente não fala com você há mais de 24h, só dá para chamar de novo com um modelo aprovado. Nesses casos a mensagem não é enviada e o motivo aparece nos detalhes do carrinho.
-                </Callout>
-              )}
-              {channelType === 'INSTAGRAM' && (
-                <Callout tone="warning">
-                  No Instagram, só conseguimos mandar mensagem para quem já conversou com sua conta nas últimas 24 horas ou aceitou receber avisos.
-                </Callout>
-              )}
-            </div>
+            {/* Não há canal para escolher: a mensagem sai por onde o comprador já fala com você.
+                Mandar para quem nunca escreveu é o que faz um número ser bloqueado. */}
+            <Callout tone="info">
+              As mensagens saem pelo canal em que o cliente já conversou com você: quem clicou num link seu no
+              Instagram é chamado no Instagram, e quem falou pelo WhatsApp, no WhatsApp. Quem nunca mandou mensagem
+              para você não recebe nada, para o seu número não correr risco de bloqueio.
+            </Callout>
 
             {savedIntegration ? (
               <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
@@ -320,7 +232,7 @@ export default function IntegrationFormModal({ isOpen, onClose, onSaved, onChang
         )}
 
         {tab === 'welcome' && (
-          <BuyerWelcomeSection value={welcome} onChange={setWelcome} channelType={channelType} />
+          <BuyerWelcomeSection value={welcome} onChange={setWelcome} />
         )}
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-3 dark:border-slate-700 sm:flex-row sm:justify-end">

@@ -13,6 +13,8 @@ import Select from '@/components/Select';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import {
   ATTEMPT_STATUS_LABELS,
+  ORDER_EVENT_LABELS,
+  ORDER_EVENT_RESULT_LABELS,
   PLATFORM_LABELS,
   REASON_LABELS,
   STATUS_LABELS,
@@ -21,6 +23,8 @@ import {
   type AbandonedCartStatus,
   type CartRecoveryIntegration,
   type ListCartsParams,
+  type OrderEvent,
+  type OrderEventType,
   type RecoveryAttemptStatus,
 } from '@/types/CartRecovery';
 
@@ -75,6 +79,34 @@ function channelLabel(type: AbandonedCart['matchedChannelType']): string {
   if (type === 'WHATSAPP_OFFICIAL') return 'WhatsApp Oficial';
   if (type === 'WHATSAPP') return 'WhatsApp';
   return '—';
+}
+
+const CLOSING_EVENTS: OrderEventType[] = ['REFUNDED', 'CHARGEBACK', 'CANCELED', 'EXPIRED'];
+
+/**
+ * O porquê do status, quando o aviso diz mais que o status sozinho: "Cancelado" pode ser
+ * compra cancelada, Pix expirado, reembolso ou chargeback.
+ */
+function statusDetail(cart: AbandonedCart): string | null {
+  const events = cart.events ?? [];
+  if (cart.status === 'CANCELED') {
+    const closing = [...events].reverse().find((entry) => CLOSING_EVENTS.includes(entry.type) && entry.result !== 'NO_CHANGE');
+    if (closing) return ORDER_EVENT_LABELS[closing.type];
+    return cart.refundedAt ? ORDER_EVENT_LABELS.REFUNDED : null;
+  }
+  if ((cart.status === 'RECOVERED' || cart.status === 'PURCHASED') && events.at(-1)?.type === 'REFUND_REQUESTED') {
+    return ORDER_EVENT_LABELS.REFUND_REQUESTED;
+  }
+  if (cart.status === 'ABANDONED' && cart.reason === 'PAYMENT_PENDING') return REASON_LABELS.PAYMENT_PENDING;
+  return null;
+}
+
+/** Aviso que só entra no histórico não "falhou": ele não muda o status por definição. */
+function eventEffect(entry: OrderEvent): string {
+  if (entry.result === 'NO_CHANGE' && (entry.type === 'REFUND_REQUESTED' || entry.type === 'PAYMENT_DELAYED')) {
+    return 'só registrado';
+  }
+  return ORDER_EVENT_RESULT_LABELS[entry.result];
 }
 
 const ATTEMPT_STATUS_TONE: Record<RecoveryAttemptStatus, string> = {
@@ -257,6 +289,7 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                   const integrationName = integrationsById.get(cart.integrationId)?.name;
                   const attempts = cart.recoveryAttempts ?? [];
                   const sent = attempts.filter((a) => a.status === 'SENT').length;
+                  const detail = statusDetail(cart);
                   return (
                     <tr key={cart.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-4 py-3">
@@ -303,8 +336,8 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[cart.status]}`}>
                           {STATUS_LABELS[cart.status]}
                         </span>
-                        {cart.reason === 'PAYMENT_PENDING' && (
-                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{REASON_LABELS.PAYMENT_PENDING}</div>
+                        {detail && (
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{detail}</div>
                         )}
                         {cart.buyerWelcome && (
                           <div className={`mt-1 text-xs ${ATTEMPT_STATUS_TONE[cart.buyerWelcome.status]}`}>
@@ -401,6 +434,42 @@ export default function AbandonedCartsList({ carts, total, integrations, initial
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Motivo</p>
                   <p className="text-slate-700 dark:text-slate-300">{REASON_LABELS[detailTarget.reason]}</p>
                 </div>
+              )}
+              {detailTarget.refundedAt && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Reembolso ou chargeback</p>
+                  <p className="text-slate-700 dark:text-slate-300">{formatDate(detailTarget.refundedAt)}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Mostra cada aviso que chegou e o que ele fez: com vários avisos do mesmo pedido,
+                é o que explica por que o status ficou como está. */}
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">Avisos recebidos da plataforma</p>
+              {(detailTarget.events ?? []).length > 0 ? (
+                <div className="space-y-1">
+                  {(detailTarget.events ?? []).map((entry, i) => (
+                    <div key={i} className="flex items-start justify-between gap-3 rounded border border-slate-200 px-3 py-1.5 text-xs dark:border-slate-700">
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-slate-700 dark:text-slate-200">{ORDER_EVENT_LABELS[entry.type]}</span>
+                        {entry.platformEvent && (
+                          <code className="truncate text-[11px] text-slate-400 dark:text-slate-500">{entry.platformEvent}</code>
+                        )}
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end text-right">
+                        <span className="text-slate-500 dark:text-slate-400">{formatDate(entry.receivedAt)}</span>
+                        <span className={entry.result === 'NO_CHANGE' ? 'text-slate-400 dark:text-slate-500' : 'font-medium text-slate-700 dark:text-slate-200'}>
+                          {eventEffect(entry)}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs italic text-slate-400 dark:text-slate-500">
+                  Os avisos deste pedido chegaram antes de o histórico existir.
+                </p>
               )}
             </div>
 
