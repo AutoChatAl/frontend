@@ -8,7 +8,8 @@ export type LeadOrigin =
   | 'CAMPAIGN'
   | 'MANUAL'
   | 'TIKTOK'
-  | 'TELEGRAM';
+  | 'TELEGRAM'
+  | 'IMPORT';
 export type ChannelType = 'WHATSAPP' | 'INSTAGRAM';
 export type StageColor = 'indigo' | 'violet' | 'blue' | 'emerald' | 'amber' | 'rose' | 'fuchsia' | 'slate';
 
@@ -49,7 +50,8 @@ export interface FunnelLead {
   displayName: string | null;
   funnelStageId: string | null;
   attendanceStatus: AttendanceStatus;
-  origin: LeadOrigin;
+  /** Pode vir `null`: no contato o default do campo é nulo. */
+  origin: LeadOrigin | null;
   notes: string;
   tags: FunnelLeadTag[];
   channels: ChannelType[];
