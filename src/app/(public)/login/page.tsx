@@ -155,7 +155,7 @@ export default function LoginPage() {
             Criar conta grátis
         </Link>
       </p>
-      <Link href="/" className="mt-4 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 w-full">
+      <Link href="/" className="mt-4 text-xs text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex items-center justify-center gap-1 w-full">
          Voltar para o início
       </Link>
     </div>
