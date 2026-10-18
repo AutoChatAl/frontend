@@ -56,6 +56,7 @@ Usada em ações principais, links ativos, foco, destaques de marca.
 |---|---|---|
 | `indigo-50` | `#eef2ff` | Fundo de seção destacada (light) |
 | `indigo-100` | `#e0e7ff` | Background de badge, hover suave |
+| `indigo-300` | `#a5b4fc` | Texto de destaque em bloco informativo (dark) |
 | `indigo-400` | `#818cf8` | Ícones, textos de destaque (dark) |
 | `indigo-500` | `#6366f1` | Focus ring, bordas ativas |
 | `indigo-600` | `#4f46e5` | Botão primário, label de destaque |
@@ -148,11 +149,12 @@ Red para botões/ações destrutivas, Rose para badges de erro.
 
 | Token | Uso |
 |---|---|
-| `red-50` | Fundo de zona de perigo |
-| `red-400` | Borda de input com erro |
+| `red-50 / red-500/10` | Fundo de aviso de erro em formulário |
+| `red-200 / red-500/20` | Borda do aviso de erro em formulário |
+| `red-400` | Borda de input com erro; texto do aviso no dark |
 | `red-500` | Mensagem de erro (texto), focus ring |
 | `red-600` | Botão danger |
-| `red-700` | Hover botão danger |
+| `red-700` | Hover botão danger; texto do aviso no light |
 | `rose-50 / rose-500/10` | Fundo de badge erro |
 | `rose-100 / rose-500/20` | Borda de badge erro |
 | `rose-700 / rose-400` | Texto de badge erro |
@@ -553,6 +555,8 @@ Aceita `className` para extensão. Usado como container padrão de seções.
 | Com erro | `red-400` | `red-500/20` |
 | Foco | `indigo-400` | — |
 
+Quando `error` está preenchido, o campo recebe `aria-invalid="true"` e `aria-describedby` apontando para o parágrafo da mensagem. Esse parágrafo tem `id` estável (`{idDoCampo}-error`) e `role="alert"`. Sem erro, esses atributos não são aplicados — os outros usos do `Input` não mudam.
+
 ```tsx
 <Input
   label="Email"
@@ -694,6 +698,8 @@ Regra: todo card sem dados usa este componente — nunca um `<p>` solto alinhado
 ### 8.7 IconButton
 
 Botão compacto somente com ícone. Usado em ações terciárias (editar, excluir inline, copiar).
+
+Todo botão só com ícone segue a regra de nome acessível e anel de foco da §11.1.
 
 ```tsx
 // Padrão de estilo
@@ -845,6 +851,22 @@ O verde (`emerald-600`) é reservado a ações que abrem o WhatsApp de verdade; 
 
 ---
 
+### 8.14 Checkbox
+
+**Arquivo:** `src/components/Checkbox.tsx`
+
+Caixa de marcação com o input real por cima do desenho (`absolute inset-0 h-5 w-5 opacity-0 cursor-pointer`) e o quadrado visual com `pointer-events-none`. O clique no quadrado cai no input; o `<label>` em volta do texto continua alternando o estado. O foco visível fica no quadrado: `peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-900`.
+
+**Props opcionais** (não alteram quem já usa o componente sem elas):
+
+- `error`: mensagem abaixo da caixa, `text-xs text-red-500 dark:text-red-400`, com `id`. No input, `aria-invalid="true"` e `aria-describedby` apontando para essa mensagem.
+- `id`: padrão `useId()`.
+- `name`.
+
+Não passe `error={undefined}` — com `exactOptionalPropertyTypes`, omita a prop (`...(mensagem ? { error: mensagem } : {})`).
+
+---
+
 ## 9. Padrões de Layout
 
 ### 9.1 Estrutura de Página
@@ -907,6 +929,29 @@ O verde (`emerald-600`) é reservado a ações que abrem o WhatsApp de verdade; 
   <Button type="submit">Salvar</Button>
 </div>
 ```
+
+### 9.14 Autenticação — login e cadastro
+
+**Arquivos:** `src/app/(public)/components/AuthShell.tsx`, `AuthThemeSync.tsx`, `login/page.tsx`, `register/page.tsx`.
+
+O `AuthShell` recebe `themed?: boolean` (padrão `false`). Sem `themed`, o shell permanece só claro, com `data-theme="light"`, para esqueci a senha, redefinir senha e convite. Com `themed` (login e cadastro):
+
+| Peça | Classes |
+|---|---|
+| Página | `bg-slate-50 dark:bg-slate-900` |
+| Cartão | `bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700` |
+| Título | `text-slate-900 dark:text-white` |
+| Subtítulo e texto terciário | `text-slate-500 dark:text-slate-400` |
+| Rótulo | `text-slate-700 dark:text-slate-300` |
+| Link | `text-indigo-600 dark:text-indigo-400` |
+| Divisor | `border-slate-100 dark:border-slate-700` |
+| Aviso de erro | `bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400` |
+| Bloco 2FA | `bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20`; título `text-indigo-800 dark:text-indigo-300`; apoio `text-indigo-600 dark:text-indigo-400` |
+| Trilho da força da senha | `bg-slate-200 dark:bg-slate-700` |
+| Força da senha | `text-rose-600 dark:text-rose-400`, `text-emerald-600 dark:text-emerald-400`, `text-amber-600 dark:text-amber-400` |
+| Botão de enviar | visual atual + `dark:shadow-none dark:hover:shadow-none` |
+
+O tema salvo (`localStorage.theme`) é aplicado antes da pintura por um `<script>` com texto filho (sem `dangerouslySetInnerHTML`), só na classe `dark` do `<html>`. `AuthThemeSync` tira essa classe ao desmontar, para ela não vazar na landing. A ilustração do inbox no painel indigo não muda de tema: é um cartão claro sobre `bg-indigo-600`, igual nos dois modos.
 
 ### 9.4 Zona de Perigo (DangerZone)
 
@@ -1115,6 +1160,20 @@ Inputs usam `focus:ring-2` com opacidade para não poluir visualmente:
 ```
 focus:ring-indigo-500/20 focus:border-indigo-400   // normal
 focus:ring-red-500/20 focus:border-red-400          // erro
+```
+
+**Botões só com ícone** (sem texto visível): `aria-label` em português é obrigatório e descreve a ação. Quando a ação depende do estado, o rótulo acompanha o estado (tema: "Mudar para o modo claro" / "Mudar para o modo escuro"). O ícone leva `aria-hidden="true"`. O `title` repete o mesmo texto. Anel de foco:
+
+```
+focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800
+```
+
+Enter e Espaço acionam porque o elemento é um `<button>` nativo com `type="button"`.
+
+**Checkbox:** o anel usa o token cheio no foco por teclado, não o anel translúcido do input:
+
+```
+peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-900
 ```
 
 ### 11.2 Semântica HTML
