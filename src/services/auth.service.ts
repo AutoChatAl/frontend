@@ -1,4 +1,52 @@
+import type { AuthErrorBody, AuthErrorCode } from '@/types/Auth';
 import { apiClient } from '@/utils/ApiClient';
+
+const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
+  EMAIL_ALREADY_EXISTS: 'Este e-mail já está cadastrado. Faça login ou use outro e-mail.',
+  INVALID_CREDENTIALS: 'E-mail ou senha incorretos.',
+  INVALID_2FA_CODE: 'Código de verificação inválido.',
+  NETWORK_ERROR: 'Não foi possível conectar. Verifique sua internet e tente de novo.',
+  MIXED_CONTENT_BLOCKED: 'Não foi possível conectar. Verifique sua internet e tente de novo.',
+};
+const LOGIN_ERROR_FALLBACK = 'Não foi possível fazer login. Verifique os dados e tente novamente.';
+const REGISTER_ERROR_FALLBACK = 'Não foi possível registrar. Verifique os dados e tente novamente.';
+
+function isAuthErrorCode(value: string): value is AuthErrorCode {
+  return Object.prototype.hasOwnProperty.call(AUTH_ERROR_MESSAGES, value);
+}
+
+function readAuthErrorCode(data: AuthErrorBody | undefined): AuthErrorCode | undefined {
+  const reason = data?.reason;
+  if (typeof reason !== 'string' || !isAuthErrorCode(reason)) {
+    return undefined;
+  }
+  return reason;
+}
+
+function messageForAuthFailure(statusCode: number, data: AuthErrorBody | undefined, fallback: string, treatBadRequestAsCredentials = false): string {
+  if (statusCode === 0) {
+    return AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+  }
+  const reason = readAuthErrorCode(data);
+  if (reason === 'NETWORK_ERROR' || reason === 'MIXED_CONTENT_BLOCKED') {
+    return AUTH_ERROR_MESSAGES[reason];
+  }
+  // Zod do login recusa senha com menos de 6 caracteres (400). A mensagem fica
+  // genérica de propósito: não revela a regra nem o texto cru da API.
+  if (treatBadRequestAsCredentials && statusCode === 400) {
+    return AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;
+  }
+  if (reason) {
+    return AUTH_ERROR_MESSAGES[reason];
+  }
+  if (statusCode === 409) {
+    return AUTH_ERROR_MESSAGES.EMAIL_ALREADY_EXISTS;
+  }
+  if (statusCode === 401) {
+    return AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;
+  }
+  return fallback;
+}
 
 interface RegisterData {
     email: string;
@@ -67,9 +115,9 @@ interface Setup2FAResponse {
 }
 class AuthService {
   public async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/register', data);
+    const response = await apiClient.post<AuthResponse & AuthErrorBody>('/auth/register', data);
     if (!response.success || !response.data) {
-      throw new Error('Não foi possível registrar. Verifique os dados e tente novamente.');
+      throw new Error(messageForAuthFailure(response.statusCode, response.data, REGISTER_ERROR_FALLBACK));
     }
     const authData = response.data as AuthResponse;
     if (authData.token) {
@@ -81,9 +129,9 @@ class AuthService {
     return authData;
   }
   public async login(data: LoginData): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    const response = await apiClient.post<AuthResponse & AuthErrorBody>('/auth/login', data);
     if (!response.success || !response.data) {
-      throw new Error('Não foi possível fazer login. Verifique os dados e tente novamente.');
+      throw new Error(messageForAuthFailure(response.statusCode, response.data, LOGIN_ERROR_FALLBACK, true));
     }
     const authData = response.data as AuthResponse;
     if (authData.requires2FA) {
