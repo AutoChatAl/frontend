@@ -35,8 +35,8 @@ export default function Header() {
       </div>
       {(hasWhatsAppConnected || hasInstagramConnected) && (<div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>)}
 
-      <button onClick={toggleTheme} className="text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
-        {darkMode ? <Sun size={17}/> : <Moon size={17}/>}
+      <button type="button" onClick={toggleTheme} aria-label={darkMode ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'} title={darkMode ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'} className="text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
+        {darkMode ? <Sun size={17} aria-hidden="true"/> : <Moon size={17} aria-hidden="true"/>}
       </button>
 
       <NotificationDropdown />
