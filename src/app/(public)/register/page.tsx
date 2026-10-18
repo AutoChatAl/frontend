@@ -54,6 +54,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [termsError, setTermsError] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +66,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setTermsError('');
     if (!formData.name.trim()) {
       setError('Informe seu nome completo.');
       return;
@@ -82,7 +84,7 @@ export default function RegisterPage() {
       return;
     }
     if (!acceptTerms) {
-      setError('Para criar a conta, aceite os Termos de Serviço e a Política de Privacidade.');
+      setTermsError('Para criar a conta, aceite os Termos de Serviço e a Política de Privacidade.');
       return;
     }
     setIsLoading(true);
@@ -149,7 +151,10 @@ export default function RegisterPage() {
           {showConfirm ? <EyeOff size={18}/> : <Eye size={18}/>}
         </button>}/>
 
-      <Checkbox checked={acceptTerms} onChange={setAcceptTerms} label={<span className="text-xs text-slate-500">
+      <Checkbox id="termos" checked={acceptTerms} onChange={(checked) => {
+        setAcceptTerms(checked);
+        if (checked) setTermsError('');
+      }} {...(termsError ? { error: termsError } : {})} label={<span className="text-xs text-slate-500">
               Eu concordo com os{' '}
         <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
                 Termos de Serviço
