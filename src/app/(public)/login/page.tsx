@@ -84,7 +84,11 @@ export default function LoginPage() {
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível fazer login. Verifique os dados e tente novamente.');
-      setPassword('');
+      // Na etapa 2FA o campo de senha some da tela. Limpar aqui faria o próximo
+      // envio ir com senha vazia e o 400 voltar como "e-mail ou senha incorretos".
+      if (!requires2FA) {
+        setPassword('');
+      }
     }
     finally {
       setIsLoading(false);
