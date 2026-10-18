@@ -9,13 +9,6 @@ const ACCEPTED_EXTENSIONS = ['.xlsx', '.xlsm', '.csv'];
 interface GroupImportErrorBody {
     reason?: string;
     code?: string;
-    message?: string;
-    maxContactsPerGroup?: number;
-    limit?: number;
-    details?: {
-        maxContactsPerGroup?: number;
-        limit?: number;
-    };
 }
 
 function asErrorBody(data: unknown): GroupImportErrorBody | undefined {
@@ -24,73 +17,20 @@ function asErrorBody(data: unknown): GroupImportErrorBody | undefined {
   return data as GroupImportErrorBody;
 }
 
-function readErrorParts(body: GroupImportErrorBody): { code?: string; detail?: string } {
+/** O backend pode mandar `CODIGO: detalhe`; só o código escolhe a mensagem. */
+function readErrorCode(body: GroupImportErrorBody): string | undefined {
   const raw = (body.reason ?? body.code)?.trim();
   if (!raw)
-    return {};
+    return undefined;
   const separator = raw.indexOf(':');
-  if (separator === -1)
-    return { code: raw };
-  const code = raw.slice(0, separator).trim();
-  const detail = raw.slice(separator + 1).trim();
-  return detail ? { code, detail } : { code };
-}
-
-function finiteNumber(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function limitFromText(text: string | undefined): number | null {
-  if (!text)
-    return null;
-  const match = /no máximo\s+([\d.]+)/i.exec(text);
-  const raw = match?.[1]?.replace(/\./g, '');
-  if (!raw)
-    return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function isUserFacingLimitMessage(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed.length > 400)
-    return false;
-  if (/[{}<>]|zod|expected|invalid_type|stack/i.test(trimmed))
-    return false;
-  return /\d/.test(trimmed);
-}
-
-/**
- * O limite do plano vem no texto ("O grupo aceita no máximo N contatos.")
- * ou num campo numérico do mesmo corpo. Sem o número, cai na mensagem já cadastrada.
- */
-function groupLimitMessage(body: GroupImportErrorBody, detail: string | undefined): string {
-  const candidates = [body.message, detail];
-  for (const candidate of candidates) {
-    if (candidate && isUserFacingLimitMessage(candidate))
-      return candidate.trim();
-  }
-  const limit = finiteNumber(body.maxContactsPerGroup)
-    ?? finiteNumber(body.limit)
-    ?? finiteNumber(body.details?.maxContactsPerGroup)
-    ?? finiteNumber(body.details?.limit)
-    ?? limitFromText(body.message)
-    ?? limitFromText(detail)
-    ?? limitFromText(body.reason);
-  if (limit != null)
-    return `O grupo aceita no máximo ${limit.toLocaleString('pt-BR')} contatos.`;
-  return getErrorMessage('GROUP_CONTACTS_LIMIT_EXCEEDED');
+  return separator === -1 ? raw : raw.slice(0, separator).trim();
 }
 
 function messageForGroupImportError(data: unknown): string {
   const body = asErrorBody(data);
-  if (!body)
-    return 'Não foi possível criar o grupo com a planilha. Tente novamente.';
-  const { code, detail } = readErrorParts(body);
+  const code = body ? readErrorCode(body) : undefined;
   if (!code)
     return 'Não foi possível criar o grupo com a planilha. Tente novamente.';
-  if (code === 'GROUP_CONTACTS_LIMIT_EXCEEDED')
-    return groupLimitMessage(body, detail);
   return getErrorMessage(code);
 }
 

@@ -20,7 +20,6 @@ interface ImportContactsModalProps {
 }
 interface GroupImportStats {
     membersAdded: number;
-    maxContactsPerGroup: number | null;
 }
 function readGroupImportStats(report: ContactImportReport): GroupImportStats | null {
   if (!('membersAdded' in report))
@@ -28,11 +27,7 @@ function readGroupImportStats(report: ContactImportReport): GroupImportStats | n
   const { membersAdded } = report as { membersAdded?: unknown };
   if (typeof membersAdded !== 'number' || !Number.isFinite(membersAdded))
     return null;
-  const { maxContactsPerGroup: rawLimit } = report as { maxContactsPerGroup?: unknown };
-  const maxContactsPerGroup = typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0
-    ? rawLimit
-    : null;
-  return { membersAdded, maxContactsPerGroup };
+  return { membersAdded };
 }
 const ACCEPTED_EXTENSIONS = ['.xlsx', '.xlsm', '.csv'];
 const TEMPLATE_ROWS = [
@@ -125,13 +120,10 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
         </p>
       </div>
 
-      {groupStats && (<div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-3 space-y-1">
+      {groupStats && (<div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-3">
         <p className="text-sm font-medium text-slate-800 dark:text-white">
           {groupStats.membersAdded.toLocaleString('pt-BR')} {groupStats.membersAdded === 1 ? 'contato entrou no grupo' : 'contatos entraram no grupo'}.
         </p>
-        {groupStats.maxContactsPerGroup != null && (<p className="text-xs text-slate-500 dark:text-slate-400">
-          Limite do plano: {groupStats.maxContactsPerGroup.toLocaleString('pt-BR')} contatos por grupo.
-        </p>)}
       </div>)}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

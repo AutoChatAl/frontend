@@ -1,23 +1,26 @@
 'use client';
-import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload } from 'lucide-react';
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { AlertCircle, Edit2, Loader2, MessageCircle, MoreVertical, RefreshCw, Smartphone, Trash2, Upload, Users } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef, useCallback, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import Badge from '@/components/Badge';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
+import Dropdown from '@/components/Dropdown';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
 import MetricCard, { type MetricTrend } from '@/components/MetricCard';
 import { SkeletonPage, SkeletonStats, SkeletonTable } from '@/components/Skeleton';
-import Table from '@/components/Table';
+import Table, { SelectionBox } from '@/components/Table';
 import { ToastContainer, useToast } from '@/components/Toast';
 import { authService } from '@/services/auth.service';
 import { channelsService } from '@/services/channels.service';
 import { contactService, type ContactsStats } from '@/services/contact.service';
+import { groupService } from '@/services/group.service';
 import { inboxService } from '@/services/inbox.service';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
+import type { Group } from '@/types/Group';
 import { getInitials, normalizeDisplayName } from '@/utils/displayName';
 import { subscribeToEvents } from '@/utils/SharedEventSource';
 
@@ -28,6 +31,10 @@ import ImportContactsModal from './components/ImportContactsModal';
 import SyncContactsModal from './components/SyncContactsModal';
 
 const PAGE_SIZE = 50;
+type RawGroup = Group & {
+    _id?: string;
+};
+const normalizeGroup = (g: RawGroup): Group => ({ ...g, id: g.id ?? g._id ?? '' });
 /** Preenche os últimos `n` dias (chave YYYY-MM-DD local) com os dados existentes. */
 function fillLastDays(rows: ContactsStats['daily'], n: number): ContactsGrowthPoint[] {
   const byDate = new Map(rows.map((r) => [r.date, r.count]));
@@ -121,9 +128,10 @@ function ActionsDropdown({ contact, onEdit, onDelete, onMarkAsRead }: {
     </div>, document.body)}
   </div>);
 }
-function DeleteConfirmModal({ isOpen, contactName, loading, onConfirm, onCancel }: {
+function DeleteConfirmModal({ isOpen, title, message, loading, onConfirm, onCancel }: {
     isOpen: boolean;
-    contactName: string;
+    title: string;
+    message: ReactNode;
     loading: boolean;
     onConfirm: () => void;
     onCancel: () => void;
@@ -138,10 +146,8 @@ function DeleteConfirmModal({ isOpen, contactName, loading, onConfirm, onCancel 
           <Trash2 size={24} className="text-red-500"/>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">Excluir contato</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-              Tem certeza que deseja excluir o contato <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{contactName}&quot;</span>? A conversa, as mensagens, os arquivos e o histórico dele também serão apagados. Esta ação não pode ser desfeita.
-          </p>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">{title}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
         </div>
         <div className="flex gap-3 w-full mt-2">
           <button type="button" onClick={onCancel} disabled={loading} className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors disabled:opacity-50">
@@ -178,10 +184,15 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupFilter, setGroupFilter] = useState('');
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
   const hasLoaded = useRef(false);
-  const fetchContacts = useCallback(async (search: string, skip: number, append: boolean) => {
+  const fetchContacts = useCallback(async (search: string, groupId: string, skip: number, append: boolean) => {
     try {
       if (append) {
         setLoadingMore(true);
@@ -193,6 +204,7 @@ export default function ContactsPage() {
       const trimmed = search.trim();
       const result = await contactService.listContacts({
         ...(trimmed ? { search: trimmed } : {}),
+        ...(groupId ? { groupId } : {}),
         skip,
         limit: PAGE_SIZE,
       });
@@ -218,11 +230,14 @@ export default function ContactsPage() {
   }, []);
   useEffect(() => {
     Promise.all([
-      fetchContacts('', 0, false),
+      fetchContacts('', '', 0, false),
       fetchStats(),
       channelsService.getWhatsAppInstances().catch(() => [] as WhatsAppInstance[]),
-    ]).then(([, , waChannels]) => {
+      // Sem a permissão de grupos a chamada falha: o filtro simplesmente não aparece.
+      groupService.listGroups().catch(() => [] as Group[]),
+    ]).then(([, , waChannels, groupList]) => {
       setWhatsappChannels(waChannels);
+      setGroups(groupList.map((g) => normalizeGroup(g as RawGroup)).filter((g) => g.id));
     }).finally(() => setBooting(false));
   }, []);
   /**
@@ -238,7 +253,7 @@ export default function ContactsPage() {
 
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
-      fetchContacts(query, 0, false);
+      fetchContacts(query, groupFilter, 0, false);
       fetchStats();
     };
     const scheduleRefresh = () => {
@@ -261,7 +276,7 @@ export default function ContactsPage() {
       unsubscribe();
       window.removeEventListener('focus', refresh);
     };
-  }, [fetchContacts, fetchStats, query]);
+  }, [fetchContacts, fetchStats, query, groupFilter]);
 
   const growth30 = useMemo(() => (stats ? fillLastDays(stats.daily, 30) : []), [stats]);
   const newLast30 = useMemo(() => growth30.reduce((sum, d) => sum + d.count, 0), [growth30]);
@@ -285,17 +300,62 @@ export default function ContactsPage() {
   };
   const handleSearchChange = useCallback((value: string) => {
     setQuery(value);
+    setSelectedIds(new Set());
     if (searchTimeout.current)
       clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
-      fetchContacts(value, 0, false);
+      fetchContacts(value, groupFilter, 0, false);
     }, 350);
-  }, [fetchContacts]);
+  }, [fetchContacts, groupFilter]);
+  const handleGroupFilterChange = useCallback((value: string) => {
+    setGroupFilter(value);
+    setSelectedIds(new Set());
+    fetchContacts(query, value, 0, false);
+  }, [fetchContacts, query]);
   const handleLoadMore = useCallback(() => {
     if (loadingMore || contacts.length >= total)
       return;
-    fetchContacts(query, contacts.length, true);
-  }, [loadingMore, contacts.length, total, query, fetchContacts]);
+    fetchContacts(query, groupFilter, contacts.length, true);
+  }, [loadingMore, contacts.length, total, query, groupFilter, fetchContacts]);
+  // Seleção: só conta o que está na tela — uma atualização da lista pode ter tirado linhas.
+  const visibleSelectedIds = useMemo(() => contacts.filter((c) => selectedIds.has(c.id)).map((c) => c.id), [contacts, selectedIds]);
+  const toggleSelect = useCallback((contactId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId))
+        next.delete(contactId);
+      else
+        next.add(contactId);
+      return next;
+    });
+  }, []);
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allSelected = contacts.length > 0 && contacts.every((c) => prev.has(c.id));
+      return allSelected ? new Set() : new Set(contacts.map((c) => c.id));
+    });
+  }, [contacts]);
+  const clearSelection = () => setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    const ids = visibleSelectedIds;
+    if (ids.length === 0)
+      return;
+    try {
+      setBulkDeleting(true);
+      const result = await contactService.bulkDelete(ids);
+      addToast('success', `${result.deleted} contato${result.deleted !== 1 ? 's' : ''} excluído${result.deleted !== 1 ? 's' : ''}.`);
+      setBulkConfirmOpen(false);
+      setSelectedIds(new Set());
+      await fetchContacts(query, groupFilter, 0, false);
+      fetchStats();
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao excluir os contatos selecionados.');
+    }
+    finally {
+      setBulkDeleting(false);
+    }
+  };
   const handleDeleteContact = async () => {
     if (!deletingContact)
       return;
@@ -304,7 +364,7 @@ export default function ContactsPage() {
       await contactService.deleteContact(deletingContact.id);
       addToast('success', `Contato "${deletingContact.displayName || 'Sem nome'}" excluído com sucesso.`);
       setDeletingContact(null);
-      await fetchContacts(query, 0, false);
+      await fetchContacts(query, groupFilter, 0, false);
       fetchStats();
     }
     catch (err) {
@@ -320,7 +380,7 @@ export default function ContactsPage() {
       await contactService.markHumanRead(contact.id);
       window.dispatchEvent(new Event('human-queue-decrement'));
       addToast('success', `Contato "${contact.displayName || 'Sem nome'}" marcado como lido.`);
-      await fetchContacts(query, 0, false);
+      await fetchContacts(query, groupFilter, 0, false);
       fetchStats();
     }
     catch (err) {
@@ -337,7 +397,7 @@ export default function ContactsPage() {
     return (<div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-4">
         <p className="text-sm font-medium text-red-500">{error}</p>
-        <Button onClick={() => fetchContacts('', 0, false)} size="sm">Tentar novamente</Button>
+        <Button onClick={() => fetchContacts('', '', 0, false)} size="sm">Tentar novamente</Button>
       </div>
     </div>);
   }
@@ -385,67 +445,103 @@ export default function ContactsPage() {
       </Card>
     </>)}
 
-    {contacts.length === 0 && !query ? (<EmptyState title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
+    {contacts.length === 0 && !query && !groupFilter ? (<EmptyState title="Nenhum contato ainda" description="Importe uma planilha, sincronize via WhatsApp ou Instagram, ou aguarde interações chegarem." action={{
       label: 'Importar Planilha',
       icon: <Upload size={15}/>,
       onClick: () => setIsImportModalOpen(true),
-    }}/>) : (<Table columns={columns} data={contacts} actions={{
-      searchBar: {
-        placeholder: 'Buscar por nome, telefone ou @usuário...',
-        value: query,
-        onChange: handleSearchChange,
-      },
-    }} renderActions={(row: Contact) => (<ActionsDropdown contact={row} onEdit={(c) => setEditingContact(c)} onDelete={(c) => setDeletingContact(c)} onMarkAsRead={handleMarkAsRead}/>)} getRowClassName={(row: Contact) => row.awaitingHuman
-      ? 'bg-red-50/60 dark:bg-red-900/10 border-l-2 border-red-400'
-      : ''} onLoadMore={handleLoadMore} hasMore={hasMore} loadingMore={loadingMore} renderMobileCard={(row: Contact) => {
-      const name = row.displayName || 'Sem nome';
-      const identities = row.identities ?? [];
-      const hasWA = identities.some((i) => i.type === 'WHATSAPP');
-      const hasIG = identities.some((i) => i.type === 'INSTAGRAM');
-      const identifier = identities.length > 0
-        ? (identities[0]?.phoneE164 || identities[0]?.igUsername || '—')
-        : 'Sem identificador';
-      const tags = row.tags ?? [];
-      return (<Card className={`p-4 ${row.awaitingHuman ? 'ring-1 ring-red-300 dark:ring-red-800 bg-red-50/40 dark:bg-red-900/10' : ''}`}>
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-sm shrink-0">
-            {getInitials(name)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-slate-900 dark:text-white truncate">{normalizeDisplayName(name)}</p>
-              {row.awaitingHuman && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"/>}
+    }}/>) : (<div className="space-y-3">
+      {visibleSelectedIds.length > 0 && (<div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 px-4 py-3 animate-in fade-in duration-150">
+        <p className="flex-1 text-sm text-slate-700 dark:text-slate-200">
+          <span className="font-semibold">{visibleSelectedIds.length}</span> contato{visibleSelectedIds.length !== 1 ? 's' : ''} selecionado{visibleSelectedIds.length !== 1 ? 's' : ''}
+          {visibleSelectedIds.length < contacts.length && (<span className="text-slate-500 dark:text-slate-400"> de {contacts.length} carregados</span>)}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={clearSelection}>Limpar seleção</Button>
+          <Button variant="danger" size="sm" icon={<Trash2 size={14}/>} onClick={() => setBulkConfirmOpen(true)}>Excluir selecionados</Button>
+        </div>
+      </div>)}
+      <Table columns={columns} data={contacts} actions={{
+        filters: groups.length > 0 ? (<Dropdown value={groupFilter} onChange={handleGroupFilterChange} leftIcon={<Users size={15}/>} wrapperClassName="w-56" options={[
+          { value: '', label: 'Todos os grupos' },
+          ...groups.map((g) => ({ value: g.id, label: g.name })),
+        ]}/>) : null,
+        searchBar: {
+          placeholder: 'Buscar por nome, telefone ou @usuário...',
+          value: query,
+          onChange: handleSearchChange,
+        },
+      }} selection={{
+        selectedIds,
+        onToggle: (row: Contact) => toggleSelect(row.id),
+        onToggleAll: toggleSelectAll,
+      }} renderActions={(row: Contact) => (<ActionsDropdown contact={row} onEdit={(c) => setEditingContact(c)} onDelete={(c) => setDeletingContact(c)} onMarkAsRead={handleMarkAsRead}/>)} getRowClassName={(row: Contact) => row.awaitingHuman
+        ? 'bg-red-50/60 dark:bg-red-900/10 border-l-2 border-red-400'
+        : ''} onLoadMore={handleLoadMore} hasMore={hasMore} loadingMore={loadingMore} renderMobileCard={(row: Contact) => {
+        const name = row.displayName || 'Sem nome';
+        const identities = row.identities ?? [];
+        const hasWA = identities.some((i) => i.type === 'WHATSAPP');
+        const hasIG = identities.some((i) => i.type === 'INSTAGRAM');
+        // Importado por planilha não tem identidade de canal, só o telefone do contato.
+        const identifier = identities.length > 0
+          ? (identities[0]?.phoneE164 || identities[0]?.igUsername || '—')
+          : (row.phoneE164 || 'Sem identificador');
+        const tags = row.tags ?? [];
+        const groups = row.groups ?? [];
+        const isSelected = selectedIds.has(row.id);
+        return (<Card className={`p-4 ${row.awaitingHuman ? 'ring-1 ring-red-300 dark:ring-red-800 bg-red-50/40 dark:bg-red-900/10' : isSelected ? 'ring-1 ring-indigo-300 dark:ring-indigo-700' : ''}`}>
+          <div className="flex items-start gap-3">
+            <div className="pt-2.5">
+              <SelectionBox checked={isSelected} onChange={() => toggleSelect(row.id)} label={`Selecionar ${name}`}/>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">{identifier}</p>
-            {row.awaitingHuman && (<p className="text-[11px] font-medium text-red-600 dark:text-red-400 mt-1">Aguardando atendimento</p>)}
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-semibold text-sm shrink-0">
+              {getInitials(name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-slate-900 dark:text-white truncate">{normalizeDisplayName(name)}</p>
+                {row.awaitingHuman && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"/>}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">{identifier}</p>
+              {row.awaitingHuman && (<p className="text-[11px] font-medium text-red-600 dark:text-red-400 mt-1">Aguardando atendimento</p>)}
+            </div>
+            <ActionsDropdown contact={row} onEdit={(c) => setEditingContact(c)} onDelete={(c) => setDeletingContact(c)} onMarkAsRead={handleMarkAsRead}/>
           </div>
-          <ActionsDropdown contact={row} onEdit={(c) => setEditingContact(c)} onDelete={(c) => setDeletingContact(c)} onMarkAsRead={handleMarkAsRead}/>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          {hasWA && (<div className="p-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" title="WhatsApp">
-            <MessageCircle size={14}/>
-          </div>)}
-          {hasIG && (<div className="p-1.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400" title="Instagram">
-            <Smartphone size={14}/>
-          </div>)}
-          {tags.length > 0 && tags.map((t) => (<Badge key={t.tagId} type="tag" text={t.tag.name}/>))}
-        </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {hasWA && (<div className="p-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" title="WhatsApp">
+              <MessageCircle size={14}/>
+            </div>)}
+            {hasIG && (<div className="p-1.5 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400" title="Instagram">
+              <Smartphone size={14}/>
+            </div>)}
+            {tags.length > 0 && tags.map((t) => (<Badge key={t.tagId} type="tag" text={t.tag.name}/>))}
+            {groups.map((group) => (<Badge key={group.id} type="group" text={group.name} icon={Users}/>))}
+          </div>
 
-        {row.lastInteractionAt && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+          {row.lastInteractionAt && (<p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                     Última interação: {formatRelativeDate(row.lastInteractionAt)}
-        </p>)}
-      </Card>);
-    }}/>)}
+          </p>)}
+        </Card>);
+      }}/>
+      {contacts.length === 0 && (<p className="text-center text-sm text-slate-500 dark:text-slate-400 py-6">
+        Nenhum contato encontrado com os filtros aplicados.
+      </p>)}
+    </div>)}
 
-    <EditContactModal isOpen={!!editingContact} contact={editingContact} onClose={() => setEditingContact(null)} onSuccess={() => fetchContacts(query, 0, false)}/>
+    <EditContactModal isOpen={!!editingContact} contact={editingContact} onClose={() => setEditingContact(null)} onSuccess={() => fetchContacts(query, groupFilter, 0, false)}/>
 
-    <DeleteConfirmModal isOpen={!!deletingContact} contactName={deletingContact?.displayName || 'Sem nome'} loading={deletingLoading} onConfirm={handleDeleteContact} onCancel={() => setDeletingContact(null)}/>
+    <DeleteConfirmModal isOpen={!!deletingContact} title="Excluir contato" message={<>
+      Tem certeza que deseja excluir o contato <span className="font-medium text-slate-700 dark:text-slate-300">&quot;{deletingContact?.displayName || 'Sem nome'}&quot;</span>? A conversa, as mensagens, os arquivos e o histórico dele também serão apagados. Esta ação não pode ser desfeita.
+    </>} loading={deletingLoading} onConfirm={handleDeleteContact} onCancel={() => setDeletingContact(null)}/>
 
-    <ImportContactsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(file) => contactService.importContacts(file)} onSuccess={() => { void fetchContacts(query, 0, false); fetchStats(); }}/>
+    <DeleteConfirmModal isOpen={bulkConfirmOpen} title={`Excluir ${visibleSelectedIds.length} contato${visibleSelectedIds.length !== 1 ? 's' : ''}`} message={<>
+      Tem certeza que deseja excluir <span className="font-medium text-slate-700 dark:text-slate-300">{visibleSelectedIds.length} contato{visibleSelectedIds.length !== 1 ? 's' : ''}</span>? As conversas, as mensagens, os arquivos e o histórico deles também serão apagados. Esta ação não pode ser desfeita.
+    </>} loading={bulkDeleting} onConfirm={handleBulkDelete} onCancel={() => setBulkConfirmOpen(false)}/>
+
+    <ImportContactsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(file) => contactService.importContacts(file)} onSuccess={() => { void fetchContacts(query, groupFilter, 0, false); fetchStats(); }}/>
 
     <SyncContactsModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} onSuccess={(result) => {
-      fetchContacts(query, 0, false);
+      fetchContacts(query, groupFilter, 0, false);
       fetchStats();
       addToast('success', `Você tem ${result.created} sincronizados via WhatsApp.`);
     }} whatsappChannels={whatsappChannels}/>

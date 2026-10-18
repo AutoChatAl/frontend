@@ -60,6 +60,21 @@ export interface CampaignSchedule {
     cron?: string | null;
     createdAt: string;
 }
+/** Quantos envios da execução estão em cada status. */
+export interface CampaignRunStats {
+    total: number;
+    pending: number;
+    sending: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+}
+/** Motivo de falha ou de envio ignorado, com quantos contatos caíram nele. */
+export interface CampaignRunIssue {
+    status: string;
+    error: string;
+    count: number;
+}
 export interface CampaignRun {
     id: string;
     campaignId: string;
@@ -67,6 +82,13 @@ export interface CampaignRun {
     status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
     startedAt?: string | null;
     finishedAt?: string | null;
+    /** Progresso dos envios — vem junto com a listagem de campanhas. */
+    stats?: CampaignRunStats;
+}
+/** Execução como `GET /campaigns/:id/runs` devolve: progresso e motivos agrupados. */
+export interface CampaignRunDetail extends CampaignRun {
+    stats: CampaignRunStats;
+    issues: CampaignRunIssue[];
 }
 export interface CreateCampaignInput {
     name: string;

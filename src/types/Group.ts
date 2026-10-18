@@ -48,7 +48,6 @@ export interface ImportedGroup {
 /** Relatório de `POST /contacts/import` mais os campos do grupo. */
 export interface GroupImportReport extends ContactImportReport {
     membersAdded: number;
-    maxContactsPerGroup: number;
 }
 export interface ImportGroupResult {
     group: ImportedGroup;

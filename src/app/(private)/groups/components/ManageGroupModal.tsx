@@ -1,15 +1,15 @@
 'use client';
-import { Search, UserPlus, X, MessageCircle, Smartphone, Users } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { UserPlus, X, MessageCircle, Smartphone, Users } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import Button from '@/components/Button';
 import Modal from '@/components/Modal';
-import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
-import { planLimitsService } from '@/services/plan-limits.service';
 import type { Contact } from '@/types/Contact';
 import type { Group } from '@/types/Group';
 import { getInitials } from '@/utils/displayName';
+
+import GroupContactPicker from './GroupContactPicker';
 
 type RawContact = Contact & {
     _id?: string;
@@ -26,13 +26,7 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAddContacts, setShowAddContacts] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Contact[]>([]);
-  const [searching, setSearching] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
-  const [maxContacts, setMaxContacts] = useState(250);
-  const [limitError, setLimitError] = useState('');
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const loadGroupData = useCallback(async () => {
     if (!group)
       return;
@@ -52,51 +46,9 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
     if (isOpen && group) {
       loadGroupData();
       setShowAddContacts(false);
-      setSearchQuery('');
-      setSearchResults([]);
       setSelectedContactIds([]);
-      setLimitError('');
-      planLimitsService.getLimits().then((l) => setMaxContacts(l.maxContactsPerGroup));
     }
   }, [isOpen, group, loadGroupData]);
-  const searchContacts = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const result = await contactService.listContacts({ search: query, limit: 20 });
-      setSearchResults(result.data.map(normalizeContact));
-    }
-    catch {
-      setSearchResults([]);
-    }
-    finally {
-      setSearching(false);
-    }
-  }, []);
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    if (searchTimeoutRef.current)
-      clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => searchContacts(value), 350);
-  };
-  const toggleContactSelection = (contactId: string) => {
-    setSelectedContactIds((prev) => {
-      if (prev.includes(contactId)) {
-        setLimitError('');
-        return prev.filter((id) => id !== contactId);
-      }
-      const totalAfterAdd = members.length + prev.length + 1;
-      if (totalAfterAdd > maxContacts) {
-        setLimitError(`Limite de ${maxContacts} contatos por grupo atingido.`);
-        return prev;
-      }
-      setLimitError('');
-      return [...prev, contactId];
-    });
-  };
   const handleAddSelected = async () => {
     if (!group || selectedContactIds.length === 0)
       return;
@@ -108,7 +60,6 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       await groupService.setMembers(group.id, allIds);
       setShowAddContacts(false);
       setSelectedContactIds([]);
-      setSearchQuery('');
       await loadGroupData();
       onUpdated();
     }
@@ -130,7 +81,7 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       setSaving(false);
     }
   };
-  const memberIds = new Set(members.map((m) => m.id));
+  const memberIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
   const getContactDisplay = (contact: Contact) => {
     if (contact.displayName)
       return contact.displayName;
@@ -139,6 +90,9 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       return identity.phoneE164;
     if (identity?.igUsername)
       return `@${identity.igUsername}`;
+    // Importado por planilha: sem identidade de canal, só o telefone do contato.
+    if (contact.phoneE164)
+      return contact.phoneE164;
     return 'Sem nome';
   };
   const getContactChannels = (contact: Contact) => {
@@ -154,7 +108,7 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
           <Users size={14}/>
           <span>{members.length} contatos</span>
         </div>
-        {!showAddContacts && (<Button size="sm" icon={<UserPlus size={14}/>} onClick={() => setShowAddContacts(true)}>
+        {!showAddContacts && group.type === 'MANUAL' && (<Button size="sm" icon={<UserPlus size={14}/>} onClick={() => setShowAddContacts(true)}>
               Adicionar Contatos
         </Button>)}
       </div>
@@ -162,46 +116,22 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
       {showAddContacts && (<div className="border border-indigo-200 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Adicionar contatos</h4>
-          <button onClick={() => { setShowAddContacts(false); setSelectedContactIds([]); setSearchQuery(''); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+          <button type="button" onClick={() => { setShowAddContacts(false); setSelectedContactIds([]); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="Fechar">
             <X size={16}/>
           </button>
         </div>
 
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-          <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Buscar contatos por nome ou telefone..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600" autoFocus/>
-        </div>
+        <GroupContactPicker
+          label=""
+          selectedIds={selectedContactIds}
+          onSelectedChange={setSelectedContactIds}
+          memberIds={memberIds}
+        />
 
-        {searching && (<p className="text-xs text-slate-400">Buscando...</p>)}
-
-        {searchResults.length > 0 && (<div className="max-h-48 overflow-y-auto space-y-1">
-          {searchResults.map((contact) => {
-            const alreadyMember = memberIds.has(contact.id);
-            const selected = selectedContactIds.includes(contact.id);
-            const channels = getContactChannels(contact);
-            return (<button key={contact.id} onClick={() => !alreadyMember && toggleContactSelection(contact.id)} disabled={alreadyMember} className={`w-full flex items-center gap-3 p-2 rounded-lg text-left text-sm transition-colors ${alreadyMember
-              ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800'
-              : selected
-                ? 'bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600'
-                : 'hover:bg-white dark:hover:bg-slate-700'}`}>
-              <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-300">
-                {getInitials(getContactDisplay(contact))}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-800 dark:text-white truncate">{getContactDisplay(contact)}</p>
-              </div>
-              <div className="flex gap-1">
-                {channels.whatsapp && <MessageCircle size={12} className="text-emerald-500"/>}
-                {channels.instagram && <Smartphone size={12} className="text-fuchsia-500"/>}
-              </div>
-              {alreadyMember && <span className="text-xs text-slate-400">Já membro</span>}
-            </button>);
-          })}
-        </div>)}
-
-        {limitError && (<p className="text-xs text-red-500 mt-1">{limitError}</p>)}
         {selectedContactIds.length > 0 && (<div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-600">
-          <span className="text-xs text-slate-500">{selectedContactIds.length} selecionados ({members.length + selectedContactIds.length}/{maxContacts})</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {selectedContactIds.length} selecionado{selectedContactIds.length > 1 ? 's' : ''} · o grupo fica com {(members.length + selectedContactIds.length).toLocaleString('pt-BR')} contatos
+          </span>
           <Button size="sm" onClick={handleAddSelected} disabled={saving}>
             {saving ? 'Adicionando...' : 'Adicionar Selecionados'}
           </Button>
@@ -228,6 +158,9 @@ export default function ManageGroupModal({ isOpen, onClose, group, onUpdated }: 
                 {contact.identities?.map((identity, i) => (<span key={i} className="text-xs text-slate-400">
                   {identity.phoneE164 || (identity.igUsername && `@${identity.igUsername}`) || ''}
                 </span>))}
+                {(contact.identities?.length ?? 0) === 0 && contact.phoneE164 && (<span className="text-xs text-slate-400">
+                  {contact.phoneE164}
+                </span>)}
               </div>
             </div>
             <div className="flex items-center gap-2">
