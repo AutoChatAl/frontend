@@ -30,6 +30,12 @@ class ContactService {
       queryString.append('includeUnlinked', String(params.includeUnlinked));
     if (params?.unlinkedOnly != null)
       queryString.append('unlinkedOnly', String(params.unlinkedOnly));
+    if (params?.hasPhone)
+      queryString.append('hasPhone', 'true');
+    if (params?.sortBy)
+      queryString.append('sortBy', params.sortBy);
+    if (params?.groupId)
+      queryString.append('groupId', params.groupId);
     if (params?.tagName)
       queryString.append('tagName', params.tagName);
     if (params?.tagIds)
@@ -71,6 +77,13 @@ class ContactService {
     const response = await apiClient.delete(`/contacts/${contactId}`);
     if (!response.success)
       throw new Error('Falha ao excluir contato.');
+  }
+  /** Exclui vários contatos de uma vez (mesma cascata da exclusão individual). */
+  public async bulkDelete(contactIds: string[]): Promise<{ requested: number; deleted: number }> {
+    const response = await apiClient.post<{ data: { requested: number; deleted: number } }>('/contacts/bulk-delete', { contactIds });
+    if (!response.success || !response.data)
+      throw new Error('Falha ao excluir os contatos selecionados.');
+    return response.data.data;
   }
   public async syncInstagramContacts(channelId: string): Promise<{
         ok: boolean;

@@ -4,8 +4,6 @@ export interface PlanLimits {
     maxCampaignsPerWorkspace: number;
     maxAutoRepliesPerWorkspace: number;
     maxInstancesPerChannelType: number;
-    maxContactsPerCampaign: number;
-    maxContactsPerGroup: number;
     manualDispatchCooldownHours: number;
     maxMessagesPerMonth: number;
 }
@@ -18,8 +16,6 @@ const DEFAULT_LIMITS: PlanLimits = {
   maxCampaignsPerWorkspace: 3,
   maxAutoRepliesPerWorkspace: 3,
   maxInstancesPerChannelType: 3,
-  maxContactsPerCampaign: 250,
-  maxContactsPerGroup: 250,
   manualDispatchCooldownHours: 2,
   maxMessagesPerMonth: 1000,
 };

@@ -1,7 +1,8 @@
 'use client';
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import Checkbox from '@/components/Checkbox';
 import Modal from '@/components/Modal';
 import type { ContactImportReport } from '@/types/Contact';
 
@@ -10,6 +11,23 @@ interface ImportContactsModalProps {
     onClose: () => void;
     onImport: (file: File) => Promise<ContactImportReport>;
     onSuccess: (report: ContactImportReport) => void;
+    /**
+     * Exige a caixa de consentimento marcada antes de enviar.
+     * A tela de contatos não passa esta prop: o envio continua só com o arquivo escolhido.
+     */
+    requireConsent?: boolean;
+    title?: string;
+}
+interface GroupImportStats {
+    membersAdded: number;
+}
+function readGroupImportStats(report: ContactImportReport): GroupImportStats | null {
+  if (!('membersAdded' in report))
+    return null;
+  const { membersAdded } = report as { membersAdded?: unknown };
+  if (typeof membersAdded !== 'number' || !Number.isFinite(membersAdded))
+    return null;
+  return { membersAdded };
 }
 const ACCEPTED_EXTENSIONS = ['.xlsx', '.xlsm', '.csv'];
 const TEMPLATE_ROWS = [
@@ -34,20 +52,29 @@ function downloadTemplate() {
   anchor.click();
   URL.revokeObjectURL(url);
 }
-export default function ImportContactsModal({ isOpen, onClose, onImport, onSuccess }: ImportContactsModalProps) {
+export default function ImportContactsModal({ isOpen, onClose, onImport, onSuccess, requireConsent = false, title = 'Importar contatos por planilha' }: ImportContactsModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [report, setReport] = useState<ContactImportReport | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleClose = () => {
-    if (loading)
-      return;
+  const reset = () => {
     setFile(null);
     setError('');
     setReport(null);
     setDragging(false);
+    setConsentConfirmed(false);
+  };
+  useEffect(() => {
+    if (!isOpen)
+      reset();
+  }, [isOpen]);
+  const handleClose = () => {
+    if (loading)
+      return;
+    reset();
     onClose();
   };
   const selectFile = (selected: File | null | undefined) => {
@@ -64,6 +91,10 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
   const handleSubmit = async () => {
     if (!file)
       return;
+    if (requireConsent && !consentConfirmed) {
+      setError('Marque a confirmação de consentimento para importar a planilha.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -78,7 +109,9 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
       setLoading(false);
     }
   };
-  return (<Modal isOpen={isOpen} onClose={handleClose} title="Importar contatos por planilha" size="md">
+  const groupStats = report ? readGroupImportStats(report) : null;
+  const importBlocked = !file || loading || (requireConsent && !consentConfirmed);
+  return (<Modal isOpen={isOpen} onClose={handleClose} title={title} size="md">
     {report ? (<div className="space-y-4">
       <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
         <CheckCircle2 size={22} className="text-emerald-600 dark:text-emerald-400 shrink-0"/>
@@ -86,6 +119,12 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
             Importação concluída. Sua base agora tem {report.totalAfterImport.toLocaleString('pt-BR')} contatos.
         </p>
       </div>
+
+      {groupStats && (<div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-3">
+        <p className="text-sm font-medium text-slate-800 dark:text-white">
+          {groupStats.membersAdded.toLocaleString('pt-BR')} {groupStats.membersAdded === 1 ? 'contato entrou no grupo' : 'contatos entraram no grupo'}.
+        </p>
+      </div>)}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <SummaryTile label="Criados" value={report.created}/>
@@ -129,6 +168,8 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
         <p>Eles entram <strong>como quem aceitou receber promoções</strong>, então podem receber qualquer modelo de mensagem, inclusive de marketing. Só importe quem já autorizou receber suas mensagens: o consentimento é responsabilidade sua, e denúncias derrubam a qualidade do seu número na Meta.</p>
       </div>
 
+      {requireConsent && (<Checkbox checked={consentConfirmed} onChange={setConsentConfirmed} label="Confirmo que essas pessoas autorizaram receber mensagens."/>)}
+
       <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); selectFile(e.dataTransfer.files[0]); }} onClick={() => fileInputRef.current?.click()} className={`rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${dragging ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'}`}>
         <input ref={fileInputRef} type="file" accept=".xlsx,.xlsm,.csv" className="hidden" onChange={(e) => selectFile(e.target.files?.[0])}/>
         <FileSpreadsheet size={28} className="mx-auto text-slate-300 dark:text-slate-600"/>
@@ -152,7 +193,7 @@ export default function ImportContactsModal({ isOpen, onClose, onImport, onSucce
           <button type="button" onClick={handleClose} disabled={loading} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50">
               Cancelar
           </button>
-          <button type="button" onClick={handleSubmit} disabled={!file || loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 disabled:hover:scale-100">
+          <button type="button" onClick={handleSubmit} disabled={importBlocked} className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 disabled:hover:scale-100">
             {loading ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16}/>}
             {loading ? 'Importando...' : 'Importar'}
           </button>
