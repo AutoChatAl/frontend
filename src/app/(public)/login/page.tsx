@@ -58,8 +58,8 @@ export default function LoginPage() {
                   Esqueceu a senha?
             </Link>
           </div>
-          <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="current-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
-            {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+          <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="current-password" rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 transition-colors" tabIndex={-1}>
+            {showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}
           </button>}/>
         </div>
       </>) : (<div className="space-y-4">
