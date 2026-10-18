@@ -10,6 +10,7 @@ import ImportExportMenu from '@/components/ImportExportMenu';
 import SegmentedControl from '@/components/SegmentedControl';
 import { SkeletonForm, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer } from '@/components/Toast';
+import { canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAIConfig } from '@/hooks/AIHooks';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -45,8 +46,7 @@ export default function IAPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const { hasAiPlan, loading: subLoading, status } = useSubscription();
-  const user = useAuthUser();
-  const canManageBilling = !user?.role || user.role === 'owner' || user.role === 'admin';
+  const canManageBilling = canManageWorkspace(useAuthUser());
   const schedulingQueryAllowed = !!status?.limits?.schedulingQueryEnabled;
   const schedulingBookingAllowed = !!status?.limits?.schedulingBookingEnabled;
   const [activeTab, setActiveTab] = useState('general');

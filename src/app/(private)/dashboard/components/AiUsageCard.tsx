@@ -3,7 +3,9 @@ import Link from 'next/link';
 
 import Card from '@/components/Card';
 import CardEmptyState from '@/components/CardEmptyState';
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 /**
  * Card de uso de IA do ciclo atual: mensagens de IA consumidas vs. limite do
@@ -11,6 +13,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
  */
 export default function AiUsageCard() {
   const { usage, loading, hasAiPlan } = useSubscription();
+  const canManage = canManageWorkspace(useAuthUser());
   const ai = usage?.aiMessages;
   const used = ai?.used ?? 0;
   const limit = ai?.limit ?? 0;
@@ -26,11 +29,13 @@ export default function AiUsageCard() {
     {loading && !usage ? (<div className="flex-1 flex flex-col justify-center gap-2 mt-2 animate-pulse" aria-hidden>
       <div className="h-6 w-20 rounded-md bg-slate-100 dark:bg-slate-700/60"/>
       <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700/60"/>
-    </div>) : !hasAiPlan && limit <= 0 ? (<CardEmptyState className="mt-2 min-h-0" message="Seu plano ainda não inclui IA." action={
+    </div>) : !hasAiPlan && limit <= 0 ? (<CardEmptyState className="mt-2 min-h-0" message="Seu plano ainda não inclui IA." action={canManage ? (
       <Link href="/plans" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           Conhecer planos de IA
       </Link>
-    }/>) : (<div className="flex-1 flex flex-col justify-end mt-2 min-w-0">
+    ) : (
+      <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{ACCOUNT_OWNER_PLAN_MESSAGE}</p>
+    )}/>) : (<div className="flex-1 flex flex-col justify-end mt-2 min-w-0">
       <p className="text-xl sm:text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white truncate">
         {used.toLocaleString('pt-BR')}
         <span className="text-xs font-medium text-slate-400 dark:text-slate-500">

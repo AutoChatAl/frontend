@@ -1,6 +1,8 @@
 'use client';
 import { Bell, CreditCard, Headset, Shield, User, Users, type LucideIcon } from 'lucide-react';
 
+import { canManageWorkspace } from '@/contexts/SidebarContext';
+
 interface SettingsNavItem {
     id: string;
     label: string;
@@ -20,7 +22,8 @@ const ALL_NAV_ITEMS: SettingsNavItem[] = [
 
 /** Seções liberadas para o papel, na ordem do menu. Serve também para validar o `?tab=` da URL. */
 export function resolveSettingsTabs(role: string): SettingsNavItem[] {
-  return ALL_NAV_ITEMS.filter((item) => !(item.ownerOnly && role === 'collaborator'));
+  const canManage = canManageWorkspace({ role });
+  return ALL_NAV_ITEMS.filter((item) => !item.ownerOnly || canManage);
 }
 
 interface SettingsNavProps {

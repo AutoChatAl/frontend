@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+import { ACCOUNT_OWNER_PLAN_MESSAGE } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useSupportChat } from '@/contexts/SupportChatContext';
 
@@ -70,7 +71,7 @@ export function TrialEndedScreen({ canChoosePlan = true, showSupport = true }: T
             </Button>)}
           </div>)
           : (<p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
-            Peça ao responsável pela conta para escolher um plano. Assim que ele assinar, você volta a usar o Synq normalmente.
+            {ACCOUNT_OWNER_PLAN_MESSAGE}
           </p>)}
       </div>
     </Card>

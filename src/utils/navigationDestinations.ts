@@ -359,6 +359,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     icon: Sparkles,
     section: 'Sistema',
     menuId: 'settings',
+    ownerOnly: true,
     keywords: ['plano', 'planos', 'upgrade', 'preco', 'assinar', 'trocar plano'],
   },
   {

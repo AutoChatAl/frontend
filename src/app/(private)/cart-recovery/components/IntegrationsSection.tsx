@@ -10,7 +10,9 @@ import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import EmptyState from '@/components/EmptyState';
 import IconButton from '@/components/IconButton';
 import ToggleSwitch from '@/components/ToggleSwitch';
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
 import { usePlanLimitCheck } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { cartRecoveryService } from '@/services/cart-recovery.service';
 import {
   PLATFORM_LABELS,
@@ -49,6 +51,7 @@ function hasRecentRejection(integration: CartRecoveryIntegration): boolean {
 
 export default function IntegrationsSection({ integrations, hasChannels, onReload, onToast }: Props) {
   const router = useRouter();
+  const canManage = canManageWorkspace(useAuthUser());
   const { used, limit, isAtLimit } = usePlanLimitCheck('cartRecoveryIntegrations');
   const limitLabel = limit === -1 ? 'ilimitadas' : limit;
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -139,16 +142,17 @@ export default function IntegrationsSection({ integrations, hasChannels, onReloa
           <div className="flex items-start gap-2">
             <Lock size={16} className="mt-0.5 shrink-0" />
             <p>
-              Você atingiu o limite de <strong>{limit}</strong> integraç{limit === 1 ? 'ão' : 'ões'} do seu plano. Mude de plano para ligar mais plataformas de venda.
+              Você atingiu o limite de <strong>{limit}</strong> integraç{limit === 1 ? 'ão' : 'ões'} do seu plano.{' '}
+              {canManage ? 'Mude de plano para ligar mais plataformas de venda.' : ACCOUNT_OWNER_PLAN_MESSAGE}
             </p>
           </div>
-          <button
+          {canManage && (<button
             type="button"
             onClick={() => router.push('/plans')}
             className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
           >
             Ver planos
-          </button>
+          </button>)}
         </div>
       )}
 

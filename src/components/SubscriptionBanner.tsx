@@ -1,12 +1,15 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 import Button from './Button';
 
 export default function SubscriptionBanner() {
   const { isInactive, isCanceled, isTrialing, isTrialExpired, loading } = useSubscription();
+  const canManage = canManageWorkspace(useAuthUser());
   const router = useRouter();
   const pathname = usePathname();
   if (loading || !isInactive || isTrialing || isTrialExpired)
@@ -24,8 +27,10 @@ export default function SubscriptionBanner() {
       <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
       <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{description}</p>
     </div>
-    <Button size="sm" className="shrink-0 self-start sm:self-auto" onClick={() => router.push('/plans')}>
+    {canManage ? (<Button size="sm" className="shrink-0 self-start sm:self-auto" onClick={() => router.push('/plans')}>
       Reativar assinatura
-    </Button>
+    </Button>) : (<p className="shrink-0 self-start text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:max-w-xs sm:self-auto">
+      {ACCOUNT_OWNER_PLAN_MESSAGE}
+    </p>)}
   </div>);
 }

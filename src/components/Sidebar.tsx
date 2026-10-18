@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import BrandLogo from '@/components/BrandLogo';
-import { useSidebar, MENU_GROUPS, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
+import { useSidebar, MENU_GROUPS, canManageWorkspace, type MenuItem, type MenuGroupId } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
 import { inboxService } from '@/services/inbox.service';
@@ -113,6 +114,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
   const msgLimit = usage?.messages?.limit ?? 0;
   const planUsage = msgLimit > 0 ? `${formatCount(msgUsed)} / ${formatCount(msgLimit)} mensagens` : '';
   const planProgress = msgLimit > 0 ? Math.min(100, Math.round((msgUsed / msgLimit) * 100)) : 0;
+  const canManage = canManageWorkspace(useAuthUser());
   const { activeTab, sidebarCollapsed, mobileMenuOpen, menuItems, setActiveTab, toggleSidebar, setMobileMenuOpen } = useSidebar();
   const [humanQueueCount, setHumanQueueCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
@@ -258,7 +260,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       </nav>
 
       <div className="p-2.5 border-t border-slate-100 dark:border-slate-700">
-        {!sidebarCollapsed && (<div onClick={() => router.push('/settings?tab=billing')} className="bg-slate-50 dark:bg-slate-700/40 p-2.5 rounded-md border border-slate-200 dark:border-slate-700 mb-2 cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500 transition-colors">
+        {!sidebarCollapsed && (<div onClick={canManage ? () => router.push('/settings?tab=billing') : undefined} className={`bg-slate-50 dark:bg-slate-700/40 p-2.5 rounded-md border border-slate-200 dark:border-slate-700 mb-2 transition-colors ${canManage ? 'cursor-pointer hover:border-indigo-300 dark:hover:border-slate-500' : ''}`}>
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 truncate">{isCanceled ? 'Plano cancelado' : `Plano ${planName}`}</span>
             {isTrialing && (<span className="text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">

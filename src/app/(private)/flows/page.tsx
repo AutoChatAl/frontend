@@ -10,7 +10,9 @@ import ImportExportMenu from '@/components/ImportExportMenu';
 import Modal from '@/components/Modal';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useWorkspaceChannels } from '@/hooks/WorkspaceChannelsHook';
 import { collaboratorService, type Member } from '@/services/collaborator.service';
 import { flowService } from '@/services/flow.service';
@@ -50,6 +52,7 @@ export default function FlowsPage() {
   const { channels } = useWorkspaceChannels();
   const { hasAiPlan, loading: subscriptionLoading, usage } = useSubscription();
   const router = useRouter();
+  const canManage = canManageWorkspace(useAuthUser());
   const searchParams = useSearchParams();
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [creatingFrom, setCreatingFrom] = useState<string | null>(null);
@@ -261,16 +264,19 @@ export default function FlowsPage() {
   /** Card da paleta. Um só desenho para as duas seções: o que muda é a lista, não o card. */
   const renderPaletteBlock = (block: BlockMeta) => {
     const locked = block.requiresAi === true && !hasAiPlan;
+    const canOpenPlans = locked && canManage;
     return (
       <div
         key={block.kind}
         draggable={!locked}
         onDragStart={(event) => event.dataTransfer.setData('application/synq-block', block.kind)}
-        onClick={locked ? () => router.push('/plans') : undefined}
-        title={locked ? 'Disponível com um plano de IA ativo' : undefined}
+        onClick={canOpenPlans ? () => router.push('/plans') : undefined}
+        title={locked ? (canManage ? 'Disponível com um plano de IA ativo' : 'Peça ao responsável pela conta para ativar o plano de IA.') : undefined}
         className={
           locked
-            ? 'cursor-pointer rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 transition-colors hover:border-indigo-300 hover:opacity-100 dark:border-slate-700 dark:hover:border-indigo-500/40'
+            ? canOpenPlans
+              ? 'cursor-pointer rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 transition-colors hover:border-indigo-300 hover:opacity-100 dark:border-slate-700 dark:hover:border-indigo-500/40'
+              : 'rounded-lg border border-dashed border-slate-200 p-2.5 opacity-60 dark:border-slate-700'
             : 'cursor-grab rounded-lg border border-slate-200 p-2.5 transition-colors hover:border-indigo-300 active:cursor-grabbing dark:border-slate-700 dark:hover:border-indigo-500/40'
         }
       >
@@ -280,7 +286,9 @@ export default function FlowsPage() {
           {locked && <Lock size={12} className="ml-auto shrink-0 text-slate-400 dark:text-slate-500" />}
         </div>
         <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
-          {locked ? 'Requer um plano de IA. Toque para ver os planos.' : block.hint}
+          {locked
+            ? (canManage ? 'Requer um plano de IA. Toque para ver os planos.' : 'Requer um plano de IA. Peça ao responsável pela conta para ativar.')
+            : block.hint}
         </p>
       </div>
     );

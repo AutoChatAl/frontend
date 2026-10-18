@@ -2,7 +2,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { authService } from '@/services/auth.service';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 import AccountTab from './components/AccountTab';
 import AttendanceTab from './components/AttendanceTab';
@@ -24,12 +24,7 @@ const SettingsPage = () => {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState('account');
-  const [role, setRole] = useState<string>('owner');
-  useEffect(() => {
-    const user = authService.getUser();
-    if (user?.role)
-      setRole(user.role);
-  }, []);
+  const role = useAuthUser()?.role ?? '';
   const allowedTabs = useMemo(() => resolveSettingsTabs(role).map((item) => item.id), [role]);
   // Abre uma aba direto pela URL (?tab=), usado pela busca do header.
   useEffect(() => {

@@ -11,11 +11,14 @@ import SectionHeader from '@/components/SectionHeader';
 import { SkeletonForm } from '@/components/Skeleton';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { canManageWorkspace } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { authService } from '@/services/auth.service';
 
 export default function AccountTab() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
+  const canManage = canManageWorkspace(useAuthUser());
   const [workspaceName, setWorkspaceName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
@@ -57,7 +60,7 @@ export default function AccountTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      await authService.updateAccount({ workspaceName, email });
+      await authService.updateAccount(canManage ? { workspaceName, email } : { email });
       addToast('success', 'Dados atualizados com sucesso.');
     }
     catch {
@@ -105,10 +108,14 @@ export default function AccountTab() {
       <Card className="flex flex-col p-4">
         <SectionHeader
           title="Informações da conta"
-          hint="O nome aparece para a sua equipe e o e-mail recebe cobranças e avisos do sistema."
+          hint={canManage
+            ? 'O nome aparece para a sua equipe e o e-mail recebe cobranças e avisos do sistema.'
+            : 'O e-mail recebe cobranças e avisos do sistema.'}
         />
         <div className="flex-1 space-y-4">
-          <Input label="Nome da empresa" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Minha Loja"/>
+          {canManage && (
+            <Input label="Nome da empresa" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Minha Loja"/>
+          )}
           <Input label="E-mail administrativo" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@loja.com"/>
         </div>
         <div className="mt-3 flex justify-end border-t border-slate-100 pt-3 dark:border-slate-700">
@@ -119,7 +126,7 @@ export default function AccountTab() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <DangerZone actions={[
+        {canManage && (<DangerZone actions={[
           {
             label: 'Remover dados da conta',
             description: 'Apaga histórico de mensagens, contatos, campanhas e grupos.',
@@ -133,7 +140,7 @@ export default function AccountTab() {
             destructive: true,
             onClick: () => setDeleteModalOpen(true),
           },
-        ]}/>
+        ]}/>)}
 
         {/* Botão ao lado do texto: em coluna o card ficava alto demais e a
             direita passava da altura do formulário da esquerda. */}
@@ -153,9 +160,11 @@ export default function AccountTab() {
       </div>
     </div>
 
-    <ConfirmDeleteModal isOpen={clearModalOpen} onClose={() => setClearModalOpen(false)} onConfirm={handleClearData} title="Remover dados da conta" message="Isso apagará permanentemente todos os contatos, histórico de mensagens, campanhas e grupos. Esta ação não pode ser desfeita." confirmLabel="Limpar Dados" loading={clearLoading}/>
+    {canManage && (<>
+      <ConfirmDeleteModal isOpen={clearModalOpen} onClose={() => setClearModalOpen(false)} onConfirm={handleClearData} title="Remover dados da conta" message="Isso apagará permanentemente todos os contatos, histórico de mensagens, campanhas e grupos. Esta ação não pode ser desfeita." confirmLabel="Limpar Dados" loading={clearLoading}/>
 
-    <ConfirmDeleteModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDeleteAccount} title="Excluir conta" message="Sua conta e todos os dados associados serão excluídos permanentemente. Você será deslogado imediatamente." confirmLabel="Excluir Conta" loading={deleteLoading}/>
+      <ConfirmDeleteModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDeleteAccount} title="Excluir conta" message="Sua conta e todos os dados associados serão excluídos permanentemente. Você será deslogado imediatamente." confirmLabel="Excluir Conta" loading={deleteLoading}/>
+    </>)}
 
     <ToastContainer toasts={toasts} onRemove={removeToast}/>
   </div>);

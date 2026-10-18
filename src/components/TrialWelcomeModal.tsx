@@ -3,7 +3,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 import Button from './Button';
 import Modal from './Modal';
@@ -34,6 +36,7 @@ function markSeen() {
 export default function TrialWelcomeModal() {
   const { isTrialing, trialDaysRemaining, trialEnd, loading, usage, aiPlan } = useSubscription();
   const { showWelcome, activeStep } = useOnboarding();
+  const canManage = canManageWorkspace(useAuthUser());
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -116,7 +119,7 @@ export default function TrialWelcomeModal() {
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
+        {canManage ? (<Button
           className="flex-1 justify-center"
           onClick={() => {
             setIsOpen(false);
@@ -124,7 +127,9 @@ export default function TrialWelcomeModal() {
           }}
         >
           Escolher um plano
-        </Button>
+        </Button>) : (<p className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+          {ACCOUNT_OWNER_PLAN_MESSAGE}
+        </p>)}
         <Button variant="secondary" className="flex-1 justify-center" onClick={() => setIsOpen(false)}>
           Continuar no teste
         </Button>
