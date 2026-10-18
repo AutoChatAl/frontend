@@ -136,6 +136,24 @@ export function canAccessMenuItem(
 }
 
 /**
+ * Dono e admin gerenciam o workspace: plano, cobrança, nome da empresa e a
+ * zona de perigo. Colaborador não. Sem papel confirmado também não — a tela
+ * esconde a ação até o usuário existir, em vez de piscar um botão de cobrança.
+ *
+ * Na UI, passe o retorno de `useAuthUser()`. A guarda de rota usa o usuário
+ * que o layout já carregou no `/me`, o mesmo objeto de `canAccessPathname`.
+ */
+export function canManageWorkspace(
+  user: { role?: string } | null | undefined,
+): boolean {
+  const role = user?.role;
+  return !!role && FULL_ACCESS_ROLES.includes(role);
+}
+
+/** Substitui o botão de plano quando quem está logado não gerencia a conta. */
+export const ACCOUNT_OWNER_PLAN_MESSAGE = 'Peça ao responsável pela conta para escolher um plano. Assim que ele assinar, você volta a usar o Synq normalmente.';
+
+/**
  * Primeira rota que o usuário realmente consegue abrir, na ordem da sidebar.
  * O dono cai sempre em /dashboard; um colaborador sem a permissão `dashboard`
  * cai na primeira área liberada para ele — sem isso, o login jogaria essa
@@ -173,6 +191,9 @@ export function canAccessPathname(
   pathname: string,
 ): boolean {
   const root = `/${pathname.split('/').filter(Boolean)[0] ?? ''}`;
+  // /plans e subrotas (/plans/success, /plans/cancel) não estão na sidebar.
+  // Sem este bloqueio o colaborador abre a vitrine digitando a URL.
+  if (root === '/plans' && !canManageWorkspace(user)) return false;
   const menuItem = ALL_MENU_ITEMS.find((item) => item.href === root);
   if (menuItem) return canAccessMenuItem(user, menuItem);
   const anyOf = EXTRA_ROUTE_PERMISSIONS[root];

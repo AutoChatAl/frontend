@@ -3,6 +3,8 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
 import Card from '@/components/Card';
+import { canManageWorkspace } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { EXTRA_INSTANCE_PRICE_CENTS, formatBRLFromCents } from '@/utils/billing';
 
 interface ExtraInstancesCardProps {
@@ -12,14 +14,15 @@ interface ExtraInstancesCardProps {
 
 /** Mesma anatomia dos stat cards vizinhos: título, valor ancorado embaixo, hint. */
 export default function ExtraInstancesCard({ quantity }: ExtraInstancesCardProps) {
+  const canManage = canManageWorkspace(useAuthUser());
   const monthlyCents = quantity * EXTRA_INSTANCE_PRICE_CENTS;
 
   return (<Card className="p-3 sm:p-3.5 min-w-0 h-full flex flex-col">
     <div className="flex items-start justify-between gap-2">
       <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">Conexões extras</p>
-      <Link href="/settings?tab=billing" title="Contratar conexões extras" aria-label="Contratar conexões extras" className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-colors">
+      {canManage && (<Link href="/settings?tab=billing" title="Contratar conexões extras" aria-label="Contratar conexões extras" className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-colors">
         <Plus size={13}/>
-      </Link>
+      </Link>)}
     </div>
 
     <div className="mt-auto pt-2">

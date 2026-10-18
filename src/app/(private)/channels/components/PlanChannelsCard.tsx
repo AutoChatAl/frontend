@@ -3,6 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 import Card from '@/components/Card';
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 interface PlanChannelsCardProps {
     planName: string;
@@ -22,6 +24,7 @@ const TYPE_ROWS: { key: keyof PlanChannelsCardProps['counts']; label: string; do
 ];
 
 export default function PlanChannelsCard({ planName, limit, counts }: PlanChannelsCardProps) {
+  const canManage = canManageWorkspace(useAuthUser());
   const used = counts.whatsapp + counts.official + counts.instagram;
   const available = Math.max(0, limit - used);
   const overLimit = limit > 0 && used > limit;
@@ -40,9 +43,9 @@ export default function PlanChannelsCard({ planName, limit, counts }: PlanChanne
 
     {limit === 0 ? (<div className="mt-3 flex-1 flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 px-4 text-center">
       <p className="text-[13px] font-medium text-slate-600 dark:text-slate-400">Seu plano atual não inclui canais</p>
-      <Link href="/plans" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+      {canManage ? (<Link href="/plans" className="text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           Ver planos
-      </Link>
+      </Link>) : (<p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{ACCOUNT_OWNER_PLAN_MESSAGE}</p>)}
     </div>) : (<>
       <div className="mt-3.5 flex items-baseline gap-1.5">
         <span className="text-xl sm:text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">{used}</span>
@@ -75,10 +78,10 @@ export default function PlanChannelsCard({ planName, limit, counts }: PlanChanne
       </ul>
 
       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700">
-        {available === 0 ? (<Link href="/plans" className="flex items-center justify-between gap-2 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+        {available === 0 ? (canManage ? (<Link href="/plans" className="flex items-center justify-between gap-2 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
           <span>Precisa de mais canais? Veja os planos</span>
           <ArrowRight size={12} className="shrink-0"/>
-        </Link>) : (<p className="text-[11px] text-slate-400 dark:text-slate-500">
+        </Link>) : (<p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{ACCOUNT_OWNER_PLAN_MESSAGE}</p>)) : (<p className="text-[11px] text-slate-400 dark:text-slate-500">
             Qualquer combinação de tipos cabe na cota — não há reserva por canal.
         </p>)}
       </div>

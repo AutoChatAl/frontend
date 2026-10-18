@@ -14,7 +14,7 @@ import TrialWelcomeModal from '@/components/TrialWelcomeModal';
 import { AttendantAlertsProvider } from '@/contexts/AttendantAlertsContext';
 import { ChannelStatusProvider } from '@/contexts/ChannelStatusContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
-import { SidebarProvider, canAccessPathname, resolveLandingRoute } from '@/contexts/SidebarContext';
+import { SidebarProvider, canAccessPathname, canManageWorkspace, resolveLandingRoute } from '@/contexts/SidebarContext';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 import { SupportChatProvider } from '@/contexts/SupportChatContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -111,7 +111,7 @@ export default function PrivateLayout({ children }: Readonly<{
                       <TrialBanner />
                       <SubscriptionBanner />
                       <TrialWelcomeModal />
-                      <TrialEndedGate canChoosePlan={userRole !== 'collaborator'} showSupport={!isAdmin}>
+                      <TrialEndedGate canChoosePlan={canManageWorkspace(user)} showSupport={!isAdmin}>
                         {children}
                       </TrialEndedGate>
                     </main>

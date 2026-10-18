@@ -3,7 +3,9 @@ import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 import Button from './Button';
 
@@ -92,6 +94,7 @@ function usageCopy(alert: UsageAlert): { title: string; description: string } {
 
 export default function TrialBanner() {
   const { isTrialing, trialDaysRemaining, trialEnd, usage } = useSubscription();
+  const canManage = canManageWorkspace(useAuthUser());
   const [countdownDismissed, setCountdownDismissed] = useState(() => readFlag(COUNTDOWN_DISMISSED_KEY));
   const [usageDismissed, setUsageDismissed] = useState(() => readFlag(USAGE_DISMISSED_KEY));
   const router = useRouter();
@@ -101,7 +104,8 @@ export default function TrialBanner() {
   const usageAlert = pickUsageAlert(usage?.aiMessages, usage?.messages);
 
   if (usageAlert && (!usageDismissed || usageAlert.reachedLimit)) {
-    const { title, description } = usageCopy(usageAlert);
+    const { title, description: usageDescription } = usageCopy(usageAlert);
+    const description = canManage ? usageDescription : ACCOUNT_OWNER_PLAN_MESSAGE;
     const percentage = Math.min(100, Math.round((usageAlert.used / usageAlert.limit) * 100));
     const barColor = usageAlert.reachedLimit
       ? 'bg-red-500 dark:bg-red-400'
@@ -121,10 +125,10 @@ export default function TrialBanner() {
           <div className={`h-full rounded-full ${barColor}`} style={{ width: `${percentage}%` }}/>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
-        <Button size="sm" onClick={() => router.push('/plans')}>
+      {(canManage || !usageAlert.reachedLimit) && (<div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
+        {canManage && (<Button size="sm" onClick={() => router.push('/plans')}>
           Assinar agora
-        </Button>
+        </Button>)}
         {!usageAlert.reachedLimit && (<button
           onClick={() => {
             setUsageDismissed(true);
@@ -135,7 +139,7 @@ export default function TrialBanner() {
         >
           <X size={16}/>
         </button>)}
-      </div>
+      </div>)}
     </div>);
   }
 
@@ -157,16 +161,18 @@ export default function TrialBanner() {
       <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
         Teste grátis: restam <span className={`font-semibold ${countdownColor}`}>{restante}</span>
       </p>
-      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-        {trialEnd
-          ? `Termina em ${new Date(trialEnd).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
-          : 'Assine um plano para não perder o acesso.'}
+      <p className={`text-xs text-slate-500 dark:text-slate-400 ${canManage ? 'truncate' : 'leading-relaxed'}`}>
+        {canManage
+          ? (trialEnd
+            ? `Termina em ${new Date(trialEnd).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+            : 'Assine um plano para não perder o acesso.')
+          : ACCOUNT_OWNER_PLAN_MESSAGE}
       </p>
     </div>
     <div className="flex shrink-0 items-center gap-1">
-      <Button size="sm" onClick={() => router.push('/plans')}>
+      {canManage && (<Button size="sm" onClick={() => router.push('/plans')}>
         Escolher plano
-      </Button>
+      </Button>)}
       <button
         onClick={() => {
           setCountdownDismissed(true);

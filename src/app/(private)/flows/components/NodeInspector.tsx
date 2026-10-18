@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
+import { ACCOUNT_OWNER_PLAN_MESSAGE, canManageWorkspace } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import type { Member } from '@/services/collaborator.service';
 import {
   FLOW_AI_MODES,
@@ -43,6 +45,7 @@ const CHOICE_LABEL_MAX = 20;
 const FILE_NAME_MAX = 120;
 
 export default function NodeInspector({ node, stages, members, hasAiPlan, onChange, onRemove, onClose }: NodeInspectorProps) {
+  const canManage = canManageWorkspace(useAuthUser());
   const meta = blockMeta(node.kind);
   const choices = node.choices ?? [];
   const intents = node.aiIntents ?? [];
@@ -507,12 +510,14 @@ export default function NodeInspector({ node, stages, members, hasAiPlan, onChan
             ele o fluxo não pode ser ativado, e a conversa segue para a auto-resposta ao
             chegar aqui.
           </p>
-          <Link
+          {canManage ? (<Link
             href="/plans"
             className="inline-flex cursor-pointer rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
           >
             Ver planos
-          </Link>
+          </Link>) : (<p className="text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+            {ACCOUNT_OWNER_PLAN_MESSAGE}
+          </p>)}
         </div>
       )}
 

@@ -8,6 +8,7 @@ import SectionHeader from '@/components/SectionHeader';
 import { SkeletonRows } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
 import ToggleRow from '@/components/ToggleRow';
+import { canManageWorkspace } from '@/contexts/SidebarContext';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import type { SchedulingReminderKey, SchedulingReminders, SchedulingRemindersPatch } from '@/types/Scheduling';
 import { SCHEDULING_REMINDER_OPTIONS } from '@/types/Scheduling';
@@ -34,10 +35,9 @@ const UPCOMING_ITEMS = [
   { title: 'Novidades e dicas', desc: 'Como melhorar suas conversões com IA.' },
 ];
 export default function NotificationsTab() {
-  // Os avisos do workspace (e-mail de campanha, lembrete) são decisão do dono; a
-  // rota que os salva exige esse papel. O colaborador vê só os alertas dele.
-  const user = useAuthUser();
-  const canManageWorkspace = user?.role === 'owner' || user?.role === 'admin';
+  // Os avisos do workspace (e-mail de campanha, lembrete) são de quem gerencia a
+  // conta; a rota que os salva exige esse papel. O colaborador vê só os alertas dele.
+  const managesWorkspace = canManageWorkspace(useAuthUser());
   const [notifications, setNotifications] = useState<WorkspaceNotifications>({
     emailCampaignDispatch: false,
     schedulingReminders: null,
@@ -46,7 +46,7 @@ export default function NotificationsTab() {
   const [saving, setSaving] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
   const loadNotifications = useCallback(async () => {
-    if (!canManageWorkspace) {
+    if (!managesWorkspace) {
       setLoading(false);
       return;
     }
@@ -64,7 +64,7 @@ export default function NotificationsTab() {
     finally {
       setLoading(false);
     }
-  }, [canManageWorkspace]);
+  }, [managesWorkspace]);
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
@@ -110,11 +110,11 @@ export default function NotificationsTab() {
   return (<div className="space-y-3">
     <AttendantAlertsCard onFeedback={addToast}/>
 
-    {canManageWorkspace && loading && (<Card className="p-4">
+    {managesWorkspace && loading && (<Card className="p-4">
       <div className="animate-pulse" aria-busy="true"><SkeletonRows count={3} avatar={false}/></div>
     </Card>)}
 
-    {canManageWorkspace && !loading && (<Card className="p-4">
+    {managesWorkspace && !loading && (<Card className="p-4">
       <SectionHeader
         title="Avisos automáticos"
         hint="O que o sistema envia sozinho, e para quem. Cada mudança é salva na hora."
@@ -140,7 +140,7 @@ export default function NotificationsTab() {
       </div>
     </Card>)}
 
-    {canManageWorkspace && !loading && (<Card className="p-4">
+    {managesWorkspace && !loading && (<Card className="p-4">
       <SectionHeader title="Em breve" hint="Ainda não estão ativos — nenhum e-mail destes é enviado por enquanto."/>
       <Callout tone="warning" className="mb-3">
         Estes avisos aparecem aqui como roadmap. Enquanto o controle não existir de verdade, os interruptores ficam

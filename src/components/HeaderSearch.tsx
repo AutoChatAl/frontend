@@ -3,8 +3,8 @@ import { CornerDownLeft, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
-import { useSidebar } from '@/contexts/SidebarContext';
-import { authService } from '@/services/auth.service';
+import { canManageWorkspace, useSidebar } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import {
   filterDestinations,
   NAV_DESTINATIONS,
@@ -51,7 +51,7 @@ function groupBySection(destinations: NavDestination[]): ResultGroup[] {
 export default function HeaderSearch() {
   const router = useRouter();
   const { menuItems, setActiveTab } = useSidebar();
-  const [role, setRole] = useState('owner');
+  const canManage = canManageWorkspace(useAuthUser());
   const [isMac, setIsMac] = useState(false);
   const [compact, setCompact] = useState(false);
   const [query, setQuery] = useState('');
@@ -62,10 +62,6 @@ export default function HeaderSearch() {
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const user = authService.getUser();
-    if (user?.role) {
-      setRole(user.role);
-    }
     setIsMac(/mac/i.test(navigator.userAgent));
   }, []);
 
@@ -84,9 +80,9 @@ export default function HeaderSearch() {
       if (!allowedIds.has(destination.menuId)) {
         return false;
       }
-      return !(destination.ownerOnly && role === 'collaborator');
+      return !(destination.ownerOnly && !canManage);
     });
-  }, [menuItems, role]);
+  }, [menuItems, canManage]);
 
   const trimmedQuery = query.trim();
 
