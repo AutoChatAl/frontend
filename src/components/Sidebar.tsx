@@ -285,8 +285,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
               <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{getReadableRole(userRole)}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="hover:text-rose-500 transition-colors shrink-0">
-            <LogOut size={15}/>
+          <button type="button" onClick={handleLogout} aria-label="Sair da conta" title="Sair da conta" className="hover:text-rose-500 transition-colors shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
+            <LogOut size={15} aria-hidden="true"/>
           </button>
         </div>)}
       </div>

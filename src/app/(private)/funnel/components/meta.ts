@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  FileUp,
   Flame,
   Instagram,
   MessageCircle,
@@ -76,7 +77,24 @@ export const ORIGIN_META: Record<LeadOrigin, { label: string; icon: LucideIcon }
   MANUAL: { label: 'Manual', icon: UserPlus },
   TIKTOK: { label: 'TikTok', icon: Music2 },
   TELEGRAM: { label: 'Telegram', icon: Send },
+  IMPORT: { label: 'Importação', icon: FileUp },
 };
+
+/** Quando a API manda origem nula ou um valor que o funil ainda não conhece. */
+export const UNKNOWN_ORIGIN_LABEL = 'Não informada';
+
+/**
+ * A resposta do funil não é validada na borda: `null` (default do contato) ou
+ * um código novo quebraria `ORIGIN_META[value].label` e derrubaria o painel.
+ */
+export function isKnownLeadOrigin(value: string | null | undefined): value is LeadOrigin {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ORIGIN_META, value);
+}
+
+export function leadOriginLabel(value: string | null | undefined): string {
+  if (!isKnownLeadOrigin(value)) return UNKNOWN_ORIGIN_LABEL;
+  return ORIGIN_META[value].label;
+}
 
 /**
  * Origens oferecidas no funil. O contato pode carregar outras (importação,

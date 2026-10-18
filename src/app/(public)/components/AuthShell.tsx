@@ -1,11 +1,19 @@
 import { BadgeCheck, Instagram } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
+import AuthThemeSync from './AuthThemeSync';
+
 interface AuthShellProps {
     children: ReactNode;
     title: string;
     subtitle: string;
+    themed?: boolean;
 }
+
+// Roda no HTML inicial, antes da pintura, e só mexe na classe `dark`.
+// O AuthThemeSync repete a leitura na navegação cliente e tira a classe ao sair,
+// para a landing (sem pares dark:) não herdar o tema do login.
+const AUTH_THEME_BOOT_SCRIPT = '(function(){try{var saved=localStorage.getItem("theme");var root=document.documentElement;if(saved==="dark"){root.classList.add("dark");}else{root.classList.remove("dark");}}catch(e){}})();';
 
 /* --------------------------------------------- Ilustração estática do inbox */
 
@@ -155,8 +163,16 @@ function InboxPreview() {
   );
 }
 
-export default function AuthShell({ children, title, subtitle }: AuthShellProps) {
-  return (<div className="min-h-screen bg-slate-50 flex" data-theme="light">
+export default function AuthShell({ children, title, subtitle, themed = false }: AuthShellProps) {
+  const pageClass = themed ? 'min-h-screen bg-slate-50 dark:bg-slate-900 flex' : 'min-h-screen bg-slate-50 flex';
+  const cardClass = themed
+    ? 'max-w-md w-full bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700'
+    : 'max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200';
+  const titleClass = themed ? 'text-2xl font-bold text-slate-900 dark:text-white' : 'text-2xl font-bold text-slate-900';
+  const subtitleClass = themed ? 'text-slate-500 dark:text-slate-400 mt-2 text-sm' : 'text-slate-500 mt-2 text-sm';
+  return (<div className={pageClass} {...(themed ? {} : { 'data-theme': 'light' })}>
+    {themed && <script>{AUTH_THEME_BOOT_SCRIPT}</script>}
+    {themed && <AuthThemeSync />}
     <div className="hidden w-1/2 items-center justify-center bg-indigo-600 lg:flex">
       <div className="w-full max-w-2xl px-10 text-white">
         <div className="relative">
@@ -184,10 +200,10 @@ export default function AuthShell({ children, title, subtitle }: AuthShellProps)
     </div>
 
     <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200">
+      <div className={cardClass}>
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-          <p className="text-slate-500 mt-2 text-sm">{subtitle}</p>
+          <h2 className={titleClass}>{title}</h2>
+          <p className={subtitleClass}>{subtitle}</p>
         </div>
         {children}
       </div>

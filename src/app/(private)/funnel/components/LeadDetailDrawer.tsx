@@ -7,7 +7,7 @@ import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import { funnelService } from '@/services/funnel.service';
 import { tagService } from '@/services/tag.service';
-import type { AttendanceStatus, FunnelLead, FunnelStage, LeadOrigin } from '@/types/Funnel';
+import type { AttendanceStatus, FunnelLead, FunnelStage, LeadOrigin, UpdateLeadPayload } from '@/types/Funnel';
 
 import {
   ATTENDANCE_META,
@@ -18,8 +18,10 @@ import {
   formatRelative,
   FUNNEL_ORIGIN_OPTIONS,
   getInitials,
-  ORIGIN_META,
+  isKnownLeadOrigin,
+  leadOriginLabel,
   SOURCE_CHANNEL_META,
+  UNKNOWN_ORIGIN_LABEL,
 } from './meta';
 import ScoreRing from './ScoreRing';
 import TemperatureBadge from './TemperatureBadge';
@@ -39,14 +41,16 @@ const ATTENDANCE_OPTIONS = (Object.keys(ATTENDANCE_META) as AttendanceStatus[]).
 }));
 
 /**
- * Só as origens de contato. Se o lead já veio com outra (importação, campanha),
- * ela entra na lista para o select não abrir em branco — mas não é oferecida.
+ * Só as origens de contato. Se o lead já veio com outra conhecida (importação,
+ * campanha), ela entra na lista para o select não abrir em branco — mas não é
+ * oferecida para quem não a tem. Nula ou desconhecida fica de fora: o campo
+ * mostra o rótulo neutro e não vira opção.
  */
-function originOptions(current: LeadOrigin) {
-  const values = FUNNEL_ORIGIN_OPTIONS.includes(current)
-    ? FUNNEL_ORIGIN_OPTIONS
-    : [...FUNNEL_ORIGIN_OPTIONS, current];
-  return values.map((value) => ({ value, label: ORIGIN_META[value].label }));
+function originOptions(current: LeadOrigin | null) {
+  const values = isKnownLeadOrigin(current) && !FUNNEL_ORIGIN_OPTIONS.includes(current)
+    ? [...FUNNEL_ORIGIN_OPTIONS, current]
+    : FUNNEL_ORIGIN_OPTIONS;
+  return values.map((value) => ({ value, label: leadOriginLabel(value) }));
 }
 
 function SectionTitle({ children }: { children: string }) {
@@ -73,7 +77,7 @@ export default function LeadDetailDrawer({
 }: LeadDetailDrawerProps) {
   const [stageId, setStageId] = useState('');
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>('OPEN');
-  const [origin, setOrigin] = useState<LeadOrigin>('MANUAL');
+  const [origin, setOrigin] = useState<LeadOrigin | null>(null);
   const [notes, setNotes] = useState('');
   const [scoreInput, setScoreInput] = useState('');
   const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([]);
@@ -96,7 +100,7 @@ export default function LeadDetailDrawer({
     if (!lead) return;
     setStageId(lead.funnelStageId ?? '');
     setAttendanceStatus(lead.attendanceStatus);
-    setOrigin(lead.origin);
+    setOrigin(isKnownLeadOrigin(lead.origin) ? lead.origin : null);
     setNotes(lead.notes);
     setScoreInput('');
     setSelectedTagIds(lead.tags.map((tag) => tag.id));
@@ -140,13 +144,19 @@ export default function LeadDetailDrawer({
     try {
       const trimmedScore = scoreInput.trim();
       const scoreOverride = trimmedScore === '' ? null : Math.max(0, Math.min(100, Number(trimmedScore) || 0));
-      let updated = await funnelService.updateLead(lead.id, {
+      const payload: UpdateLeadPayload = {
         attendanceStatus,
-        origin,
         notes,
         tagIds: selectedTagIds,
         scoreOverride,
-      });
+      };
+      // O Zod do funil não aceita IMPORT (nem null). Mandar a origem só quando
+      // ela mudou evita o 400 ao salvar um lead importado sem alterar o contrato.
+      const originalOrigin = isKnownLeadOrigin(lead.origin) ? lead.origin : null;
+      if (origin !== null && origin !== originalOrigin) {
+        payload.origin = origin;
+      }
+      let updated = await funnelService.updateLead(lead.id, payload);
       const fromStageId = lead.funnelStageId;
       if (stageId && stageId !== lead.funnelStageId) {
         updated = await funnelService.moveLead(lead.id, stageId, 0);
@@ -258,7 +268,8 @@ export default function LeadDetailDrawer({
               />
               <Select<LeadOrigin>
                 label="Origem"
-                value={origin}
+                placeholder={UNKNOWN_ORIGIN_LABEL}
+                value={origin ?? ''}
                 onChange={(value) => setOrigin(value)}
                 options={originOptions(lead.origin)}
               />
