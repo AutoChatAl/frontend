@@ -26,6 +26,7 @@ import type {
 // Reexportado: a versão que vivia aqui cortava emoji e letra decorativa no meio.
 export { getInitials } from '@/utils/displayName';
 import { formatPhoneNumber } from '@/utils/phone';
+import { formatRelativeTime } from '@/utils/relativeTime';
 
 export interface TemperatureMeta {
   label: string;
@@ -189,18 +190,7 @@ export function stageColorMeta(color: StageColor): StageColorMeta {
 
 export function formatRelative(iso: string | null): string {
   if (!iso) return 'Sem interação';
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return 'Agora mesmo';
-  if (diffMinutes < 60) return `há ${diffMinutes} min`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `há ${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'Ontem';
-  if (diffDays < 30) return `há ${diffDays} dias`;
-  return date.toLocaleDateString('pt-BR');
+  return formatRelativeTime(iso);
 }
 
 export function formatWaiting(iso: string | null): string | null {
