@@ -8,8 +8,10 @@ import type {
   StagePayload,
   UpdateLeadPayload,
 } from '@/types/Funnel';
+import type { Group } from '@/types/Group';
 import type { TransferExport, TransferImportResult } from '@/types/Transfer';
 import { apiClient } from '@/utils/ApiClient';
+import { getErrorFromResponse } from '@/utils/ErrorHandling';
 
 type QueryValue = string | number | undefined;
 
@@ -112,6 +114,14 @@ class FunnelService {
       throw new Error('Falha ao reordenar as etapas.');
     }
     return response.data.stages;
+  }
+
+  public async createGroupFromStage(stageId: string, name: string): Promise<Group> {
+    const response = await apiClient.post<{ group: Group }>(`/funnel/stages/${stageId}/group`, { name });
+    if (!response.success || !response.data) {
+      throw new Error(getErrorFromResponse(response));
+    }
+    return response.data.group;
   }
 
   public async exportStagesCsv(): Promise<TransferExport> {

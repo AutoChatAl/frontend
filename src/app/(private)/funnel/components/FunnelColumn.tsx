@@ -2,7 +2,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Layers, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { FunnelLead, FunnelStage, LeadTemperature } from '@/types/Funnel';
@@ -18,14 +18,19 @@ interface FunnelColumnProps {
   temperatureFilter: LeadTemperature | undefined;
   /** Falso quando é a última coluna do funil: sem ela o quadro ficaria sem entrada. */
   canDelete: boolean;
+  canCreateGroup: boolean;
   onOpenLead: (lead: FunnelLead) => void;
   onLoadMore: (stageId: string) => void;
   onRenameStage: (stage: FunnelStage) => void;
   onDeleteStage: (stage: FunnelStage) => void;
+  onCreateGroup: (stage: FunnelStage) => void;
 }
 
 /** Prefixo separa o arrasto de coluna do de lead — os dois correm no mesmo contexto. */
 export const COLUMN_DRAG_PREFIX = 'col:';
+
+const MENU_ITEM_CLASS =
+  'flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-[13px] text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50';
 
 export default function FunnelColumn({
   stage,
@@ -34,10 +39,12 @@ export default function FunnelColumn({
   loadingMore,
   temperatureFilter,
   canDelete,
+  canCreateGroup,
   onOpenLead,
   onLoadMore,
   onRenameStage,
   onDeleteStage,
+  onCreateGroup,
 }: FunnelColumnProps) {
   const color = stageColorMeta(stage.color);
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
@@ -118,11 +125,24 @@ export default function FunnelColumn({
                     setMenuOpen(false);
                     onRenameStage(stage);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-[13px] text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
+                  className={MENU_ITEM_CLASS}
                 >
                   <Pencil size={14} className="text-slate-400" />
                   Editar etapa
                 </button>
+                {canCreateGroup && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onCreateGroup(stage);
+                    }}
+                    className={MENU_ITEM_CLASS}
+                  >
+                    <Layers size={14} className="text-slate-400" />
+                    Criar grupo
+                  </button>
+                )}
                 {/* Última coluna não tem opção de excluir: fora do DOM, não só escondida. */}
                 {canDelete && (
                   <button
