@@ -13,6 +13,7 @@ import SectionHeader from '@/components/SectionHeader';
 import { SkeletonRows } from '@/components/Skeleton';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { authService, type AuthUser, type Permission } from '@/services/auth.service';
 import { collaboratorService, type Member, type Invite } from '@/services/collaborator.service';
 import { getInitials } from '@/utils/displayName';
@@ -24,6 +25,7 @@ interface PermissionOption {
     hint: string;
     /** Some da lista quando a feature está oculta na navegação. */
     hidden?: boolean;
+    testerOnly?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ const PERMISSION_OPTIONS: PermissionOption[] = [
   { value: 'groups', label: 'Grupos', hint: 'Segmentações e listas' },
   { value: 'campaigns', label: 'Campanhas', hint: 'Envios em massa e modelos de mensagem' },
   { value: 'funnel', label: 'Funil', hint: 'Quadro de estágios e leads' },
+  { value: 'journey', label: 'Jornada', hint: 'Cliques nos links, navegação no site e compras de cada contato', testerOnly: true },
   { value: 'cart-recovery', label: 'Recuperação', hint: 'Recuperação de carrinhos abandonados', hidden: HIDDEN_FEATURES.cartRecovery },
   { value: 'scheduling', label: 'Agendamentos', hint: 'Agenda, serviços e horários' },
   { value: 'auto-replies', label: 'Automações', hint: 'Respostas automáticas no Direct, no WhatsApp e nos comentários' },
@@ -47,7 +50,6 @@ const PERMISSION_OPTIONS: PermissionOption[] = [
 ];
 
 const VISIBLE_PERMISSION_OPTIONS = PERMISSION_OPTIONS.filter((opt) => !opt.hidden);
-const VISIBLE_PERMISSION_VALUES: Permission[] = VISIBLE_PERMISSION_OPTIONS.map((opt) => opt.value);
 
 /**
  * O papel do membro, não a suposição de que "tudo que não é dono é
@@ -60,8 +62,8 @@ function memberBadge(member: Member): { type: 'admin' | 'collaborator'; text: st
   return { type: 'collaborator', text: 'Colaborador' };
 }
 
-function allSelected(selected: Permission[]): boolean {
-  return VISIBLE_PERMISSION_VALUES.every((value) => selected.includes(value));
+function allSelected(selected: Permission[], visible: Permission[]): boolean {
+  return visible.every((value) => selected.includes(value));
 }
 
 /**
@@ -69,9 +71,9 @@ function allSelected(selected: Permission[]): boolean {
  * Sem isso, "Marcar todas" apagaria silenciosamente uma permissão de feature
  * escondida da navegação (hoje, Recuperação) na hora de salvar.
  */
-function toggleAll(selected: Permission[]): Permission[] {
-  const hiddenKept = selected.filter((value) => !VISIBLE_PERMISSION_VALUES.includes(value));
-  return allSelected(selected) ? hiddenKept : [...hiddenKept, ...VISIBLE_PERMISSION_VALUES];
+function toggleAll(selected: Permission[], visible: Permission[]): Permission[] {
+  const hiddenKept = selected.filter((value) => !visible.includes(value));
+  return allSelected(selected, visible) ? hiddenKept : [...hiddenKept, ...visible];
 }
 function PermissionCheckbox({ label, hint, checked, onChange }: {
     label: string;
@@ -97,6 +99,9 @@ function PermissionCheckbox({ label, hint, checked, onChange }: {
   </div>);
 }
 export default function MembersTab() {
+  const viewer = useAuthUser();
+  const permissionOptions = VISIBLE_PERMISSION_OPTIONS.filter((opt) => !opt.testerOnly || viewer?.isTester === true);
+  const permissionValues = permissionOptions.map((opt) => opt.value);
   const [_user, setUser] = useState<AuthUser | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -315,12 +320,12 @@ export default function MembersTab() {
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Permissões de acesso
             </p>
-            <button type="button" onClick={() => setInvitePermissions(toggleAll(invitePermissions))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
-              {allSelected(invitePermissions) ? 'Limpar' : 'Marcar todas'}
+            <button type="button" onClick={() => setInvitePermissions(toggleAll(invitePermissions, permissionValues))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
+              {allSelected(invitePermissions, permissionValues) ? 'Limpar' : 'Marcar todas'}
             </button>
           </div>
           <div className="space-y-2">
-            {VISIBLE_PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={invitePermissions.includes(opt.value)} onChange={() => toggleInvitePermission(opt.value)}/>))}
+            {permissionOptions.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={invitePermissions.includes(opt.value)} onChange={() => toggleInvitePermission(opt.value)}/>))}
           </div>
         </div>
 
@@ -340,12 +345,12 @@ export default function MembersTab() {
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Permissões de acesso
             </p>
-            <button type="button" onClick={() => setEditPermissions(toggleAll(editPermissions))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
-              {allSelected(editPermissions) ? 'Limpar' : 'Marcar todas'}
+            <button type="button" onClick={() => setEditPermissions(toggleAll(editPermissions, permissionValues))} className="text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400">
+              {allSelected(editPermissions, permissionValues) ? 'Limpar' : 'Marcar todas'}
             </button>
           </div>
           <div className="space-y-2">
-            {VISIBLE_PERMISSION_OPTIONS.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={editPermissions.includes(opt.value)} onChange={() => toggleEditPermission(opt.value)}/>))}
+            {permissionOptions.map((opt) => (<PermissionCheckbox key={opt.value} label={opt.label} hint={opt.hint} checked={editPermissions.includes(opt.value)} onChange={() => toggleEditPermission(opt.value)}/>))}
           </div>
         </div>
 

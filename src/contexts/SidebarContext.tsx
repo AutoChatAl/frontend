@@ -1,5 +1,5 @@
 'use client';
-import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3, Rocket } from 'lucide-react';
+import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3, Rocket, Route } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
@@ -12,11 +12,14 @@ import {
   type SetupStepId,
 } from '@/app/get-started/setupSteps';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { authService, type Permission } from '@/services/auth.service';
 import { setupOnboardingService } from '@/services/setup-onboarding.service';
 import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 
 export type MenuGroupId = 'main' | 'audience' | 'engagement' | 'automation' | 'system';
+
+type AccessUser = { role?: string; permissions?: Permission[]; isTester?: boolean } | null | undefined;
 
 export interface MenuGroup {
     id: MenuGroupId;
@@ -47,6 +50,7 @@ export interface MenuItem {
      * cada um com a sua permissão e o seu card na página.
      */
     permission?: Permission | Permission[];
+    testerOnly?: boolean;
     locked?: boolean;
     beta?: boolean;
     advanced?: boolean;
@@ -83,6 +87,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   // Templates saiu da sidebar: a listagem vive na página da API Oficial, e a
   // rota /templates segue acessível por lá (card "Templates" → Ver todos).
   { id: 'funnel', icon: KanbanSquare, text: 'Funil', href: '/funnel', permission: 'funnel', group: 'engagement' },
+  { id: 'journey', icon: Route, text: 'Jornada', href: '/journey', permission: 'journey', group: 'engagement', testerOnly: true },
   { id: 'scheduling', icon: CalendarDays, text: 'Agendamentos', href: '/scheduling', permission: 'scheduling', group: 'engagement' },
   // Automação — respostas, recuperação de vendas e IA.
   { id: 'auto-replies', icon: Reply, text: 'Automações', href: '/auto-replies', permission: 'auto-replies', group: 'automation' },
@@ -98,7 +103,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
 const HIDDEN_MENU_IDS = new Set<string>([
   ...(HIDDEN_FEATURES.cartRecovery ? ['cart-recovery'] : []),
 ]);
-const ADVANCED_MENU_IDS = new Set<string>(['flows', 'funnel']);
+const ADVANCED_MENU_IDS = new Set<string>(['flows', 'funnel', 'journey']);
 const FULL_ACCESS_ROLES = ['owner', 'admin'];
 const SETUP_MENU_ITEM: MenuItem = { id: 'get-started', icon: Rocket, text: 'Primeiros passos', href: '/get-started', group: 'main' };
 
@@ -124,9 +129,10 @@ async function hasPendingSetupStep(hasAiPlan: boolean): Promise<boolean> {
 
 /** Dono e admin passam por tudo; colaborador precisa da permissão explícita. */
 export function canAccessMenuItem(
-  user: { role?: string; permissions?: Permission[] } | null | undefined,
-  item: Pick<MenuItem, 'permission'>,
+  user: AccessUser,
+  item: Pick<MenuItem, 'permission' | 'testerOnly'>,
 ): boolean {
+  if (item.testerOnly && user?.isTester !== true) return false;
   if (!item.permission) return true;
   const role = user?.role;
   if (!role || FULL_ACCESS_ROLES.includes(role)) return true;
@@ -160,7 +166,7 @@ export const ACCOUNT_OWNER_PLAN_MESSAGE = 'Peça ao responsável pela conta para
  * pessoa numa página que só responde 403.
  */
 export function resolveLandingRoute(
-  user: { role?: string; permissions?: Permission[] } | null | undefined,
+  user: AccessUser,
 ): string {
   const firstAllowed = ALL_MENU_ITEMS.find(
     (item) => !!item.href && !item.locked && !HIDDEN_MENU_IDS.has(item.id) && canAccessMenuItem(user, item),
@@ -179,7 +185,7 @@ const EXTRA_ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 };
 
 export function hasPermission(
-  user: { role?: string; permissions?: Permission[] } | null | undefined,
+  user: AccessUser,
   permission: Permission,
 ): boolean {
   return canAccessMenuItem(user, { permission });
@@ -187,7 +193,7 @@ export function hasPermission(
 
 /** Permissão exigida pela rota informada (ex.: '/funnel/123' -> 'funnel'). */
 export function canAccessPathname(
-  user: { role?: string; permissions?: Permission[] } | null | undefined,
+  user: AccessUser,
   pathname: string,
 ): boolean {
   const root = `/${pathname.split('/').filter(Boolean)[0] ?? ''}`;
@@ -210,6 +216,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
   const setupCheckedRef = useRef(false);
   const onDashboard = pathname === '/dashboard';
   const { hasAiPlan, loading: subscriptionLoading } = useSubscription();
+  const user = useAuthUser();
   useEffect(() => {
     const currentTab = pathname.split('/')[1] || 'dashboard';
     setActiveTab(currentTab);
@@ -235,16 +242,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
   const menuItems = useMemo(() => {
     if (customMenuItems)
       return customMenuItems;
-    const user = authService.getUser();
-    const role = user?.role;
-    const permissions = user?.permissions ?? [];
-    let items: MenuItem[];
-    if (!role || FULL_ACCESS_ROLES.includes(role)) {
-      items = [...ALL_MENU_ITEMS];
-    }
-    else {
-      items = ALL_MENU_ITEMS.filter((item) => canAccessMenuItem({ role, permissions }, item));
-    }
+    const items = ALL_MENU_ITEMS.filter((item) => canAccessMenuItem(user, item));
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
@@ -254,7 +252,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
       .filter((item) => !HIDDEN_MENU_IDS.has(item.id))
       .map((item) => (setupPending && ADVANCED_MENU_IDS.has(item.id) ? { ...item, advanced: true } : item));
     return setupPending ? [SETUP_MENU_ITEM, ...visible] : visible;
-  }, [customMenuItems, showSupportTab, setupPending]);
+  }, [customMenuItems, showSupportTab, setupPending, user]);
   const toggleSidebar = () => setSidebarCollapsed((prev) => !prev);
   const toggleMobileMenu = () => setMobileMenuOpen((prev) => !prev);
   const value: SidebarContextType = {

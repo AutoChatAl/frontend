@@ -1,10 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import Modal from '@/components/Modal';
-import { planLimitsService } from '@/services/plan-limits.service';
 import type { FunnelStage } from '@/types/Funnel';
 
 const GROUP_NAME_MAX_LENGTH = 80;
@@ -17,25 +16,17 @@ interface StageGroupModalProps {
   onSubmit: (name: string) => void;
 }
 
-function resolveBlockedReason(stage: FunnelStage, filtered: boolean, maxContacts: number | null): string | null {
+function resolveBlockedReason(stage: FunnelStage, filtered: boolean): string | null {
   if (filtered) return null;
   if (stage.total === 0) return 'Esta etapa ainda não tem leads.';
-  if (maxContacts !== null && maxContacts !== -1 && stage.total > maxContacts) {
-    return `Seu plano permite até ${maxContacts.toLocaleString('pt-BR')} contatos por grupo e esta etapa tem ${stage.total.toLocaleString('pt-BR')}.`;
-  }
   return null;
 }
 
 export default function StageGroupModal({ stage, filtered, loading, onClose, onSubmit }: StageGroupModalProps) {
   const [name, setName] = useState(stage.name);
   const [error, setError] = useState('');
-  const [maxContacts, setMaxContacts] = useState<number | null>(null);
 
-  useEffect(() => {
-    planLimitsService.getLimits().then((limits) => setMaxContacts(limits.maxContactsPerGroup));
-  }, []);
-
-  const blockedReason = resolveBlockedReason(stage, filtered, maxContacts);
+  const blockedReason = resolveBlockedReason(stage, filtered);
 
   const handleSubmit = () => {
     if (blockedReason || loading) return;

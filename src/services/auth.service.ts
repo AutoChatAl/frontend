@@ -73,6 +73,7 @@ export type Permission =
     | 'inbox'
     | 'contacts'
     | 'funnel'
+    | 'journey'
     | 'groups'
     | 'campaigns'
     | 'cart-recovery'
@@ -86,6 +87,7 @@ export interface AuthUser {
     twoFactorEnabled?: boolean;
     role?: 'owner' | 'collaborator' | 'admin';
     permissions?: Permission[];
+    isTester?: boolean;
     workspace?: {
         id: string;
         name: string;
