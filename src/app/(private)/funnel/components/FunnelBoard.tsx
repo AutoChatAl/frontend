@@ -31,12 +31,14 @@ interface FunnelBoardProps {
   hasMoreByStage: Record<string, boolean>;
   loadingMoreStage: string | null;
   temperatureFilter: LeadTemperature | undefined;
+  canCreateGroup: boolean;
   onColumnsChange: (next: Record<string, FunnelLead[]>) => void;
   onPersistMove: (leadId: string, fromStageId: string, toStageId: string, index: number) => void;
   onOpenLead: (lead: FunnelLead) => void;
   onLoadMore: (stageId: string) => void;
   onRenameStage: (stage: FunnelStage) => void;
   onDeleteStage: (stage: FunnelStage) => void;
+  onCreateGroup: (stage: FunnelStage) => void;
   /** Nova ordem das colunas, da esquerda para a direita. */
   onReorderStages: (stageIds: string[]) => void;
 }
@@ -50,12 +52,14 @@ export default function FunnelBoard({
   hasMoreByStage,
   loadingMoreStage,
   temperatureFilter,
+  canCreateGroup,
   onColumnsChange,
   onPersistMove,
   onOpenLead,
   onLoadMore,
   onRenameStage,
   onDeleteStage,
+  onCreateGroup,
   onReorderStages,
 }: FunnelBoardProps) {
   const [activeLead, setActiveLead] = useState<FunnelLead | null>(null);
@@ -166,10 +170,12 @@ export default function FunnelBoard({
               loadingMore={loadingMoreStage === stage.id}
               temperatureFilter={temperatureFilter}
               canDelete={stages.length > 1}
+              canCreateGroup={canCreateGroup}
               onOpenLead={onOpenLead}
               onLoadMore={onLoadMore}
               onRenameStage={onRenameStage}
               onDeleteStage={onDeleteStage}
+              onCreateGroup={onCreateGroup}
             />
           ))}
         </SortableContext>
