@@ -7,12 +7,15 @@ import Modal from '@/components/Modal';
 import Select from '@/components/Select';
 import { SkeletonCards, SkeletonPage } from '@/components/Skeleton';
 import { ToastContainer, useToast } from '@/components/Toast';
+import { hasPermission } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { funnelService } from '@/services/funnel.service';
 import type { ChannelType, FunnelLead, FunnelStage, LeadOrigin, LeadTemperature, StageColor } from '@/types/Funnel';
 
 import FunnelBoard from './components/FunnelBoard';
 import FunnelFilters from './components/FunnelFilters';
 import LeadDetailDrawer from './components/LeadDetailDrawer';
+import StageGroupModal from './components/StageGroupModal';
 import StageModal from './components/StageModal';
 
 interface StageModalState {
@@ -45,9 +48,14 @@ export default function FunnelPage() {
   const [reassignTo, setReassignTo] = useState('');
   const [removingLead, setRemovingLead] = useState<FunnelLead | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
+  const [groupStage, setGroupStage] = useState<FunnelStage | null>(null);
+  const [groupSaving, setGroupSaving] = useState(false);
 
   const { toasts, addToast, removeToast } = useToast();
   const firstLoaded = useRef(false);
+  const user = useAuthUser();
+  const canCreateGroup = hasPermission(user, 'groups');
+  const boardFiltered = !!(debouncedSearch || channelType || origin || temperature);
 
   const loadBoard = useCallback(async () => {
     if (firstLoaded.current) setRefreshing(true);
@@ -266,6 +274,23 @@ export default function FunnelPage() {
     }
   }, [removingLead, stages, addToast]);
 
+  const handleCreateGroup = useCallback(
+    async (name: string) => {
+      if (!groupStage) return;
+      setGroupSaving(true);
+      try {
+        const group = await funnelService.createGroupFromStage(groupStage.id, name);
+        setGroupStage(null);
+        addToast('success', `Grupo "${group.name}" criado com ${group.memberCount.toLocaleString('pt-BR')} contato(s).`);
+      } catch (err) {
+        addToast('error', err instanceof Error ? err.message : 'Erro ao criar o grupo.');
+      } finally {
+        setGroupSaving(false);
+      }
+    },
+    [groupStage, addToast],
+  );
+
   if (loading) {
     return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
   }
@@ -322,12 +347,14 @@ export default function FunnelPage() {
         hasMoreByStage={hasMoreByStage}
         loadingMoreStage={loadingMoreStage}
         temperatureFilter={temperature}
+        canCreateGroup={canCreateGroup}
         onColumnsChange={setColumns}
         onPersistMove={handlePersistMove}
         onOpenLead={setDrawerLead}
         onLoadMore={handleLoadMore}
         onRenameStage={(stage) => setStageModal({ open: true, mode: 'edit', stage })}
         onDeleteStage={openDeleteStage}
+        onCreateGroup={setGroupStage}
         onReorderStages={handleReorderStages}
       />
 
@@ -414,6 +441,16 @@ export default function FunnelPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {groupStage && (
+        <StageGroupModal
+          stage={groupStage}
+          filtered={boardFiltered}
+          loading={groupSaving}
+          onClose={() => (groupSaving ? undefined : setGroupStage(null))}
+          onSubmit={handleCreateGroup}
+        />
       )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
