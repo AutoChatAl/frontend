@@ -1,5 +1,5 @@
 'use client';
-import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3, Rocket, Route } from 'lucide-react';
+import { Users, Workflow, KanbanSquare, Settings, LayoutDashboard, Layers, Share2, Send, Bot, Reply, CalendarDays, LifeBuoy, MessagesSquare, ShoppingCart, BadgeCheck, TicketPercent, BarChart3, Rocket, Route, Gift, HandCoins } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
@@ -51,6 +51,8 @@ export interface MenuItem {
      */
     permission?: Permission | Permission[];
     testerOnly?: boolean;
+    /** Só dono e admin: o item fala de cobrança do workspace (ex.: Indique e ganhe). */
+    ownerOnly?: boolean;
     locked?: boolean;
     beta?: boolean;
     advanced?: boolean;
@@ -95,6 +97,7 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   { id: 'cart-recovery', icon: ShoppingCart, text: 'Recuperação', href: '/cart-recovery', permission: 'cart-recovery', group: 'automation' },
   { id: 'ia', icon: Bot, text: 'Inteligência Artificial', href: '/ia', permission: 'ia', group: 'automation' },
   // Sistema.
+  { id: 'referrals', icon: Gift, text: 'Indique e ganhe', href: '/referrals', group: 'system', ownerOnly: true },
   { id: 'settings', icon: Settings, text: 'Configurações', href: '/settings', group: 'system' },
 ];
 // IDs ocultados da navegacao (ver HIDDEN_FEATURES em @lib/featureFlags).
@@ -130,9 +133,10 @@ async function hasPendingSetupStep(hasAiPlan: boolean): Promise<boolean> {
 /** Dono e admin passam por tudo; colaborador precisa da permissão explícita. */
 export function canAccessMenuItem(
   user: AccessUser,
-  item: Pick<MenuItem, 'permission' | 'testerOnly'>,
+  item: Pick<MenuItem, 'permission' | 'testerOnly' | 'ownerOnly'>,
 ): boolean {
   if (item.testerOnly && user?.isTester !== true) return false;
+  if (item.ownerOnly && !canManageWorkspace(user)) return false;
   if (!item.permission) return true;
   const role = user?.role;
   if (!role || FULL_ACCESS_ROLES.includes(role)) return true;
@@ -246,6 +250,7 @@ export function SidebarProvider({ children, defaultActiveTab = 'dashboard', menu
     if (showSupportTab) {
       items.push({ id: 'suporte', icon: LifeBuoy, text: 'Suporte', href: '/suporte', group: 'system' });
       items.push({ id: 'cupons', icon: TicketPercent, text: 'Cupons', href: '/cupons', group: 'system' });
+      items.push({ id: 'referrals-admin', icon: HandCoins, text: 'Indicações (admin)', href: '/referrals-admin', group: 'system' });
       items.push({ id: 'gastos-ia', icon: BarChart3, text: 'Gastos IA', href: '/gastos-ia', group: 'system' });
     }
     const visible = items

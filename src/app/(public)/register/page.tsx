@@ -2,14 +2,16 @@
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Checkbox from '@/components/Checkbox';
 import Input from '@/components/Input';
 import { authService } from '@/services/auth.service';
 import { extractPhoneDigits, formatPhoneNumber } from '@/utils/phone';
+import { clearReferralCookie, normalizeReferralCode, readReferralCookie } from '@/utils/referralCode';
 
 import AuthShell from '../components/AuthShell';
+import ReferralCodeField, { useReferralCodeCheck } from '../components/ReferralCodeField';
 
 const MIN_PASSWORD_LENGTH = 8;
 const STRENGTH_SEGMENTS = 4;
@@ -75,6 +77,28 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({});
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Código do link de convite (`/r/CODIGO`, `?ref=`) ou digitado. Lido no efeito, e não com
+  // useSearchParams, para a página não precisar de Suspense.
+  const [referralCode, setReferralCode] = useState('');
+  const [referralFromLink, setReferralFromLink] = useState(false);
+  const [referralError, setReferralError] = useState<string | undefined>(undefined);
+  const referralCheck = useReferralCodeCheck(referralCode);
+  useEffect(() => {
+    const fromQuery = new URLSearchParams(window.location.search).get('ref');
+    const code = fromQuery ? normalizeReferralCode(fromQuery) : readReferralCookie();
+    if (code) {
+      setReferralCode(code);
+      setReferralFromLink(true);
+    }
+  }, []);
+  useEffect(() => {
+    // Link antigo com código que não existe mais: some sem alarde, o cadastro segue normal.
+    if (referralFromLink && referralCheck.status === 'invalid') {
+      setReferralCode('');
+      setReferralFromLink(false);
+      clearReferralCookie();
+    }
+  }, [referralFromLink, referralCheck.status]);
   const clearFieldError = (field: RegisterField) => {
     setFieldErrors((current) => {
       if (!current[field]) {
@@ -137,6 +161,11 @@ export default function RegisterPage() {
       document.getElementById(REGISTER_FIELD_ID[firstInvalid])?.focus();
       return;
     }
+    if (referralCode && referralCheck.status === 'invalid') {
+      setReferralError('Não encontramos este código. Confira ou deixe o campo vazio.');
+      document.getElementById('codigo-indicacao')?.focus();
+      return;
+    }
     setIsLoading(true);
     try {
       await authService.register({
@@ -145,7 +174,9 @@ export default function RegisterPage() {
         email: formData.email.trim(),
         phone: formData.phone,
         password: formData.password,
+        ...(referralCode ? { referralCode, referralSource: referralFromLink ? 'link' as const : 'register_form' as const } : {}),
       });
+      clearReferralCookie();
       router.push('/get-started');
     }
     catch (err) {
@@ -210,6 +241,19 @@ export default function RegisterPage() {
         rightElement={<button type="button" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" tabIndex={-1}>
           {showConfirm ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}
         </button>}/>
+
+      <ReferralCodeField
+        code={referralCode}
+        onChange={(code) => {
+          setReferralCode(code);
+          setReferralFromLink(false);
+          setReferralError(undefined);
+        }}
+        status={referralCheck.status}
+        info={referralCheck.info}
+        fromLink={referralFromLink}
+        error={referralError}
+      />
 
       <Checkbox id="termos" checked={acceptTerms} onChange={(checked) => {
         setAcceptTerms(checked);

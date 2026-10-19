@@ -12,11 +12,15 @@ import PlanCheckoutModal from '@/components/PlanCheckoutModal';
 import SectionHeader from '@/components/SectionHeader';
 import { useToast, ToastContainer } from '@/components/Toast';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { referralService } from '@/services/referral.service';
 import { subscriptionService } from '@/services/subscription.service';
+import type { ReferralDashboard } from '@/types/Referral';
 import type { BillingCycle, Plan, AiPlan, Invoice, UpcomingInvoice } from '@/types/Subscription';
 import { EXTRA_COLLABORATOR_PRICE_CENTS, EXTRA_INSTANCE_PRICE_CENTS, formatBRLFromCents } from '@/utils/billing';
 import { BILLING_CYCLES, DEFAULT_BILLING_CYCLE, cycleChargeSummary, planCycleTotalCents, planMonthlyEquivalentCents } from '@lib/billingCycles';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
+
+import ReferralBillingCard from './ReferralBillingCard';
 
 function formatBRL(cents: number) {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
@@ -37,6 +41,7 @@ export default function BillingTab() {
   const [aiPlans, setAiPlans] = useState<AiPlan[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [upcomingInvoice, setUpcomingInvoice] = useState<UpcomingInvoice | null>(null);
+  const [referral, setReferral] = useState<ReferralDashboard | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
@@ -87,7 +92,13 @@ export default function BillingTab() {
     Promise.all([subscriptionService.getPlans(), subscriptionService.getAiPlans()])
       .then(([p, a]) => { setPlans(p); setAiPlans(a); })
       .catch(() => { });
+    // Indicação é complemento do faturamento: sem ela a aba funciona igual.
+    referralService.getDashboard().then(setReferral).catch(() => { });
   }, [reloadBilling]);
+  // A prévia do Stripe não inclui o crédito de indicação (ele entra só no rascunho da renovação).
+  const referralEstimate = referral?.nextInvoice?.appliesTo === 'renewal' && referral.nextInvoice.estimatedCents > 0
+    ? referral.nextInvoice.estimatedCents
+    : 0;
   useEffect(() => {
     if (showManageModal) {
       refresh();
@@ -429,6 +440,8 @@ export default function BillingTab() {
       </div>
     </Card>)}
 
+    {referral && <ReferralBillingCard dashboard={referral}/>}
+
     <Card className="p-4">
       <SectionHeader title="Faturas" hint="Cobranças do plano, dos extras e da IA."/>
       <div className="space-y-2">
@@ -444,9 +457,14 @@ export default function BillingTab() {
               </p>
             </div>
           </div>
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 ml-11 sm:ml-0">
-            {formatBRL(upcomingInvoice.amountCents)}
-          </span>
+          <div className="ml-11 sm:ml-0 sm:text-right">
+            <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+              {formatBRL(Math.max(0, upcomingInvoice.amountCents - referralEstimate))}
+            </span>
+            {referralEstimate > 0 && (<p className="text-xs text-emerald-700 dark:text-emerald-300">
+                inclui − {formatBRL(referralEstimate)} de indicação (estimado)
+            </p>)}
+          </div>
         </div>)}
         {invoices.length === 0 && !upcomingInvoice ? (<p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">Nenhuma fatura encontrada</p>) : (invoices.map((inv) => (<div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
           <div className="flex items-center gap-3">

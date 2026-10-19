@@ -1,5 +1,5 @@
 import { authService } from '@/services/auth.service';
-import type { InboxAgent, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings, UpdateInboxSettingsPayload } from '@/types/Inbox';
+import type { InboxAgent, InboxChannelOption, InboxConversation, InboxListFilters, InboxMessage, InboxOutgoingMedia, InboxSettings, UpdateInboxSettingsPayload } from '@/types/Inbox';
 import { apiClient } from '@/utils/ApiClient';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -32,6 +32,7 @@ class InboxService {
   public async listConversations(filters: InboxListFilters = {}): Promise<{ conversations: InboxConversation[]; archivedCount: number }> {
     const query = new URLSearchParams();
     if (filters.channelType) query.set('channelType', filters.channelType);
+    if (filters.channelId) query.set('channelId', filters.channelId);
     if (filters.search?.trim()) query.set('search', filters.search.trim());
     if (filters.archived) query.set('archived', 'true');
     const suffix = query.toString() ? `?${query.toString()}` : '';
@@ -43,6 +44,13 @@ class InboxService {
       conversations: response.data.conversations,
       archivedCount: response.data.archivedCount ?? 0,
     };
+  }
+
+  /** Canais do workspace para o filtro da lista. Sem eles o filtro só não aparece. */
+  public async listChannels(): Promise<InboxChannelOption[]> {
+    const response = await apiClient.get<{ channels: InboxChannelOption[] }>('/inbox/channels');
+    if (!response.success || !response.data) return [];
+    return response.data.channels;
   }
 
   /**

@@ -1,3 +1,4 @@
+import type { CheckoutPreview } from '@/types/Referral';
 import type { AiPlan, BillingCycle, EffectiveLimits, Invoice, Plan, SubscriptionStatus_Full, UpcomingInvoice, UsageSummary } from '@/types/Subscription';
 import { apiClient } from '@/utils/ApiClient';
 import { extractSubscriptionError } from '@/utils/ErrorHandling';
@@ -201,6 +202,8 @@ class SubscriptionService {
         requiresAction?: boolean;
         clientSecret?: string;
         error?: string;
+        /** Código do erro da API — o checkout trata `REFERRAL_NOT_ELIGIBLE` à parte. */
+        reason?: string;
     } | null> {
     try {
       const res = await apiClient.post<{
@@ -214,10 +217,23 @@ class SubscriptionService {
                     requiresAction?: boolean;
                     clientSecret?: string;
                 };
-      return { success: false, error: extractSubscriptionError(res) };
+      const reason = (res.data as { reason?: string } | undefined)?.reason;
+      return { success: false, error: extractSubscriptionError(res), ...(reason ? { reason } : {}) };
     }
     catch { }
     return null;
+  }
+  /** Resumo do checkout com a mesma conta da cobrança: plano, cupom e desconto de indicação. */
+  public async previewCheckout(planSlug: string, billingCycle: BillingCycle, couponCode?: string): Promise<CheckoutPreview> {
+    const res = await apiClient.post<{ preview: CheckoutPreview }>('/subscription/checkout-preview', {
+      planSlug,
+      billingCycle,
+      ...(couponCode ? { couponCode } : {}),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(extractSubscriptionError(res) || 'Não foi possível calcular o valor.');
+    }
+    return (res.data as { preview: CheckoutPreview }).preview;
   }
   public async createSetupIntent(): Promise<string | null> {
     try {

@@ -21,6 +21,7 @@ import { normalizeDisplayName } from '@/utils/displayName';
 import { mediaTypeFromMime, validateInboxMedia } from '@/utils/inboxMedia';
 
 import AlertsQuickMenu from './components/AlertsQuickMenu';
+import ChannelFilterMenu from './components/ChannelFilterMenu';
 import {
   Avatar,
   bodyForBubble,
@@ -455,6 +456,8 @@ export default function InboxPage() {
     contactTyping,
     error,
     channelFilter,
+    channelIdFilter,
+    channelOptions,
     viewingArchived,
     setViewingArchived,
     archivedCount,
@@ -463,6 +466,7 @@ export default function InboxPage() {
     agents,
     assigning,
     setChannelFilter,
+    setChannelIdFilter,
     setSearch,
     selectConversation,
     sendMessage,
@@ -572,10 +576,11 @@ export default function InboxPage() {
       setMobilePane('thread');
       return;
     }
-    const filtered = channelFilter !== 'ALL' || viewingArchived || search.trim() !== '';
+    const filtered = channelFilter !== 'ALL' || channelIdFilter !== null || viewingArchived || search.trim() !== '';
     if (filtered && resetAtCycleRef.current === null) {
       resetAtCycleRef.current = loadCycleRef.current;
       setChannelFilter('ALL');
+      setChannelIdFilter(null);
       setViewingArchived(false);
       setSearch('');
       return;
@@ -589,11 +594,13 @@ export default function InboxPage() {
     conversations,
     loadingConversations,
     channelFilter,
+    channelIdFilter,
     viewingArchived,
     search,
     selectConversation,
     consumePendingConversation,
     setChannelFilter,
+    setChannelIdFilter,
     setViewingArchived,
     setSearch,
   ]);
@@ -885,6 +892,19 @@ export default function InboxPage() {
     { id: 'WHATSAPP_OFFICIAL', label: 'Oficial' },
     { id: 'INSTAGRAM', label: 'Instagram' },
   ];
+  // O seletor de número/conta mostra só os canais do tipo marcado nos botões. Com um canal
+  // só nesse recorte não há o que escolher; com um filtro ativo, fica visível para desfazer.
+  const typeChannelOptions = channelFilter === 'ALL'
+    ? channelOptions
+    : channelOptions.filter((option) => option.type === channelFilter);
+  const showChannelFilter = !viewingArchived && (typeChannelOptions.length > 1 || channelIdFilter !== null);
+  const changeTypeFilter = (type: InboxFilterId) => {
+    setSwipedRowId(null);
+    setChannelFilter(type);
+    // Canal escolhido de outro tipo não cabe no novo recorte: a lista ficaria vazia.
+    const selected = channelOptions.find((option) => option.id === channelIdFilter);
+    if (type !== 'ALL' && selected && selected.type !== type) setChannelIdFilter(null);
+  };
 
   const openArchived = (open: boolean) => {
     setSwipedRowId(null);
@@ -927,14 +947,26 @@ export default function InboxPage() {
               </span>
             </div>
 
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar conversa..."
-                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 pl-9 pr-3 text-[13px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar conversa..."
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 pl-9 pr-3 text-[13px] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors"
+                />
+              </div>
+              {showChannelFilter && (
+                <ChannelFilterMenu
+                  value={channelIdFilter}
+                  options={typeChannelOptions}
+                  onChange={(channelId) => {
+                    setSwipedRowId(null);
+                    setChannelIdFilter(channelId);
+                  }}
+                />
+              )}
             </div>
 
             {/* Dentro do arquivo o recorte por canal não vale: ele mostra tudo que foi arquivado. */}
@@ -943,10 +975,7 @@ export default function InboxPage() {
                 {filters.map((f) => (
                   <button
                     key={f.id}
-                    onClick={() => {
-                      setSwipedRowId(null);
-                      setChannelFilter(f.id);
-                    }}
+                    onClick={() => changeTypeFilter(f.id)}
                     className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${channelFilter === f.id ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs dark:shadow-none' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
                   >
                     {f.label}

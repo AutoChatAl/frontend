@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { inboxService } from '@/services/inbox.service';
-import type { InboxAgent, InboxConversation, InboxFilterId, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
+import type { InboxAgent, InboxChannelOption, InboxConversation, InboxFilterId, InboxListFilters, InboxMessage, InboxOutgoingMedia, MessageDeliveryStatus } from '@/types/Inbox';
 import { subscribeToEvents } from '@/utils/SharedEventSource';
 
 const STATUS_RANK: Record<MessageDeliveryStatus, number> = { SENT: 1, DELIVERED: 2, READ: 3 };
@@ -44,6 +44,10 @@ interface UseInboxReturn {
   contactTyping: boolean;
   error: string | null;
   channelFilter: InboxFilterId;
+  /** Número/conta específico, dentro do tipo escolhido em `channelFilter`. */
+  channelIdFilter: string | null;
+  /** Canais do workspace para o seletor (vazio até carregar ou se a busca falhar). */
+  channelOptions: InboxChannelOption[];
   /** Lista mostrando o arquivo em vez da caixa principal. */
   viewingArchived: boolean;
   setViewingArchived: (value: boolean) => void;
@@ -53,6 +57,7 @@ interface UseInboxReturn {
   agents: InboxAgent[];
   assigning: boolean;
   setChannelFilter: (value: InboxFilterId) => void;
+  setChannelIdFilter: (value: string | null) => void;
   setSearch: (value: string) => void;
   selectConversation: (conversationId: string) => void;
   sendMessage: (body: string, media?: InboxOutgoingMedia, replyTo?: InboxMessage | null) => Promise<void>;
@@ -81,6 +86,8 @@ export function useInbox(): UseInboxReturn {
   const [transcribingId, setTranscribingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [channelFilter, setChannelFilter] = useState<InboxFilterId>('ALL');
+  const [channelIdFilter, setChannelIdFilter] = useState<string | null>(null);
+  const [channelOptions, setChannelOptions] = useState<InboxChannelOption[]>([]);
   const [search, setSearch] = useState('');
   const [viewingArchived, setViewingArchived] = useState(false);
   const [archivedCount, setArchivedCount] = useState(0);
@@ -129,7 +136,10 @@ export function useInbox(): UseInboxReturn {
       const filters: InboxListFilters = {};
       // O arquivo é uma vista à parte: mostra tudo que foi arquivado, sem recorte por canal.
       if (viewingArchived) filters.archived = true;
-      else if (channelFilter !== 'ALL') filters.channelType = channelFilter;
+      else {
+        if (channelFilter !== 'ALL') filters.channelType = channelFilter;
+        if (channelIdFilter) filters.channelId = channelIdFilter;
+      }
       if (search.trim()) filters.search = search.trim();
       const { conversations: data, archivedCount: count } = await inboxService.listConversations(filters);
       setConversations(data);
@@ -139,7 +149,11 @@ export function useInbox(): UseInboxReturn {
     } finally {
       setLoadingConversations(false);
     }
-  }, [channelFilter, search, viewingArchived]);
+  }, [channelFilter, channelIdFilter, search, viewingArchived]);
+
+  useEffect(() => {
+    inboxService.listChannels().then(setChannelOptions).catch(() => {});
+  }, []);
 
   const markConversationReadRef = useRef(markConversationRead);
   markConversationReadRef.current = markConversationRead;
@@ -617,6 +631,8 @@ export function useInbox(): UseInboxReturn {
     contactTyping,
     error,
     channelFilter,
+    channelIdFilter,
+    channelOptions,
     viewingArchived,
     setViewingArchived,
     archivedCount,
@@ -625,6 +641,7 @@ export function useInbox(): UseInboxReturn {
     agents,
     assigning,
     setChannelFilter,
+    setChannelIdFilter,
     setSearch,
     selectConversation,
     sendMessage,

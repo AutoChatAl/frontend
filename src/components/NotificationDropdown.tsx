@@ -12,11 +12,18 @@ function getTypeLabel(type?: NotificationType): string {
     return 'Manutenção';
   if (type === 'bugfix')
     return 'Correção de bug';
+  if (type === 'alert')
+    return 'Aviso';
+  if (type === 'referral')
+    return 'Indicação';
   return 'Feature';
 }
 function getTypeClassName(type?: NotificationType): string {
-  if (type === 'maintenance') {
+  if (type === 'maintenance' || type === 'alert') {
     return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+  }
+  if (type === 'referral') {
+    return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300';
   }
   if (type === 'bugfix') {
     return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';

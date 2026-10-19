@@ -16,6 +16,7 @@ import HeroSection from './components/HeroSection';
 import HowItWorks from './components/HowItWorks';
 import InboxSection from './components/InboxSection';
 import PricingSection from './components/PricingSection';
+import ReferralRibbon from './components/ReferralRibbon';
 import SchedulingSection from './components/SchedulingSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
@@ -55,6 +56,7 @@ export default function Home() {
         </div>
       </div>
       <WhatsAppFloatingButton />
+      <ReferralRibbon />
     </div>
   );
 }

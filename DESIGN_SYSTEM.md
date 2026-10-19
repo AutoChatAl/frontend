@@ -241,7 +241,7 @@ Ambas são carregadas via `next/font/google` com subset `latin`.
 ```
 Label de seção:   text-xs uppercase tracking-wider font-semibold text-indigo-600 dark:text-indigo-400
 Título de página: text-xl sm:text-2xl font-bold text-slate-900 dark:text-white
-Título de card:   text-base font-semibold text-slate-900 dark:text-white
+Título de card:   text-sm font-semibold text-slate-900 dark:text-white   (descrição do card: text-xs text-slate-500, ver SectionHeader)
 Subtítulo:        text-sm font-medium text-slate-700 dark:text-slate-200
 Corpo:            text-sm text-slate-600 dark:text-slate-400
 Meta/hint:        text-xs text-slate-500 dark:text-slate-400
@@ -284,7 +284,7 @@ Baseado na escala padrão do Tailwind (1 unidade = 0.25rem = 4px).
 
 | Componente | Padding |
 |---|---|
-| Card | `p-4 sm:p-6` |
+| Card | `p-4 sm:p-5` (nunca `p-6`/`p-8` em card de tela do app) |
 | Modal (header/body) | `p-6` |
 | Input | `py-2.5 px-4` |
 | Botão SM | `px-3 py-1.5` |
@@ -300,16 +300,16 @@ Baseado na escala padrão do Tailwind (1 unidade = 0.25rem = 4px).
 |---|---|
 | Entre elementos inline | `gap-1`, `gap-2` |
 | Entre campos de formulário | `gap-3`, `gap-4` |
-| Entre cards / seções | `gap-4`, `gap-6` |
-| Espaço vertical entre seções | `space-y-4`, `space-y-6` |
+| Entre cards no mesmo grid | `gap-2 sm:gap-3` |
+| Espaço vertical entre cards / seções da página | `space-y-3` |
 | Espaço interno de lista | `space-y-1.5`, `space-y-2` |
 
 ### 4.4 Responsividade de Espaçamento
 
 Padrão responsivo adotado nos cards e layouts:
 ```
-p-4 sm:p-6          → padding aumenta em telas maiores
-gap-2 sm:gap-4      → gap responsivo
+p-4 sm:p-5          → padding do card aumenta em telas maiores
+gap-2 sm:gap-3      → gap entre cards
 flex-col sm:flex-row → empilha no mobile, lado a lado no desktop
 ```
 
@@ -888,31 +888,31 @@ Não passe `error={undefined}` — com `exactOptionalPropertyTypes`, omita a pro
 ### 9.2 Padrão de Seção em Página
 
 ```tsx
-// Seção padrão dentro de página de configurações
-<div className="space-y-6">
-  {/* Label de categoria */}
-  <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-    Categoria
-  </p>
+// Página: cabeçalho simples + cards densos (mesma densidade do dashboard e do Faturamento)
+<div className="space-y-3">
+  <div>
+    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Título da página</h1>
+    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Uma frase do que a página resolve.</p>
+  </div>
 
-  <Card className="p-6">
-    {/* Cabeçalho do card com ação */}
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-          Título
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Descrição
-        </p>
+  <div className="grid gap-2 sm:gap-3 lg:grid-cols-5">
+    <Card className="p-4 sm:p-5 lg:col-span-3">
+      {/* Cabeçalho do card com ação */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Título</h2>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Descrição</p>
+        </div>
+        <Button size="sm">Ação</Button>
       </div>
-      <Button size="sm">Ação</Button>
-    </div>
-
-    {/* Conteúdo */}
-  </Card>
+      {/* Conteúdo */}
+    </Card>
+    <Card className="p-4 sm:p-5 lg:col-span-2 flex h-full flex-col">{/* ... */}</Card>
+  </div>
 </div>
 ```
+
+O cabeçalho da página é só texto: nada de card colorido, ilustração ou label em caixa-alta em cima do título (ver §9.16).
 
 ### 9.3 Formulários
 
@@ -1129,7 +1129,57 @@ Quando uma página tem **um** número que prova o valor do Synq (ex.: "R$ recupe
 - Valor: `text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-emerald-700 dark:text-emerald-300`, com o complemento ("recuperados este mês") na mesma linha em `ml-2 text-base sm:text-lg font-semibold`
 - Frase de apoio: `mt-1 text-sm text-emerald-700 dark:text-emerald-300`, explicando o número em linguagem simples; com zero, diz o que vai aparecer ali
 
-Use no máximo um bloco desses por página.
+Use no máximo um bloco desses por página, **só quando o número já é maior que zero** e prova valor. Com zero (ou como "o valor vai aparecer aqui"), mostre o número neutro, no padrão de card. O bloco é seção própria da página: nunca vai dentro de outro card.
+
+### 9.15 Indique e ganhe — ilustrações e status
+
+**Arquivos:** `src/app/(private)/referrals/`, `src/app/(public)/r/[code]/`, `src/components/Illustration.tsx`.
+
+**Ilustrações.** Esta é a única área com ilustração: objetos em 3D estilizado (brilho suave, formas arredondadas, paleta índigo/violeta, sem pessoas) em `public/referral/`. A regra "sem ícone decorativo" (§10) continua valendo no resto do produto.
+
+- **Componente:** sempre via `Illustration`. É decorativa (`alt=""`, `aria-hidden`) e **some** se o arquivo não existir, nunca vira imagem quebrada. Por isso a página não pode depender dela: todo texto e ação ficam no HTML.
+- **Arquivo:** PNG com transparência de verdade, sem texto e **sem margem transparente sobrando** (recorte o vazio em volta do desenho antes de adicionar). O `next/image` converte para formato leve. Funciona sobre `#fafafa` e `#09090b`, então não há versão dark.
+- **Tamanho:** sempre numa caixa fixa com `object-contain`, igual para todos os itens da mesma linha. A ilustração acompanha o texto do lado e nunca fica pequena num espaço grande e vazio.
+
+| Arquivo | Uso | Caixa |
+|---|---|---|
+| `hero.png` | Card "Seu link de indicação", à direita do conteúdo (só a partir de `xl`) | `w-40` |
+| `invite.png` | Landing do convite `/r/[code]` | `max-w-md lg:max-w-lg` |
+| `step-share.png`, `step-subscribe.png`, `step-earn.png` | Três passos de "Como funciona", à esquerda do texto | `h-12 w-12` |
+| `empty.png` | Lista de indicações vazia, à esquerda da mensagem | `h-12 w-12` |
+| `gift-badge.png` | Card de créditos no Faturamento | `h-14 w-14` |
+
+**Página `/referrals`:** segue §9.2. Cabeçalho só com título e frase, e grid `lg:grid-cols-5` com "Seu link" (3 colunas) e "Seus créditos" (2 colunas). Embaixo, "Como funciona", "Suas indicações", "Quem te indicou" e "Regras", todos com `space-y-3`.
+
+**Seus créditos:** número neutro (`text-2xl font-semibold tabular-nums text-slate-900 dark:text-white`), sem bloco colorido. Abaixo dele, uma lista `dl` com `mt-auto border-t pt-3` (próxima fatura, em carência e limite por fatura) preenche o card até a altura do vizinho. Isso evita card meio vazio.
+
+**Status da indicação (Badge, tipos existentes):**
+
+| Status | Badge | Texto |
+|---|---|---|
+| `registered` | `neutral` | Cadastrou-se |
+| `in_grace` | `processing` | Em carência |
+| `qualified` (crédito disponível) | `success` | Confirmada |
+| `qualified` (crédito usado) | `success` | Desconto aplicado |
+| `on_hold` | `warning` | Em análise |
+| `disqualified` / `revoked` | `neutral` | Não confirmada |
+
+O "não confirmada" é neutro de propósito: o indicador não fez nada errado e não deve ler isso como erro.
+
+### 9.16 O que evitar: visual genérico ("cara de IA")
+
+Telas do app são ferramenta de trabalho, não landing page. Antes de entregar uma tela nova, confira esta lista.
+
+| Evite | Use |
+|---|---|
+| Banner colorido no topo (fundo índigo ou lilás, label em caixa-alta, ilustração grande) | Cabeçalho simples da §9.2: título e uma frase |
+| Círculos numerados para explicar o produto ("1, 2, 3 — como funciona") | Itens lado a lado com título curto. Números só no passo a passo operacional (§8.9) |
+| Bloco colorido dentro de um card, ou número zero em destaque colorido | Número neutro no padrão de card. Destaque (§9.13) só para valor real maior que zero |
+| Card meio vazio porque o vizinho do grid é mais alto | Conteúdo de altura parecida. Complete com uma lista `dl` de dados (`mt-auto`) ou mude o layout. Nunca deixe sobrar meio card em branco |
+| Espaçamento de landing: `p-6`/`p-8`, `gap-6`, `space-y-6`, títulos `text-base`+ nos cards | Densidade da §4: `p-4 sm:p-5`, `gap-2 sm:gap-3`, `space-y-3`, título de card `text-sm` |
+| Ilustrações de tamanhos visuais diferentes, ou pequenas num espaço grande | Recorte a margem, use caixa fixa igual por linha e no máximo uma ilustração por card (§9.15) |
+| Gradiente, sombra colorida, emoji ou ícone decorativo para "enfeitar" | Hierarquia por texto e espaço. Cor só com significado (§2.3) |
+| Texto de marketing ("Desbloqueie", "Incrível", "Turbine") | Frase direta do que a pessoa ganha ou precisa fazer |
 
 ---
 
@@ -1209,6 +1259,7 @@ Segue os pares de cor testados:
 - Não adicione sombras coloridas no dark mode (use `dark:shadow-none`)
 - Não use `font-bold` em texto de corpo — apenas em headings e valores numéricos de destaque
 - Não crie novos componentes quando os existentes cobrem o caso de uso
+- Não monte tela com visual genérico de landing ("cara de IA"): banner colorido no topo, passos com círculos numerados, bloco colorido dentro de card, card meio vazio, espaçamento largo. Veja a lista completa na §9.16
 - Não use CSS inline ou módulos CSS para estilização — use Tailwind
 
 ### 12.3 Extensão de Componentes

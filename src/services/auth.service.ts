@@ -54,6 +54,9 @@ interface RegisterData {
     name?: string;
     phone?: string;
     workspaceName?: string;
+    /** Código do programa de indicação; inválido não bloqueia o cadastro. */
+    referralCode?: string;
+    referralSource?: 'link' | 'register_form';
 }
 interface LoginData {
     email: string;
@@ -96,6 +99,8 @@ export interface AuthUser {
 interface AuthResponse {
     token?: string;
     requires2FA?: boolean;
+    /** Só no cadastro com código de indicação. */
+    referral?: { applied: boolean; reason?: string };
     workspace?: {
         id: string;
         name: string;
