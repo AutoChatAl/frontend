@@ -15,6 +15,11 @@ export interface ContactTag {
         name: string;
     };
 }
+/** Grupo manual em que o contato está — vem com a listagem de contatos. */
+export interface ContactGroupRef {
+    id: string;
+    name: string;
+}
 export type ContactOrigin = 'WHATSAPP' | 'INSTAGRAM' | 'CART_RECOVERY' | 'COMMENT' | 'CAMPAIGN' | 'MANUAL' | 'TIKTOK' | 'TELEGRAM' | 'IMPORT';
 export interface Contact {
     id: string;
@@ -29,6 +34,7 @@ export interface Contact {
     awaitingHumanSince?: string | null;
     identities?: ContactIdentity[];
     tags?: ContactTag[];
+    groups?: ContactGroupRef[];
     salesCount?: number;
     salesValueCents?: number;
     abandonedCount?: number;
@@ -39,6 +45,12 @@ export interface ListContactsParams {
     channelId?: string;
     includeUnlinked?: boolean;
     unlinkedOnly?: boolean;
+    /** Só contatos com telefone (WhatsApp ou planilha) — deixa de fora quem só existe no Instagram. */
+    hasPhone?: boolean;
+    /** `name` ordena A→Z; sem valor, a API devolve fila de atendimento e última interação primeiro. */
+    sortBy?: 'name';
+    /** Só os membros deste grupo. */
+    groupId?: string;
     tagName?: string;
     tagIds?: string;
     skip?: number;

@@ -1,5 +1,5 @@
 'use client';
-import { BadgeCheck, Edit2, Filter, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
+import { BadgeCheck, Edit2, Filter, History, Loader2, MessageCircle, MoreVertical, Play, Plus, Search, Smartphone, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,13 +20,20 @@ import { campaignService } from '@/services/campaign.service';
 import { type Campaign } from '@/types/Campaign';
 import { HIDDEN_FEATURES, LOCKED_FEATURES } from '@lib/featureFlags';
 
-import { columns } from './components/CampaignsColumns';
+import CampaignRunsModal from './components/CampaignRunsModal';
+import { buildColumns } from './components/CampaignsColumns';
 import CreateCampaignModal from './components/CreateCampaignModal';
 import EditCampaignModal from './components/EditCampaignModal';
+import RunProgress from './components/RunProgress';
+import { isRunInProgress, latestRun } from './components/runSummary';
 import ScheduleGrid from './components/ScheduleGrid';
 
-function ActionsDropdown({ campaign, onEdit, onDelete }: {
+/** Enquanto alguma campanha tiver envio na fila, a lista se atualiza sozinha neste intervalo. */
+const PROGRESS_REFRESH_MS = 15000;
+
+function ActionsDropdown({ campaign, onViewRuns, onEdit, onDelete }: {
     campaign: Campaign;
+    onViewRuns: (campaign: Campaign) => void;
     onEdit: (campaign: Campaign) => void;
     onDelete: (campaign: Campaign) => void;
 }) {
@@ -72,6 +79,13 @@ function ActionsDropdown({ campaign, onEdit, onDelete }: {
   return (<div ref={buttonRef}>
     <IconButton icon={<MoreVertical size={16}/>} onClick={handleToggle}/>
     {open && createPortal(<div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in zoom-in-95 duration-150">
+      <button type="button" onClick={() => {
+        setOpen(false);
+        onViewRuns(campaign);
+      }} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+        <History size={15} className="text-slate-400"/>
+            Ver execuções
+      </button>
       <button type="button" onClick={() => {
         setOpen(false);
         onEdit(campaign);
@@ -151,15 +165,42 @@ function CampaignsPageContent() {
   const [runningCampaign, setRunningCampaign] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [runsCampaign, setRunsCampaign] = useState<Campaign | null>(null);
   const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [nameFilter, setNameFilter] = useState('');
   const [channelFilter, setChannelFilter] = useState<CampaignChannelFilter>('ALL');
   const { toasts, addToast, removeToast } = useToast();
+  const columns = useMemo(() => buildColumns({ onOpenRuns: setRunsCampaign }), []);
   useEffect(() => {
     loadCampaigns();
   }, []);
+  /**
+   * Recarga silenciosa: troca os dados sem passar pelo esqueleto da página.
+   * É o que mantém o progresso dos disparos andando na lista.
+   */
+  const refreshCampaigns = useCallback(async () => {
+    try {
+      setCampaigns(await campaignService.listCampaigns());
+    }
+    catch {
+      // A próxima rodada tenta de novo; a lista atual continua na tela.
+    }
+  }, []);
+  const hasRunInProgress = useMemo(
+    () => campaigns.some((campaign) => (campaign.runs ?? []).some(isRunInProgress)),
+    [campaigns],
+  );
+  useEffect(() => {
+    if (!hasRunInProgress)
+      return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible')
+        void refreshCampaigns();
+    }, PROGRESS_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [hasRunInProgress, refreshCampaigns]);
   const loadCampaigns = async () => {
     try {
       setLoading(true);
@@ -181,8 +222,13 @@ function CampaignsPageContent() {
       setRunningCampaign(campaignId);
       const run = await campaignService.runCampaign(campaignId);
       const stats = await campaignService.processJobs({ runId: run.id });
-      await loadCampaigns();
-      addToast('success', `Campanha disparada! ${stats.sent} enviada${stats.sent !== 1 ? 's' : ''}, ${stats.skipped} ignorada${stats.skipped !== 1 ? 's' : ''}, ${stats.failed} falha${stats.failed !== 1 ? 's' : ''}.`);
+      await refreshCampaigns();
+      // A execução nova aparece na agenda: recarrega a grade sem passar pelo esqueleto.
+      setScheduleKey((prev) => prev + 1);
+      const pending = stats.pending ?? 0;
+      addToast('success', pending > 0
+        ? `Disparo iniciado: ${stats.sent} enviada${stats.sent !== 1 ? 's' : ''} agora e ${pending} na fila. Acompanhe o progresso em "Último disparo".`
+        : `Campanha disparada! ${stats.sent} enviada${stats.sent !== 1 ? 's' : ''}, ${stats.skipped} ignorada${stats.skipped !== 1 ? 's' : ''}, ${stats.failed} falha${stats.failed !== 1 ? 's' : ''}.`);
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao executar campanha';
@@ -300,7 +346,7 @@ function CampaignsPageContent() {
       </Card>)}
       <Table columns={columns} data={filteredCampaigns} renderActions={(row: Campaign) => (<div className="flex justify-end gap-2">
         <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="md" className={row.status === 'ACTIVE' ? 'text-indigo-600 dark:text-indigo-400' : ''}/>
-        <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
+        <ActionsDropdown campaign={row} onViewRuns={(c) => setRunsCampaign(c)} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
       </div>)} renderMobileCard={(row: Campaign) => (<Card className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -311,9 +357,16 @@ function CampaignsPageContent() {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <IconButton icon={runningCampaign === row.id ? <Loader2 size={16} className="animate-spin"/> : <Play size={16}/>} onClick={() => handleRunCampaign(row.id)} disabled={runningCampaign === row.id || row.status !== 'ACTIVE'} title={row.status !== 'ACTIVE' ? 'Campanha não está ativa' : 'Disparar campanha'} variant="primary" size="sm"/>
-            <ActionsDropdown campaign={row} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
+            <ActionsDropdown campaign={row} onViewRuns={(c) => setRunsCampaign(c)} onEdit={(c) => setEditingCampaign(c)} onDelete={(c) => setDeletingCampaign(c)}/>
           </div>
         </div>
+
+        {(() => {
+          const last = latestRun(row.runs);
+          return last ? (<div className="mt-3">
+            <RunProgress run={last} onClick={() => setRunsCampaign(row)}/>
+          </div>) : null;
+        })()}
 
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <Badge type={row.status === 'ACTIVE' ? 'success' : row.status === 'PAUSED' ? 'warning' : 'neutral'} text={row.status === 'ACTIVE' ? 'Ativa' : row.status === 'PAUSED' ? 'Pausada' : 'Concluída'}/>
@@ -343,6 +396,8 @@ function CampaignsPageContent() {
     <CreateCampaignModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={() => loadCampaigns()} addToast={addToast}/>
 
     <EditCampaignModal isOpen={!!editingCampaign} campaign={editingCampaign} onClose={() => setEditingCampaign(null)} onSuccess={() => loadCampaigns()}/>
+
+    <CampaignRunsModal isOpen={!!runsCampaign} campaign={runsCampaign} onClose={() => setRunsCampaign(null)}/>
 
     <DeleteConfirmModal isOpen={!!deletingCampaign} campaignName={deletingCampaign?.name || ''} loading={deletingLoading} onConfirm={handleDeleteCampaign} onCancel={() => setDeletingCampaign(null)}/>
 

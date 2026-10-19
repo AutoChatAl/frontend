@@ -60,6 +60,10 @@ export default function GroupsPage() {
       empty: groups.filter((group) => (group.memberCount ?? 0) === 0).length,
     };
   }, [groups]);
+  const handleGroupImported = async () => {
+    addToast('success', 'Grupo criado com sucesso!');
+    await loadGroups();
+  };
   const handleCreateGroup = async (name: string, contactIds: string[]) => {
     try {
       const raw = await groupService.createGroup({ name, type: 'MANUAL' });
@@ -148,7 +152,7 @@ export default function GroupsPage() {
       <AddGroupCard onClick={() => setCreateModalOpen(true)}/>
     </div>)}
 
-    <CreateGroupModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} onSubmit={handleCreateGroup}/>
+    <CreateGroupModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} onSubmit={handleCreateGroup} onImported={handleGroupImported}/>
 
     <ManageGroupModal isOpen={!!manageGroup} onClose={() => setManageGroup(null)} group={manageGroup} onUpdated={loadGroups}/>
 

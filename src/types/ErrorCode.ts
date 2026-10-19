@@ -63,7 +63,6 @@ export const ERROR_MESSAGES: Record<ErrorReason, string> = {
   CAMPAIGN_NO_CONTACTS: 'Esta campanha ainda não tem destinatários. Escolha os contatos ou um grupo antes de enviar.',
   CAMPAIGN_RUN_FAILED: 'Não foi possível iniciar a campanha. Tente de novo em alguns instantes.',
   CAMPAIGN_LIMIT_EXCEEDED: 'Você chegou ao limite de campanhas do seu plano. Exclua uma campanha antiga ou mude de plano para criar outra.',
-  CAMPAIGN_CONTACTS_LIMIT_EXCEEDED: 'Uma campanha pode ter no máximo 250 contatos. Divida o envio em mais de uma campanha.',
   AUTO_REPLY_NOT_FOUND: 'Não encontramos esta automação. Ela pode ter sido excluída.',
   AUTO_REPLY_CREATE_FAILED: 'Não foi possível criar a automação. Tente de novo em alguns instantes.',
   AUTO_REPLY_UPDATE_FAILED: 'Não foi possível salvar as mudanças da automação. Tente de novo.',

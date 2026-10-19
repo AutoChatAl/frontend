@@ -99,8 +99,6 @@ export interface EffectiveLimits {
     maxInstagramInstances: number;
     maxTotalInstances: number;
     maxContacts: number;
-    maxContactsPerCampaign: number;
-    maxContactsPerGroup: number;
     maxCollaborators: number;
     maxSchedules: number;
     schedulesPerMember: boolean;

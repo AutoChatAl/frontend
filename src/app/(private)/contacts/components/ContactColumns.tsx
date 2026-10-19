@@ -1,5 +1,5 @@
 'use client';
-import { MessageCircle, Smartphone } from 'lucide-react';
+import { MessageCircle, Smartphone, Users } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 
 import Badge from '@/components/Badge';
@@ -91,6 +91,18 @@ const ALL_COLUMNS = [
       const tags = row.tags ?? [];
       return (<div className="flex flex-wrap gap-1">
         {tags.length > 0 ? (tags.map((t) => t.tag.name === 'Aguardando atendimento' ? (<Badge key={t.tagId} type="error" text={t.tag.name}/>) : (<Badge key={t.tagId} type="tag" text={t.tag.name}/>))) : (<span className="text-slate-400 text-xs italic">Sem tags</span>)}
+      </div>);
+    },
+  },
+  {
+    header: 'Grupos',
+    accessor: 'groups' as keyof Contact,
+    render: (_value: unknown, row: Contact) => {
+      const groups = row.groups ?? [];
+      if (groups.length === 0)
+        return <span className="text-slate-400 text-xs italic">Sem grupo</span>;
+      return (<div className="flex flex-wrap gap-1">
+        {groups.map((group) => (<Badge key={group.id} type="group" text={group.name} icon={Users}/>))}
       </div>);
     },
   },

@@ -11,7 +11,6 @@ import { campaignService, type DispatchIssue } from '@/services/campaign.service
 import { channelsService } from '@/services/channels.service';
 import { contactService } from '@/services/contact.service';
 import { groupService } from '@/services/group.service';
-import { planLimitsService, type PlanLimits } from '@/services/plan-limits.service';
 import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
@@ -22,6 +21,7 @@ import type { Group } from '@/types/Group';
 import type { WaCampaignEstimate, WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 import { HIDDEN_FEATURES } from '@lib/featureFlags';
 
+import { describeDispatchError } from './dispatchErrors';
 import { EXECUTION_HOURS } from './executionHours';
 
 interface Channel {
@@ -37,26 +37,6 @@ interface DispatchResult {
     skipped: number;
     pending: number;
     issues: DispatchIssue[];
-}
-const DISPATCH_ERROR_LABELS: Record<string, string> = {
-  NO_PHONE: 'Contato sem telefone.',
-  WA_TEMPLATE_REQUIRED: 'A campanha está sem modelo de mensagem.',
-  WA_TEMPLATE_NOT_APPROVED: 'O modelo de mensagem não está aprovado na Meta.',
-  WA_MARKETING_OPT_OUT: 'O contato recusou mensagens de marketing.',
-  WA_OUTSIDE_SERVICE_WINDOW: 'Fora da janela de 24h de atendimento.',
-  WA_MARKETING_LIMIT_REACHED: 'A Meta limitou mensagens de marketing para este número (131049).',
-  WA_UNDELIVERABLE: 'O número não pode receber a mensagem: sem WhatsApp ou indisponível (131026).',
-  WA_BILLING_ISSUE: 'Problema de pagamento na conta da Meta (131042).',
-  WA_RATE_LIMITED: 'Limite de envio da Meta atingido. Tente novamente mais tarde.',
-};
-function describeDispatchError(error: string): string {
-  const known = DISPATCH_ERROR_LABELS[error];
-  if (known)
-    return known;
-  const graph = error.match(/^WA_GRAPH_ERROR_(\w+)(?::\s*(.*))?$/);
-  if (graph)
-    return `Erro da Meta (${graph[1]})${graph[2] ? `: ${graph[2]}` : ''}`;
-  return error;
 }
 interface CreateCampaignModalProps {
     isOpen: boolean;
@@ -157,14 +137,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<CreateCampaignInput>(INITIAL_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [limits, setLimits] = useState<PlanLimits | null>(null);
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [costEstimate, setCostEstimate] = useState<WaCampaignEstimate | null>(null);
   const loadInitialData = useCallback(async () => {
     try {
       setLoadingData(true);
-      const fetchedLimits = await planLimitsService.getLimits();
-      setLimits(fetchedLimits);
       const [whatsappChannels, officialChannels, approvedTemplates, groupsList] = await Promise.all([
         channelsService.getWhatsAppInstances().catch(() => []),
         whatsappOfficialService.getInstances().catch(() => []),
@@ -260,14 +237,13 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       if (formData.message.length > 2000)
         newErrors.message = 'Mensagem não pode ter mais de 2000 caracteres';
     }
-    if (formData.sourceType === 'CHANNEL') {
-      if (formData.channelIds.length === 0)
-        newErrors.channels = 'Selecione pelo menos um canal';
+    if (formData.channelIds.length === 0) {
+      newErrors.channels = formData.sourceType === 'GROUP'
+        ? 'Selecione o número que vai fazer o disparo'
+        : 'Selecione pelo menos um canal';
     }
-    else {
-      if (!formData.groupId)
-        newErrors.group = 'Selecione um grupo';
-    }
+    if (formData.sourceType === 'GROUP' && !formData.groupId)
+      newErrors.group = 'Selecione um grupo';
     if (!formData.frequency)
       newErrors.frequency = 'Selecione a frequência';
     if (formData.frequency === 'ONCE' && !formData.scheduledDate)
@@ -471,10 +447,10 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
   };
   const handleSourceTypeChange = (newSourceType: 'CHANNEL' | 'GROUP') => {
     setFormData((prev) => {
+      // O canal vale para as duas origens, então fica; só os destinatários zeram.
       const next: CreateCampaignInput = {
         ...prev,
         sourceType: newSourceType,
-        channelIds: [],
         contactIds: [],
       };
       delete next.groupId;
@@ -534,15 +510,10 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     });
     clearFieldError('group');
   };
-  const rawMaxContacts = limits?.maxContactsPerCampaign ?? 250;
-  const maxContacts = rawMaxContacts === -1 ? Number.POSITIVE_INFINITY : rawMaxContacts;
+  // Sem teto de contatos por campanha: entra quem a base tiver.
   const toggleContact = (contactId: string) => {
     setFormData((prev) => {
       const isRemoving = prev.contactIds.includes(contactId);
-      if (!isRemoving && prev.contactIds.length >= maxContacts) {
-        addToast('error', `Limite de ${maxContacts} contatos por campanha atingido.`);
-        return prev;
-      }
       return {
         ...prev,
         contactIds: isRemoving
@@ -566,12 +537,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
     return Array.from(uniqueById.values());
   }, [contacts, formData.channelIds, isOfficialCampaign]);
   const selectAllContacts = () => {
-    const ids = Number.isFinite(maxContacts)
-      ? channelContacts.map((c) => c.id).slice(0, maxContacts)
-      : channelContacts.map((c) => c.id);
-    if (channelContacts.length > maxContacts) {
-      addToast('error', `Limite de ${maxContacts} contatos. Apenas os ${maxContacts} primeiros foram selecionados.`);
-    }
+    const ids = channelContacts.map((c) => c.id);
     setFormData((prev) => ({ ...prev, contactIds: ids }));
   };
   const deselectAllContacts = () => setFormData((prev) => ({ ...prev, contactIds: [] }));
@@ -714,7 +680,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         </div>)}
 
         {dispatchResult.pending > 0 && (<p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-          {dispatchResult.pending} envio{dispatchResult.pending !== 1 ? 's' : ''} ainda na fila. Eles saem no próximo horário de disparo configurado.
+          {dispatchResult.pending} envio{dispatchResult.pending !== 1 ? 's' : ''} ainda na fila. Eles saem aos poucos, dentro dos horários de disparo — acompanhe o progresso na coluna <strong>Último disparo</strong> da lista.
         </p>)}
 
         {dispatchResult.jobsCreated > 0 && (<p className="text-xs text-slate-400 text-center">
@@ -778,65 +744,11 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
         <p className="text-xs text-slate-400 dark:text-slate-500 -mt-3 mb-4">
           {formData.sourceType === 'CHANNEL'
             ? 'Selecione um canal e escolha os contatos para envio.'
-            : 'Selecione um grupo existente — os contatos dele serão usados automaticamente.'}
+            : 'Escolha o grupo e o número do WhatsApp Oficial que vai fazer o disparo — os contatos do grupo entram automaticamente.'}
         </p>
 
-        {formData.sourceType === 'CHANNEL' && (<>
-          {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-              {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Nenhum número do WhatsApp Oficial conectado'
-                : 'Nenhum canal disponível'}
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {HIDDEN_FEATURES.campaignNonOfficialChannels
-                ? 'Conecte um número do WhatsApp Oficial em Canais para criar campanhas.'
-                : 'Conecte um número ou uma conta em Canais para começar.'}
-            </p>
-          </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {channels.map((channel) => {
-              const isSelected = formData.channelIds.includes(channel.id);
-              const isWhatsApp = channel.type === 'WHATSAPP';
-              const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
-              const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id)
-                || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
-              return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
-                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
-                  ? 'bg-green-100 dark:bg-green-900/30'
-                  : 'bg-pink-100 dark:bg-pink-900/30'}`}>
-                  {isOfficial ? (<BadgeCheck size={18} className="text-emerald-600 dark:text-emerald-400"/>) : isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                    {channel.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp || isOfficial
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                      : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'}`}>
-                      {isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
-                    </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                  ? 'border-indigo-500 bg-indigo-500'
-                  : 'border-slate-300 dark:border-slate-600'}`}>
-                  {isSelected && <CheckCircle2 size={12} className="text-white"/>}
-                </div>
-              </div>);
-            })}
-          </div>)}
-          <FieldError msg={errors.channels}/>
-        </>)}
-
         {formData.sourceType === 'GROUP' && (<>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Grupo de destinatários</p>
           {groups.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                       Nenhum grupo disponível
@@ -917,7 +829,61 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
               </div>
             </div>);
           })()}
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-6 mb-3">Número do disparo</p>
         </>)}
+
+        {channels.length === 0 ? (<div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl gap-2">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+            {HIDDEN_FEATURES.campaignNonOfficialChannels
+              ? 'Nenhum número do WhatsApp Oficial conectado'
+              : 'Nenhum canal disponível'}
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {HIDDEN_FEATURES.campaignNonOfficialChannels
+              ? 'Conecte um número do WhatsApp Oficial em Canais para criar campanhas.'
+              : 'Conecte um número ou uma conta em Canais para começar.'}
+          </p>
+        </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {channels.map((channel) => {
+            const isSelected = formData.channelIds.includes(channel.id);
+            const isWhatsApp = channel.type === 'WHATSAPP';
+            const isOfficial = channel.type === 'WHATSAPP_OFFICIAL';
+            const channelContacts = contacts.filter((c) => c.identities?.some((i) => i.channelId === channel.id)
+              || (channel.type === 'WHATSAPP_OFFICIAL' && isUnlinkedContact(c)));
+            return (<div key={channel.id} onClick={() => toggleChannel(channel.id)} className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${isSelected
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isWhatsApp || isOfficial
+                ? 'bg-green-100 dark:bg-green-900/30'
+                : 'bg-pink-100 dark:bg-pink-900/30'}`}>
+                {isOfficial ? (<BadgeCheck size={18} className="text-emerald-600 dark:text-emerald-400"/>) : isWhatsApp ? (<MessageCircle size={18} className="text-green-600 dark:text-green-400"/>) : (<Smartphone size={18} className="text-pink-600 dark:text-pink-400"/>)}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                  {channel.name}
+                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isWhatsApp || isOfficial
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                    : 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400'}`}>
+                    {isOfficial ? 'WhatsApp Oficial' : isWhatsApp ? 'WhatsApp' : 'Instagram'}
+                  </span>
+                  {formData.sourceType === 'CHANNEL' && (<span className="text-xs text-slate-400 dark:text-slate-500">
+                    {channelContacts.length} contato{channelContacts.length !== 1 ? 's' : ''}
+                  </span>)}
+                </div>
+              </div>
+
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
+                ? 'border-indigo-500 bg-indigo-500'
+                : 'border-slate-300 dark:border-slate-600'}`}>
+                {isSelected && <CheckCircle2 size={12} className="text-white"/>}
+              </div>
+            </div>);
+          })}
+        </div>)}
+        <FieldError msg={errors.channels}/>
       </section>
 
       <section className="pt-6 border-t border-slate-100 dark:border-slate-700/60 first:border-0 first:pt-0">

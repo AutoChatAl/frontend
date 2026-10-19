@@ -1,4 +1,4 @@
-import type { Campaign, CampaignRun, CreateCampaignInput, ScheduleGrid, UpdateCampaignInput } from '@/types/Campaign';
+import type { Campaign, CampaignRun, CampaignRunDetail, CreateCampaignInput, ScheduleGrid, UpdateCampaignInput } from '@/types/Campaign';
 import type { WaCampaignEstimate } from '@/types/WhatsAppOfficial';
 import { apiClient } from '@/utils/ApiClient';
 import { getErrorFromResponse } from '@/utils/ErrorHandling';
@@ -58,6 +58,12 @@ export class CampaignService {
   public async getCampaign(campaignId: string): Promise<Campaign> {
     const response = await apiClient.get<BackendResponse<Campaign>>(`/campaigns/${campaignId}`);
     return extractData<Campaign>(response, 'Falha ao buscar campanha. Tente novamente.');
+  }
+  /** Histórico de execuções com progresso e motivos das falhas, da mais recente para a mais antiga. */
+  public async listRuns(campaignId: string): Promise<CampaignRunDetail[]> {
+    const response = await apiClient.get<BackendResponse<CampaignRunDetail[]>>(`/campaigns/${campaignId}/runs`);
+    const data = extractData<CampaignRunDetail[]>(response, 'Falha ao buscar as execuções da campanha. Tente novamente.');
+    return Array.isArray(data) ? data.map((run) => normalizeId(run as CampaignRunDetail & { _id?: string })) : [];
   }
   public async createCampaign(input: CreateCampaignInput): Promise<Campaign> {
     const response = await apiClient.post<BackendResponse<Campaign & {
