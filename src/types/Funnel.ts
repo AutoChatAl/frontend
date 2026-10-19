@@ -77,6 +77,30 @@ export interface FunnelLead {
   abandonedValueCents: number;
 }
 
+/**
+ * Por que o contato não aparece em coluna nenhuma do quadro.
+ * `REMOVED` — tirado do funil à mão; volta na próxima interação.
+ * `AWAITING_REPLY` — importado e ainda sem resposta; entra quando responder.
+ */
+export type FunnelOffBoardReason = 'REMOVED' | 'AWAITING_REPLY';
+
+/** Em que coluna do quadro o contato está agora — é o que a conversa mostra. */
+export interface FunnelLeadPlacement {
+  /** Nulo quando o quadro não mostra o contato em coluna nenhuma. */
+  stageId: string | null;
+  /** Nulo também quando a etapa gravada deixou de existir. */
+  offBoardReason: FunnelOffBoardReason | null;
+  stageEnteredAt: string | null;
+  stageMovedBy: StageMovedBy | null;
+  stageMoveReason: string | null;
+}
+
+/**
+ * Evento do stream do workspace: um lead mudou de coluna ou saiu do quadro (pela
+ * tela, pela IA ou por um fluxo). Traz só `{ contactId }` — a etapa vem da API.
+ */
+export const FUNNEL_LEAD_MOVED_EVENT = 'funnel.lead_moved';
+
 export interface FunnelStage {
   id: string;
   name: string;

@@ -8,6 +8,8 @@ import Button from '@/components/Button';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import Skeleton from '@/components/Skeleton';
 import { useAttendantAlerts } from '@/contexts/AttendantAlertsContext';
+import { canAccessMenuItem } from '@/contexts/SidebarContext';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { authService } from '@/services/auth.service';
 import { inboxService } from '@/services/inbox.service';
 import type { InboxConversation, InboxDirection, InboxFilterId, InboxMessage, InboxOutgoingMedia, InboxRetentionDays, MessageShareKind } from '@/types/Inbox';
@@ -36,7 +38,9 @@ import {
 import ChatSettingsMenu from './components/ChatSettingsMenu';
 import ConversationContextPanel from './components/ConversationContextPanel';
 import DocumentBubble from './components/DocumentBubble';
+import FunnelStagePicker from './components/FunnelStagePicker';
 import MediaLightbox, { type LightboxItem } from './components/MediaLightbox';
+import { useContactFunnel } from './useContactFunnel';
 import { messagePreview, useInbox } from './useInbox';
 
 /**
@@ -518,6 +522,14 @@ export default function InboxPage() {
   const replyToRef = useRef<InboxMessage | null>(null);
   replyToRef.current = replyTo;
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
+  // Etapa do funil ao lado do chat — só para quem também tem acesso ao funil.
+  const authUser = useAuthUser();
+  const canUseFunnel = canAccessMenuItem(authUser, { permission: 'funnel' });
+  const funnel = useContactFunnel(
+    selectedConversation?.contactId ?? null,
+    chatEnabled && canUseFunnel,
+    selectedConversation?.lastMessageAt ?? null,
+  );
   const router = useRouter();
   const {
     setOpenConversationId,
@@ -1122,6 +1134,7 @@ export default function InboxPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {canUseFunnel && <FunnelStagePicker funnel={funnel} variant="chip" className="hidden sm:inline-flex" />}
                   {selectedConversation.assignedTo && (
                     <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
                       <UserCheck size={11} />
@@ -1261,7 +1274,9 @@ export default function InboxPage() {
               </div>
 
               <footer className="border-t border-slate-100 dark:border-slate-700 p-3">
-                {(attachError || error) && <p className="mb-2 text-xs text-rose-500">{attachError || error}</p>}
+                {(attachError || error || funnel.moveError) && (
+                  <p className="mb-2 text-xs text-rose-500">{attachError || error || funnel.moveError}</p>
+                )}
                 {replyLocked ? (
                   <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-3 py-2.5">
                     <Lock size={16} className="mt-0.5 shrink-0 text-slate-400 dark:text-slate-500" />
@@ -1379,6 +1394,7 @@ export default function InboxPage() {
                 onLink={(targetId) => { void linkConversation(selectedConversation.id, targetId); }}
                 onUnlink={() => { void unlinkConversation(selectedConversation.id); }}
                 onRenameContact={(name) => { void renameContact(selectedConversation.id, name); }}
+                funnel={canUseFunnel ? funnel : null}
               />
             </aside>
           </>

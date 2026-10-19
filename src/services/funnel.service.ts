@@ -3,6 +3,7 @@ import type {
   FunnelBoard,
   FunnelColumn,
   FunnelLead,
+  FunnelLeadPlacement,
   FunnelStageDefinition,
   StageColor,
   StagePayload,
@@ -54,6 +55,15 @@ class FunnelService {
       throw new Error('Falha ao mover o lead.');
     }
     return response.data.lead;
+  }
+
+  /** Em que coluna do quadro o contato está agora — a conversa mostra isto ao lado do chat. */
+  public async getLeadPlacement(leadId: string): Promise<FunnelLeadPlacement> {
+    const response = await apiClient.get<{ placement: FunnelLeadPlacement }>(`/funnel/leads/${leadId}/placement`);
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao carregar a etapa do contato no funil.');
+    }
+    return response.data.placement;
   }
 
   public async updateLead(leadId: string, payload: UpdateLeadPayload): Promise<FunnelLead> {

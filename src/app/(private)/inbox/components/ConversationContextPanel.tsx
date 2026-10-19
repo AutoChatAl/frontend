@@ -6,7 +6,9 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import type { InboxAgent, InboxConversation } from '@/types/Inbox';
 
+import type { ContactFunnelState } from '../useContactFunnel';
 import { Avatar, CHANNEL_LABEL, channelBadge, formatCountdown, getInitials, normalizeDisplayName, relativeTime } from './ChatBits';
+import FunnelStagePicker from './FunnelStagePicker';
 import PopoverMenu from './PopoverMenu';
 
 const ATTENDANCE_LABEL: Record<string, string> = {
@@ -35,6 +37,8 @@ interface ConversationContextPanelProps {
     onLink: (targetConversationId: string) => void;
     onUnlink: () => void;
     onRenameContact: (displayName: string) => void;
+    /** Etapa do contato no funil. Nulo para quem não tem acesso ao funil: a seção nem existe. */
+    funnel?: ContactFunnelState | null;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -64,6 +68,7 @@ export default function ConversationContextPanel({
   onLink,
   onUnlink,
   onRenameContact,
+  funnel = null,
 }: ConversationContextPanelProps) {
   // Irmãs já vinculadas e candidatas a vínculo saem da mesma lista que a caixa
   // já carregou — não vale uma busca própria para escolher entre o que está à vista.
@@ -235,6 +240,12 @@ export default function ConversationContextPanel({
           Só {assignedLabel} ou o dono do workspace pode mudar esse atendimento.
       </p>)}
     </div>
+
+    {/* Logo abaixo do atendimento: qualificar o lead faz parte de atender. */}
+    {funnel && (<div className="space-y-2 border-b border-slate-100 dark:border-slate-700 p-4">
+      <SectionTitle>Funil</SectionTitle>
+      <FunnelStagePicker funnel={funnel} variant="field"/>
+    </div>)}
 
     <div className="space-y-1.5 border-b border-slate-100 dark:border-slate-700 p-4">
       <SectionTitle>Sinais</SectionTitle>

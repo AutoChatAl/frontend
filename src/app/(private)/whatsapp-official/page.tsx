@@ -18,6 +18,9 @@ import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import { formatBrlFromMicros, type WaMetaBilledPoint, type WaOfficialOverview, type WaUsageRecord, type WhatsAppTemplate } from '@/types/WhatsAppOfficial';
 
+import FreeTierMeter from './components/FreeTierMeter';
+import { useFreeTier } from './useFreeTier';
+
 const USAGE_PAGE_SIZE = 10;
 const TEMPLATES_PREVIEW = 4;
 
@@ -25,7 +28,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   marketing: 'Marketing',
   utility: 'Utilidade',
   authentication: 'Autenticação',
-  service: 'Atendimento (grátis)',
+  service: 'Atendimento',
   referral_conversion: 'Anúncio (grátis)',
   unknown: 'Outros',
 };
@@ -56,6 +59,8 @@ export default function WhatsAppOfficialDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
+  const channelIds = useMemo(() => (overview?.channels ?? []).map((c) => c.id), [overview?.channels]);
+  const freeTier = useFreeTier(channelIds);
 
   const loadData = useCallback(async (channelId: string, periodDays: string, page = 0) => {
     try {
@@ -100,6 +105,7 @@ export default function WhatsAppOfficialDashboardPage() {
     try {
       await whatsappOfficialService.refreshHealth(channelId);
       addToast('success', 'Dados da conta atualizados com a Meta.');
+      freeTier.reload([channelId]);
       await loadData(selectedChannelId, days, usagePage);
     } catch (error) {
       setRefreshing(false);
@@ -266,6 +272,11 @@ export default function WhatsAppOfficialDashboardPage() {
                           Atualizar
                         </Button>
                       </div>
+                      <FreeTierMeter
+                        usage={freeTier.usageByChannel[channel.id] ?? null}
+                        failed={freeTier.failed.has(channel.id)}
+                        className="mt-2.5 max-w-md"
+                      />
                       {pendencies.length > 0 && (
                         <div className="space-y-1 mt-2">
                           {pendencies.map((pendency, i) => (
@@ -350,7 +361,7 @@ export default function WhatsAppOfficialDashboardPage() {
                     </div>
                   ))}
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-700/60">
-                    Quando o cliente falou com você nas últimas 24h, as respostas e os modelos de Utilidade são grátis. A cobrança de verdade é feita pela Meta, direto na sua conta.
+                    Respostas de atendimento são grátis até 1.000 por número no mês — a cota de cada número está em Números conectados. Os valores aqui são uma estimativa: a cobrança de verdade é feita pela Meta, direto na sua conta.
                   </p>
                 </div>
               ) : (
@@ -389,7 +400,7 @@ export default function WhatsAppOfficialDashboardPage() {
                   </p>
                 </div>
               ) : (
-                <CardEmptyState message="Nenhuma cobrança da Meta no período. Responder quem falou com você nas últimas 24h é grátis."/>
+                <CardEmptyState message="Nenhuma cobrança da Meta no período. Respostas de atendimento são grátis até 1.000 por número no mês."/>
               )}
             </Card>
           </div>

@@ -173,6 +173,22 @@ export type WaMetaBilledPoint = {
   pricing_type?: string;
 };
 
+/** Cota grátis de atendimento do número no mês corrente (1.000 por número desde 01/10/2026). */
+export type WaFreeTierUsage = {
+  channelId: string;
+  limit: number;
+  /** Atendimento entregue dentro da cota neste mês. */
+  used: number;
+  /** Atendimento entregue e cobrado depois que a cota acabou. */
+  billedAfterLimit: number;
+  periodStart: string;
+  resetsAt: string;
+  /** Fuso da conta na Meta — é nele que a cota zera. */
+  timeZone: string;
+  /** `meta` — dado da própria Meta; `synq` — a Meta não respondeu e a conta é dos envios pelo Synq. */
+  source: 'meta' | 'synq';
+};
+
 export function formatBrlFromMicros(micros: number): string {
   return (micros / 1_000_000).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }

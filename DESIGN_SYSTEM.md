@@ -1131,6 +1131,26 @@ Quando uma página tem **um** número que prova o valor do Synq (ex.: "R$ recupe
 
 Use no máximo um bloco desses por página.
 
+### 9.15 Cota grátis de atendimento (WhatsApp Oficial)
+
+**Arquivo:** `src/app/(private)/whatsapp-official/components/FreeTierMeter.tsx`
+
+Desde 01/10/2026 a Meta dá 1.000 mensagens de atendimento grátis por número a cada mês. A
+barra fica na linha de cada número, em "Números conectados" (a cota é do número, não da
+conta), limitada a `max-w-md`. Segue a barra de uso de 9.7:
+
+| Parte | Classes |
+|---|---|
+| Título e contagem | `text-[11px] font-medium text-slate-600 dark:text-slate-300`; o número usado em `font-semibold text-slate-900 dark:text-white tabular-nums` |
+| Trilho | `h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700`, com `role="progressbar"` |
+| Preenchimento (uso normal) | `bg-indigo-500 dark:bg-indigo-400` |
+| Preenchimento (≥ 80%) | `bg-amber-500 dark:bg-amber-400` |
+| Preenchimento (cota esgotada) | `bg-red-500 dark:bg-red-400`; a linha de baixo vai para `text-red-600 dark:text-red-400` |
+| Linha de baixo | `text-[11px] text-slate-400 dark:text-slate-500`: quanto resta e quando zera ("Restam 688 · zera em 01/11") |
+
+O texto fala do resultado ("Atendimento grátis em outubro · 312 de 1.000"), nunca do nome
+técnico da Meta. Quando o dado não vem da Meta, a linha de baixo diz que a contagem é do Synq.
+
 ---
 
 ## 10. Ícones
@@ -1333,6 +1353,39 @@ ao focar o campo.
 |---|---|
 | `animate-bubble-in` | Entrada de balões, do painel de respostas e da tela de resultado (sobe 6px e aparece, 220ms) |
 | `animate-typing` | Pontinhos do "digitando…", com `[animation-delay:170ms]` e `340ms` no segundo e terceiro |
+
+---
+
+## 13.3 Etapa do Funil — cores e selo na conversa
+
+**Arquivos:** `src/utils/funnelStageColors.ts` (cores) e `src/app/(private)/inbox/components/FunnelStagePicker.tsx` (selo e campo da conversa).
+
+Cada etapa do funil tem uma das oito cores abaixo, escolhida pelo usuário. O quadro e a
+conversa desenham a etapa com o mesmo mapa (`STAGE_COLOR_META` / `stageColorMeta`) — nunca
+monte a classe da etapa à mão.
+
+| Token | Ponto (`dot`) | Texto (`text`) | Fundo suave (`soft`) |
+|---|---|---|---|
+| `indigo` | `bg-indigo-500` | `text-indigo-600 dark:text-indigo-400` | `bg-indigo-50 dark:bg-indigo-500/10` |
+| `violet` | `bg-violet-500` | `text-violet-600 dark:text-violet-400` | `bg-violet-50 dark:bg-violet-500/10` |
+| `blue` | `bg-blue-500` | `text-blue-600 dark:text-blue-400` | `bg-blue-50 dark:bg-blue-500/10` |
+| `emerald` | `bg-emerald-500` | `text-emerald-600 dark:text-emerald-400` | `bg-emerald-50 dark:bg-emerald-500/10` |
+| `amber` | `bg-amber-500` | `text-amber-600 dark:text-amber-400` | `bg-amber-50 dark:bg-amber-500/10` |
+| `rose` | `bg-rose-500` | `text-rose-600 dark:text-rose-400` | `bg-rose-50 dark:bg-rose-500/10` |
+| `fuchsia` | `bg-fuchsia-500` | `text-fuchsia-600 dark:text-fuchsia-400` | `bg-fuchsia-50 dark:bg-fuchsia-500/10` |
+| `slate` | `bg-slate-400` | `text-slate-600 dark:text-slate-300` | `bg-slate-100 dark:bg-slate-700/40` |
+
+Na conversa a etapa aparece em dois lugares, com o mesmo estado: o selo no cabeçalho do
+chat (sempre à vista, a partir de `sm`) e o campo da seção **Funil** do painel de detalhes,
+logo abaixo de Atendimento. Os dois só existem para quem tem a permissão de funil.
+
+| Elemento | Light | Dark |
+|---|---|---|
+| Selo da etapa (cabeçalho) | pílula `rounded-full px-2 py-0.5 text-[11px] font-semibold` com `soft` + `text` da etapa, ponto `h-1.5 w-1.5` e `ChevronDown` 11px; aberto ganha `ring-1 ring-slate-200` | pares `dark:` do mapa; `dark:ring-slate-600` |
+| Selo "Fora do funil" | `bg-slate-100 text-slate-500`, ponto vazado `border border-slate-400` | `dark:bg-slate-700/60 dark:text-slate-400`, `dark:border-slate-500` |
+| Campo da seção Funil | `Select size="sm"`, ponto `h-2 w-2` como ícone de cada opção; ganho/perda levam a descrição "Marca o atendimento como resolvido" | — |
+| "Movido pela IA" | `text-violet-600` com ícone `Bot` (o violeta do sinal "IA ativa") e o motivo em `line-clamp-2` | `dark:text-violet-400` |
+| Importado aguardando resposta | caixa `rounded-lg border-dashed border-slate-200` com `Clock`, sem ação | `dark:border-slate-700` |
 
 ---
 

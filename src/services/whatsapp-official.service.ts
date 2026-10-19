@@ -1,5 +1,6 @@
 import { getErrorMessage } from '@/types/ErrorCode';
 import type {
+  WaFreeTierUsage,
   WaMetaBilledPoint,
   WaOfficialOverview,
   WaSignupConfig,
@@ -68,6 +69,12 @@ class WhatsAppOfficialService {
     if (!response.success || !response.data) throwApiError(response, 'Não foi possível carregar o histórico de gastos. Tente de novo.');
     const body = response.data as { data?: WaUsageRecord[]; total?: number };
     return { data: body.data ?? [], total: body.total ?? body.data?.length ?? 0 };
+  }
+
+  /** Quanto da cota grátis de atendimento do mês o número já usou, com o dado da Meta. */
+  public async getFreeTier(channelId: string): Promise<WaFreeTierUsage> {
+    const response = await apiClient.get(`/channels/whatsapp-official/${channelId}/free-tier`);
+    return unwrap<WaFreeTierUsage>(response, 'Não foi possível consultar a cota grátis na Meta. Tente de novo em alguns instantes.');
   }
 
   public async getMetaBilling(channelId: string, days = 30): Promise<WaMetaBilledPoint[]> {

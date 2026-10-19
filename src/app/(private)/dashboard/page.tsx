@@ -229,15 +229,6 @@ export default function DashboardPage() {
       <UpcomingCampaignsCard />
     </div>
 
-    {metrics.messagesFailed > 0 && (<div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg p-3.5">
-      <p className="text-[13px] font-medium text-red-700 dark:text-red-400">
-        {metrics.messagesFailed.toLocaleString('pt-BR')} mensagens falharam no envio
-      </p>
-      <p className="text-xs text-red-600/70 dark:text-red-400/70 mt-0.5">
-          Verifique a conexão dos canais e tente reenviar as campanhas afetadas.
-      </p>
-    </div>)}
-
     {billing && (() => {
       const revenue30 = fillLastDays(billing.dailyRevenue, 30);
       const avgTicketCents = billing.totalCompleted > 0 ? Math.round(billing.totalRevenueCents / billing.totalCompleted) : 0;
