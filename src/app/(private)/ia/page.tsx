@@ -176,7 +176,7 @@ export default function IAPage() {
           <AIChannelsList channels={channels} onToggle={toggleChannel} activeProfileId={activeProfileId}/>
         </div>)}
 
-        {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} followUpMinutes={followUpMinutes} followUpMessage={followUpMessage} maxChars={customRulesLimit} onCustomRulesChange={setCustomRules} onFollowUpMinutesChange={setFollowUpMinutes} onFollowUpMessageChange={setFollowUpMessage}/>)}
+        {activeTab === 'triggers' && (<AIRulesSection customRules={customRules} followUpMinutes={followUpMinutes} followUpMessage={followUpMessage} maxChars={customRulesLimit} catalogItemCount={productsTotal} onCustomRulesChange={setCustomRules} onFollowUpMinutesChange={setFollowUpMinutes} onFollowUpMessageChange={setFollowUpMessage}/>)}
 
         {activeTab === 'guardrails' && (<AIGuardrailsSection/>)}
 

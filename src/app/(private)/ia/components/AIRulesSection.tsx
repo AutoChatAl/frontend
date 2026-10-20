@@ -1,5 +1,6 @@
 'use client';
 
+import Callout from '@/components/Callout';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
 import Select from '@/components/Select';
@@ -16,12 +17,24 @@ interface AIRulesSectionProps {
     onFollowUpMessageChange: (value: string) => void;
     /** Limite vindo do GET /config. Tem prioridade sobre o da assinatura, que pode estar em cache. */
     maxChars?: number;
+    /** Itens no catálogo do perfil. Com catálogo, preço escrito no prompt vira fonte de divergência. */
+    catalogItemCount?: number;
 }
-export default function AIRulesSection({ customRules, followUpMinutes, followUpMessage, onCustomRulesChange, onFollowUpMinutesChange, onFollowUpMessageChange, maxChars: maxCharsProp }: AIRulesSectionProps) {
+/** "R$ 97", "R$97,00", "279 reais". */
+const PRICE_IN_TEXT = /R\$\s?\d|\b\d+(?:[.,]\d+)?\s?reais\b/i;
+
+function mentionsPrice(text: string): boolean {
+  return PRICE_IN_TEXT.test(text);
+}
+export default function AIRulesSection({ customRules, followUpMinutes, followUpMessage, onCustomRulesChange, onFollowUpMinutesChange, onFollowUpMessageChange, maxChars: maxCharsProp, catalogItemCount = 0 }: AIRulesSectionProps) {
   const { status } = useSubscription();
   const maxChars = maxCharsProp && maxCharsProp > 0 ? maxCharsProp : (status?.limits?.maxCustomRulesChars ?? 0);
   const overLimit = maxChars > 0 && customRules.length > maxChars;
   const remaining = maxChars - customRules.length;
+  // O preço da ficha enviada ao cliente é o do catálogo, e a IA segue o catálogo quando os
+  // dois divergem. Tabela de preços colada aqui envelhece sem ninguém perceber — foi assim
+  // que um cliente viu um valor na ficha e outro no texto da mesma mensagem.
+  const priceConflictRisk = catalogItemCount > 0 && mentionsPrice(customRules);
   return (
     <div className="space-y-3">
       <Card className="p-4">
@@ -67,6 +80,11 @@ export default function AIRulesSection({ customRules, followUpMinutes, followUpM
           {...(overLimit ? { error: `Passou do limite de ${maxChars.toLocaleString('pt-BR')} caracteres do seu plano — corte o texto antes de salvar.` } : {})}
           placeholder={'Sempre responda em português.\nNão ofereça descontos sem aprovação.\nEncaminhe reclamações para o suporte humano.'}
         />
+        {priceConflictRisk && (
+          <Callout tone="warning" className="mt-2">
+            Este prompt cita valores em R$, mas o preço de cada item é o do catálogo: é ele que aparece na ficha enviada ao cliente e que a IA usa quando os dois divergem. Para a IA não citar um valor desatualizado, mantenha os preços dos itens só no catálogo e tire-os daqui.
+          </Callout>
+        )}
         {maxChars > 0 && (
           <p className={`mt-1.5 text-right text-[11px] tabular-nums ${
             overLimit
