@@ -233,6 +233,7 @@ export const ATTEMPT_STATUS_LABELS: Record<RecoveryAttemptStatus, string> = {
 export const DELIVERY_ERROR_LABELS: Record<string, string> = {
   WA_OUTSIDE_SERVICE_WINDOW: 'Não enviada: este cliente não fala com você há mais de 24h. Para chamar de novo, use um modelo aprovado.',
   NO_IG_SCOPED_ID: 'Não enviada: a pessoa ainda não conversou com seu Instagram, então não dá para mandar mensagem para ela.',
+  IG_OUTSIDE_WINDOW: 'Não enviada: o Instagram só aceita mensagem até 24h depois da última mensagem do cliente (ou do toque dele no botão da DM), e esse prazo já tinha passado.',
   INSTAGRAM_NOT_CONFIGURED: 'Não enviada: o Instagram em que o cliente conversa com você precisa ser conectado de novo em Canais.',
   NO_CONTACT: 'Não enviada: não encontramos conversa deste cliente com o seu WhatsApp ou Instagram. Para não arriscar o seu número, só falamos com quem já conversou com você.',
   NO_PHONE: 'Não enviada: a plataforma não mandou o telefone do comprador.',

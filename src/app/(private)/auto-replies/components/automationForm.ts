@@ -54,6 +54,14 @@ export interface AutomationDraft {
   linkUrl: string;
   linkLabel: string;
   linkDescription: string;
+  /**
+   * Só comentário e live: quem não conversa no Direct recebe antes uma mensagem curta com
+   * botão, e a DM sai no toque. O toque abre a conversa no Instagram, e é ela que permite
+   * mandar a recuperação de carrinho depois.
+   */
+  openingDmEnabled: boolean;
+  openingDmMessage: string;
+  openingDmButtonLabel: string;
   oncePerUser: boolean;
   postFilter: 'ALL' | 'SPECIFIC';
   /** Só comentário: posts em que a regra vale, quando `postFilter` é SPECIFIC. */
@@ -70,6 +78,18 @@ export const MESSAGE_MAX: Record<AutomationKind, number> = { DM: 4000, COMMENT: 
  * o texto em 640 caracteres — e a descrição do link entra nesse mesmo texto.
  */
 export const IG_BUTTON_MESSAGE_MAX = 640;
+/** O Instagram corta o rótulo do botão em 20 caracteres. */
+export const OPENING_DM_BUTTON_MAX = 20;
+export const DEFAULT_OPENING_DM_MESSAGE = 'Oi {{username}}! Toque no botão abaixo que eu te mando o link 👇';
+export const DEFAULT_OPENING_DM_BUTTON = 'Quero o link';
+
+const LINK_IN_TEXT = /https?:\/\/\S/i;
+
+/** A DM leva link, no botão ou no texto. É o link que vira checkout e carrinho. */
+export function draftHasLink(draft: AutomationDraft): boolean {
+  if (draft.linkUrl.trim()) return true;
+  return hasText(draft.replyType) && LINK_IN_TEXT.test(draft.message);
+}
 
 export function messageMaxFor(draft: AutomationDraft, kind: AutomationKind): number {
   if (!isCommentLike(kind) || draft.channelType !== 'INSTAGRAM' || !draft.linkUrl.trim()) {
@@ -122,6 +142,9 @@ export function emptyDraft(kind: AutomationKind): AutomationDraft {
     linkUrl: '',
     linkLabel: '',
     linkDescription: '',
+    openingDmEnabled: true,
+    openingDmMessage: DEFAULT_OPENING_DM_MESSAGE,
+    openingDmButtonLabel: DEFAULT_OPENING_DM_BUTTON,
     oncePerUser: true,
     postFilter: 'ALL',
     postIds: [],
@@ -184,6 +207,10 @@ export function draftFromLiveAutomation(rule: LiveAutomation): AutomationDraft {
     linkUrl: rule.dmLinkUrl ?? '',
     linkLabel: rule.dmLinkLabel ?? '',
     linkDescription: rule.dmLinkDescription ?? '',
+    // Regra salva antes da opção não tem o campo: vale ligada, como no backend.
+    openingDmEnabled: rule.openingDmEnabled !== false,
+    openingDmMessage: rule.openingDmMessage || DEFAULT_OPENING_DM_MESSAGE,
+    openingDmButtonLabel: rule.openingDmButtonLabel || DEFAULT_OPENING_DM_BUTTON,
     oncePerUser: rule.oncePerUser,
     enabled: rule.enabled,
   };
@@ -215,6 +242,10 @@ export function draftFromCommentAutomation(rule: CommentAutomation): AutomationD
     linkUrl: rule.dmLinkUrl ?? '',
     linkLabel: rule.dmLinkLabel ?? '',
     linkDescription: rule.dmLinkDescription ?? '',
+    // Regra salva antes da opção não tem o campo: vale ligada, como no backend.
+    openingDmEnabled: rule.openingDmEnabled !== false,
+    openingDmMessage: rule.openingDmMessage || DEFAULT_OPENING_DM_MESSAGE,
+    openingDmButtonLabel: rule.openingDmButtonLabel || DEFAULT_OPENING_DM_BUTTON,
     oncePerUser: rule.oncePerUser,
     postFilter: rule.postFilter,
     postIds: rule.postIds ?? [],
@@ -310,6 +341,9 @@ export function toCommentAutomationInput(draft: AutomationDraft): CreateCommentA
     dmLinkUrl: draft.linkUrl.trim(),
     dmLinkLabel: draft.linkLabel.trim(),
     dmLinkDescription: draft.linkDescription.trim(),
+    openingDmEnabled: draft.openingDmEnabled,
+    openingDmMessage: draft.openingDmMessage.trim(),
+    openingDmButtonLabel: draft.openingDmButtonLabel.trim(),
     postFilter: draft.postFilter,
     postIds: draft.postFilter === 'SPECIFIC' ? draft.postIds : [],
     oncePerUser: draft.oncePerUser,
@@ -430,6 +464,21 @@ export function validateDraft(draft: AutomationDraft, kind: AutomationKind, opti
   }
   if (draft.linkDescription.trim().length > LINK_DESCRIPTION_MAX) {
     errors.linkDescription = `A descrição deve ter no máximo ${LINK_DESCRIPTION_MAX} caracteres`;
+  }
+
+  if (isCommentLike(kind) && draft.openingDmEnabled && draftHasLink(draft)) {
+    const opening = draft.openingDmMessage.trim();
+    const button = draft.openingDmButtonLabel.trim();
+    if (!opening) {
+      errors.openingDmMessage = 'Escreva a mensagem de abertura';
+    } else if (opening.length > IG_BUTTON_MESSAGE_MAX) {
+      errors.openingDmMessage = `A mensagem de abertura deve ter no máximo ${IG_BUTTON_MESSAGE_MAX} caracteres`;
+    }
+    if (!button) {
+      errors.openingDmButtonLabel = 'Escreva o texto do botão';
+    } else if (button.length > OPENING_DM_BUTTON_MAX) {
+      errors.openingDmButtonLabel = `O texto do botão deve ter no máximo ${OPENING_DM_BUTTON_MAX} caracteres`;
+    }
   }
 
   return errors;

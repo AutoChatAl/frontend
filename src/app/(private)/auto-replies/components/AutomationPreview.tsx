@@ -3,7 +3,7 @@ import { FileText, Image as ImageIcon, Mic } from 'lucide-react';
 
 import { whatsAppToHtml } from '@/utils/whatsappFormat';
 
-import type { AutomationDraft } from './automationForm';
+import { DEFAULT_OPENING_DM_BUTTON, draftHasLink, type AutomationDraft } from './automationForm';
 import { hasAudio, hasDocument, hasImage, hasText, isCommentLike, type AutomationKind } from './automationMeta';
 
 const BUBBLE = 'rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300';
@@ -34,13 +34,13 @@ function MessageBody({ text, formatted, bold }: { text: string; formatted: boole
  * título, descrição, botão, destino. A descrição fica junto do título porque as
  * duas são o corpo do card; a linha separa só a área do botão.
  */
-function LinkCard({ label, url }: { label: string; url: string }) {
+function LinkCard({ label, url }: { label: string; url?: string }) {
   return (
     <div className="border-t border-slate-100 px-3 py-2.5 dark:border-slate-700">
       <div className="rounded-xl bg-indigo-600 py-2 text-center text-sm font-semibold text-white">
         {label || 'Saiba mais'}
       </div>
-      <p className="mt-1.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{url}</p>
+      {url && <p className="mt-1.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{url}</p>}
     </div>
   );
 }
@@ -93,7 +93,11 @@ export default function AutomationPreview({ kind, draft, sampleText = '', fires 
         ? (kind === 'LIVE' ? 'Qualquer comentário na live' : 'Qualquer comentário')
         : (kind === 'LIVE' ? 'Comentário na live' : 'Comentário'))
       : 'Mensagem recebida';
-  const answerLabel = isCommentLike(kind) ? 'Mensagem no Direct' : 'Resposta automática';
+  // Quem não conversa no Direct recebe antes a abertura com botão; a DM sai no toque.
+  const opensWithTap = isCommentLike(kind) && draft.openingDmEnabled && draftHasLink(draft);
+  const answerLabel = opensWithTap
+    ? 'Depois do toque no botão'
+    : isCommentLike(kind) ? 'Mensagem no Direct' : 'Resposta automática';
   const showAnswer = fires && hasAnything;
 
   return (
@@ -147,6 +151,21 @@ export default function AutomationPreview({ kind, draft, sampleText = '', fires 
             <div className={`${BUBBLE} ml-6 inline-block max-w-[85%]`}>
               <MessageBody text={withUsername(firstReply)} formatted={false} />
             </div>
+          </div>
+        )}
+
+        {showAnswer && opensWithTap && (
+          <div>
+            <Caption>Primeira mensagem no Direct</Caption>
+            <div className="max-w-[85%] overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <div className="px-3 py-2">
+                <MessageBody text={withUsername(draft.openingDmMessage)} formatted={false} />
+              </div>
+              <LinkCard label={draft.openingDmButtonLabel || DEFAULT_OPENING_DM_BUTTON} />
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+              Só para quem ainda não conversa com você. Quem já conversa recebe a DM direto.
+            </p>
           </div>
         )}
 

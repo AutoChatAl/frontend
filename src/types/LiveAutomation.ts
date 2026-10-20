@@ -36,6 +36,10 @@ export interface LiveAutomation {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
+    /** Mensagem curta com botão para quem não conversa no Direct; a DM sai no toque. Ausente = ligado. */
+    openingDmEnabled?: boolean;
+    openingDmMessage?: string;
+    openingDmButtonLabel?: string;
     oncePerUser: boolean;
     enabled: boolean;
     createdAt: string;
@@ -60,6 +64,9 @@ export interface CreateLiveAutomationInput {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
+    openingDmEnabled?: boolean;
+    openingDmMessage?: string;
+    openingDmButtonLabel?: string;
     oncePerUser?: boolean;
     enabled?: boolean;
 }

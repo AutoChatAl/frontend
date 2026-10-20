@@ -40,12 +40,15 @@ import {
   draftFromAutoReply,
   draftFromCommentAutomation,
   draftFromLiveAutomation,
+  draftHasLink,
   hasAdvancedMatching,
+  IG_BUTTON_MESSAGE_MAX,
   KEYWORDS_MAX,
   LINK_DESCRIPTION_MAX,
   LINK_LABEL_MAX,
   MATCH_MODE_OPTIONS,
   messageMaxFor,
+  OPENING_DM_BUTTON_MAX,
   replyTypeOptions,
   toAutoReplyInput,
   toCommentAutomationInput,
@@ -96,6 +99,8 @@ const FIELD_ORDER = [
   'message',
   'linkUrl',
   'linkLabel',
+  'openingDmMessage',
+  'openingDmButtonLabel',
   'audio',
   'image',
   'document',
@@ -568,6 +573,62 @@ export default function AutomationModal({
             </div>
           )}
 
+          {commentLike && draftHasLink(draft) && (
+            <div className="space-y-3">
+              <Checkbox
+                checked={draft.openingDmEnabled}
+                onChange={(checked) => {
+                  patch({ openingDmEnabled: checked });
+                  clearError('openingDmMessage');
+                  clearError('openingDmButtonLabel');
+                }}
+                label="Pedir um toque antes de mandar o link"
+                description="Quem ainda não conversa com você no Direct recebe primeiro uma mensagem curta com um botão, e a DM com o link sai quando a pessoa toca. Esse toque é o que libera a recuperação de carrinho pelo Instagram. Quem já está conversando recebe a DM direto."
+              />
+              {draft.openingDmEnabled && (
+                <>
+                  <div id={fieldAnchor('openingDmMessage')}>
+                    <FieldLabel required htmlFor="automation-opening-message">Mensagem de abertura</FieldLabel>
+                    <Textarea
+                      id="automation-opening-message"
+                      value={draft.openingDmMessage}
+                      onChange={(event) => {
+                        patch({ openingDmMessage: event.target.value });
+                        clearError('openingDmMessage');
+                      }}
+                      placeholder="Ex.: Oi {{username}}! Toque no botão abaixo que eu te mando o link"
+                      rows={2}
+                      maxLength={IG_BUTTON_MESSAGE_MAX}
+                      error={errors.openingDmMessage}
+                    />
+                    <div className="flex items-start justify-between gap-3">
+                      <UsernameInserter onInsert={() => patch({ openingDmMessage: `${draft.openingDmMessage}{{username}}` })} />
+                      <span className="mt-1.5 shrink-0">
+                        <CharCounter value={draft.openingDmMessage.length} max={IG_BUTTON_MESSAGE_MAX} />
+                      </span>
+                    </div>
+                  </div>
+                  <div id={fieldAnchor('openingDmButtonLabel')}>
+                    <FieldLabel required htmlFor="automation-opening-button">Texto do botão da abertura</FieldLabel>
+                    <Input
+                      id="automation-opening-button"
+                      type="text"
+                      value={draft.openingDmButtonLabel}
+                      maxLength={OPENING_DM_BUTTON_MAX}
+                      onChange={(event) => {
+                        patch({ openingDmButtonLabel: event.target.value });
+                        clearError('openingDmButtonLabel');
+                      }}
+                      placeholder="Ex.: Quero o link"
+                      hint="O Instagram mostra até 20 caracteres."
+                      error={errors.openingDmButtonLabel}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {hasAudio(draft.replyType) && (
             <div id={fieldAnchor('audio')}>
               <AudioPicker
@@ -825,10 +886,12 @@ export default function AutomationModal({
                 <Checkbox
                   checked={draft.oncePerUser}
                   onChange={(checked) => patch({ oncePerUser: checked })}
-                  label="Mandar o Direct só uma vez por pessoa"
+                  label={kind === 'LIVE'
+                    ? 'Mandar o Direct só uma vez por pessoa em cada live'
+                    : 'Mandar o Direct só uma vez por pessoa em cada post'}
                   description={kind === 'LIVE'
                     ? 'Numa live a mesma pessoa comenta várias vezes — sem isso, ela receberia um Direct a cada comentário. Recomendamos deixar ligado.'
-                    : 'Quem comentar várias vezes não recebe a mesma mensagem de novo. Recomendamos deixar ligado.'}
+                    : 'Quem comentar várias vezes no mesmo post não recebe a mesma mensagem de novo. Se comentar em outro post, recebe. Recomendamos deixar ligado.'}
                 />
               )}
             </div>
@@ -857,7 +920,11 @@ export default function AutomationModal({
                 <span className="mt-1 block">Lembre: só vale nos posts escolhidos.</span>
               )}
               {simulation.fires && commentLike && draft.oncePerUser && (
-                <span className="mt-1 block">Se a mesma pessoa comentar de novo, ela não recebe o Direct outra vez.</span>
+                <span className="mt-1 block">
+                  {kind === 'LIVE'
+                    ? 'Se a mesma pessoa comentar de novo na mesma live, ela não recebe o Direct outra vez.'
+                    : 'Se a mesma pessoa comentar de novo no mesmo post, ela não recebe o Direct outra vez.'}
+                </span>
               )}
             </Callout>
           )}

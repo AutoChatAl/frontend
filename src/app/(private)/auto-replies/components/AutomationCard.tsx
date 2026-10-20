@@ -256,7 +256,9 @@ export default function AutomationCard({ row, channelName, result, resultsReady 
                 {row.rule.postIds?.length === 1 ? '1 post' : `${row.rule.postIds?.length ?? 0} posts`}
               </Chip>
             )}
-            {row.kind !== 'DM' && row.rule.oncePerUser && <Chip>1x por pessoa</Chip>}
+            {row.kind !== 'DM' && row.rule.oncePerUser && (
+              <Chip>{row.kind === 'LIVE' ? '1x por pessoa por live' : '1x por pessoa por post'}</Chip>
+            )}
           </div>
 
           {row.kind === 'DM' ? (

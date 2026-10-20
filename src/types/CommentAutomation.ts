@@ -27,6 +27,10 @@ export interface CommentAutomation {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
+    /** Mensagem curta com botão para quem não conversa no Direct; a DM sai no toque. Ausente = ligado. */
+    openingDmEnabled?: boolean;
+    openingDmMessage?: string;
+    openingDmButtonLabel?: string;
     postFilter: 'ALL' | 'SPECIFIC';
     postIds?: string[];
     oncePerUser: boolean;
@@ -55,6 +59,9 @@ export interface CreateCommentAutomationInput {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
+    openingDmEnabled?: boolean;
+    openingDmMessage?: string;
+    openingDmButtonLabel?: string;
     postFilter?: 'ALL' | 'SPECIFIC';
     postIds?: string[];
     oncePerUser?: boolean;
@@ -81,6 +88,9 @@ export interface UpdateCommentAutomationInput {
     dmLinkUrl?: string;
     dmLinkLabel?: string;
     dmLinkDescription?: string;
+    openingDmEnabled?: boolean;
+    openingDmMessage?: string;
+    openingDmButtonLabel?: string;
     postFilter?: 'ALL' | 'SPECIFIC';
     postIds?: string[];
     oncePerUser?: boolean;
