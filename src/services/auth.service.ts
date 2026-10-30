@@ -91,6 +91,8 @@ export interface AuthUser {
     role?: 'owner' | 'collaborator' | 'admin';
     permissions?: Permission[];
     isTester?: boolean;
+    /** Avisos fechados para sempre (vem do `/me`). Ausente = ainda não carregado. */
+    dismissedNotices?: string[];
     workspace?: {
         id: string;
         name: string;
@@ -276,6 +278,18 @@ class AuthService {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
     }
+  }
+  /**
+   * Fecha um banner para sempre. O cache local é atualizado na hora — o banner some mesmo
+   * se a gravação falhar, e nesse caso volta só no próximo `/me`.
+   */
+  public async dismissNotice(notice: 'referral-banner'): Promise<void> {
+    const cached = this.getUser();
+    if (cached) {
+      const current = cached.dismissedNotices ?? [];
+      this.saveUser({ ...cached, dismissedNotices: current.includes(notice) ? current : [...current, notice] });
+    }
+    await apiClient.post(`/auth/notices/${notice}/dismiss`);
   }
   public saveUser(user: AuthUser): void {
     if (typeof window !== 'undefined') {

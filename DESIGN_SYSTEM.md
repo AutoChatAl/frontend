@@ -1146,10 +1146,16 @@ Use no máximo um bloco desses por página, **só quando o número já é maior 
 | `hero.png` | Card "Seu link de indicação", à direita do conteúdo (só a partir de `xl`) | `w-40` |
 | `invite.png` | Landing do convite `/r/[code]` | `max-w-md lg:max-w-lg` |
 | `step-share.png`, `step-subscribe.png`, `step-earn.png` | Três passos de "Como funciona", à esquerda do texto | `h-12 w-12` |
-| `empty.png` | Lista de indicações vazia, à esquerda da mensagem | `h-12 w-12` |
+| `empty.png` | Lista de indicações vazia, à esquerda da mensagem; e topo do modal de divulgação | `h-12 w-12` na lista, `h-28` no modal |
 | `gift-badge.png` | Card de créditos no Faturamento | `h-14 w-14` |
 
 **Página `/referrals`:** segue §9.2. Cabeçalho só com título e frase, e grid `lg:grid-cols-5` com "Seu link" (3 colunas) e "Seus créditos" (2 colunas). Embaixo, "Como funciona", "Suas indicações", "Quem te indicou" e "Regras", todos com `space-y-3`.
+
+**Modal de divulgação (`components/ReferralInviteModal.tsx`):** `Modal size="sm"` no mesmo formato do modal de fim de teste:
+- **Conteúdo:** `empty.png` centralizada (`h-28`), uma frase `text-sm font-semibold`, apoio `text-xs` e dois botões lado a lado ("Pegar meu link" primário e "Agora não" secundário).
+- **Quando abre:** 1,2 s depois de o dono entrar no app, só com assinatura paga ativa (no teste já existe o modal do teste). Nunca abre por cima do tour de boas-vindas nem em `/referrals`.
+- **Fechamento:** qualquer forma de fechar grava `referral-banner` em `User.dismissedNotices` (`POST /auth/notices/:notice/dismiss`), e o modal não volta em nenhum aparelho.
+- **Novos avisos fecháveis** entram na lista `DISMISSIBLE_NOTICES` do backend.
 
 **Seus créditos:** número neutro (`text-2xl font-semibold tabular-nums text-slate-900 dark:text-white`), sem bloco colorido. Abaixo dele, uma lista `dl` com `mt-auto border-t pt-3` (próxima fatura, em carência e limite por fatura) preenche o card até a altura do vizinho. Isso evita card meio vazio.
 
