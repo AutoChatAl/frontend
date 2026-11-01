@@ -293,7 +293,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
     </aside>
 
     {mobileMenuOpen && (<div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></div>)}
-    <aside className={`
+    <div className={`
         fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-64 z-50 transform transition-transform duration-300 md:hidden border-r border-slate-200 dark:border-slate-700
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
@@ -302,8 +302,8 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <BrandLogo size={24}/>
           <span className="text-base font-semibold text-slate-900 dark:text-white">{brandName}</span>
         </div>
-        <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1">
-          <X size={20}/>
+        <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1" aria-label="Fechar menu de navegação">
+          <X size={20} aria-hidden="true"/>
         </button>
       </div>
       <nav className="p-3 overflow-y-auto max-h-[calc(100vh-3.5rem)]">
@@ -312,6 +312,6 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           setMobileMenuOpen(false);
         }} onToggleGroup={toggleGroup}/>
       </nav>
-    </aside>
+    </div>
   </>);
 }

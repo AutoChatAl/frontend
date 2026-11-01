@@ -152,8 +152,8 @@ export default function NotificationDropdown() {
     }
   };
   return (<div className="relative" ref={dropdownRef}>
-    <button onClick={handleToggle} className="relative text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
-      <Bell size={20}/>
+    <button onClick={handleToggle} className="relative text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Abrir painel de notificações">
+      <Bell size={20} aria-hidden="true"/>
       {unreadCount > 0 && (<span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full border border-white dark:border-slate-800 flex items-center justify-center leading-none">
         {unreadCount > 99 ? '99+' : unreadCount}
       </span>)}
@@ -162,8 +162,8 @@ export default function NotificationDropdown() {
     {isOpen && (<div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
         <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Notificações</h3>
-        <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-          <X size={16}/>
+        <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" aria-label="Fechar painel de notificações">
+          <X size={16} aria-hidden="true"/>
         </button>
       </div>
 
