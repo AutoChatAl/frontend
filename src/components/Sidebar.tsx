@@ -302,7 +302,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <BrandLogo size={24}/>
           <span className="text-base font-semibold text-slate-900 dark:text-white">{brandName}</span>
         </div>
-        <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1" aria-label="Fechar menu de navegação">
+        <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1" aria-label="Fechar menu de navegação" title="Fechar menu de navegação">
           <X size={20} aria-hidden="true"/>
         </button>
       </div>
