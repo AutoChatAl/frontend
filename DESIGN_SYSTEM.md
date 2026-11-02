@@ -867,6 +867,24 @@ Não passe `error={undefined}` — com `exactOptionalPropertyTypes`, omita a pro
 
 ---
 
+### 8.15 Abas de página (sublinhado)
+
+**Arquivos:** `journey/page.tsx` (seções da jornada) e `funnel/components/FunnelTabs.tsx` (um funil por aba)
+
+Troca o conteúdo da página inteira sem sair dela. Para alternar entre duas ou três visões dentro de um card, use `SegmentedControl`.
+
+| Parte | Classes |
+|---|---|
+| Faixa (`role="tablist"`) | `flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-700` |
+| Aba (`<button role="tab" aria-selected>`) | `shrink-0 cursor-pointer border-b-2 px-4 py-2.5 text-sm font-medium transition-colors` |
+| Aba ativa | `border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400` |
+| Aba inativa | `border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200` |
+| Ação da aba ativa (opcional, à direita) | `flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200` + ícone 14 |
+
+No funil, as abas só aparecem com dois ou mais funis — quem tem um só vê a página como sempre foi. A ação à direita é "Configurar funil" (`Settings2`).
+
+---
+
 ## 9. Padrões de Layout
 
 ### 9.1 Estrutura de Página

@@ -9,6 +9,7 @@ import type { InstagramProductLayout, Product, ProductImportMode, ProductImportR
 import type { AiTriggerSettings } from '@/types/AI';
 import { AI_SIMPLE_FOLLOW_UP_MINUTES, defaultAiTriggerSettings } from '@/types/AI';
 import type { FunnelStageDefinition } from '@/types/Funnel';
+import { stagesAcrossFunnels } from '@/utils/funnelStageLabels';
 
 const PRODUCTS_PAGE_SIZE = 20;
 const PRODUCTS_SEARCH_DEBOUNCE_MS = 350;
@@ -130,7 +131,9 @@ export function useAIConfig() {
       await loadChannels(activeIds);
       // Colaborador sem permissão de contatos recebe 403 no funil — a aba apenas
       // deixa de listar as etapas, sem quebrar o carregamento da página de IA.
-      setFunnelStages(await funnelService.listStages().catch(() => []));
+      // Só entram os funis em que a IA pode mover cards: os critérios dos outros não são lidos.
+      const funnelList = await funnelService.listFunnels().catch(() => null);
+      setFunnelStages(funnelList ? stagesAcrossFunnels(funnelList.funnels.filter((funnel) => funnel.aiAutoMove)) : []);
     }
     catch {
     }

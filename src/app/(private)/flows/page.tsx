@@ -19,6 +19,7 @@ import { flowService } from '@/services/flow.service';
 import { funnelService } from '@/services/funnel.service';
 import type { Flow, FlowEdge, FlowNode, FlowNodeKind } from '@/types/Flow';
 import type { FunnelStageDefinition } from '@/types/Funnel';
+import { stagesAcrossFunnels } from '@/utils/funnelStageLabels';
 
 import { ACTION_BLOCKS, TRIGGER_BLOCKS, blockMeta, defaultNodeFields, outputHandles, requiresAiPlan, type BlockMeta } from './components/blocks';
 import FlowCanvas from './components/FlowCanvas';
@@ -112,7 +113,10 @@ export default function FlowsPage() {
   }, [reloadFlows]);
 
   useEffect(() => {
-    void funnelService.listStages().then(setStages).catch(() => setStages([]));
+    // O bloco "Mover no funil" pode mandar o contato para a coluna de qualquer funil.
+    void funnelService.listFunnels()
+      .then(({ funnels }) => setStages(stagesAcrossFunnels(funnels)))
+      .catch(() => setStages([]));
     void collaboratorService.getMembers().then(setMembers).catch(() => setMembers([]));
   }, []);
 

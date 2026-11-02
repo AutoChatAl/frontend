@@ -1,7 +1,9 @@
 'use client';
+import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Button from '@/components/Button';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import ImportExportMenu from '@/components/ImportExportMenu';
 import Modal from '@/components/Modal';
 import Select from '@/components/Select';
@@ -10,11 +12,25 @@ import { ToastContainer, useToast } from '@/components/Toast';
 import { hasPermission } from '@/contexts/SidebarContext';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { funnelService } from '@/services/funnel.service';
-import type { ChannelType, FunnelLead, FunnelStage, LeadOrigin, LeadTemperature, StageColor } from '@/types/Funnel';
+import type {
+  ChannelType,
+  CreateFunnelPayload,
+  Funnel,
+  FunnelLead,
+  FunnelStage,
+  LeadOrigin,
+  LeadSourceChannel,
+  LeadTemperature,
+  StageColor,
+  UpdateFunnelPayload,
+} from '@/types/Funnel';
 
 import FunnelBoard from './components/FunnelBoard';
 import FunnelFilters from './components/FunnelFilters';
+import FunnelModal from './components/FunnelModal';
+import FunnelTabs from './components/FunnelTabs';
 import LeadDetailDrawer from './components/LeadDetailDrawer';
+import { formatIdentifier } from './components/meta';
 import StageGroupModal from './components/StageGroupModal';
 import StageModal from './components/StageModal';
 
@@ -24,7 +40,47 @@ interface StageModalState {
   stage: FunnelStage | null;
 }
 
+interface FunnelModalState {
+  open: boolean;
+  /** Nulo cria um funil novo. */
+  funnel: Funnel | null;
+}
+
+/** Último funil aberto neste navegador — conveniência, não precisa sobreviver a nada. */
+const ACTIVE_FUNNEL_KEY = 'synq:funnel:active';
+
+function readStoredFunnelId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_FUNNEL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** De onde vêm os contatos do funil aberto, em uma frase. */
+function funnelSourceHint(funnel: Funnel | null, channels: LeadSourceChannel[]): string {
+  if (!funnel || funnel.isMain) return 'Recebe os contatos dos canais que não estão em outro funil';
+  const names = funnel.channelIds
+    .map((channelId) => channels.find((channel) => channel.id === channelId))
+    .filter((channel): channel is LeadSourceChannel => !!channel)
+    .map((channel) => channel.name || formatIdentifier(channel.identifier) || 'canal sem nome');
+  if (names.length === 0) return 'Nenhum canal vinculado: os cards chegam movidos à mão ou por fluxo';
+  return `Recebe os contatos de ${names.join(', ')}`;
+}
+
 export default function FunnelPage() {
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+  const [funnelChannels, setFunnelChannels] = useState<LeadSourceChannel[]>([]);
+  const [maxExtraFunnels, setMaxExtraFunnels] = useState(0);
+  /** `null` enquanto a lista de funis carrega; vazio abre o principal sem precisar do id. */
+  const [activeFunnelId, setActiveFunnelId] = useState<string | null>(null);
+  const [funnelModal, setFunnelModal] = useState<FunnelModalState>({ open: false, funnel: null });
+  const [funnelSaving, setFunnelSaving] = useState(false);
+  const [deletingFunnel, setDeletingFunnel] = useState<Funnel | null>(null);
+  const [funnelDeleteLoading, setFunnelDeleteLoading] = useState(false);
+  /** Trocando de funil: o quadro do anterior sai da tela enquanto o novo carrega. */
+  const [boardLoading, setBoardLoading] = useState(false);
+
   const [stages, setStages] = useState<FunnelStage[]>([]);
   const [columns, setColumns] = useState<Record<string, FunnelLead[]>>({});
   const [hasMoreByStage, setHasMoreByStage] = useState<Record<string, boolean>>({});
@@ -53,16 +109,56 @@ export default function FunnelPage() {
 
   const { toasts, addToast, removeToast } = useToast();
   const firstLoaded = useRef(false);
+  /** Funil cujo quadro está na tela — é como a troca de aba se distingue de um recarregamento. */
+  const shownFunnelRef = useRef<string | null>(null);
+  /** Resposta de um funil anterior que chega depois da troca é descartada. */
+  const boardRequestRef = useRef(0);
   const user = useAuthUser();
   const canCreateGroup = hasPermission(user, 'groups');
   const boardFiltered = !!(debouncedSearch || channelType || origin || temperature);
 
+  const loadFunnels = useCallback(async (preferId?: string) => {
+    try {
+      const list = await funnelService.listFunnels();
+      setFunnels(list.funnels);
+      setFunnelChannels(list.channels);
+      setMaxExtraFunnels(list.maxExtraFunnels);
+      setActiveFunnelId((current) => {
+        const wanted = preferId ?? current ?? readStoredFunnelId();
+        if (wanted && list.funnels.some((funnel) => funnel.id === wanted)) return wanted;
+        return list.funnels.find((funnel) => funnel.isMain)?.id ?? '';
+      });
+    } catch {
+      // Sem a lista, o quadro abre no principal e só não dá para trocar de funil.
+      setActiveFunnelId((current) => current ?? '');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadFunnels();
+  }, [loadFunnels]);
+
+  useEffect(() => {
+    if (!activeFunnelId) return;
+    try {
+      localStorage.setItem(ACTIVE_FUNNEL_KEY, activeFunnelId);
+    } catch {
+      // Navegação privada ou armazenamento bloqueado: só não lembra a aba.
+    }
+  }, [activeFunnelId]);
+
   const loadBoard = useCallback(async () => {
-    if (firstLoaded.current) setRefreshing(true);
-    else setLoading(true);
+    if (activeFunnelId === null) return;
+    const requestId = boardRequestRef.current + 1;
+    boardRequestRef.current = requestId;
+    const switching = firstLoaded.current && shownFunnelRef.current !== activeFunnelId;
+    if (!firstLoaded.current) setLoading(true);
+    else if (switching) setBoardLoading(true);
+    else setRefreshing(true);
     setError(null);
     try {
       const board = await funnelService.getBoard({
+        ...(activeFunnelId ? { funnelId: activeFunnelId } : {}),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(channelType ? { channelType } : {}),
         ...(origin ? { origin } : {}),
@@ -74,17 +170,30 @@ export default function FunnelPage() {
         nextColumns[stage.id] = column?.leads ?? [];
         nextHasMore[stage.id] = column?.hasMore ?? false;
       }
+      if (requestId !== boardRequestRef.current) return;
       setStages(board.stages);
       setColumns(nextColumns);
       setHasMoreByStage(nextHasMore);
+      shownFunnelRef.current = activeFunnelId;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar o funil.');
+      if (requestId !== boardRequestRef.current) return;
+      const message = err instanceof Error ? err.message : 'Erro ao carregar o funil.';
+      if (switching) {
+        // Volta para a aba que estava na tela em vez de mostrar colunas de outro funil.
+        addToast('error', message);
+        setActiveFunnelId(shownFunnelRef.current);
+      } else {
+        setError(message);
+      }
     } finally {
-      firstLoaded.current = true;
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === boardRequestRef.current) {
+        firstLoaded.current = true;
+        setLoading(false);
+        setRefreshing(false);
+        setBoardLoading(false);
+      }
     }
-  }, [debouncedSearch, channelType, origin]);
+  }, [activeFunnelId, debouncedSearch, channelType, origin, addToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 350);
@@ -175,7 +284,7 @@ export default function FunnelPage() {
       setStageSaving(true);
       try {
         if (stageModal.mode === 'create') {
-          await funnelService.createStage(name, color, aiCriteria);
+          await funnelService.createStage(name, color, aiCriteria, activeFunnelId || undefined);
           await loadBoard();
           addToast('success', 'Etapa criada com sucesso.');
         } else if (stageModal.stage) {
@@ -196,7 +305,7 @@ export default function FunnelPage() {
         setStageSaving(false);
       }
     },
-    [stageModal, loadBoard, addToast],
+    [stageModal, activeFunnelId, loadBoard, addToast],
   );
 
   const openDeleteStage = useCallback(
@@ -291,6 +400,62 @@ export default function FunnelPage() {
     [groupStage, addToast],
   );
 
+  const handleCreateFunnel = useCallback(
+    async (payload: CreateFunnelPayload) => {
+      setFunnelSaving(true);
+      try {
+        const created = await funnelService.createFunnel(payload);
+        setFunnelModal({ open: false, funnel: null });
+        await loadFunnels(created.id);
+        addToast('success', `Funil "${created.name}" criado.`);
+      } catch (err) {
+        addToast('error', err instanceof Error ? err.message : 'Erro ao criar o funil.');
+      } finally {
+        setFunnelSaving(false);
+      }
+    },
+    [loadFunnels, addToast],
+  );
+
+  const handleUpdateFunnel = useCallback(
+    async (funnelId: string, payload: UpdateFunnelPayload) => {
+      setFunnelSaving(true);
+      try {
+        await funnelService.updateFunnel(funnelId, payload);
+        setFunnelModal({ open: false, funnel: null });
+        await loadFunnels();
+        // Contatos trazidos de outro funil entram na primeira coluna deste.
+        if (payload.moveExistingContacts && funnelId === activeFunnelId) await loadBoard();
+        addToast('success', 'Funil atualizado.');
+      } catch (err) {
+        addToast('error', err instanceof Error ? err.message : 'Erro ao salvar o funil.');
+      } finally {
+        setFunnelSaving(false);
+      }
+    },
+    [activeFunnelId, loadFunnels, loadBoard, addToast],
+  );
+
+  const handleDeleteFunnel = useCallback(async () => {
+    if (!deletingFunnel) return;
+    setFunnelDeleteLoading(true);
+    try {
+      await funnelService.deleteFunnel(deletingFunnel.id);
+      setDeletingFunnel(null);
+      await loadFunnels(funnels.find((funnel) => funnel.isMain)?.id);
+      addToast('success', 'Funil excluído. Os cards foram para o funil principal.');
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Erro ao excluir o funil.');
+    } finally {
+      setFunnelDeleteLoading(false);
+    }
+  }, [deletingFunnel, funnels, loadFunnels, addToast]);
+
+  const activeFunnel = funnels.find((funnel) => funnel.id === activeFunnelId) ?? null;
+  const multipleFunnels = funnels.length > 1;
+  const funnelLimitReached = funnels.filter((funnel) => !funnel.isMain).length >= maxExtraFunnels;
+  const funnelIdParam = activeFunnelId || undefined;
+
   if (loading) {
     return <SkeletonPage><SkeletonCards count={6}/></SkeletonPage>;
   }
@@ -312,20 +477,47 @@ export default function FunnelPage() {
     <div className="w-full max-w-full space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Funil de vendas</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+            {multipleFunnels ? 'Funis' : 'Funil de vendas'}
+          </h1>
           <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-            Onde cada lead está e quanto ainda dá para fechar
+            {multipleFunnels
+              ? funnelSourceHint(activeFunnel, funnelChannels)
+              : 'Onde cada lead está e quanto ainda dá para fechar'}
           </p>
         </div>
-        {/* Só as colunas do quadro viajam no arquivo — os leads ficam. */}
-        <ImportExportMenu
-          resourceLabel="etapas do funil"
-          onExport={() => funnelService.exportStagesCsv()}
-          onImport={(csv) => funnelService.importStagesCsv(csv)}
-          onImported={() => { void loadBoard(); }}
-          onError={(message) => addToast('error', message)}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          {funnels.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Plus size={14} />}
+              disabled={funnelLimitReached}
+              title={funnelLimitReached ? 'Você já tem o número máximo de funis. Exclua um para criar outro.' : undefined}
+              onClick={() => setFunnelModal({ open: true, funnel: null })}
+            >
+              Novo funil
+            </Button>
+          )}
+          {/* Só as colunas do quadro viajam no arquivo — os leads ficam. */}
+          <ImportExportMenu
+            resourceLabel="etapas do funil"
+            onExport={() => funnelService.exportStagesCsv(funnelIdParam)}
+            onImport={(csv) => funnelService.importStagesCsv(csv, funnelIdParam)}
+            onImported={() => { void loadBoard(); }}
+            onError={(message) => addToast('error', message)}
+          />
+        </div>
       </div>
+
+      {multipleFunnels && activeFunnelId && (
+        <FunnelTabs
+          funnels={funnels}
+          activeId={activeFunnelId}
+          onSelect={setActiveFunnelId}
+          onConfigure={(funnel) => setFunnelModal({ open: true, funnel })}
+        />
+      )}
 
       <FunnelFilters
         search={search}
@@ -341,22 +533,26 @@ export default function FunnelPage() {
         refreshing={refreshing}
       />
 
-      <FunnelBoard
-        stages={stages}
-        columns={columns}
-        hasMoreByStage={hasMoreByStage}
-        loadingMoreStage={loadingMoreStage}
-        temperatureFilter={temperature}
-        canCreateGroup={canCreateGroup}
-        onColumnsChange={setColumns}
-        onPersistMove={handlePersistMove}
-        onOpenLead={setDrawerLead}
-        onLoadMore={handleLoadMore}
-        onRenameStage={(stage) => setStageModal({ open: true, mode: 'edit', stage })}
-        onDeleteStage={openDeleteStage}
-        onCreateGroup={setGroupStage}
-        onReorderStages={handleReorderStages}
-      />
+      {boardLoading ? (
+        <SkeletonCards count={6}/>
+      ) : (
+        <FunnelBoard
+          stages={stages}
+          columns={columns}
+          hasMoreByStage={hasMoreByStage}
+          loadingMoreStage={loadingMoreStage}
+          temperatureFilter={temperature}
+          canCreateGroup={canCreateGroup}
+          onColumnsChange={setColumns}
+          onPersistMove={handlePersistMove}
+          onOpenLead={setDrawerLead}
+          onLoadMore={handleLoadMore}
+          onRenameStage={(stage) => setStageModal({ open: true, mode: 'edit', stage })}
+          onDeleteStage={openDeleteStage}
+          onCreateGroup={setGroupStage}
+          onReorderStages={handleReorderStages}
+        />
+      )}
 
       <LeadDetailDrawer
         lead={drawerLead}
@@ -452,6 +648,33 @@ export default function FunnelPage() {
           onSubmit={handleCreateGroup}
         />
       )}
+
+      <FunnelModal
+        isOpen={funnelModal.open}
+        funnel={funnelModal.funnel}
+        funnels={funnels}
+        channels={funnelChannels}
+        loading={funnelSaving}
+        onClose={() => (funnelSaving ? undefined : setFunnelModal({ open: false, funnel: null }))}
+        onCreate={handleCreateFunnel}
+        onUpdate={handleUpdateFunnel}
+        onDelete={(funnel) => {
+          setFunnelModal({ open: false, funnel: null });
+          setDeletingFunnel(funnel);
+        }}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={deletingFunnel !== null}
+        title="Excluir funil"
+        message={deletingFunnel
+          ? `Os cards de "${deletingFunnel.name}" vão para a primeira coluna do funil principal, e os canais dele passam a cair lá. As colunas deste funil serão apagadas.`
+          : ''}
+        confirmLabel="Excluir funil"
+        loading={funnelDeleteLoading}
+        onClose={() => (funnelDeleteLoading ? undefined : setDeletingFunnel(null))}
+        onConfirm={handleDeleteFunnel}
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
