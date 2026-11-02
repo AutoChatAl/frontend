@@ -30,8 +30,10 @@ interface PlacementEntry {
 
 const MOVE_ERROR = 'Não foi possível mover o contato no funil. Tente de novo.';
 
-function placementFromLead(lead: FunnelLead): FunnelLeadPlacement {
+/** Mover pela conversa não troca o contato de funil: as colunas oferecidas são as do funil dele. */
+function placementFromLead(lead: FunnelLead, funnelId: string): FunnelLeadPlacement {
   return {
+    funnelId,
     stageId: lead.funnelStageId,
     offBoardReason: null,
     stageEnteredAt: lead.stageEnteredAt,
@@ -67,12 +69,13 @@ export function useContactFunnel(
 
   const load = useCallback(async (targetId: string, silent: boolean) => {
     try {
-      const [nextStages, nextPlacement] = await Promise.all([
-        funnelService.listStages(),
+      const [{ funnels }, nextPlacement] = await Promise.all([
+        funnelService.listFunnels(),
         funnelService.getLeadPlacement(targetId),
       ]);
       if (activeIdRef.current !== targetId) return;
-      setStages(nextStages);
+      // Cada contato tem as colunas do próprio funil — "Ganho" de vendas não é "Concluído" do pós-venda.
+      setStages(funnels.find((funnel) => funnel.id === nextPlacement.funnelId)?.stages ?? []);
       setEntry({ contactId: targetId, placement: nextPlacement });
       setFailedFor((prev) => (prev === targetId ? null : prev));
     } catch {
@@ -121,6 +124,7 @@ export function useContactFunnel(
     setEntry({
       contactId: targetId,
       placement: {
+        funnelId: previous.placement.funnelId,
         stageId,
         offBoardReason: null,
         stageEnteredAt: new Date().toISOString(),
@@ -130,7 +134,9 @@ export function useContactFunnel(
     });
     funnelService.moveLead(targetId, stageId, 0)
       .then((lead) => {
-        if (activeIdRef.current === targetId) setEntry({ contactId: targetId, placement: placementFromLead(lead) });
+        if (activeIdRef.current === targetId) {
+          setEntry({ contactId: targetId, placement: placementFromLead(lead, previous.placement.funnelId) });
+        }
       })
       .catch(() => {
         if (activeIdRef.current !== targetId) return;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Header from '@/components/Header';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
+import ReferralInviteModal from '@/components/ReferralInviteModal';
 import Sidebar from '@/components/Sidebar';
 import Skeleton, { SkeletonCards, SkeletonPage, SkeletonStats } from '@/components/Skeleton';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
@@ -111,6 +112,7 @@ export default function PrivateLayout({ children }: Readonly<{
                       <TrialBanner />
                       <SubscriptionBanner />
                       <TrialWelcomeModal />
+                      <ReferralInviteModal />
                       <TrialEndedGate canChoosePlan={canManageWorkspace(user)} showSupport={!isAdmin}>
                         {children}
                       </TrialEndedGate>
