@@ -2,12 +2,15 @@
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { ArrowLeft, CheckCircle2, CreditCard, Lock, TicketPercent, User, X } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { couponService } from '@/services/coupon.service';
+import { referralService } from '@/services/referral.service';
 import { subscriptionService } from '@/services/subscription.service';
 import type { CouponPreview } from '@/types/Coupon';
+import type { CheckoutPreview } from '@/types/Referral';
 import type { BillingCycle, Plan } from '@/types/Subscription';
+import { isPlausibleReferralCode, normalizeReferralCode } from '@/utils/referralCode';
 import { BILLING_CYCLES, cycleChargeSummary, planCycleTotalCents, planMonthlyEquivalentCents } from '@lib/billingCycles';
 
 import Button from './Button';
@@ -159,7 +162,68 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(null);
+  // Resumo calculado pelo backend (mesma conta da cobrança): plano, cupom e indicação.
+  const [preview, setPreview] = useState<CheckoutPreview | null>(null);
+  const [referralOpen, setReferralOpen] = useState(false);
+  const [referralInput, setReferralInput] = useState('');
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState('');
+  const [referralRejected, setReferralRejected] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
+  const appliedCouponCode = appliedCoupon?.code;
+  const refreshPreview = useCallback(async () => {
+    try {
+      setPreview(await subscriptionService.previewCheckout(plan.slug, billingCycle, appliedCouponCode));
+    }
+    catch {
+      // Sem a prévia o checkout segue com os valores do plano; a cobrança é calculada no backend.
+      setPreview(null);
+    }
+  }, [plan.slug, billingCycle, appliedCouponCode]);
+  useEffect(() => {
+    refreshPreview();
+  }, [refreshPreview]);
+  const applyReferralCode = async (code: string): Promise<boolean> => {
+    try {
+      await referralService.attach(code, 'checkout');
+      await refreshPreview();
+      addToast('success', 'Código de indicação aplicado. O desconto entra nesta primeira cobrança.');
+      return true;
+    }
+    catch (err) {
+      setReferralError(err instanceof Error ? err.message : 'Não foi possível aplicar o código de indicação.');
+      return false;
+    }
+  };
+  const handleApplyReferral = async () => {
+    const code = normalizeReferralCode(referralInput);
+    if (!isPlausibleReferralCode(code)) {
+      setReferralError('Digite o código de indicação que você recebeu.');
+      return;
+    }
+    setReferralLoading(true);
+    setReferralError('');
+    if (await applyReferralCode(code)) {
+      setReferralInput('');
+      setReferralOpen(false);
+    }
+    setReferralLoading(false);
+  };
+  const handleContinueWithoutReferral = async () => {
+    setReferralLoading(true);
+    try {
+      await referralService.detach();
+      setReferralRejected(false);
+      await refreshPreview();
+      addToast('success', 'Código de indicação removido. Confira o valor e clique em pagar.');
+    }
+    catch (err) {
+      addToast('error', err instanceof Error ? err.message : 'Não foi possível remover o código de indicação.');
+    }
+    finally {
+      setReferralLoading(false);
+    }
+  };
   const handleApplyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code)
@@ -167,13 +231,23 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
     setCouponLoading(true);
     setCouponError('');
     try {
-      const preview = await couponService.validate(code, plan.slug, billingCycle);
-      setAppliedCoupon(preview);
+      const couponPreview = await couponService.validate(code, plan.slug, billingCycle);
+      setAppliedCoupon(couponPreview);
       setCouponInput('');
     }
     catch (err) {
       setAppliedCoupon(null);
-      setCouponError(err instanceof Error ? err.message : 'Cupom inválido.');
+      // Código de indicação digitado no campo de cupom: aplica como indicação.
+      const asReferral = normalizeReferralCode(code);
+      const referralInfo = isPlausibleReferralCode(asReferral)
+        ? await referralService.getCodeInfo(asReferral).catch(() => null)
+        : null;
+      if (referralInfo && await applyReferralCode(asReferral)) {
+        setCouponInput('');
+      }
+      else {
+        setCouponError(err instanceof Error ? err.message : 'Cupom inválido.');
+      }
     }
     finally {
       setCouponLoading(false);
@@ -188,13 +262,17 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
   const isMonthly = billingCycle === 'monthly';
   const perChargeSuffix = isMonthly ? '/mês' : ` a cada ${cycleMeta.months} meses`;
   const firstChargeLabel = isMonthly ? 'no 1º mês' : 'na 1ª cobrança';
-  const payLabel = appliedCoupon
+  const couponPayLabel = appliedCoupon
     ? appliedCoupon.type === 'recurring'
       ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}${perChargeSuffix}`
       : appliedCoupon.type === 'repeating' && (appliedCoupon.durationInMonths ?? 0) > 1
         ? `Pagar ${formatBRL(appliedCoupon.discountedCents)}${perChargeSuffix} nos primeiros ${appliedCoupon.durationInMonths} meses`
         : `Pagar ${formatBRL(appliedCoupon.discountedCents)} ${firstChargeLabel}`
     : `Pagar ${formatBRL(planCycleTotalCents(plan, billingCycle))}${perChargeSuffix}`;
+  // O desconto de indicação vale só na 1ª cobrança, então o botão mostra o valor dela.
+  const payLabel = preview && preview.referralDiscountCents > 0
+    ? `Pagar ${formatBRL(preview.totalCents)} ${firstChargeLabel}`
+    : couponPayLabel;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements)
@@ -220,6 +298,7 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
             requiresAction?: boolean;
             clientSecret?: string;
             error?: string;
+            reason?: string;
         } | null = null;
     try {
       result = await subscriptionService.subscribe(plan.slug, paymentMethod.id, personal, appliedCoupon?.code, billingCycle);
@@ -231,6 +310,11 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
     }
     if (!result) {
       addToast('error', 'Erro ao processar pagamento. Tente novamente.');
+      setLoading(false);
+      return;
+    }
+    if (!result.success && result.reason === 'REFERRAL_NOT_ELIGIBLE') {
+      setReferralRejected(true);
       setLoading(false);
       return;
     }
@@ -330,7 +414,58 @@ function CardForm({ plan, billingCycle, personal, onSuccess, onBack }: CardFormP
       </>)}
     </div>
 
-    <Button type="submit" className="w-full justify-center" disabled={loading || !stripe}>
+    <div>
+      {preview?.refereeEligible ? (<p className="text-sm text-emerald-700 dark:text-emerald-300">
+          Indicação aplicada: {formatBRL(preview.refereeDiscountCents)} de desconto nesta primeira cobrança.
+      </p>) : referralOpen ? (<>
+        <label htmlFor="checkout-codigo-indicacao" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Código de indicação
+        </label>
+        <div className="flex gap-2">
+          <input id="checkout-codigo-indicacao" type="text" value={referralInput} onChange={(e) => { setReferralInput(normalizeReferralCode(e.target.value)); setReferralError(''); }} placeholder="Ex: ANA7K4P" className="flex-1 min-w-0 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 uppercase focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"/>
+          <Button type="button" variant="secondary" onClick={handleApplyReferral} disabled={referralLoading || !referralInput.trim()}>
+            {referralLoading ? 'Aplicando...' : 'Aplicar'}
+          </Button>
+        </div>
+        {referralError && <p className="text-xs text-red-500 mt-1">{referralError}</p>}
+      </>) : (<button type="button" onClick={() => setReferralOpen(true)} className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+          Tenho um código de indicação
+      </button>)}
+    </div>
+
+    {preview && (preview.couponDiscountCents > 0 || preview.referralDiscountCents > 0) && (<dl className="space-y-1.5 rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-sm">
+      <div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
+        <dt>{plan.name} · {cycleMeta.label}</dt>
+        <dd className="tabular-nums">{formatBRL(preview.baseCents)}</dd>
+      </div>
+      {preview.couponDiscountCents > 0 && (<div className="flex justify-between gap-3 text-slate-600 dark:text-slate-300">
+        <dt>Cupom {appliedCoupon?.code ?? ''}</dt>
+        <dd className="tabular-nums">− {formatBRL(preview.couponDiscountCents)}</dd>
+      </div>)}
+      {preview.refereeDiscountCents > 0 && (<div className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-300">
+        <dt>Desconto de indicação</dt>
+        <dd className="tabular-nums">− {formatBRL(preview.refereeDiscountCents)}</dd>
+      </div>)}
+      {preview.rewardDiscountCents > 0 && (<div className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-300">
+        <dt>Seus créditos de indicação</dt>
+        <dd className="tabular-nums">− {formatBRL(preview.rewardDiscountCents)}</dd>
+      </div>)}
+      <div className="flex justify-between gap-3 border-t border-slate-100 dark:border-slate-700 pt-1.5 font-semibold text-slate-900 dark:text-white">
+        <dt>Total {firstChargeLabel}</dt>
+        <dd className="tabular-nums">{formatBRL(preview.totalCents)}</dd>
+      </div>
+    </dl>)}
+
+    {referralRejected && (<div role="alert" className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 p-3">
+      <p className="text-sm text-amber-700 dark:text-amber-400">
+          O código de indicação vale só para quem assina o Synq pela primeira vez, com cartão e CPF próprios. Nada foi cobrado.
+      </p>
+      <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={handleContinueWithoutReferral} loading={referralLoading}>
+          Continuar sem indicação
+      </Button>
+    </div>)}
+
+    <Button type="submit" className="w-full justify-center" disabled={loading || !stripe || referralRejected}>
       <CreditCard size={16} className="mr-1"/>
       {loading ? 'Processando...' : payLabel}
     </Button>

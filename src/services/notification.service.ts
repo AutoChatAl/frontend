@@ -1,6 +1,6 @@
 import { apiClient } from '@/utils/ApiClient';
 
-export type NotificationType = 'maintenance' | 'feature' | 'bugfix';
+export type NotificationType = 'maintenance' | 'feature' | 'bugfix' | 'alert' | 'referral';
 export interface Notification {
     id: string;
     workspaceId: string;

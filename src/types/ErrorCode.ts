@@ -150,6 +150,12 @@ export const ERROR_MESSAGES: Record<ErrorReason, string> = {
   FUNNEL_LIMIT_REACHED: 'Você já tem o número máximo de funis. Exclua um funil para criar outro.',
   TRACKING_INVALID_DOMAIN: 'Um dos domínios não é válido. Use só o endereço do site, por exemplo: minhaloja.com.br.',
   TRACKING_SITE_NOT_FOUND: 'Não encontramos a configuração de rastreamento. Atualize a página e tente de novo.',
+  REFERRAL_CODE_NOT_FOUND: 'Não encontramos este código de indicação. Confira as letras e os números e tente de novo.',
+  REFERRAL_SELF_NOT_ALLOWED: 'Você não pode usar o seu próprio código de indicação. Compartilhe ele com outras pessoas.',
+  REFERRAL_NOT_ELIGIBLE: 'Este código de indicação vale só para quem está assinando o Synq pela primeira vez, com cartão e CPF próprios.',
+  REFERRAL_LOCKED: 'Sua indicação já foi confirmada e não pode mais ser trocada.',
+  REFERRAL_NOT_FOUND: 'Sua conta não tem código de indicação aplicado.',
+  REFERRAL_CODE_IN_COUPON_FIELD: 'Este é um código de indicação, não um cupom. Use o campo "Código de indicação".',
 };
 export function getErrorMessage(reason?: string): string {
   if (!reason)

@@ -216,6 +216,50 @@ export default function TermosPage() {
           </li>
         </ul>
 
+        <h2 id="programa-de-indicacao" className="text-2xl font-bold text-slate-900 mt-10 mb-3 scroll-mt-8">
+            8.1 Programa de indicação (&quot;Indique e ganhe&quot;)
+        </h2>
+        <ul className="list-disc pl-6 space-y-1">
+          <li>
+              Cada conta tem um código e um link de indicação. Quem cria a conta
+              pelo link ou informa o código antes da primeira fatura paga é
+              considerado indicado por aquela conta.
+          </li>
+          <li>
+              O indicado recebe 5% de desconto sobre o valor do plano somente na
+              primeira fatura paga. O benefício vale apenas para quem assina a
+              Synq pela primeira vez, com cartão e CPF próprios.
+          </li>
+          <li>
+              A indicação é confirmada quando o indicado mantém a assinatura por
+              7 (sete) dias após a primeira fatura paga, sem cancelamento,
+              reembolso ou contestação do pagamento.
+          </li>
+          <li>
+              Cada indicação confirmada gera para quem indicou um crédito único
+              de 10% do valor de uma mensalidade do seu plano, abatido na
+              próxima renovação. Várias indicações confirmadas no mesmo ciclo
+              se somam.
+          </li>
+          <li>
+              O desconto total de uma fatura, somando cupons e indicações, é
+              limitado a 50% do valor do plano daquela fatura. O crédito que
+              exceder o limite fica guardado para as faturas seguintes. Os
+              descontos não se aplicam a planos de IA, recursos extras ou
+              mensagens excedentes e não são convertidos em dinheiro.
+          </li>
+          <li>
+              Indicações de si mesmo, contas criadas para obter o benefício ou
+              qualquer uso em desacordo com estes Termos podem ser revisadas,
+              suspensas ou canceladas pela Synq, inclusive com o cancelamento
+              dos créditos ainda não utilizados.
+          </li>
+          <li>
+              A Synq pode alterar ou encerrar o programa a qualquer momento,
+              preservando os créditos de indicações já confirmadas.
+          </li>
+        </ul>
+
         <h2 className="text-2xl font-bold text-slate-900 mt-10 mb-3">
             9. Propriedade intelectual
         </h2>

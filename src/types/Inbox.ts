@@ -2,6 +2,15 @@ export type InboxChannelType = 'WHATSAPP' | 'INSTAGRAM' | 'WHATSAPP_OFFICIAL';
 export type InboxDirection = 'IN' | 'OUT';
 /** Opções da barra de filtros da lista. O arquivo não entra aqui: é uma vista à parte. */
 export type InboxFilterId = InboxChannelType | 'ALL';
+
+/** Opção do filtro de canal (`GET /inbox/channels`). */
+export interface InboxChannelOption {
+  id: string;
+  type: InboxChannelType;
+  name: string | null;
+  /** Número ou @ do canal. */
+  identifier: string | null;
+}
 export type MessageDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
 export type MessageMediaType = 'image' | 'audio' | 'video' | 'document';
 
@@ -127,6 +136,7 @@ export interface InboxOutgoingMedia {
 
 export interface InboxListFilters {
   channelType?: InboxChannelType;
+  channelId?: string;
   search?: string;
   /** `true` lista o arquivo em vez da caixa principal. */
   archived?: boolean;
