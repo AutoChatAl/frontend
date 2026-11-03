@@ -86,6 +86,8 @@ export type FunnelOffBoardReason = 'REMOVED' | 'AWAITING_REPLY';
 
 /** Em que coluna do quadro o contato está agora — é o que a conversa mostra. */
 export interface FunnelLeadPlacement {
+  /** Funil do contato: as colunas que a conversa oferece saem dele. */
+  funnelId: string;
   /** Nulo quando o quadro não mostra o contato em coluna nenhuma. */
   stageId: string | null;
   /** Nulo também quando a etapa gravada deixou de existir. */
@@ -132,11 +134,14 @@ export interface FunnelColumn {
 }
 
 export interface FunnelBoard {
+  funnelId: string;
   stages: FunnelStage[];
   columns: Record<string, FunnelColumn>;
 }
 
 export interface BoardFilters {
+  /** Sem id, o funil principal. */
+  funnelId?: string;
   search?: string;
   channelType?: ChannelType;
   origin?: LeadOrigin;
@@ -152,6 +157,7 @@ export interface UpdateLeadPayload {
 
 export interface FunnelStageDefinition {
   id: string;
+  funnelId: string;
   name: string;
   color: StageColor;
   order: number;
@@ -164,4 +170,49 @@ export interface StagePayload {
   name?: string;
   color?: StageColor;
   aiCriteria?: string;
+}
+
+/** Colunas com que um funil novo nasce. `COPY` repete as de outro funil. */
+export type FunnelStartingStages = 'POST_SALES' | 'SALES' | 'BLANK' | 'COPY';
+
+/**
+ * Um quadro do funil. O principal sempre existe, não guarda canais — recebe todos os
+ * que não estão em outro funil — e não pode ser excluído.
+ */
+export interface Funnel {
+  id: string;
+  name: string;
+  isMain: boolean;
+  /** Canais que alimentam o funil. Vazio no principal. */
+  channelIds: string[];
+  /** A IA pode mover os cards entre as colunas deste funil. */
+  aiAutoMove: boolean;
+  order: number;
+  stages: FunnelStageDefinition[];
+}
+
+export interface FunnelList {
+  funnels: Funnel[];
+  /** Canais do workspace, para vincular a um funil. */
+  channels: LeadSourceChannel[];
+  /** Quantos funis além do principal a conta pode ter. */
+  maxExtraFunnels: number;
+}
+
+export interface CreateFunnelPayload {
+  name: string;
+  channelIds: string[];
+  aiAutoMove: boolean;
+  template: FunnelStartingStages;
+  copyFromFunnelId?: string;
+  /** Traz também quem já conversou pelos canais escolhidos. */
+  moveExistingContacts: boolean;
+}
+
+export interface UpdateFunnelPayload {
+  name?: string;
+  channelIds?: string[];
+  aiAutoMove?: boolean;
+  /** Vale só para os canais que entram agora no funil. */
+  moveExistingContacts?: boolean;
 }

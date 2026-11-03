@@ -16,6 +16,7 @@ Este documento é a fonte primária de verdade para agentes de IA e desenvolvedo
 - **Dark mode desde o início:** Todo novo componente deve suportar dark mode com o par `light / dark:`.
 - **TypeScript estrito:** `strict: true` com `noUncheckedIndexedAccess` e `exactOptionalPropertyTypes`. Nunca use `any`.
 - **Fail Fast:** Prefira erros em tempo de compilação. Valide em boundaries de sistema (entrada do usuário, resposta da API).
+- **Tela de produto, não landing:** páginas do app seguem a densidade do dashboard e do Faturamento: cabeçalho só com título e frase, cards `p-4 sm:p-5`, `gap-2 sm:gap-3`, `space-y-3` e título de card `text-sm`. Antes de entregar, confira a lista "O que evitar" (`DESIGN_SYSTEM.md` §9.16).
 
 ---
 
@@ -532,6 +533,8 @@ Siga estas regras ao implementar qualquer componente ou página:
 7. **Ícones:** Sempre Lucide React. Tamanhos: 12 (badge), 14-16 (body/botão), 20 (header modal). Veja seção 10.
 8. **Badges:** Use os 12 tipos documentados no Design System — nunca crie uma nova variante sem documentar primeiro.
 9. **Novos tokens:** Se precisar de uma cor, tamanho ou estilo não documentado, adicione ao `DESIGN_SYSTEM.md` **antes** de usar no código.
+10. **Densidade e layout:** Cards lado a lado no grid precisam ter conteúdo de altura parecida. Nunca deixe meio card em branco: complete com dados ou mude o layout. Destaque colorido (§9.13) só para valor real maior que zero.
+11. **Ilustrações:** Só onde o `DESIGN_SYSTEM.md` permite (§9.15). Recorte a margem transparente, use caixa fixa igual por linha e no máximo uma por card.
 
 ---
 
@@ -589,6 +592,7 @@ yarn build  # Sem erros de TypeScript
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Sim | URL base da API backend (padrão: `http://localhost:3000`) |
+| `NEXT_PUBLIC_SITE_URL` | Não | URL pública do site, usada nas prévias (Open Graph) dos links de indicação `/r/CODIGO` (padrão: `https://www.synq.app.br`) |
 
 ---
 
@@ -606,6 +610,9 @@ yarn build  # Sem erros de TypeScript
 - **Nunca** escreva mensagens de erro para o usuário em inglês — use português.
 - **Nunca** use `alert()`, `confirm()` ou `prompt()` nativos — use `Toast` ou `Modal`.
 - **Nunca** aplique cor sem o par `dark:` correspondente.
+- **Nunca** use banner colorido (fundo índigo/lilás) como cabeçalho de página, nem círculos numerados para explicar o produto. Números ficam só no passo a passo operacional (`DESIGN_SYSTEM.md` §8.9).
+- **Nunca** coloque bloco colorido dentro de card nem destaque um número zero com cor.
+- **Nunca** use espaçamento de landing em tela do app (`p-6`/`p-8` em card, `gap-6`, `space-y-6`).
 
 ---
 

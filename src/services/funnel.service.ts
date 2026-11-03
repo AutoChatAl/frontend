@@ -1,12 +1,16 @@
 import type {
   BoardFilters,
+  CreateFunnelPayload,
+  Funnel,
   FunnelBoard,
   FunnelColumn,
   FunnelLead,
   FunnelLeadPlacement,
+  FunnelList,
   FunnelStageDefinition,
   StageColor,
   StagePayload,
+  UpdateFunnelPayload,
   UpdateLeadPayload,
 } from '@/types/Funnel';
 import type { Group } from '@/types/Group';
@@ -82,19 +86,59 @@ class FunnelService {
     }
   }
 
-  public async listStages(): Promise<FunnelStageDefinition[]> {
-    const response = await apiClient.get<{ stages: FunnelStageDefinition[] }>('/funnel/stages');
+  /** Os funis do workspace, com as colunas de cada um e os canais que dá para vincular. */
+  public async listFunnels(): Promise<FunnelList> {
+    const response = await apiClient.get<FunnelList>('/funnel/funnels');
+    if (!response.success || !response.data) {
+      throw new Error('Falha ao carregar os funis.');
+    }
+    return response.data;
+  }
+
+  public async createFunnel(payload: CreateFunnelPayload): Promise<Funnel> {
+    const response = await apiClient.post<{ funnel: Funnel }>('/funnel/funnels', payload);
+    if (!response.success || !response.data) {
+      throw new Error(getErrorFromResponse(response));
+    }
+    return response.data.funnel;
+  }
+
+  public async updateFunnel(funnelId: string, payload: UpdateFunnelPayload): Promise<Funnel> {
+    const response = await apiClient.patch<{ funnel: Funnel }>(`/funnel/funnels/${funnelId}`, payload);
+    if (!response.success || !response.data) {
+      throw new Error(getErrorFromResponse(response));
+    }
+    return response.data.funnel;
+  }
+
+  /** Os cards voltam para a entrada do funil principal, e os canais passam a cair nele. */
+  public async deleteFunnel(funnelId: string): Promise<void> {
+    const response = await apiClient.delete(`/funnel/funnels/${funnelId}`);
+    if (!response.success) {
+      throw new Error(getErrorFromResponse(response));
+    }
+  }
+
+  /** Colunas de um funil; sem id, as do principal. */
+  public async listStages(funnelId?: string): Promise<FunnelStageDefinition[]> {
+    const response = await apiClient.get<{ stages: FunnelStageDefinition[] }>(`/funnel/stages${buildQuery({ funnelId })}`);
     if (!response.success || !response.data) {
       throw new Error('Falha ao carregar as etapas do funil.');
     }
     return response.data.stages;
   }
 
-  public async createStage(name: string, color?: StageColor, aiCriteria?: string): Promise<FunnelStageDefinition> {
+  public async createStage(
+    name: string,
+    color?: StageColor,
+    aiCriteria?: string,
+    funnelId?: string,
+  ): Promise<FunnelStageDefinition> {
     const response = await apiClient.post<{ stage: FunnelStageDefinition }>('/funnel/stages', {
       name,
       ...(color ? { color } : {}),
       ...(aiCriteria !== undefined ? { aiCriteria } : {}),
+      ...(funnelId ? { funnelId } : {}),
     });
     if (!response.success || !response.data) {
       throw new Error('Falha ao criar a etapa.');
@@ -134,16 +178,20 @@ class FunnelService {
     return response.data.group;
   }
 
-  public async exportStagesCsv(): Promise<TransferExport> {
-    const response = await apiClient.get<TransferExport>('/funnel/stages/export');
+  public async exportStagesCsv(funnelId?: string): Promise<TransferExport> {
+    const response = await apiClient.get<TransferExport>(`/funnel/stages/export${buildQuery({ funnelId })}`);
     if (!response.success || !response.data) {
       throw new Error('Falha ao exportar a configuração do funil.');
     }
     return response.data;
   }
 
-  public async importStagesCsv(csv: string): Promise<TransferImportResult> {
-    const response = await apiClient.post<TransferImportResult>('/funnel/stages/import', { csv }, { timeoutMs: 120000 });
+  public async importStagesCsv(csv: string, funnelId?: string): Promise<TransferImportResult> {
+    const response = await apiClient.post<TransferImportResult>(
+      '/funnel/stages/import',
+      { csv, ...(funnelId ? { funnelId } : {}) },
+      { timeoutMs: 120000 },
+    );
     if (!response.success || !response.data) {
       throw new Error('Falha ao importar o funil. Confira se o arquivo veio de uma exportação do Synq.');
     }
