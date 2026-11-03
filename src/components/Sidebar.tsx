@@ -293,7 +293,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
     </aside>
 
     {mobileMenuOpen && (<button type="button" className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></button>)}
-    <div className={`
+    <aside className={`
         fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-64 z-50 transform transition-transform duration-300 md:hidden border-r border-slate-200 dark:border-slate-700
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
@@ -312,6 +312,6 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           setMobileMenuOpen(false);
         }} onToggleGroup={toggleGroup}/>
       </nav>
-    </div>
+    </aside>
   </>);
 }
