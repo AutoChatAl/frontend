@@ -118,14 +118,14 @@ export default function DatePicker({ value, onChange, min, placeholder = 'Seleci
     {open && (<div className="absolute top-full left-0 mt-2 z-50 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-black/30 p-4 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150">
 
       <div className="flex items-center justify-between mb-4">
-        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <ChevronLeft size={16}/>
+        <button type="button" onClick={prevMonth} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Mês anterior">
+          <ChevronLeft size={16} aria-hidden="true"/>
         </button>
         <span className="text-sm font-semibold text-slate-800 dark:text-white">
           {MONTHS_PT[viewMonth]} {viewYear}
         </span>
-        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <ChevronRight size={16}/>
+        <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Próximo mês">
+          <ChevronRight size={16} aria-hidden="true"/>
         </button>
       </div>
 

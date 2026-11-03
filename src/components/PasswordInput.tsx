@@ -16,7 +16,7 @@ interface PasswordInputProps {
 }
 export default function PasswordInput({ label, placeholder = '••••••••', value, onChange, required, minLength, autoComplete, wrapperClassName }: PasswordInputProps) {
   const [show, setShow] = useState(false);
-  return (<Input label={label} type={show ? 'text' : 'password'} placeholder={placeholder} value={value} onChange={onChange} required={required} minLength={minLength} autoComplete={autoComplete} {...(wrapperClassName ? { wrapperClassName } : {})} rightElement={<button type="button" onClick={() => setShow((v) => !v)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" title={show ? 'Ocultar senha' : 'Mostrar senha'}>
+  return (<Input label={label} type={show ? 'text' : 'password'} placeholder={placeholder} value={value} onChange={onChange} required={required} minLength={minLength} autoComplete={autoComplete} {...(wrapperClassName ? { wrapperClassName } : {})} rightElement={<button type="button" onClick={() => setShow((v) => !v)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" title={show ? 'Esconder senha' : 'Mostrar senha'} aria-label={show ? 'Esconder senha' : 'Mostrar senha'}>
     {show ? <EyeOff size={16} aria-hidden="true"/> : <Eye size={16} aria-hidden="true"/>}
   </button>}/>);
 }
