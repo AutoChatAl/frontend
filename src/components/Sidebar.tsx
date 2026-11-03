@@ -276,7 +276,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
         {sidebarCollapsed ? (<button onClick={toggleSidebar} className="flex items-center justify-center w-full p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-colors">
           <Menu size={18}/>
         </button>) : (<div className="flex items-center w-full gap-2.5 p-1.5 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-colors overflow-hidden">
-          <div onClick={toggleSidebar} className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer">
+          <button onClick={toggleSidebar} className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer">
             <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-[10px] border border-slate-200 dark:border-slate-600 shrink-0">
               {userInitials}
             </div>
@@ -284,7 +284,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
               <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate">{userName}</p>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{getReadableRole(userRole)}</p>
             </div>
-          </div>
+          </button>
           <button type="button" onClick={handleLogout} aria-label="Sair da conta" title="Sair da conta" className="hover:text-rose-500 transition-colors shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
             <LogOut size={15} aria-hidden="true"/>
           </button>
@@ -292,7 +292,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
       </div>
     </aside>
 
-    {mobileMenuOpen && (<div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></div>)}
+    {mobileMenuOpen && (<button className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></button>)}
     <div className={`
         fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-64 z-50 transform transition-transform duration-300 md:hidden border-r border-slate-200 dark:border-slate-700
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -302,7 +302,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <BrandLogo size={24}/>
           <span className="text-base font-semibold text-slate-900 dark:text-white">{brandName}</span>
         </div>
-        <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1" aria-label="Fechar menu de navegação" title="Fechar menu de navegação">
+        <button type="button" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 p-1" aria-label="Recolher menu lateral" title="Recolher menu lateral">
           <X size={20} aria-hidden="true"/>
         </button>
       </div>
