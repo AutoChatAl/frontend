@@ -294,7 +294,7 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
 
     {mobileMenuOpen && (<div className="fixed inset-0 bg-slate-900/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}></div>)}
     <aside className={`
-        fixed inset-y-0 left-0 bg-white dark:bg-slate-800 w-64 z-50 transform transition-transform duration-300 md:hidden border-r border-slate-200 dark:border-slate-700
+        fixed inset-y-0 left-0 flex flex-col bg-white dark:bg-slate-800 w-64 z-50 transform transition-transform duration-300 md:hidden border-r border-slate-200 dark:border-slate-700
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
       <div className="h-14 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-700">
@@ -306,12 +306,26 @@ export default function Sidebar({ brandName = 'Synq', userName = 'John Doe', use
           <X size={20}/>
         </button>
       </div>
-      <nav className="p-3 overflow-y-auto max-h-[calc(100vh-3.5rem)]">
+      <nav className="flex-1 min-h-0 p-3 overflow-y-auto">
         <SidebarSections items={menuItemsWithBadges} activeTab={activeTab} collapsed={false} collapsedGroups={collapsedGroups} onItemClick={(item) => {
           handleMenuClick(item);
           setMobileMenuOpen(false);
         }} onToggleGroup={toggleGroup}/>
       </nav>
+      <div className="p-3 border-t border-slate-100 dark:border-slate-700">
+        <div className="flex items-center w-full gap-2.5 p-1.5 text-slate-400 rounded-md overflow-hidden">
+          <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-600 shrink-0">
+            {userInitials}
+          </div>
+          <div className="text-left overflow-hidden min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{userName}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{getReadableRole(userRole)}</p>
+          </div>
+          <button type="button" onClick={handleLogout} aria-label="Sair da conta" title="Sair da conta" className="p-2 hover:text-rose-500 transition-colors shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800">
+            <LogOut size={17} aria-hidden="true"/>
+          </button>
+        </div>
+      </div>
     </aside>
   </>);
 }
