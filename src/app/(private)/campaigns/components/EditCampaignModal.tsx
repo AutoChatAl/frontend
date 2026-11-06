@@ -14,6 +14,7 @@ import { groupService } from '@/services/group.service';
 import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { Campaign, UpdateCampaignInput } from '@/types/Campaign';
+import { CONTACT_NAME_PLACEHOLDER, DEFAULT_NAME_FALLBACK, NAME_FALLBACK_MAX_CHARS, unknownPlaceholders } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import { isUnlinkedContact } from '@/types/Contact';
@@ -266,8 +267,11 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       } else {
         const vars = formData.messageMeta?.templateVariables ?? {};
         const missing = templateVariableNames.filter((name) => !vars[name]?.trim());
+        const unknown = templateVariableNames.flatMap((name) => unknownPlaceholders(vars[name] ?? ''));
         if (missing.length > 0) {
           newErrors.template = `Preencha os campos do modelo de mensagem: ${missing.map((v) => `{{${v}}}`).join(', ')}`;
+        } else if (unknown.length > 0) {
+          newErrors.template = `Só {{nome}} pode ser usado como variável nos campos do modelo — ${unknown.map((v) => `{{${v}}}`).join(', ')} não existe.`;
         }
       }
     } else {
@@ -327,9 +331,11 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       if (formData.scheduledDate)
         payload.scheduledDate = formData.scheduledDate;
       if (isOfficialCampaign) {
+        const nameFallback = formData.messageMeta?.nameFallback?.trim();
         payload.messageMeta = {
           templateId: formData.messageMeta?.templateId ?? '',
           templateVariables: formData.messageMeta?.templateVariables ?? {},
+          ...(nameFallback ? { nameFallback } : {}),
         };
         delete payload.linkUrl;
         delete payload.linkLabel;
@@ -339,6 +345,7 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
         delete meta.templateName;
         delete meta.templateLanguage;
         delete meta.templateVariables;
+        delete meta.nameFallback;
         delete meta.headerMediaUrl;
         if (Object.keys(meta).length > 0) {
           payload.messageMeta = meta as NonNullable<UpdateCampaignInput['messageMeta']>;
@@ -615,11 +622,17 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
     }
     const contactCount = formData.sourceType === 'CHANNEL' ? formData.contactIds.length : (selectedGroup?.memberCount ?? 0);
     let cancelled = false;
-    campaignService.estimateOfficialCost({ templateId: selectedTemplate.id, contactCount })
+    campaignService.estimateOfficialCost({
+      templateId: selectedTemplate.id,
+      contactCount,
+      sourceType: formData.sourceType,
+      ...(formData.sourceType === 'CHANNEL' ? { contactIds: formData.contactIds } : {}),
+      ...(formData.sourceType === 'GROUP' && formData.groupId ? { groupId: formData.groupId } : {}),
+    })
       .then((estimate) => { if (!cancelled) setCostEstimate(estimate); })
       .catch(() => { if (!cancelled) setCostEstimate(null); });
     return () => { cancelled = true; };
-  }, [isOfficialCampaign, selectedTemplate, formData.contactIds.length, formData.sourceType, selectedGroup]);
+  }, [isOfficialCampaign, selectedTemplate, formData.contactIds, formData.sourceType, formData.groupId, selectedGroup]);
   const selectTemplate = (templateId: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -641,6 +654,17 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
       },
     }));
   };
+  const setNameFallback = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      messageMeta: { ...(prev.messageMeta ?? {}), nameFallback: value },
+    }));
+  };
+  const usesContactName = useMemo(
+    () => Object.values(formData.messageMeta?.templateVariables ?? {}).some((value) => CONTACT_NAME_PLACEHOLDER.test(value)),
+    [formData.messageMeta?.templateVariables],
+  );
+  const effectiveNameFallback = formData.messageMeta?.nameFallback?.trim() || DEFAULT_NAME_FALLBACK;
   return (<Modal isOpen={isOpen} onClose={handleClose} title="Editar Campanha" size="lg">
     {loadingData ? (<div className="flex flex-col items-center justify-center py-16 gap-3">
       <Loader2 className="animate-spin text-indigo-500" size={28}/>
@@ -894,6 +918,26 @@ export default function EditCampaignModal({ isOpen, campaign, onClose, onSuccess
             <p className="text-xs text-slate-400 dark:text-slate-500">
               {'Dica: use {{nome}} como valor para substituir automaticamente pelo nome de cada contato.'}
             </p>
+            {usesContactName && (<div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                Se o contato não tiver nome, usar
+              </label>
+              <input
+                type="text"
+                value={formData.messageMeta?.nameFallback ?? ''}
+                onChange={(e) => setNameFallback(e.target.value)}
+                className={inputCls(false)}
+                placeholder={DEFAULT_NAME_FALLBACK}
+                maxLength={NAME_FALLBACK_MAX_CHARS}
+              />
+              <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                {`Contato importado sem nome não pode receber campo vazio — a Meta recusa a mensagem. Em branco, usa "${DEFAULT_NAME_FALLBACK}".`}
+              </p>
+              {costEstimate && costEstimate.recipientsWithoutName > 0 && (<p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertCircle size={12}/>
+                {`${costEstimate.recipientsWithoutName} de ${costEstimate.contactCount} destinatário${costEstimate.contactCount !== 1 ? 's' : ''} sem nome cadastrado: ${costEstimate.recipientsWithoutName === 1 ? 'ele vai receber' : 'eles vão receber'} "${effectiveNameFallback}" no lugar de {{nome}}.`}
+              </p>)}
+            </div>)}
           </div>)}
 
           {selectedTemplate && templatePreviewMessage && (<div>

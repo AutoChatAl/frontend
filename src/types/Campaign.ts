@@ -120,6 +120,8 @@ export interface CreateCampaignInput {
         templateName?: string;
         templateLanguage?: string;
         templateVariables?: Record<string, string>;
+        /** Vai no lugar de {{nome}} quando o contato não tem nome; vazio usa `DEFAULT_NAME_FALLBACK`. */
+        nameFallback?: string;
         headerMediaUrl?: string;
     };
     messageTag?: 'HUMAN_AGENT';
@@ -128,6 +130,22 @@ export interface CreateCampaignInput {
     executionHour?: number;
 }
 export type UpdateCampaignInput = CreateCampaignInput;
+
+/** Mesmo padrão do backend: contato sem nome nunca manda campo vazio para a Meta. */
+export const DEFAULT_NAME_FALLBACK = 'cliente';
+export const NAME_FALLBACK_MAX_CHARS = 60;
+/** Valor de campo do modelo que puxa o nome do contato (`{{nome}}`, `{{ Nome }}`…). */
+export const CONTACT_NAME_PLACEHOLDER = /\{\{\s*nome\s*\}\}/i;
+
+/** Placeholders `{{...}}` de um valor que o disparo não conhece — só `{{nome}}` existe. */
+export function unknownPlaceholders(value: string): string[] {
+  const names: string[] = [];
+  for (const match of value.matchAll(/\{\{\s*([\w]+)\s*\}\}/g)) {
+    const [, name] = match;
+    if (name && name.toLowerCase() !== 'nome' && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
 
 export interface ScheduleGridCell {
   hour: number;

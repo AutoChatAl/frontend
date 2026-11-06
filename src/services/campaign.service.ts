@@ -104,6 +104,9 @@ export class CampaignService {
   public async estimateOfficialCost(input: {
         templateId: string;
         contactCount: number;
+        sourceType?: 'CHANNEL' | 'GROUP';
+        contactIds?: string[];
+        groupId?: string;
     }): Promise<WaCampaignEstimate> {
     const response = await apiClient.post<BackendResponse<WaCampaignEstimate>>('/campaigns/estimate', input);
     return extractData<WaCampaignEstimate>(response, 'Falha ao estimar o custo da campanha.');

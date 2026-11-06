@@ -156,6 +156,8 @@ export type WaCampaignEstimate = {
   templateName: string;
   category: WaTemplateCategory;
   contactCount: number;
+  /** Destinatários sem nome cadastrado — recebem o fallback no lugar de {{nome}}. */
+  recipientsWithoutName: number;
   unitCostMicros: number;
   totalCostMicros: number;
   unitCostFormatted: string;
