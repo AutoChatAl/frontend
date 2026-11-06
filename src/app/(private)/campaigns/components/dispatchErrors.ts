@@ -10,7 +10,7 @@ export const DISPATCH_ERROR_LABELS: Record<string, string> = {
   WA_TEMPLATE_VARIABLE_EMPTY: 'Um campo do modelo de mensagem ficou vazio para este contato — confira o nome do contato e os campos do modelo.',
   WA_MARKETING_OPT_OUT: 'O contato recusou mensagens de marketing.',
   WA_OUTSIDE_SERVICE_WINDOW: 'Fora da janela de 24h de atendimento.',
-  WA_MARKETING_LIMIT_REACHED: 'A Meta limitou mensagens de marketing para este número (131049).',
+  WA_MARKETING_LIMIT_REACHED: 'A Meta não entregou: o contato está no limite de mensagens de marketing (131049). Não é bloqueio do seu número — tente de novo para ele depois de 24h.',
   WA_UNDELIVERABLE: 'O número não pode receber a mensagem: sem WhatsApp ou indisponível (131026).',
   WA_BILLING_ISSUE: 'Problema de pagamento na conta da Meta (131042).',
   WA_RATE_LIMITED: 'Limite de envio da Meta atingido. Tente novamente mais tarde.',

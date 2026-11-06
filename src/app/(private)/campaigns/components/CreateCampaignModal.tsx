@@ -14,7 +14,7 @@ import { groupService } from '@/services/group.service';
 import { templateService } from '@/services/template.service';
 import { whatsappOfficialService } from '@/services/whatsapp-official.service';
 import type { CreateCampaignInput } from '@/types/Campaign';
-import { CONTACT_NAME_PLACEHOLDER, DEFAULT_NAME_FALLBACK, NAME_FALLBACK_MAX_CHARS, unknownPlaceholders } from '@/types/Campaign';
+import { CONTACT_NAME_PLACEHOLDER, CONTACT_NAME_TOKEN, DEFAULT_NAME_FALLBACK, NAME_FALLBACK_MAX_CHARS, lowercasePlaceholders, normalizeContactNameToken, stripBraces, unknownPlaceholders } from '@/types/Campaign';
 import type { WhatsAppInstance } from '@/types/Channel';
 import type { Contact } from '@/types/Contact';
 import { contactPhone, isUnlinkedContact } from '@/types/Contact';
@@ -228,7 +228,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       } else {
         const vars = formData.messageMeta?.templateVariables ?? {};
         const missing = templateVariableNames.filter((name) => !vars[name]?.trim());
-        const unknown = templateVariableNames.flatMap((name) => unknownPlaceholders(vars[name] ?? ''));
+        const unknown = templateVariableNames.flatMap((name) => unknownPlaceholders(normalizeContactNameToken(vars[name] ?? '')));
         if (missing.length > 0) {
           newErrors.template = `Preencha os campos do modelo de mensagem: ${missing.map((v) => `{{${v}}}`).join(', ')}`;
         } else if (unknown.length > 0) {
@@ -275,8 +275,10 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       }
       return payload;
     }
-    const variables = formData.messageMeta?.templateVariables ?? {};
-    const nameFallback = formData.messageMeta?.nameFallback?.trim();
+    const variables = Object.fromEntries(
+      Object.entries(formData.messageMeta?.templateVariables ?? {}).map(([key, value]) => [key, normalizeContactNameToken(value)]),
+    );
+    const nameFallback = stripBraces(formData.messageMeta?.nameFallback ?? '').trim();
     return {
       ...formData,
       message: '',
@@ -634,10 +636,20 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
       },
     }));
   };
+  // Ao sair do campo, {{Nome}} / {nome} viram {{nome}} — o backend faz o mesmo ao salvar.
+  const normalizeTemplateVariable = (name: string) => {
+    const value = formData.messageMeta?.templateVariables?.[name] ?? '';
+    const normalized = normalizeContactNameToken(value);
+    if (normalized !== value) setTemplateVariable(name, normalized);
+  };
+  const insertContactName = (name: string) => {
+    const value = formData.messageMeta?.templateVariables?.[name] ?? '';
+    setTemplateVariable(name, `${normalizeContactNameToken(value)}${CONTACT_NAME_TOKEN}`);
+  };
   const setNameFallback = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      messageMeta: { ...(prev.messageMeta ?? {}), nameFallback: value },
+      messageMeta: { ...(prev.messageMeta ?? {}), nameFallback: stripBraces(value) },
     }));
   };
   const usesContactName = useMemo(
@@ -956,10 +968,21 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
               <input
                 type="text"
                 value={formData.messageMeta?.templateVariables?.[name] ?? ''}
-                onChange={(e) => setTemplateVariable(name, e.target.value)}
+                onChange={(e) => setTemplateVariable(name, lowercasePlaceholders(e.target.value))}
+                onBlur={() => normalizeTemplateVariable(name)}
                 className={inputCls(false)}
                 placeholder={'Ex.: {{nome}} para usar o nome do contato'}
               />
+              {!CONTACT_NAME_PLACEHOLDER.test(formData.messageMeta?.templateVariables?.[name] ?? '') && (<div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => insertContactName(name)}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+                >
+                  Inserir {CONTACT_NAME_TOKEN}
+                </button>
+                <span className="text-xs text-slate-400 dark:text-slate-500">Será substituído pelo nome de cada contato</span>
+              </div>)}
             </div>))}
             <p className="text-xs text-slate-400 dark:text-slate-500">
               {'Dica: use {{nome}} como valor para substituir automaticamente pelo nome de cada contato.'}
@@ -977,7 +1000,7 @@ export default function CreateCampaignModal({ isOpen, onClose, onSuccess, addToa
                 maxLength={NAME_FALLBACK_MAX_CHARS}
               />
               <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
-                {`Contato importado sem nome não pode receber campo vazio — a Meta recusa a mensagem. Em branco, usa "${DEFAULT_NAME_FALLBACK}".`}
+                {`Texto simples, sem chaves — é o que a pessoa vai ler no lugar do nome. Em branco, usa "${DEFAULT_NAME_FALLBACK}".`}
               </p>
               {costEstimate && costEstimate.recipientsWithoutName > 0 && (<p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertCircle size={12}/>

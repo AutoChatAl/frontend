@@ -134,8 +134,29 @@ export type UpdateCampaignInput = CreateCampaignInput;
 /** Mesmo padrão do backend: contato sem nome nunca manda campo vazio para a Meta. */
 export const DEFAULT_NAME_FALLBACK = 'cliente';
 export const NAME_FALLBACK_MAX_CHARS = 60;
-/** Valor de campo do modelo que puxa o nome do contato (`{{nome}}`, `{{ Nome }}`…). */
-export const CONTACT_NAME_PLACEHOLDER = /\{\{\s*nome\s*\}\}/i;
+export const CONTACT_NAME_TOKEN = '{{nome}}';
+/** Grafias que o usuário usa para a variável do nome: `{{Nome}}`, `{{ NOME }}`, `{nome}`, `{{nome}`… */
+const CONTACT_NAME_TOKEN_VARIANTS = String.raw`\{+\s*nome\s*\}+`;
+/** Valor de campo do modelo que puxa o nome do contato, em qualquer grafia. */
+export const CONTACT_NAME_PLACEHOLDER = new RegExp(CONTACT_NAME_TOKEN_VARIANTS, 'i');
+
+/** Mesma regra do backend: toda grafia vira `{{nome}}`; texto fixo passa intacto. */
+export function normalizeContactNameToken(value: string): string {
+  return value.replace(new RegExp(CONTACT_NAME_TOKEN_VARIANTS, 'gi'), CONTACT_NAME_TOKEN);
+}
+
+/**
+ * Enquanto o usuário digita: o que está entre chaves vira minúsculo na hora, mesmo com
+ * Caps Lock (`{{NOM` → `{{nom`). Texto fixo fora das chaves mantém as maiúsculas.
+ */
+export function lowercasePlaceholders(value: string): string {
+  return value.replace(/\{[^}]*\}?/g, (segment) => segment.toLowerCase());
+}
+
+/** O fallback é texto puro — chaves digitadas ou coladas saem na hora. */
+export function stripBraces(value: string): string {
+  return value.replace(/[{}]/g, '');
+}
 
 /** Placeholders `{{...}}` de um valor que o disparo não conhece — só `{{nome}}` existe. */
 export function unknownPlaceholders(value: string): string[] {
