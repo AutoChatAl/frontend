@@ -206,7 +206,7 @@ export default function RegisterPage() {
         clearFieldError('phone');
       }} required autoComplete="tel" hint="Inclua o código do país (DDI) e o DDD." error={fieldErrors.phone}/>
       <div>
-        <Input id="senha" label="Senha" type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" hint={`Use pelo menos ${MIN_PASSWORD_LENGTH} caracteres. Misturar letras, números e símbolos deixa a senha mais segura.`} error={fieldErrors.password} rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" tabIndex={-1}>
+        <Input id="senha" label="Senha" type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" hint={`Use pelo menos ${MIN_PASSWORD_LENGTH} caracteres. Misturar letras, números e símbolos deixa a senha mais segura.`} error={fieldErrors.password} rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'} title={showPassword ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
           {showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}
         </button>}/>
 
@@ -238,7 +238,7 @@ export default function RegisterPage() {
         required
         autoComplete="new-password"
         error={fieldErrors.confirmPassword ?? (confirmMismatch ? 'As senhas não conferem.' : undefined)}
-        rightElement={<button type="button" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" tabIndex={-1}>
+        rightElement={<button type="button" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? 'Esconder senha' : 'Mostrar senha'} title={showConfirm ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
           {showConfirm ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}
         </button>}/>
 

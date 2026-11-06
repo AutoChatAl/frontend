@@ -115,7 +115,7 @@ export default function LoginPage() {
           <Input id="senha" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => {
             setPassword(e.target.value);
             clearFieldError('password');
-          }} required autoComplete="current-password" error={fieldErrors.password} rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" tabIndex={-1}>
+          }} required autoComplete="current-password" error={fieldErrors.password} rightElement={<button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'} title={showPassword ? 'Esconder senha' : 'Mostrar senha'} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             {showPassword ? <EyeOff size={18} aria-hidden="true"/> : <Eye size={18} aria-hidden="true"/>}
           </button>}/>
         </div>

@@ -201,14 +201,20 @@ export default function CalendarView({ appointments, businessHours, contacts: _c
 
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs dark:shadow-none p-3 sm:p-4">
       <div className="flex items-center gap-2 w-full sm:w-auto">
-        <button onClick={() => navigateWeek(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-          <ChevronLeft size={18} className="text-slate-600 dark:text-slate-400"/>
+        <button type="button" onClick={() => navigateWeek(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" aria-label="Semana anterior">
+          <ChevronLeft size={18} className="text-slate-600 dark:text-slate-400" aria-hidden="true"/>
+          <span className="sr-only">
+            Semana anterior
+          </span>
         </button>
-        <button onClick={goToToday} className="px-3 py-1.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
+        <button type="button" onClick={goToToday} className="px-3 py-1.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
             Hoje
         </button>
-        <button onClick={() => navigateWeek(1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-          <ChevronRight size={18} className="text-slate-600 dark:text-slate-400"/>
+        <button type="button" onClick={() => navigateWeek(1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" aria-label="Próxima semana">
+          <ChevronRight size={18} className="text-slate-600 dark:text-slate-400" aria-hidden="true"/>
+          <span className="sr-only">
+            Próxima semana
+          </span>
         </button>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 capitalize ml-1">
           {headerLabel}
